@@ -34,3 +34,4 @@ Fabrication of this is going to be quite expensive due to the accelerometer
 which is apparently tricky to place.
 
 ![l0destar board](images/l0destar_prototype_1.0_1.png)
+![l0destar board](images/l0destar_prototype_1.0_2.png)
