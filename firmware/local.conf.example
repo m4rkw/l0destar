@@ -1,0 +1,45 @@
+# Copy this file to local.conf and fill in your values.
+# local.conf is gitignored and picked up automatically by build.sh.
+
+# --- secrets (required) ----------------------------------------------------
+CONFIG_APP_PSK_HEX=""
+
+# --- network (required) ----------------------------------------------------
+CONFIG_APP_SERVER_HOST=""
+CONFIG_APP_SERVER_PORT=0
+CONFIG_APP_APN=""
+
+# --- preferences -----------------------------------------------------------
+# CONFIG_APP_ALWAYS_ON=n
+# CONFIG_APP_MOVEMENT_ALARM=n
+# CONFIG_LOG_MODE_IMMEDIATE=y
+
+# --- intervals (seconds) ---------------------------------------------------
+# CONFIG_APP_ENGINE_OFF_LOOP_INTERVAL=0
+# CONFIG_APP_IGNITION_ON_SLEEP_INTERVAL=30
+# CONFIG_APP_VOLTAGE_POLL_INTERVAL=5
+# CONFIG_APP_BATTERY_CHECK_INTERVAL=86400
+# CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT=60
+# CONFIG_APP_NETWORK_RETRY_INTERVAL=300
+# CONFIG_APP_GPS_FIX_TIMEOUT_MS=60000
+
+# --- voltage thresholds (millivolts) ---------------------------------------
+# CONFIG_APP_BATTERY_WARNING_MV=11900
+# CONFIG_APP_BATTERY_POWEROFF_MV=11800
+# CONFIG_APP_SLEEP_SAFETY_MV=12000
+# CONFIG_APP_ENGINE_RUNNING_MV=13000
+
+# --- accelerometer / movement ----------------------------------------------
+# CONFIG_APP_ACC_MOVEMENT_THRESHOLD=150
+# CONFIG_APP_MOVEMENT_CONFIRM_MS=3000
+# CONFIG_APP_MOVEMENT_CONFIRM_HITS=2
+# CONFIG_APP_MOVEMENT_INACTIVITY_RESET=1800
+
+# --- coast-to-stop ---------------------------------------------------------
+# CONFIG_APP_COAST_STOP_SPEED_KMH_X10=50
+# CONFIG_APP_COAST_MAX_ITERATIONS=60
+
+# --- error escalation ------------------------------------------------------
+# CONFIG_APP_GSM_ESCALATION_POWERCYCLE=3
+# CONFIG_APP_GSM_ESCALATION_SLEEP=5
+# CONFIG_APP_GSM_RECOVERY_SLEEP_INTERVAL=300

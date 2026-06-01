@@ -1,0 +1,650 @@
+/*
+ * Main entry + state machine.  Full port from firmware.ino including sleep
+ * states, movement detection, coast-to-stop, and network error recovery.
+ *
+ * States:
+ *   IDLE            — poll ignition/voltage, decide when to send
+ *   GPS_COLLECT     — get fix, buffer a record
+ *   SEND            — transmit telemetry, process response, transition
+ *   IGNITION_SLEEP  — ignition ON but engine OFF; periodic sends, watch for
+ *                     engine start or ignition off
+ *   SLEEP           — ignition OFF; low-power loop with timer/accel/ign wake
+ */
+
+#include <string.h>
+#include <stdio.h>
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/dt-bindings/gpio/nordic-nrf-gpio.h>
+#include <zephyr/logging/log.h>
+
+#include "app.h"
+#include "hw_common.h"
+#include "pins.h"
+
+#include <modem/lte_lc.h>
+
+LOG_MODULE_REGISTER(main, CONFIG_APP_LOG_LEVEL);
+
+/* -- shared state used across modules (declared in app.h) ------------------ */
+char     pending_server_cmd[128];
+bool     read_udp_response;
+bool     power_reboot;
+int      gsm_send_failures;
+bool     network_ready;
+bool     use_cached_gps;
+bool     powered_on = true;
+char     ignition;
+int8_t   previous_ignition = -1;
+bool     engine_running;
+float    battery_v;
+
+/* -- state machine --------------------------------------------------------- */
+enum main_state {
+    STATE_IDLE,
+    STATE_GPS_COLLECT,
+    STATE_SEND,
+    STATE_IGNITION_SLEEP,
+    STATE_SLEEP,
+};
+
+static enum main_state s_state = STATE_IDLE;
+static int64_t s_last_send_ms;
+static int     s_buffered_records;
+
+/* -- ignition wake interrupt ----------------------------------------------- */
+static K_SEM_DEFINE(s_wake_sem, 0, 1);
+static struct gpio_callback s_ign_cb;
+static bool s_ign_cb_installed;
+
+static void ign_isr(const struct device *dev, struct gpio_callback *cb,
+                    uint32_t pins)
+{
+    k_sem_give(&s_wake_sem);
+}
+
+static void ign_irq_enable(void)
+{
+    if (!s_ign_cb_installed) {
+        gpio_init_callback(&s_ign_cb, ign_isr, BIT(PIN_IGN_SENSE));
+        gpio_add_callback(hw_gpio0, &s_ign_cb);
+        s_ign_cb_installed = true;
+    }
+    gpio_pin_interrupt_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INT_EDGE_BOTH);
+}
+
+static void ign_irq_disable(void)
+{
+    gpio_pin_interrupt_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INT_DISABLE);
+}
+
+/* -- accelerometer wake interrupt ------------------------------------------ */
+static struct gpio_callback s_accel_cb;
+static bool s_accel_cb_installed;
+
+static void accel_isr(const struct device *dev, struct gpio_callback *cb,
+                      uint32_t pins)
+{
+    k_sem_give(&s_wake_sem);
+}
+
+static void accel_irq_enable(void)
+{
+    if (!s_accel_cb_installed) {
+        gpio_pin_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INPUT);
+        gpio_init_callback(&s_accel_cb, accel_isr, BIT(PIN_ACC_INT1));
+        gpio_add_callback(hw_gpio0, &s_accel_cb);
+        s_accel_cb_installed = true;
+    }
+    accel_enable_wake_int();
+    gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
+                                 GPIO_INT_EDGE_TO_ACTIVE);
+}
+
+static void accel_irq_disable(void)
+{
+    gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INT_DISABLE);
+    accel_disable_wake_int();
+}
+
+/* -- coast-to-stop --------------------------------------------------------- */
+static bool s_coasting;
+static int  s_coast_iters;
+
+/* -- movement alert state -------------------------------------------------- */
+static const int s_move_cooldowns[] = {300, 900, 1800, 3600};
+static int  s_move_alert_level;
+static int  s_move_cooldown_secs;
+static int  s_move_idle_secs;
+static bool s_move_needs_gps;
+static int  s_saved_loop_interval = -1;
+
+void movement_reset(void)
+{
+    s_move_alert_level = 0;
+    s_move_cooldown_secs = 0;
+    s_move_idle_secs = 0;
+    s_move_needs_gps = false;
+    if (s_saved_loop_interval >= 0) {
+        g_settings.loop_interval = s_saved_loop_interval;
+        s_saved_loop_interval = -1;
+    }
+}
+
+/* -- helpers --------------------------------------------------------------- */
+static void handle_ignition_state(void)
+{
+    ignition = (char)ignition_read();
+}
+
+static bool should_send_data(void)
+{
+    int64_t elapsed = k_uptime_get() - s_last_send_ms;
+
+    if (previous_ignition == -1)                 return true;
+    if (ignition == 0 && previous_ignition != 0) return true;
+    if (ignition != 0 && previous_ignition == 0) return true;
+    if (ignition == 0 && engine_running &&
+        elapsed >= 1000)                         return true;
+    if (ignition == 0 && !engine_running &&
+        elapsed >= IGNITION_ON_SLEEP_INTERVAL * 1000)
+                                                 return true;
+    if (send_int_to_server)                      return true;
+    if (!last_send_ok && ignition == 0)          return true;
+    if (g_settings.loop_interval > 0 &&
+        elapsed >= (int64_t)g_settings.loop_interval * 1000)
+                                                 return true;
+    return false;
+}
+
+/* ========================================================================= */
+/*  STATE_SLEEP — low-power loop with timer / accel / ignition wake          */
+/* ========================================================================= */
+static void do_sleep(void)
+{
+    LOG_INF("entering sleep");
+    led_off();
+    LOG_INF("sleep: GNSS stop");
+    gnss_stop();
+    LOG_INF("sleep: transport close");
+    transport_close();
+    LOG_INF("sleep: modem power off");
+    lte_lc_power_off();
+    LOG_INF("sleep: K-line power off");
+    kline_power_off();
+    LOG_INF("sleep: INA228 shutdown");
+    hw_power_shutdown();
+    network_ready = false;
+    LOG_INF("sleep: all peripherals off");
+
+    accel_read_baseline();
+    accel_irq_enable();
+
+    if (s_saved_loop_interval < 0) {
+        s_saved_loop_interval = g_settings.loop_interval;
+    }
+
+    int telemetry_remaining = g_settings.loop_interval;
+    if (telemetry_remaining == 0 && RELAY_CONNECTED) {
+        telemetry_remaining = BATTERY_CHECK_INTERVAL;
+    }
+
+    ign_irq_enable();
+    int ign_before = ignition_read();
+    g_cell.dirty = true;
+
+    for (;;) {
+        watchdog_kick();
+
+        /* pick shortest wake interval (accel uses interrupt, not polling) */
+        int sleep_secs = 3600;
+        if (telemetry_remaining > 0 && telemetry_remaining < sleep_secs)
+            sleep_secs = telemetry_remaining;
+        if (s_move_cooldown_secs > 0 && s_move_cooldown_secs < sleep_secs)
+            sleep_secs = s_move_cooldown_secs;
+        if (sleep_secs < 1) sleep_secs = 1;
+
+        k_sem_reset(&s_wake_sem);
+        int64_t t0 = k_uptime_get();
+        k_sem_take(&s_wake_sem, K_SECONDS(sleep_secs));
+        int elapsed = (int)((k_uptime_get() - t0) / 1000);
+        if (elapsed < 1) elapsed = 1;
+
+        /* update timers */
+        if (telemetry_remaining > 0) telemetry_remaining -= elapsed;
+        if (s_move_cooldown_secs > 0) s_move_cooldown_secs -= elapsed;
+        s_move_idle_secs += elapsed;
+        if (s_move_idle_secs >= MOVEMENT_INACTIVITY_RESET)
+            s_move_alert_level = 0;
+
+        /* --- ignition check --- */
+        int ign_now = ignition_read();
+        if (ign_now != ign_before) {
+            k_msleep(200);
+            ign_now = ignition_read();
+            if (ign_now == 0) {
+                LOG_INF("wake: ignition ON");
+                ignition = 0;
+                movement_reset();
+                ign_irq_disable();
+                accel_irq_disable();
+                LOG_INF("wake: INA228 wake");
+                hw_power_wake();
+                LOG_INF("wake: modem connect");
+                modem_connect();
+                LOG_INF("wake: GNSS start");
+                gnss_start();
+                led_on();
+                LOG_INF("wake: relay set");
+                relay_set();
+                s_state = STATE_IDLE;
+                return;
+            }
+            ign_before = ign_now;
+        }
+
+        /* --- movement check (interrupt woke us, confirm sustained) --- */
+        if (gpio_pin_get(hw_gpio0, PIN_ACC_INT1) == 1) {
+            LOG_INF("accel wake — confirming movement");
+            gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
+                                         GPIO_INT_DISABLE);
+            if (!accel_confirm_movement()) {
+                LOG_INF("transient bump — ignoring");
+                accel_read_baseline();
+                accel_irq_enable();
+                continue;
+            }
+            accel_irq_disable();
+            LOG_INF("movement confirmed");
+            s_move_idle_secs = 0;
+            s_move_needs_gps = true;
+
+            if (s_move_cooldown_secs <= 0) {
+                int tilt, delta;
+                accel_get_movement_info(&tilt, &delta);
+                char msg[80];
+                snprintf(msg, sizeof(msg),
+                         "movement: %d.%ddeg tilt, %dmg",
+                         tilt / 10, tilt % 10, delta);
+                alert_enqueue(msg, 2);
+
+                watchdog_kick();
+                int reg = modem_get_network_status();
+                if (reg != 1 && reg != 5) modem_connect();
+                alert_send_standalone();
+
+                s_move_cooldown_secs =
+                    s_move_cooldowns[s_move_alert_level];
+                if (s_move_alert_level < 3) s_move_alert_level++;
+
+                if (g_settings.loop_interval == 0 ||
+                    g_settings.loop_interval >
+                        MOVEMENT_TEMPORARY_ENGINE_OFF_INTERVAL) {
+                    if (s_saved_loop_interval < 0)
+                        s_saved_loop_interval = g_settings.loop_interval;
+                    g_settings.loop_interval =
+                        MOVEMENT_TEMPORARY_ENGINE_OFF_INTERVAL;
+                    telemetry_remaining =
+                        MOVEMENT_TEMPORARY_ENGINE_OFF_INTERVAL;
+                }
+            } else if (alert_count > 0) {
+                watchdog_kick();
+                int reg = modem_get_network_status();
+                if (reg != 1 && reg != 5) modem_connect();
+                alert_send();
+            }
+
+            accel_read_baseline();
+        }
+
+        /* --- timer telemetry --- */
+        if (telemetry_remaining <= 0 && g_settings.loop_interval > 0) {
+            LOG_INF("sleep: INA228 wake for voltage read");
+            hw_power_wake();
+            float v = battery_read_voltage();
+            battery_v = v;
+
+            if (v > 0 && v < BATTERY_POWEROFF_LEVEL) {
+                LOG_WRN("battery %.2fV < poweroff", (double)v);
+                relay_reset();
+                hw_power_shutdown();
+                telemetry_remaining = BATTERY_CHECK_INTERVAL;
+                continue;
+            }
+            if (v > 0 && v < SLEEP_SAFETY_VOLTAGE) {
+                LOG_WRN("battery %.2fV, skipping send", (double)v);
+                hw_power_shutdown();
+                telemetry_remaining = g_settings.loop_interval;
+                continue;
+            }
+
+            watchdog_kick();
+            int reg = modem_get_network_status();
+            if (reg != 1 && reg != 5) modem_connect();
+            modem_update_cell_info();
+
+            if (s_move_needs_gps) {
+                gnss_start();
+                use_cached_gps = false;
+            } else {
+                use_cached_gps = true;
+            }
+
+            ignition = (char)ignition_read();
+            read_udp_response = true;
+            if (collect_data(ignition) > 0) {
+                send_data();
+                if (pending_server_cmd[0] != '\0') {
+                    cmd_run(pending_server_cmd);
+                    pending_server_cmd[0] = '\0';
+                    if (alert_count > 0) alert_send();
+                }
+                if (!last_send_ok) modem_recover(gsm_send_failures);
+            }
+            data_reset();
+
+            if (s_move_needs_gps) {
+                gnss_stop();
+                s_move_needs_gps = false;
+            }
+            use_cached_gps = false;
+            transport_close();
+            hw_power_shutdown();
+            telemetry_remaining = g_settings.loop_interval;
+        }
+
+        /* re-read baseline and re-arm accel interrupt before next sleep cycle */
+        accel_read_baseline();
+        accel_irq_enable();
+
+        /* re-check ignition before going back to sleep */
+        ign_now = ignition_read();
+        if (ign_now == 0) {
+            LOG_INF("wake: ignition ON");
+            ignition = 0;
+            movement_reset();
+            ign_irq_disable();
+            accel_irq_disable();
+            LOG_INF("wake: INA228 wake");
+            hw_power_wake();
+            LOG_INF("wake: modem connect");
+            modem_connect();
+            LOG_INF("wake: GNSS start");
+            gnss_start();
+            led_on();
+            LOG_INF("wake: relay set");
+            relay_set();
+            s_state = STATE_IDLE;
+            return;
+        }
+        ign_before = ign_now;
+    }
+}
+
+/* ========================================================================= */
+/*  STATE_IGNITION_SLEEP — ignition ON, engine OFF, watching for engine      */
+/* ========================================================================= */
+static void do_ignition_sleep(void)
+{
+    LOG_INF("ignition sleep (ign=ON, engine=OFF)");
+    int64_t last_voltage_ms = k_uptime_get();
+    int64_t last_send_ms    = k_uptime_get();
+
+    for (;;) {
+        watchdog_kick();
+
+        ignition = (char)ignition_read();
+        if (ignition != 0) {
+            LOG_INF("ignition OFF — sending final position");
+            use_cached_gps = true;
+            read_udp_response = false;
+            if (collect_data(ignition) > 0) {
+                gnss_stop();
+                send_data();
+                data_reset();
+            } else {
+                gnss_stop();
+            }
+            previous_ignition = ignition;
+            s_state = STATE_SLEEP;
+            return;
+        }
+
+        int64_t now = k_uptime_get();
+        if (now - last_voltage_ms >= VOLTAGE_POLL_INTERVAL * 1000) {
+            battery_v = battery_read_voltage();
+            if (battery_v >= ENGINE_RUNNING_VOLTAGE) {
+                engine_running = true;
+                LOG_INF("engine started (%.2fV)", (double)battery_v);
+                s_state = STATE_IDLE;
+                return;
+            }
+            last_voltage_ms = now;
+        }
+
+        now = k_uptime_get();
+        if (now - last_send_ms >= IGNITION_ON_SLEEP_INTERVAL * 1000) {
+            /* GNSS is already running continuously — grab a fix if one is
+             * available (returns immediately when locked), don't block 60s. */
+            struct gnss_fix fix = {0};
+            if (gnss_collect(2000, &fix) == 0 && fix.valid) {
+                g_gnss = fix;
+            }
+            use_cached_gps = true;
+            read_udp_response = true;
+            if (collect_data(ignition) > 0) {
+                gnss_stop();
+                send_data();
+                data_reset();
+                if (pending_server_cmd[0] != '\0') {
+                    cmd_run(pending_server_cmd);
+                    pending_server_cmd[0] = '\0';
+                    if (alert_count > 0) alert_send();
+                }
+                if (!last_send_ok) modem_recover(gsm_send_failures);
+                gnss_resume();
+            }
+            last_send_ms = k_uptime_get();
+        }
+
+        status_delay(1000);
+    }
+}
+
+/* ========================================================================= */
+/*  main                                                                     */
+/* ========================================================================= */
+int main(void)
+{
+    LOG_INF("=== l0destar firmware boot ===");
+
+    if (crypto_init()) {
+        LOG_ERR("crypto init failed — halting");
+        return 0;
+    }
+    settings_load();
+
+    if (hw_gpio_init()) {
+        LOG_ERR("gpio init failed — halting");
+        return 0;
+    }
+
+    if (hw_power_init())  LOG_WRN("INA228 init failed — voltage unavailable");
+    if (hw_accel_init())  LOG_WRN("accel init failed — readings unavailable");
+
+    hw_aux_power_on();
+
+    relay_init();
+
+    LOG_INF("ignition=%s battery=%.2fV",
+            ignition_read() == 0 ? "ON" : "OFF",
+            (double)battery_read_voltage());
+
+    if (modem_init()) {
+        LOG_ERR("modem init failed");
+        return 0;
+    }
+    if (gnss_init()) {
+        LOG_ERR("gnss init failed");
+        return 0;
+    }
+
+    led_on();
+    if (modem_connect() == 0) {
+        char imei[32] = {0};
+        if (modem_get_imei(imei, sizeof(imei)) == 0) {
+            strncpy(g_settings.imei, imei, sizeof(g_settings.imei) - 1);
+            LOG_INF("imei=%s", g_settings.imei);
+        }
+        modem_update_cell_info();
+    }
+
+    gnss_start();
+
+    if (ignition_read() == 0 || g_settings.always_on) {
+        relay_set();
+    }
+
+    watchdog_init();
+    s_last_send_ms = k_uptime_get();
+
+    LOG_INF("entering main loop");
+
+    for (;;) {
+        watchdog_kick();
+
+        if (power_reboot) {
+            reboot_now();
+        }
+
+        switch (s_state) {
+        case STATE_IDLE:
+            handle_ignition_state();
+
+            if (!network_ready) {
+                LOG_INF("waiting for network registration...");
+                int reg = modem_get_network_status();
+                if (reg == 1 || reg == 5) {
+                    network_ready = true;
+                    LOG_INF("network ready");
+                } else {
+                    status_delay(5000);
+                    break;
+                }
+            }
+
+            battery_v = battery_read_voltage();
+            if (ignition == 0 && !engine_running &&
+                battery_v >= ENGINE_RUNNING_VOLTAGE) {
+                engine_running = true;
+                LOG_INF("engine started (%.2fV)", (double)battery_v);
+            } else if (engine_running &&
+                       battery_v < ENGINE_RUNNING_VOLTAGE) {
+                engine_running = false;
+                LOG_INF("engine stopped (%.2fV)", (double)battery_v);
+            }
+
+            if (should_send_data()) {
+                LOG_INF("collecting GPS fix (%d/%d)",
+                        s_buffered_records + 1, BATCH_SIZE);
+                s_state = STATE_GPS_COLLECT;
+                break;
+            }
+            status_delay(1000);
+            break;
+
+        case STATE_GPS_COLLECT: {
+            use_cached_gps = false;
+            int have_fix = collect_data(ignition);
+            if (!have_fix) {
+                LOG_WRN("no fix, skipping send");
+                data_reset();
+                s_last_send_ms = k_uptime_get();
+                previous_ignition = ignition;
+                s_state = STATE_IDLE;
+                break;
+            }
+            s_buffered_records++;
+            if (s_buffered_records >= BATCH_SIZE
+                || ignition != 0
+                || previous_ignition == -1
+                || send_int_to_server
+                || !last_send_ok
+                || data_index >= DATA_LIMIT - BATCH_HEADROOM) {
+                s_state = STATE_SEND;
+            } else {
+                s_state = STATE_IDLE;
+            }
+            break;
+        }
+
+        case STATE_SEND:
+            read_udp_response =
+                (previous_ignition == -1
+                 || previous_ignition != ignition
+                 || ignition != 0
+                 || g_gnss.speed_kmh < 0.005f);
+
+            LOG_INF("sending %d records", s_buffered_records);
+            gnss_stop();
+            send_data();
+            s_last_send_ms = k_uptime_get();
+            s_buffered_records = 0;
+            data_reset();
+
+            if (pending_server_cmd[0] != '\0' && read_udp_response) {
+                cmd_run(pending_server_cmd);
+                pending_server_cmd[0] = '\0';
+                if (alert_count > 0) alert_send();
+            }
+
+            /* network error recovery */
+            if (!last_send_ok) {
+                modem_recover(gsm_send_failures);
+                s_coasting = false;
+            }
+
+            /* coast-to-stop: keep sending after ignition off while moving */
+            if (!s_coasting &&
+                previous_ignition == 0 && ignition != 0 &&
+                g_gnss.speed_kmh > COAST_STOP_SPEED_KMH) {
+                s_coasting = true;
+                s_coast_iters = 0;
+                LOG_INF("coast-to-stop started");
+            }
+            if (s_coasting) {
+                s_coast_iters++;
+                if (g_gnss.speed_kmh <= COAST_STOP_SPEED_KMH ||
+                    s_coast_iters >= COAST_MAX_ITERATIONS) {
+                    LOG_INF("coast-to-stop ended (spd=%.1f iter=%d)",
+                            (double)g_gnss.speed_kmh, s_coast_iters);
+                    s_coasting = false;
+                }
+            }
+
+            previous_ignition = ignition;
+
+            /* state transition */
+            if (ignition != 0 && !s_coasting) {
+                LOG_INF("ignition off -> sleep");
+                s_state = STATE_SLEEP;
+            } else if (!engine_running && !s_coasting) {
+                LOG_INF("engine off -> ignition sleep");
+                s_state = STATE_IGNITION_SLEEP;
+            } else {
+                gnss_resume();
+                s_state = STATE_GPS_COLLECT;
+            }
+            break;
+
+        case STATE_IGNITION_SLEEP:
+            do_ignition_sleep();
+            break;
+
+        case STATE_SLEEP:
+            do_sleep();
+            break;
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,90 @@
+#include <zephyr/kernel.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/logging/log.h>
+
+#include "app.h"
+#include "hw_common.h"
+#include "pins.h"
+
+LOG_MODULE_REGISTER(hw_power, CONFIG_APP_LOG_LEVEL);
+
+static const struct bb_i2c ina_bus = {
+	.scl_pin = PIN_INA_SCL,
+	.sda_pin = PIN_INA_SDA
+};
+
+#define INA228_ADDR     0x40
+#define INA228_ADC_CFG  0x01
+#define INA228_ADC_CONT 0xB920
+#define INA228_ADC_SHUT 0x0920
+
+int hw_power_init(void)
+{
+	bb_init(&ina_bus);
+	bb_pin_test(&ina_bus, "INA228");
+	gpio_pin_configure(hw_gpio0, PIN_INA_ALRT, GPIO_INPUT | GPIO_PULL_UP);
+	gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INPUT);
+
+	if (!bb_write16(&ina_bus, INA228_ADDR, 0x00, 0x8000)) {
+		LOG_ERR("INA228 reset NACK");
+		return -EIO;
+	}
+	k_msleep(5);
+
+	uint8_t id[2];
+	if (!bb_read_regs(&ina_bus, INA228_ADDR, 0x3E, id, 2)) {
+		LOG_ERR("INA228 MFR_ID NACK");
+		return -EIO;
+	}
+	uint16_t mfr = (id[0] << 8) | id[1];
+	if (mfr != 0x5449) {
+		LOG_ERR("INA228 MFR_ID=0x%04X (expect 0x5449)", mfr);
+		return -EIO;
+	}
+
+	bb_write16(&ina_bus, INA228_ADDR, INA228_ADC_CFG, INA228_ADC_CONT);
+	bb_write16(&ina_bus, INA228_ADDR, 0x0B, 0x0000);
+	k_msleep(10);
+
+	float v = battery_read_voltage();
+	LOG_INF("INA228 ready — VBUS=%.3f V", (double)v);
+	return 0;
+}
+
+void hw_aux_power_on(void)
+{
+    gpio_pin_configure(hw_gpio0, PIN_AUX_SW, GPIO_OUTPUT_HIGH);
+    LOG_INF("AUX_SW HIGH");
+}
+
+void hw_aux_power_off(void)
+{
+    gpio_pin_configure(hw_gpio0, PIN_AUX_SW, GPIO_OUTPUT_LOW);
+    LOG_INF("AUX_SW HIGH");
+}
+
+float battery_read_voltage(void)
+{
+	uint8_t buf[3];
+	if (!bb_read_regs(&ina_bus, INA228_ADDR, 0x05, buf, 3)) {
+		return -1.0f;
+	}
+	uint32_t raw = ((uint32_t)buf[0] << 16 | (uint32_t)buf[1] << 8 | buf[2]) >> 4;
+	return (float)raw * 195.3125e-6f;
+}
+
+void hw_power_shutdown(void)
+{
+	bb_write16(&ina_bus, INA228_ADDR, INA228_ADC_CFG, INA228_ADC_SHUT);
+}
+
+void hw_power_wake(void)
+{
+	bb_write16(&ina_bus, INA228_ADDR, INA228_ADC_CFG, INA228_ADC_CONT);
+	k_msleep(2);
+}
+
+int ignition_read(void)
+{
+	return !gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
+}

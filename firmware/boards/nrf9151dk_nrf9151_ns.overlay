@@ -1,0 +1,21 @@
+/* Disable UART1 so P0.15-P0.18 are free for K-line GPIO. */
+&uart1 {
+	status = "disabled";
+};
+
+/* Disable I2C2 so P0.30 is free for ACC_INT2. */
+&i2c2 {
+	status = "disabled";
+};
+
+/* Disable SPI3 so P0.11-P0.13 are free for relay GPIO. */
+&spi3 {
+	status = "disabled";
+};
+
+/* Use DK-default UART0 pins (routed through J-Link to USB VCOM) */
+&uart0 {
+	status = "okay";
+	current-speed = <115200>;
+	/delete-property/ hw-flow-control;
+};
