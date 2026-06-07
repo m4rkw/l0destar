@@ -33,5 +33,5 @@ there's a still more testing to be done before I'm ready to have it fabbed.
 Fabrication of this is going to be quite expensive due to the accelerometer
 which is apparently tricky to place.
 
-![l0destar board](images/l0destar_prototype_1.0_1.png)
-![l0destar board](images/l0destar_prototype_1.0_2.png)
+![l0destar board](images/l0destar_prototype_1.0_3.png)
+![l0destar board](images/l0destar_prototype_1.0_4.png)
