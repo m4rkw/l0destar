@@ -300,11 +300,9 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Diode:BZX84Cxx"
-			(pin_numbers
-				(hide yes)
-			)
+		(symbol "Transistor_FET:AO3400A"
 			(pin_names
+				(offset 0)
 				(hide yes)
 			)
 			(exclude_from_sim no)
@@ -312,27 +310,54 @@
 			(on_board yes)
 			(in_pos_files yes)
 			(duplicate_pin_numbers_are_jumpers no)
-			(property "Reference" "D"
-				(at 0 3.81 0)
+			(property "Reference" "Q"
+				(at 5.08 1.905 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
+					(justify left)
 				)
 			)
-			(property "Value" "BZX84Cxx"
-				(at 0 -3.81 0)
+			(property "Value" "AO3400A"
+				(at 5.08 0 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
+					(justify left)
 				)
 			)
 			(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
+				(at 5.08 -1.905 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+						(italic yes)
+					)
+					(justify left)
+				)
+			)
+			(property "Datasheet" "http://www.aosmd.com/pdfs/datasheet/AO3400A.pdf"
+				(at 5.08 -3.81 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Description" "30V Vds, 5.7A Id, N-Channel MOSFET, SOT-23"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -343,29 +368,7 @@
 					)
 				)
 			)
-			(property "Datasheet" "https://diotec.com/tl_files/diotec/files/pdf/datasheets/bzx84c2v4.pdf"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Description" "300mW Zener Diode, SOT-23"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "ki_keywords" "zener diode"
+			(property "ki_keywords" "N-Channel MOSFET"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -387,10 +390,10 @@
 					)
 				)
 			)
-			(symbol "BZX84Cxx_0_1"
+			(symbol "AO3400A_0_1"
 				(polyline
 					(pts
-						(xy -1.27 -1.27) (xy -1.27 1.27) (xy -0.762 1.27)
+						(xy 0.254 1.905) (xy 0.254 -1.905)
 					)
 					(stroke
 						(width 0.254)
@@ -402,7 +405,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 0) (xy -1.27 0)
+						(xy 0.254 0) (xy -2.54 0)
 					)
 					(stroke
 						(width 0)
@@ -414,7 +417,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 -1.27) (xy 1.27 1.27) (xy -1.27 0) (xy 1.27 -1.27)
+						(xy 0.762 2.286) (xy 0.762 1.27)
 					)
 					(stroke
 						(width 0.254)
@@ -424,12 +427,141 @@
 						(type none)
 					)
 				)
+				(polyline
+					(pts
+						(xy 0.762 0.508) (xy 0.762 -0.508)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 -1.27) (xy 0.762 -2.286)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 -1.778) (xy 3.302 -1.778) (xy 3.302 1.778) (xy 0.762 1.778)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.016 0) (xy 2.032 0.381) (xy 2.032 -0.381) (xy 1.016 0)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(circle
+					(center 1.651 0)
+					(radius 2.794)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 2.54) (xy 2.54 1.778)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 2.54 1.778)
+					(radius 0.254)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(circle
+					(center 2.54 -1.778)
+					(radius 0.254)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 -2.54) (xy 2.54 0) (xy 0.762 0)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.921 0.381) (xy 3.683 0.381)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.302 0.381) (xy 2.921 -0.254) (xy 3.683 -0.254) (xy 3.302 0.381)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
 			)
-			(symbol "BZX84Cxx_1_1"
-				(pin passive line
-					(at 3.81 0 180)
+			(symbol "AO3400A_1_1"
+				(pin input line
+					(at -5.08 0 0)
 					(length 2.54)
-					(name "A"
+					(name "G"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -444,11 +576,10 @@
 						)
 					)
 				)
-				(pin no_connect line
-					(at 1.27 0 180)
+				(pin passive line
+					(at 2.54 -5.08 90)
 					(length 2.54)
-					(hide yes)
-					(name "NC"
+					(name "S"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -464,9 +595,9 @@
 					)
 				)
 				(pin passive line
-					(at -3.81 0 0)
+					(at 2.54 5.08 270)
 					(length 2.54)
-					(name "K"
+					(name "D"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -613,9 +744,9 @@
 		)
 		(uuid "3a279c7f-b0ac-4217-a010-478010a1ab5a")
 	)
-	(text "IGNITION PRESENCE SENSING\nVOLTAGE DIVIDER WITH ZENER CLAMP"
+	(text "IGNITION PRESENCE SENSING"
 		(exclude_from_sim no)
-		(at 44.958 29.972 0)
+		(at 46.228 27.94 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -646,7 +777,7 @@
 		)
 		(uuid "973effe9-5c26-47b1-918b-b874ca967e54")
 	)
-	(text "Ignition presence sensing\nvoltage divider for minimal power consumption\nZener clamp to 3.3v logic level"
+	(text "Ignition presence sensing\nMOSFET gating 3.3v to IGN_SENSE\nSignal is HIGH when ignition is off"
 		(exclude_from_sim no)
 		(at 180.848 172.212 0)
 		(effects
@@ -703,24 +834,40 @@
 		(uuid "0bd0f89a-bcde-4609-8a4b-ab7accac6408")
 	)
 	(junction
-		(at 87.63 53.34)
+		(at 81.28 53.34)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "18ff24f9-902f-4afd-84bf-5c513bc3b6a6")
+		(uuid "2ab6a047-9f09-4219-9e5c-6b221b7b7925")
+	)
+	(junction
+		(at 99.06 39.37)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "71be43e7-7ce9-469c-8615-1e2349f3c60d")
 	)
 	(wire
 		(pts
-			(xy 67.31 53.34) (xy 67.31 40.64)
+			(xy 99.06 58.42) (xy 99.06 68.58)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "1cf06aaf-8bac-4f50-ba5e-1c2cfba5b025")
+		(uuid "1ca4cbf4-6efa-4c83-a248-3f36f46640c0")
 	)
 	(wire
 		(pts
-			(xy 67.31 53.34) (xy 67.31 58.42)
+			(xy 45.72 39.37) (xy 52.07 39.37)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "273af62c-4260-401d-a07d-9b6971ea104b")
+	)
+	(wire
+		(pts
+			(xy 81.28 53.34) (xy 81.28 58.42)
 		)
 		(stroke
 			(width 0)
@@ -730,27 +877,7 @@
 	)
 	(wire
 		(pts
-			(xy 114.3 68.58) (xy 114.3 53.34)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "444def68-67ed-4b38-a7ce-dc1121ac243a")
-	)
-	(wire
-		(pts
-			(xy 87.63 67.31) (xy 87.63 68.58)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4efced0a-a138-4470-89f8-2f34e8f0d54c")
-	)
-	(wire
-		(pts
-			(xy 39.37 53.34) (xy 52.07 53.34)
+			(xy 45.72 53.34) (xy 52.07 53.34)
 		)
 		(stroke
 			(width 0)
@@ -760,13 +887,43 @@
 	)
 	(wire
 		(pts
-			(xy 109.22 53.34) (xy 114.3 53.34)
+			(xy 67.31 66.04) (xy 67.31 68.58)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "59cd3fa0-7acb-4871-87ed-19d611576f74")
+		(uuid "6b092a37-3e7e-4988-bf50-ff5ee3128b4d")
+	)
+	(wire
+		(pts
+			(xy 99.06 39.37) (xy 107.95 39.37)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6d02efbb-513e-4ab9-a0f8-b97f139c5307")
+	)
+	(wire
+		(pts
+			(xy 59.69 39.37) (xy 99.06 39.37)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "76de7fea-bf45-4004-bc12-8248477168f0")
+	)
+	(wire
+		(pts
+			(xy 81.28 53.34) (xy 91.44 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7715f88b-bafb-4fe1-9aa3-89e324772fa1")
 	)
 	(wire
 		(pts
@@ -780,47 +937,27 @@
 	)
 	(wire
 		(pts
-			(xy 82.55 40.64) (xy 110.49 40.64)
+			(xy 67.31 53.34) (xy 67.31 58.42)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "bb26df5f-9cbc-4708-8441-d40a0718c10e")
+		(uuid "a14cbb69-33bc-49b8-b4e7-4185594cfe31")
 	)
 	(wire
 		(pts
-			(xy 67.31 40.64) (xy 74.93 40.64)
+			(xy 99.06 39.37) (xy 99.06 48.26)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "c18ece29-d929-4eaa-adf2-b77f23d05541")
+		(uuid "c2666040-9389-4a92-ae88-6377b2c4414c")
 	)
 	(wire
 		(pts
-			(xy 87.63 53.34) (xy 87.63 59.69)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "cebe40c7-1dd2-41c9-9d90-699a47e3e20e")
-	)
-	(wire
-		(pts
-			(xy 67.31 53.34) (xy 87.63 53.34)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "cf8fa28f-36b7-4535-98de-f3e56f3528dc")
-	)
-	(wire
-		(pts
-			(xy 87.63 53.34) (xy 101.6 53.34)
+			(xy 67.31 53.34) (xy 81.28 53.34)
 		)
 		(stroke
 			(width 0)
@@ -830,7 +967,7 @@
 	)
 	(wire
 		(pts
-			(xy 67.31 66.04) (xy 67.31 68.58)
+			(xy 81.28 66.04) (xy 81.28 68.58)
 		)
 		(stroke
 			(width 0)
@@ -840,7 +977,7 @@
 	)
 	(global_label "IGN_SENSE"
 		(shape input)
-		(at 110.49 40.64 0)
+		(at 107.95 39.37 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -850,7 +987,7 @@
 		)
 		(uuid "50935789-e549-4458-ad5a-8e92e156fbcb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 123.6956 40.64 0)
+			(at 121.1556 39.37 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -864,7 +1001,7 @@
 	)
 	(global_label "VIGN_PROT"
 		(shape input)
-		(at 39.37 53.34 180)
+		(at 45.72 53.34 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -874,7 +1011,31 @@
 		)
 		(uuid "ea4ed40d-0117-4dd8-aa5f-d8b4a45d89a0")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 26.2852 53.34 0)
+			(at 32.6352 53.34 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+	)
+	(global_label "+3.3V"
+		(shape input)
+		(at 45.72 39.37 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "fafa4cfe-a650-4643-94b7-c06ccc7020f4")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 37.05 39.37 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -888,7 +1049,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 78.74 40.64 90)
+		(at 67.31 62.23 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -899,27 +1060,29 @@
 		(fields_autoplaced yes)
 		(uuid "00b08042-0c64-4bc2-9e30-9fac8fa25469")
 		(property "Reference" "S4R2"
-			(at 78.74 34.29 90)
+			(at 69.85 60.9599 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
-		(property "Value" "1K"
-			(at 78.74 36.83 90)
+		(property "Value" "100K"
+			(at 69.85 63.4999 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify right)
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 78.74 42.418 90)
+			(at 69.088 62.23 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -930,7 +1093,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 78.74 40.64 0)
+			(at 67.31 62.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -941,7 +1104,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 78.74 40.64 0)
+			(at 67.31 62.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -968,7 +1131,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 67.31 68.58 0)
+		(at 81.28 68.58 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -979,7 +1142,7 @@
 		(fields_autoplaced yes)
 		(uuid "0566c513-17c2-47b4-ba99-2f7c6a9ed8fd")
 		(property "Reference" "#PWR08"
-			(at 67.31 74.93 0)
+			(at 81.28 74.93 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -990,7 +1153,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 67.31 73.66 0)
+			(at 81.28 73.66 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1000,7 +1163,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 67.31 68.58 0)
+			(at 81.28 68.58 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1011,7 +1174,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 67.31 68.58 0)
+			(at 81.28 68.58 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1022,7 +1185,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 67.31 68.58 0)
+			(at 81.28 68.58 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1045,93 +1208,8 @@
 		)
 	)
 	(symbol
-		(lib_id "Diode:BZX84Cxx")
-		(at 87.63 63.5 270)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "2c84dbf6-03ba-4534-8265-e752b38103ba")
-		(property "Reference" "S4D1"
-			(at 90.17 62.2299 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "BZX84-C3V3"
-			(at 90.17 64.7699 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-			(at 87.63 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" "https://diotec.com/tl_files/diotec/files/pdf/datasheets/bzx84c2v4.pdf"
-			(at 87.63 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "300mW Zener Diode, SOT-23"
-			(at 87.63 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "93195b19-d0c7-4785-9639-cf2bdca55f55")
-		)
-		(pin "3"
-			(uuid "a041a5f9-3739-4b4b-b80e-a1662cdd4cf7")
-		)
-		(pin "1"
-			(uuid "479bc9e8-0fae-4996-9a51-fbfaa6844964")
-		)
-		(instances
-			(project "l0destar"
-				(path "/9f6f029d-c66b-4815-8da3-518accca920f"
-					(reference "S4D1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:R")
-		(at 105.41 53.34 90)
+		(at 55.88 39.37 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1142,7 +1220,7 @@
 		(fields_autoplaced yes)
 		(uuid "2f7ddcf8-b767-496c-b342-ec767de50c0a")
 		(property "Reference" "S4R3"
-			(at 105.41 46.99 90)
+			(at 55.88 33.02 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1151,8 +1229,8 @@
 				)
 			)
 		)
-		(property "Value" "4.7K"
-			(at 105.41 49.53 90)
+		(property "Value" "56K"
+			(at 55.88 35.56 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1162,7 +1240,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 105.41 55.118 90)
+			(at 55.88 41.148 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1173,7 +1251,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 105.41 53.34 0)
+			(at 55.88 39.37 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1184,7 +1262,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 105.41 53.34 0)
+			(at 55.88 39.37 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1231,7 +1309,7 @@
 				)
 			)
 		)
-		(property "Value" "2K"
+		(property "Value" "56K"
 			(at 55.88 49.53 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1291,7 +1369,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 114.3 68.58 0)
+		(at 99.06 68.58 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1302,7 +1380,7 @@
 		(fields_autoplaced yes)
 		(uuid "7b22fda4-9e15-4ff5-9940-135ce23870f6")
 		(property "Reference" "#PWR010"
-			(at 114.3 74.93 0)
+			(at 99.06 74.93 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1313,7 +1391,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 114.3 73.66 0)
+			(at 99.06 73.66 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1323,7 +1401,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 114.3 68.58 0)
+			(at 99.06 68.58 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1334,7 +1412,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 114.3 68.58 0)
+			(at 99.06 68.58 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1345,7 +1423,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 114.3 68.58 0)
+			(at 99.06 68.58 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1368,8 +1446,8 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 87.63 68.58 0)
+		(lib_id "Transistor_FET:AO3400A")
+		(at 96.52 53.34 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1377,10 +1455,56 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "aa88d633-f558-4893-a6ee-25aae921c9bc")
-		(property "Reference" "#PWR015"
-			(at 87.63 74.93 0)
+		(uuid "ab01f4ca-f742-4d0c-9fc3-52a0935ec634")
+		(property "Reference" "S4Q1"
+			(at 90.424 49.276 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "AO3400A"
+			(at 88.138 47.244 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
+			(at 101.6 55.245 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left)
+			)
+		)
+		(property "Datasheet" "http://www.aosmd.com/pdfs/datasheet/AO3400A.pdf"
+			(at 101.6 57.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Description" "30V Vds, 5.7A Id, N-Channel MOSFET, SOT-23"
+			(at 96.52 53.34 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1390,56 +1514,19 @@
 				)
 			)
 		)
-		(property "Value" "GND"
-			(at 87.63 73.66 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
+		(pin "2"
+			(uuid "49bc16b4-73bb-46dc-837c-90d722a0eea2")
 		)
-		(property "Footprint" ""
-			(at 87.63 68.58 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 87.63 68.58 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 87.63 68.58 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
+		(pin "3"
+			(uuid "dfecfccf-7cf9-4f22-b3d7-48ef1ec18d24")
 		)
 		(pin "1"
-			(uuid "6c4ea9a7-714f-439b-8de1-15b5ed82d68e")
+			(uuid "a1f5f0b1-317f-4312-a3d6-e36adfbebfb1")
 		)
 		(instances
 			(project "l0destar"
 				(path "/9f6f029d-c66b-4815-8da3-518accca920f"
-					(reference "#PWR015")
+					(reference "S4Q1")
 					(unit 1)
 				)
 			)
@@ -1447,7 +1534,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 67.31 62.23 0)
+		(at 81.28 62.23 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1458,7 +1545,7 @@
 		(fields_autoplaced yes)
 		(uuid "b3140f32-8d6a-4b76-b51d-558f203d2e24")
 		(property "Reference" "S4C1"
-			(at 71.12 60.9599 0)
+			(at 85.09 60.9599 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1469,7 +1556,7 @@
 			)
 		)
 		(property "Value" "100nF"
-			(at 71.12 63.4999 0)
+			(at 85.09 63.4999 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1480,7 +1567,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 68.2752 66.04 0)
+			(at 82.2452 66.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1491,7 +1578,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 67.31 62.23 0)
+			(at 81.28 62.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1502,7 +1589,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 67.31 62.23 0)
+			(at 81.28 62.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1522,6 +1609,84 @@
 			(project "l0destar"
 				(path "/9f6f029d-c66b-4815-8da3-518accca920f"
 					(reference "S4C1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 67.31 68.58 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "fac0f1c1-6bac-4b8f-b7b2-f96e745ca776")
+		(property "Reference" "#PWR015"
+			(at 67.31 74.93 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 67.31 73.66 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 67.31 68.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 67.31 68.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 67.31 68.58 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "77644751-ef26-4e80-9e1b-a823947d6c11")
+		)
+		(instances
+			(project "l0destar"
+				(path "/9f6f029d-c66b-4815-8da3-518accca920f"
+					(reference "#PWR015")
 					(unit 1)
 				)
 			)
