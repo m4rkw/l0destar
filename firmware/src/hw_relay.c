@@ -8,6 +8,10 @@
 
 LOG_MODULE_REGISTER(hw_relay, CONFIG_APP_LOG_LEVEL);
 
+#if RELAY_CONNECTED
+
+static bool s_connected = true;
+
 int relay_init(void)
 {
 	gpio_pin_configure(hw_gpio0, PIN_RLY_SET, GPIO_OUTPUT_LOW);
@@ -17,11 +21,16 @@ int relay_init(void)
 	int set_fb = gpio_pin_get(hw_gpio0, PIN_RLY_SET_FB);
 	int rst_fb = gpio_pin_get(hw_gpio0, PIN_RLY_RST_FB);
 	LOG_INF("relay init: SET_FB=%d RST_FB=%d", set_fb, rst_fb);
+	if (set_fb == 0 && rst_fb == 0) {
+		LOG_WRN("relay not detected (both FB low)");
+		s_connected = false;
+	}
 	return 0;
 }
 
 int relay_set(void)
 {
+	if (!s_connected) return 0;
 	if (gpio_pin_get(hw_gpio0, PIN_RLY_SET_FB) == 1 &&
 	    gpio_pin_get(hw_gpio0, PIN_RLY_RST_FB) == 0) {
 		return 0;
@@ -43,8 +52,14 @@ int relay_set(void)
 	return 0;
 }
 
+bool relay_available(void)
+{
+	return s_connected;
+}
+
 int relay_reset(void)
 {
+	if (!s_connected) return 0;
 	if (gpio_pin_get(hw_gpio0, PIN_RLY_SET_FB) == 0 &&
 	    gpio_pin_get(hw_gpio0, PIN_RLY_RST_FB) == 1) {
 		return 0;
@@ -65,3 +80,12 @@ int relay_reset(void)
 	}
 	return 0;
 }
+
+#else /* !RELAY_CONNECTED — no relay on this board; pins reused for I2C/INA */
+
+int  relay_init(void)      { return 0; }
+int  relay_set(void)       { return 0; }
+int  relay_reset(void)     { return 0; }
+bool relay_available(void) { return false; }
+
+#endif /* RELAY_CONNECTED */

@@ -82,6 +82,7 @@ void settings_load(void);
 void settings_print(void);
 
 int  modem_init(void);
+int  modem_provision_tls(void);
 int  modem_connect(void);
 int  modem_get_imei(char *out, size_t out_len);
 int  modem_get_network_status(void);   /* 1=home, 5=roaming */
@@ -96,8 +97,12 @@ int  gnss_stop(void);
 int  gnss_collect(int timeout_ms, struct gnss_fix *out);  /* blocking with timeout */
 int  gnss_resume(void);   /* restart without resetting fix state (warm) */
 
+int  agnss_init(void);
+int  agnss_fetch(void *agnss_request);  /* NULL = request all; else nrf_modem_gnss_agnss_data_frame* */
+
 int  transport_open(void);
 void transport_close(void);
+void transport_teardown(void);
 int  transport_send(const uint8_t *plaintext, size_t pt_len);
 int  transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms);
 
@@ -125,13 +130,16 @@ void status_delay(long ms);   /* watchdog-aware sleep */
 /* Hardware modules */
 int  hw_gpio_init(void);
 int  hw_power_init(void);
+bool hw_power_available(void);
 void hw_power_shutdown(void);
 void hw_power_wake(void);
 void hw_aux_power_on(void);
 int  hw_accel_init(void);
+bool accel_available(void);
 int  relay_init(void);
 int  relay_set(void);
 int  relay_reset(void);
+bool relay_available(void);
 int  kline_init(void);
 int  kline_self_test(void);
 void kline_power_on(void);

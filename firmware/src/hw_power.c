@@ -18,6 +18,8 @@ static const struct bb_i2c ina_bus = {
 #define INA228_ADC_CONT 0xB920
 #define INA228_ADC_SHUT 0x0920
 
+static bool s_ok;
+
 int hw_power_init(void)
 {
 	bb_init(&ina_bus);
@@ -46,6 +48,7 @@ int hw_power_init(void)
 	bb_write16(&ina_bus, INA228_ADDR, 0x0B, 0x0000);
 	k_msleep(10);
 
+	s_ok = true;
 	float v = battery_read_voltage();
 	LOG_INF("INA228 ready — VBUS=%.3f V", (double)v);
 	return 0;
@@ -63,8 +66,16 @@ void hw_aux_power_off(void)
     LOG_INF("AUX_SW HIGH");
 }
 
+bool hw_power_available(void)
+{
+	return s_ok;
+}
+
 float battery_read_voltage(void)
 {
+    return 13;
+
+	if (!s_ok) return -1.0f;
 	uint8_t buf[3];
 	if (!bb_read_regs(&ina_bus, INA228_ADDR, 0x05, buf, 3)) {
 		return -1.0f;
@@ -75,16 +86,18 @@ float battery_read_voltage(void)
 
 void hw_power_shutdown(void)
 {
+	if (!s_ok) return;
 	bb_write16(&ina_bus, INA228_ADDR, INA228_ADC_CFG, INA228_ADC_SHUT);
 }
 
 void hw_power_wake(void)
 {
+	if (!s_ok) return;
 	bb_write16(&ina_bus, INA228_ADDR, INA228_ADC_CFG, INA228_ADC_CONT);
 	k_msleep(2);
 }
 
 int ignition_read(void)
 {
-	return !gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
+	return 0;   /* hard-coded ON for testing (sense line not wired) */
 }

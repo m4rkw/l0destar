@@ -1,2 +1,4 @@
 build/
 local.conf
+certs/*.key
+certs/server.crt

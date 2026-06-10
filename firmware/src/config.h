@@ -14,7 +14,10 @@
 /* -- protocol / endpoint --------------------------------------------------- */
 #define HOSTNAME            ""
 #define UDP_PORT            0
+#define TLS_PORT            65481
+#define DTLS_PORT           65482
 #define UDP_PACKET_SIZE     1200
+#define TLS_SEC_TAG         1
 
 /* Fallback PSK — all zeros disables sends.  Real keys go in local.conf
  * (gitignored) as CONFIG_APP_PSK_HEX. */
@@ -33,12 +36,14 @@
 #define NETWORK_REGISTRATION_TIMEOUT CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT
 #define NETWORK_RETRY_INTERVAL      CONFIG_APP_NETWORK_RETRY_INTERVAL
 #define GPS_FIX_TIMEOUT_MS          CONFIG_APP_GPS_FIX_TIMEOUT_MS
+#define GPS_COLD_FIX_TIMEOUT_MS     CONFIG_APP_GPS_COLD_FIX_TIMEOUT_MS
 
 /* -- voltage thresholds (Kconfig uses mV, code uses float V) -------------- */
 #define BATTERY_WARNING_LEVEL       (CONFIG_APP_BATTERY_WARNING_MV / 1000.0f)
 #define BATTERY_POWEROFF_LEVEL      (CONFIG_APP_BATTERY_POWEROFF_MV / 1000.0f)
 #define SLEEP_SAFETY_VOLTAGE        (CONFIG_APP_SLEEP_SAFETY_MV / 1000.0f)
 #define ENGINE_RUNNING_VOLTAGE      (CONFIG_APP_ENGINE_RUNNING_MV / 1000.0f)
+#define IMPLAUSIBLE_VOLTAGE         5.0f
 #define ENGINE_STOPPED_COUNT        10
 
 /* -- accelerometer --------------------------------------------------------- */
@@ -55,12 +60,13 @@
 
 /* -- buffers --------------------------------------------------------------- */
 #define DATA_LIMIT                  2500
-#define BATCH_SIZE                  5
+#define BATCH_SIZE                  1
 #define BATCH_HEADROOM              400
+#define SPEED_MIN_SATS              5
 
 /* -- hardware presence flags (compiled-out paths) -------------------------- */
 #define ALWAYS_ON_POWER             1
-#define RELAY_CONNECTED             1
+#define RELAY_CONNECTED             0
 #define LOW_POWER_STANDBY           1
 
 /* -- coast-to-stop --------------------------------------------------------- */

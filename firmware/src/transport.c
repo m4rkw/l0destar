@@ -1,12 +1,21 @@
 /*
- * Encrypted UDP transport.  Envelope format (unchanged from the legacy
- * firmware):
+ * DTLS transport over UDP, offloaded to the nRF modem.
  *
- *   imei_len(1) | IMEI | nonce(12) | ciphertext | tag(16)
+ * The modem handles the DTLS handshake, encryption, and certificate
+ * verification.  The application sends/receives plaintext.
  *
- * IMEI is bound as AAD so envelopes can't be replayed across devices.
- * Sockets are offloaded to the modem (CONFIG_NET_SOCKETS_OFFLOAD=y), so the
- * regular POSIX-shaped API talks directly to the modem stack.
+ * Wire format (single DTLS datagram per send):
+ *   request:  [2] payload_len (big-endian)  [N] plaintext
+ *   response: plaintext (single datagram)
+ *
+ * The IMEI is sent as the first line of the payload so the server can
+ * identify the device.
+ *
+ * After each exchange, RAI_NO_DATA hints the network to release the
+ * radio so GNSS can use it.  The socket is closed immediately so the
+ * modem can complete the DTLS close_notify while the server session is
+ * still alive.  Session caching lets the modem abbreviate subsequent
+ * handshakes.
  */
 
 #include <string.h>
@@ -15,16 +24,16 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/net/socket.h>
+#include <zephyr/net/tls_credentials.h>
+#include <modem/modem_key_mgmt.h>
 
 #include "app.h"
-#include "chacha20_poly1305.h"
 
 LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
 
 #define SERVER_HOST \
     (sizeof(CONFIG_APP_SERVER_HOST) > 1 ? CONFIG_APP_SERVER_HOST : HOSTNAME)
-#define SERVER_PORT \
-    (CONFIG_APP_SERVER_PORT > 0 ? CONFIG_APP_SERVER_PORT : UDP_PORT)
+#define SERVER_PORT DTLS_PORT
 
 static int s_sock = -1;
 static struct sockaddr_in s_server;
@@ -36,7 +45,7 @@ int transport_open(void)
     struct zsock_addrinfo hints = {
         .ai_family   = AF_INET,
         .ai_socktype = SOCK_DGRAM,
-        .ai_protocol = IPPROTO_UDP,
+        .ai_protocol = IPPROTO_DTLS_1_2,
     };
     struct zsock_addrinfo *res = NULL;
     char port_str[8];
@@ -50,21 +59,55 @@ int transport_open(void)
     memcpy(&s_server, res->ai_addr, sizeof(s_server));
     zsock_freeaddrinfo(res);
 
-    s_sock = zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    s_sock = zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_DTLS_1_2);
     if (s_sock < 0) {
         LOG_ERR("socket: %d", errno);
         return -errno;
     }
 
-    /* recv timeout — used by transport_recv_response */
-    struct zsock_timeval tv = { .tv_sec = 0, .tv_usec = 0 };
-    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    sec_tag_t sec_tags[] = { TLS_SEC_TAG };
+    zsock_setsockopt(s_sock, SOL_TLS, TLS_SEC_TAG_LIST,
+                     sec_tags, sizeof(sec_tags));
 
-    LOG_INF("socket ready");
+    int verify = TLS_PEER_VERIFY_REQUIRED;
+    zsock_setsockopt(s_sock, SOL_TLS, TLS_PEER_VERIFY,
+                     &verify, sizeof(verify));
+
+    zsock_setsockopt(s_sock, SOL_TLS, TLS_HOSTNAME,
+                     SERVER_HOST, strlen(SERVER_HOST));
+
+    int cid = TLS_DTLS_CID_ENABLED;
+    zsock_setsockopt(s_sock, SOL_TLS, TLS_DTLS_CID,
+                     &cid, sizeof(cid));
+
+    int cache = TLS_SESSION_CACHE_ENABLED;
+    zsock_setsockopt(s_sock, SOL_TLS, TLS_SESSION_CACHE,
+                     &cache, sizeof(cache));
+
+    err = zsock_connect(s_sock, (struct sockaddr *)&s_server,
+                        sizeof(s_server));
+    if (err) {
+        LOG_ERR("connect: %d", errno);
+        zsock_close(s_sock);
+        s_sock = -1;
+        return -errno;
+    }
+
+    LOG_INF("DTLS connected");
     return 0;
 }
 
 void transport_close(void)
+{
+    if (s_sock >= 0) {
+        int rai = RAI_NO_DATA;
+        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+        zsock_close(s_sock);
+        s_sock = -1;
+    }
+}
+
+void transport_teardown(void)
 {
     if (s_sock >= 0) {
         zsock_close(s_sock);
@@ -79,54 +122,37 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
         if (err) return err;
     }
 
-    /* Refuse to send under an all-zero key — that would leak plaintext under
-     * a known/static key.  See settings.c. */
-    uint8_t zero[32] = {0};
-    if (memcmp(g_settings.psk, zero, sizeof(zero)) == 0) {
-        LOG_WRN("PSK unset, dropping packet");
-        return -EACCES;
-    }
-
     size_t imei_len = strlen(g_settings.imei);
     if (imei_len == 0 || imei_len > 20) {
         LOG_WRN("IMEI not set, dropping packet");
         return -EACCES;
     }
 
-    /* Envelope build */
-    uint8_t pkt[UDP_PACKET_SIZE];
-    size_t off = 0;
-
-    if (1 + imei_len + 12 + pt_len + 16 > sizeof(pkt)) {
-        LOG_ERR("packet too large: %u", (unsigned)pt_len);
+    size_t payload_len = imei_len + 1 + pt_len;
+    if (payload_len > UINT16_MAX || payload_len + 2 > UDP_PACKET_SIZE) {
+        LOG_ERR("payload too large: %u", (unsigned)payload_len);
         return -EMSGSIZE;
     }
 
-    pkt[off++] = (uint8_t)imei_len;
-    memcpy(pkt + off, g_settings.imei, imei_len);
-    off += imei_len;
+    /* Single datagram: [2-byte len][IMEI\n][csv_data] */
+    uint8_t buf[UDP_PACKET_SIZE];
+    buf[0] = (uint8_t)(payload_len >> 8);
+    buf[1] = (uint8_t)(payload_len & 0xFF);
+    memcpy(buf + 2, g_settings.imei, imei_len);
+    buf[2 + imei_len] = '\n';
+    memcpy(buf + 2 + imei_len + 1, plaintext, pt_len);
+    size_t total = 2 + payload_len;
 
-    uint8_t *nonce = pkt + off;
-    if (!crypto_random(nonce, 12)) {
-        LOG_ERR("nonce gen failed");
-        return -EIO;
-    }
-    off += 12;
+    int rai = read_udp_response ? RAI_ONE_RESP : RAI_LAST;
+    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
 
-    uint8_t *ct  = pkt + off;
-    uint8_t *tag = pkt + off + pt_len;
-    cp_seal(g_settings.psk, nonce,
-            (const uint8_t *)g_settings.imei, imei_len,
-            plaintext, pt_len, ct, tag);
-    off += pt_len + 16;
-
-    int sent = zsock_sendto(s_sock, pkt, off, 0,
-                            (struct sockaddr *)&s_server, sizeof(s_server));
-    if (sent < 0) {
-        LOG_ERR("sendto: %d", errno);
+    if (zsock_send(s_sock, buf, total, 0) < 0) {
+        LOG_ERR("send: %d", errno);
+        transport_teardown();
         return -errno;
     }
-    LOG_INF("sent %d bytes", sent);
+
+    LOG_INF("sent %u bytes", (unsigned)total);
     return 0;
 }
 
@@ -140,30 +166,15 @@ int transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms)
     };
     zsock_setsockopt(s_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    uint8_t buf[UDP_PACKET_SIZE];
-    int n = zsock_recv(s_sock, buf, sizeof(buf), 0);
+    int n = zsock_recv(s_sock, out_plaintext, out_len - 1, 0);
     if (n < 0) {
         if (errno != EAGAIN) LOG_WRN("recv: %d", errno);
         return -errno;
     }
-    /* Reply envelope shape matches the request: imei_len|IMEI|nonce|ct|tag */
-    if (n < 1) return -EBADMSG;
-    int imei_len = buf[0];
-    if (imei_len < 1 || imei_len > 20) return -EBADMSG;
-    if (n < 1 + imei_len + 12 + 16) return -EBADMSG;
+    out_plaintext[n] = '\0';
 
-    const uint8_t *imei  = buf + 1;
-    const uint8_t *nonce = buf + 1 + imei_len;
-    int ct_len = n - 1 - imei_len - 12 - 16;
-    if (ct_len < 0 || (size_t)ct_len >= out_len) return -EBADMSG;
-    const uint8_t *ct  = nonce + 12;
-    const uint8_t *tag = ct + ct_len;
+    int rai = RAI_NO_DATA;
+    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
 
-    if (!cp_open(g_settings.psk, nonce, imei, imei_len,
-                 ct, ct_len, tag, (uint8_t *)out_plaintext)) {
-        LOG_WRN("recv: tag mismatch");
-        return -EBADMSG;
-    }
-    out_plaintext[ct_len] = '\0';
-    return ct_len;
+    return n;
 }

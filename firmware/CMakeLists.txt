@@ -7,7 +7,6 @@ project(l0destar)
 target_sources(app PRIVATE
     src/main.c
     src/crypto.c
-    src/chacha20_poly1305.c
     src/settings.c
     src/hw_common.c
     src/hw_power.c
@@ -15,6 +14,7 @@ target_sources(app PRIVATE
     src/hw_relay.c
     src/hw_kline.c
     src/gnss.c
+    src/agnss.c
     src/modem.c
     src/transport.c
     src/data.c

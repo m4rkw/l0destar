@@ -90,6 +90,7 @@ static void accel_isr(const struct device *dev, struct gpio_callback *cb,
 
 static void accel_irq_enable(void)
 {
+    if (!accel_available()) return;
     if (!s_accel_cb_installed) {
         gpio_pin_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INPUT);
         gpio_init_callback(&s_accel_cb, accel_isr, BIT(PIN_ACC_INT1));
@@ -103,6 +104,7 @@ static void accel_irq_enable(void)
 
 static void accel_irq_disable(void)
 {
+    if (!accel_available()) return;
     gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INT_DISABLE);
     accel_disable_wake_int();
 }
@@ -244,7 +246,7 @@ static void do_sleep(void)
         }
 
         /* --- movement check (interrupt woke us, confirm sustained) --- */
-        if (gpio_pin_get(hw_gpio0, PIN_ACC_INT1) == 1) {
+        if (accel_available() && gpio_pin_get(hw_gpio0, PIN_ACC_INT1) == 1) {
             LOG_INF("accel wake — confirming movement");
             gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
                                          GPIO_INT_DISABLE);
@@ -401,6 +403,7 @@ static void do_ignition_sleep(void)
             if (collect_data(ignition) > 0) {
                 gnss_stop();
                 send_data();
+                transport_close();
                 data_reset();
             } else {
                 gnss_stop();
@@ -435,6 +438,7 @@ static void do_ignition_sleep(void)
             if (collect_data(ignition) > 0) {
                 gnss_stop();
                 send_data();
+                transport_close();
                 data_reset();
                 if (pending_server_cmd[0] != '\0') {
                     cmd_run(pending_server_cmd);
@@ -484,9 +488,16 @@ int main(void)
         LOG_ERR("modem init failed");
         return 0;
     }
+    if (modem_provision_tls()) {
+        LOG_ERR("TLS provisioning failed");
+        return 0;
+    }
     if (gnss_init()) {
         LOG_ERR("gnss init failed");
         return 0;
+    }
+    if (agnss_init()) {
+        LOG_WRN("A-GNSS init failed — will run without assistance");
     }
 
     led_on();
@@ -496,7 +507,6 @@ int main(void)
             strncpy(g_settings.imei, imei, sizeof(g_settings.imei) - 1);
             LOG_INF("imei=%s", g_settings.imei);
         }
-        modem_update_cell_info();
     }
 
     gnss_start();
@@ -547,6 +557,7 @@ int main(void)
             if (should_send_data()) {
                 LOG_INF("collecting GPS fix (%d/%d)",
                         s_buffered_records + 1, BATCH_SIZE);
+                use_cached_gps = false;
                 s_state = STATE_GPS_COLLECT;
                 break;
             }
@@ -554,7 +565,6 @@ int main(void)
             break;
 
         case STATE_GPS_COLLECT: {
-            use_cached_gps = false;
             int have_fix = collect_data(ignition);
             if (!have_fix) {
                 LOG_WRN("no fix, skipping send");
@@ -586,7 +596,7 @@ int main(void)
                  || g_gnss.speed_kmh < 0.005f);
 
             LOG_INF("sending %d records", s_buffered_records);
-            gnss_stop();
+            if (g_cell.mcc == 0) modem_update_cell_info();
             send_data();
             s_last_send_ms = k_uptime_get();
             s_buffered_records = 0;
@@ -627,12 +637,15 @@ int main(void)
             /* state transition */
             if (ignition != 0 && !s_coasting) {
                 LOG_INF("ignition off -> sleep");
+                gnss_stop();
+                transport_close();
                 s_state = STATE_SLEEP;
             } else if (!engine_running && !s_coasting) {
                 LOG_INF("engine off -> ignition sleep");
+                gnss_stop();
+                transport_close();
                 s_state = STATE_IGNITION_SLEEP;
             } else {
-                gnss_resume();
                 s_state = STATE_GPS_COLLECT;
             }
             break;

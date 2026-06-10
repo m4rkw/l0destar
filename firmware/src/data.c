@@ -4,6 +4,7 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -41,6 +42,8 @@ static float battery_sample_with_engine_check(void)
     }
     return v;
 }
+
+/* -- data collection ------------------------------------------------------ */
 
 int collect_data(int ignitionState)
 {
@@ -85,10 +88,12 @@ int collect_data(int ignitionState)
             k_uptime_get() / 1000,
             powered_on ? 1 : 0);
     } else {
+        float speed = (g_gnss.sats >= SPEED_MIN_SATS)
+                      ? g_gnss.speed_kmh : 0.0f;
         n = snprintf(&data_current[data_index], remaining,
             "%s,%s,%s,%.2f,%.2f,%.2f,%ld,%ld,%.2f,%d,%lld,%d",
             ts, g_gnss.lat_str, g_gnss.lon_str,
-            (double)g_gnss.speed_kmh, (double)g_gnss.altitude_m,
+            (double)speed, (double)g_gnss.altitude_m,
             (double)g_gnss.heading_deg,
             g_gnss.hdop_x10, g_gnss.sats,
             (double)v,
@@ -139,20 +144,24 @@ int collect_data(int ignitionState)
 
     data_current[data_index] = '\0';
 
-    /* Battery warning (one-shot per low-battery episode) */
-    if (v < BATTERY_WARNING_LEVEL) {
-        if (s_battery_warning_status == 0) {
-            char msg[24];
-            snprintf(msg, sizeof(msg), "low battery: %.2fV", (double)v);
-            alert_enqueue(msg, 2);
-            s_battery_warning_status = 1;
+    /* Battery warning — skip when voltage is implausible (sensor absent/broken) */
+    if (v >= IMPLAUSIBLE_VOLTAGE) {
+        if (v < BATTERY_WARNING_LEVEL) {
+            if (s_battery_warning_status == 0) {
+                char msg[24];
+                snprintf(msg, sizeof(msg), "low battery: %.2fV", (double)v);
+                alert_enqueue(msg, 2);
+                s_battery_warning_status = 1;
+            }
+        } else {
+            s_battery_warning_status = 0;
         }
-    } else {
-        s_battery_warning_status = 0;
     }
 
     return 1;
 }
+
+/* -- send ----------------------------------------------------------------- */
 
 int send_data(void)
 {

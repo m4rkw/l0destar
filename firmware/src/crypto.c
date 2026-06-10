@@ -1,6 +1,5 @@
 /*
- * Crypto glue: Zephyr CSPRNG + ChaCha20-Poly1305 self-test on boot.
- * Replaces the STM32L4 HSI48/RNG init from the original crypto.ino.
+ * Crypto glue: Zephyr CSPRNG + PSK hex parsing.
  */
 
 #include <zephyr/kernel.h>
@@ -8,24 +7,17 @@
 #include <zephyr/random/random.h>
 
 #include "app.h"
-#include "chacha20_poly1305.h"
 
 LOG_MODULE_REGISTER(crypto, CONFIG_APP_LOG_LEVEL);
 
 int crypto_init(void)
 {
-    if (!cp_self_test()) {
-        LOG_ERR("AEAD self-test FAILED");
-        return -EIO;
-    }
     LOG_INF("ready");
     return 0;
 }
 
 int crypto_random(uint8_t *out, size_t len)
 {
-    /* sys_csrand_get pulls from CONFIG_ENTROPY_GENERATOR (CryptoCell on
-     * nRF9151).  Returns 0 on success, negative errno otherwise. */
     return sys_csrand_get(out, len) == 0;
 }
 

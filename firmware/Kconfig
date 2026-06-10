@@ -36,15 +36,8 @@ config APP_SERVER_HOST
 	string "Telemetry server hostname"
 	default ""
 	help
-	  UDP telemetry endpoint hostname.  Leave empty to fall back to
-	  HOSTNAME in config.h.
-
-config APP_SERVER_PORT
-	int "Telemetry server port"
-	default 0
-	help
-	  UDP telemetry endpoint port.  Leave at 0 to fall back to
-	  UDP_PORT in config.h.
+	  Telemetry endpoint hostname (used for DNS resolution and TLS SNI).
+	  Leave empty to fall back to HOSTNAME in config.h.
 
 config APP_APN
 	string "Cellular APN"
@@ -81,6 +74,14 @@ config APP_NETWORK_RETRY_INTERVAL
 config APP_GPS_FIX_TIMEOUT_MS
 	int "GPS fix timeout (ms)"
 	default 60000
+
+config APP_GPS_COLD_FIX_TIMEOUT_MS
+	int "GPS cold-start fix timeout (ms)"
+	default 300000
+	help
+	  Timeout for the first GNSS fix after a cold boot (no cached
+	  almanac/ephemeris).  Without A-GPS, a cold TTFF can take 2-5
+	  minutes depending on signal and antenna-sharing with LTE.
 
 # --- voltage thresholds (millivolts to avoid Kconfig float limitation) ------
 
@@ -145,5 +146,13 @@ config APP_GSM_ESCALATION_SLEEP
 config APP_GSM_RECOVERY_SLEEP_INTERVAL
 	int "Recovery sleep interval (seconds)"
 	default 300
+
+config NRF_CLOUD_KEY
+	string "nRF Cloud REST API key (service evaluation token)"
+	default ""
+	help
+	  Bearer token passed in the Authorization header when fetching
+	  A-GNSS data from api.nrfcloud.com.  Obtain from the nRF Cloud
+	  dashboard → Service evaluation tokens.
 
 source "Kconfig.zephyr"

@@ -67,6 +67,11 @@ int hw_accel_init(void)
 	return 0;
 }
 
+bool accel_available(void)
+{
+	return s_ok;
+}
+
 int accel_read(int *ax, int *ay, int *az)
 {
 	if (!s_ok) {

@@ -9,11 +9,20 @@
 #include <zephyr/logging/log.h>
 #include <modem/lte_lc.h>
 #include <modem/nrf_modem_lib.h>
+#include <modem/modem_key_mgmt.h>
 #include <nrf_modem_at.h>
+#include <modem/at_monitor.h>
 
 #include "app.h"
+#include "ca_cert.h"
 
 LOG_MODULE_REGISTER(modem, CONFIG_APP_LOG_LEVEL);
+
+static void rai_urc_handler(const char *notif)
+{
+    LOG_INF("RAI URC: %s", notif);
+}
+AT_MONITOR(rai_urc, "%RAI", rai_urc_handler, PAUSED);
 
 struct cell_info g_cell;
 
@@ -64,6 +73,34 @@ int modem_init(void)
     return 0;
 }
 
+int modem_provision_tls(void)
+{
+    int err;
+    bool exists;
+
+    err = modem_key_mgmt_exists(TLS_SEC_TAG,
+                                MODEM_KEY_MGMT_CRED_TYPE_CA_CHAIN,
+                                &exists);
+    if (err) {
+        LOG_ERR("key_mgmt_exists: %d", err);
+        return err;
+    }
+    if (exists) {
+        LOG_INF("TLS CA already provisioned (sec_tag %d)", TLS_SEC_TAG);
+        return 0;
+    }
+
+    err = modem_key_mgmt_write(TLS_SEC_TAG,
+                               MODEM_KEY_MGMT_CRED_TYPE_CA_CHAIN,
+                               ca_cert_pem, sizeof(ca_cert_pem) - 1);
+    if (err) {
+        LOG_ERR("key_mgmt_write: %d", err);
+        return err;
+    }
+    LOG_INF("TLS CA provisioned (sec_tag %d)", TLS_SEC_TAG);
+    return 0;
+}
+
 int modem_connect(void)
 {
     modem_set_apn(g_settings.apn);
@@ -71,6 +108,22 @@ int modem_connect(void)
     nrf_modem_at_printf("AT+CPSMS=0");
     nrf_modem_at_printf("AT%%XEDRX=0");
     nrf_modem_at_printf("AT+CEDRXS=0,4");
+
+    /* Enable Rel-14 features (incl. RAI) and request RAI URC on registration.
+     * Both must be issued before CFUN=1 (which lte_lc_connect does). */
+    char at_resp[64];
+    int at_err;
+    at_err = nrf_modem_at_cmd(at_resp, sizeof(at_resp),
+                              "AT%%REL14FEAT=1,1,1,1,1");
+    if (at_err) {
+        LOG_WRN("%%REL14FEAT: %d", at_err);
+    }
+    at_err = nrf_modem_at_cmd(at_resp, sizeof(at_resp), "AT%%RAI=2");
+    if (at_err) {
+        LOG_WRN("%%RAI=2: %d", at_err);
+    } else {
+        at_monitor_resume(&rai_urc);
+    }
 
     LOG_INF("connecting (this can take 30s+)...");
     int err = lte_lc_connect();
@@ -171,7 +224,7 @@ int modem_update_cell_info(void)
 
 int modem_recover(int failure_count)
 {
-    transport_close();
+    transport_teardown();
 
     if (failure_count >= GSM_ESCALATION_SLEEP) {
         LOG_WRN("modem power cycle (failures=%d)", failure_count);

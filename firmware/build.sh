@@ -2,7 +2,7 @@
 # Build the blinky firmware for the nRF9151 DK using NCS v3.3.0.
 set -euo pipefail
 
-if [ "$1" = "pristine" ] ; then
+if [ "${1:-}" = "pristine" ] ; then
     rm -rf build
 fi
 
