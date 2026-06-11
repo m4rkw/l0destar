@@ -462,6 +462,19 @@ int main(void)
 {
     LOG_INF("=== l0destar firmware boot ===");
 
+#if defined(CONFIG_APP_PROVISION_MODE)
+    /* Provisioning build (prov.conf): bring up the modem library so the AT
+     * Host library can bridge nrfcloud-utils <-> modem (AT%KEYGEN, cert
+     * install) for nRF Cloud onboarding, then idle.  No LTE needed.  After
+     * onboarding, reflash the normal build — the device key/cert persist in
+     * modem NVM at CONFIG_NRF_CLOUD_SEC_TAG. */
+    printk("\n*** PROVISIONING MODE — AT host ready; run nrfcloud-utils ***\n");
+    (void)modem_init();
+    for (;;) {
+        k_sleep(K_FOREVER);
+    }
+#endif
+
     if (crypto_init()) {
         LOG_ERR("crypto init failed — halting");
         return 0;

@@ -1,4 +1,7 @@
 build/
+build_prov/
 local.conf
 certs/*.key
-certs/server.crt
+certs/*.crt
+# nRF Cloud onboarding CA (contains a private key) + generated artifacts
+onboarding/

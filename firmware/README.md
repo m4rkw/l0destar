@@ -1,122 +1,278 @@
 # l0destar firmware
 
-Automotive telemetry tracker firmware for the nRF9151 SiP, built on Zephyr RTOS / Nordic NCS.
+Automotive telemetry tracker firmware for the **Nordic nRF9151** SiP (LTE-M +
+GNSS), built on Zephyr RTOS via the nRF Connect SDK (NCS). It reports position,
+speed, battery and ignition state to a back-end over an encrypted link, sleeps
+deeply when the vehicle is parked, and wakes on movement, ignition, or a timer.
+
+> Ported from the original Arduino/Polaris `*.ino` firmware. Where a module
+> replaces a legacy one, its header comment notes the original source file.
+
+---
 
 ## Hardware
 
-- **MCU**: nRF9151 (LTE-M + GNSS)
-- **Accelerometer**: LSM6DSO (I2C, bit-banged)
-- **Voltage monitor**: INA228 (I2C, shared bus with accelerometer)
-- **K-line transceivers**: 2x L9637D via bidirectional level shifter
-- **Relay**: Latching (SET/RST coils with feedback pins)
-- **Ignition sense**: GPIO input (active-low)
+| Function          | Part / detail |
+|-------------------|---------------|
+| MCU / modem / GNSS | nRF9151 SiP (LTE-M, integrated GNSS receiver) |
+| IMU               | ASM330LHHX (automotive 6-axis, WHO_AM_I 0x6B) over bit-banged I²C — accel-only today: movement detection + hardware wake interrupt; gyro/MLC/FSM/FIFO unused |
+| Voltage monitor   | INA228 over the same I²C bus — battery / ignition-derived voltage |
+| Relay             | Latching (separate SET/RST coils with feedback sense) |
+| Diagnostics       | K-line (ISO-9141) via L9637D, bit-banged UART |
+| Ignition sense    | GPIO input (MOSFET-gated 3.3 V rail) |
+| Status LED        | board `led0` alias (LED1 on the nRF9151 DK) |
 
-### Pin assignments
+Reference board is the **nRF9151 DK** (`nrf9151dk/nrf9151/ns`); production runs
+on a custom carrier around the MakerDiary nRF9151 Connect Kit module. Pin
+assignments live in `src/pins.h`; DK-specific peripheral conflicts are resolved
+in `boards/nrf9151dk_nrf9151_ns.overlay` (+ `.conf`).
 
-See `src/pins.h`. DK-specific peripheral conflicts (QSPI, UART1, SPI3, I2C2) are disabled in `boards/nrf9151dk_nrf9151_ns.overlay`.
+---
 
-## Building
+## Architecture
 
-Requires [nRF Connect SDK v3.3.0](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/index.html) installed at `/opt/nordic/ncs/v3.3.0` (or set `NCS_ROOT`).
-
-```
-./build.sh            # incremental build
-./build.sh pristine   # clean rebuild
-```
-
-Flash with nrfjprog or the nRF Connect for Desktop programmer.
-
-## Configuration
-
-Build configuration is split across three layers:
-
-| File | Committed | Purpose |
-|---|---|---|
-| `prj.conf` | Yes | Zephyr subsystem config (modem, networking, GPIO, crypto, logging) |
-| `Kconfig` | Yes | Application symbol definitions with defaults |
-| `local.conf` | No (gitignored) | Per-deployment overrides: secrets, network, preferences |
-
-`build.sh` automatically picks up `local.conf` as a Kconfig overlay if present.
-
-### Setting up local.conf
-
-Copy the template and fill in your values:
+`main()` initialises the peripherals, modem, GNSS and watchdog, then runs a
+state machine:
 
 ```
-cp local.conf.example local.conf
+            ┌───────────────────────────── engine on ──────────────┐
+            ▼                                                        │
+  IDLE ──► GPS_COLLECT ──► SEND ──┬─► (ignition off) ─────► SLEEP    │
+   ▲                              ├─► (engine off)  ─► IGNITION_SLEEP┘
+   └──────────────────────────────┘
 ```
 
-Required settings (no defaults in the committed code):
+- **IDLE** – wait for network registration, poll ignition + battery, decide when to send.
+- **GPS_COLLECT** – acquire a GNSS fix, build and buffer a telemetry record.
+- **SEND** – transmit batched telemetry over DTLS, process any server command.
+- **IGNITION_SLEEP** – ignition on but engine off: periodic sends, watch for engine start / ignition off.
+- **SLEEP** – ignition off: peripherals powered down; wakes on LSM6DSO movement interrupt, ignition change, or telemetry timer.
 
-```
-CONFIG_APP_PSK_HEX="<64-char hex key>"
-CONFIG_APP_SERVER_HOST="<hostname>"
-CONFIG_APP_SERVER_PORT=<port>
-CONFIG_APP_APN="<apn>"
-```
+Extras handled in the loop: **movement alarm** with escalating cooldowns,
+**coast-to-stop** (keep reporting briefly after ignition-off while still
+rolling), and **progressive modem recovery** (power-cycle → sleep) on repeated
+send failures.
 
-Optional overrides (defaults shown):
-
-```
-CONFIG_APP_ALWAYS_ON=n
-CONFIG_APP_MOVEMENT_ALARM=n
-CONFIG_APP_ENGINE_OFF_LOOP_INTERVAL=0
-CONFIG_APP_IGNITION_ON_SLEEP_INTERVAL=30
-CONFIG_APP_VOLTAGE_POLL_INTERVAL=5
-CONFIG_APP_BATTERY_CHECK_INTERVAL=86400
-CONFIG_APP_BATTERY_WARNING_MV=11900
-CONFIG_APP_BATTERY_POWEROFF_MV=11800
-CONFIG_APP_SLEEP_SAFETY_MV=12000
-CONFIG_APP_ENGINE_RUNNING_MV=13000
-CONFIG_APP_ACC_MOVEMENT_THRESHOLD=150
-CONFIG_APP_MOVEMENT_CONFIRM_MS=3000
-CONFIG_APP_MOVEMENT_CONFIRM_HITS=2
-CONFIG_APP_COAST_STOP_SPEED_KMH_X10=50
-CONFIG_APP_COAST_MAX_ITERATIONS=60
-```
-
-## State machine
-
-```
-IDLE  -->  GPS_COLLECT  -->  SEND  -->  IDLE
-                                   -->  IGNITION_SLEEP (ign on, engine off)
-                                   -->  SLEEP (ign off)
-```
-
-- **IDLE**: polls ignition and voltage, decides when to collect GPS
-- **GPS_COLLECT**: acquires a fix, buffers a record
-- **SEND**: transmits batched telemetry over encrypted UDP, handles server commands
-- **IGNITION_SLEEP**: ignition on but engine not running; periodic sends, watches for engine start or ignition off
-- **SLEEP**: ignition off; peripherals powered down, wakes on accelerometer interrupt (LSM6DSO hardware wake-up), ignition change, or telemetry timer
-
-## Telemetry protocol
-
-UDP packets are encrypted with ChaCha20-Poly1305:
-
-```
-imei_len(1) | IMEI | nonce(12) | ciphertext | tag(16)
-```
-
-IMEI is bound as AAD. The PSK is provisioned per-device via `local.conf`.
-
-## Source layout
+### Source layout (`src/`)
 
 | File | Description |
 |---|---|
-| `main.c` | Entry point, state machine, sleep/wake logic |
-| `modem.c` | LTE-M modem control (AT commands, registration, APN) |
-| `gnss.c` | GNSS fix acquisition |
-| `transport.c` | Encrypted UDP send/receive |
-| `data.c` | Telemetry record formatting and batching |
-| `hw_power.c` | INA228 voltage monitor, ignition read |
-| `hw_accel.c` | LSM6DSO accelerometer (polling + hardware wake interrupt) |
-| `hw_relay.c` | Latching relay with feedback verification |
-| `hw_kline.c` | K-line bit-bang UART via L9637D |
-| `hw_common.c` | GPIO init, bit-banged I2C bus |
-| `crypto.c` | ChaCha20-Poly1305 envelope seal/open |
-| `settings.c` | Runtime settings (in-memory, Kconfig-backed defaults) |
-| `commands.c` | Server command handler |
-| `alert.c` | Movement/event alert queue |
-| `watchdog.c` | Task watchdog with hardware fallback |
-| `pins.h` | PCB pin assignments |
-| `config.h` | Compile-time defaults (mapped from Kconfig) |
+| `main.c`      | Entry point, state machine, sleep/wake, movement + coast logic |
+| `modem.c`     | LTE-M bring-up, registration, APN, RAI, cell-info tracking, error recovery |
+| `gnss.c`      | GNSS fixes via the nRF9151's built-in receiver (`nrf_modem_gnss`) |
+| `agnss.c`     | A-GNSS assistance from **nRF Cloud REST** (device-JWT auth) |
+| `transport.c` | **DTLS-over-UDP** telemetry, offloaded to the modem |
+| `data.c`      | Telemetry CSV record builder (position, speed, battery, ignition, accel) |
+| `commands.c`  | Server command dispatch (`key=value[,…]`) |
+| `alert.c`     | Movement/event alert queue (piggybacks on sends, or standalone) |
+| `settings.c`  | Runtime settings (in-memory; Kconfig-backed defaults) |
+| `crypto.c`    | CSPRNG + PSK hex parsing (PSK used only by the legacy transport) |
+| `hw_common.c` | GPIO init + bit-banged I²C bus |
+| `hw_power.c`  | INA228 voltage, ignition read, INA shutdown/wake |
+| `hw_accel.c`  | ASM330LHHX IMU (accel path): polling + hardware wake interrupt |
+| `hw_relay.c`  | Latching relay with feedback verification |
+| `hw_kline.c`  | K-line bit-bang UART (L9637D) |
+| `led.c` · `watchdog.c` · `reboot.c` | Status LED · 32 s task watchdog (HW fallback) · reboot helper |
+| `config.h` · `pins.h` · `app.h` · `ca_cert.h` | Compile-time defaults · pins · shared API/state · server CA cert |
+
+> `transport 2.c` (legacy ChaCha20-Poly1305 UDP envelope) and `stubs.c` are
+> **not** in `CMakeLists.txt` and are not built.
+
+---
+
+## Connectivity & telemetry
+
+Telemetry uses **DTLS 1.2 over UDP**, with the handshake, encryption and
+certificate verification offloaded to the modem (`transport.c`). The
+application sends/receives plaintext; the server is authenticated by
+certificate (`TLS_PEER_VERIFY_REQUIRED`) against the CA in `src/ca_cert.h`,
+which `modem.c` provisions into the modem at **`TLS_SEC_TAG = 1`** on first boot.
+
+- Endpoint: `CONFIG_APP_SERVER_HOST` : `DTLS_PORT` (**65482**, fixed in `config.h`).
+- Datagram: `[2-byte big-endian length] [IMEI "\n"] [CSV record(s)]`.
+- DTLS connection ID + session caching abbreviate later handshakes; `SO_RAI`
+  hints release the radio after each exchange so GNSS can use the antenna.
+
+Each telemetry record is one CSV line built in `data.c` (timestamp, lat, lon,
+speed, altitude, heading, HDOP, satellites, battery, ignition, uptime,
+accelerometer). Records batch by `BATCH_SIZE` (default 1).
+
+---
+
+## GNSS & A-GNSS (nRF Cloud)
+
+GNSS fixes come from the nRF9151's built-in receiver. A cold fix with no cached
+ephemeris can take 2–5 minutes (it time-shares the antenna with LTE), so the
+firmware optionally fetches **A-GNSS** assistance from nRF Cloud to speed up
+time-to-first-fix.
+
+`agnss.c` authenticates to nRF Cloud's REST API with a **per-device JWT** signed
+by a key in the modem at `CONFIG_NRF_CLOUD_SEC_TAG` (default `16842753`). nRF
+Cloud only accepts that JWT once the device has been **onboarded** to your
+account — otherwise the request fails with `401 / 40100 "Auth token is
+malformed"`. See **[nRF Cloud device provisioning](#nrf-cloud-device-provisioning)**.
+
+> A-GNSS is an optimisation, not a dependency: GNSS still cold-fixes without it.
+> `CONFIG_NRF_CLOUD_KEY` is a **legacy** option from an abandoned
+> service-evaluation-token approach and is unused by the current device-JWT path.
+
+---
+
+## Building
+
+Requires [nRF Connect SDK **v3.3.0**](https://docs.nordicsemi.com/) installed at
+`/opt/nordic/ncs/v3.3.0` (override with `NCS_ROOT`). Default board is
+`nrf9151dk/nrf9151/ns` (override with `BOARD`).
+
+```sh
+./build.sh            # incremental build  -> build/merged.hex
+./build.sh pristine   # clean rebuild
+```
+
+`build.sh` runs `west build` inside the NCS toolchain. It auto-overlays
+`local.conf` if present, and layers `prov.conf` when `PROV=1` is set.
+
+### Configuration layers
+
+| File | Committed | Purpose |
+|---|---|---|
+| `prj.conf` | yes | Zephyr/NCS subsystem config (modem, sockets, crypto, logging, PM) |
+| `Kconfig`  | yes | Application symbols + defaults (see table below) |
+| `boards/nrf9151dk_nrf9151_ns.{conf,overlay}` | yes | Board-specific Kconfig + devicetree (disables conflicting DK peripherals) |
+| `local.conf` | **no** (git-ignored) | Per-deployment secrets / overrides |
+| `prov.conf`  | yes | Provisioning-build overlay (AT-host bridge) — enabled via `PROV=1` |
+
+### local.conf
+
+`local.conf` is git-ignored; create it with at least the endpoint and APN:
+
+```
+CONFIG_APP_SERVER_HOST="tracker.example.com"
+CONFIG_APP_APN="iot.example.net"
+```
+
+Any `APP_*` symbol from `Kconfig` can be overridden here (see the reference
+table). `CONFIG_APP_PSK_HEX` is **legacy** (only the unused ChaCha20 transport
+consumed it) and is not required.
+
+### Flashing
+
+```sh
+west flash -d build                 # or: nrfutil device program / the nRF Connect programmer
+```
+
+(Run `west flash` inside the NCS toolchain, the same way `build.sh` invokes
+`west build`.) On Apple Silicon, flashing needs a **native arm64** SEGGER
+J-Link install — an Intel-only J-Link library cannot be loaded by the arm64
+toolchain Python.
+
+---
+
+## nRF Cloud device provisioning
+
+One-time per device, to enable A-GNSS. The device's key/cert are written to
+**modem NVM**, so they survive reflashing the application. No separate
+`at_client` sample is needed — a provisioning build of *this* firmware acts as
+the AT bridge.
+
+**Prerequisites**
+
+- An nRF Cloud account and its **REST API key** (nrfcloud.com → User Account).
+- [`nrfcloud-utils`](https://pypi.org/project/nrfcloud-utils/): `uv tool install --python 3.12 nrfcloud-utils`
+
+**1. Create a device CA (once)**
+
+```sh
+mkdir -p onboarding
+create_ca_cert -c GB -o l0destar -p onboarding -f l0destar
+```
+
+Writes `onboarding/*_ca.pem` / `*_prv.pem` (git-ignored — the key is secret).
+
+**2. Build & flash the provisioning firmware**
+
+```sh
+PROV=1 BUILD_DIR="$PWD/build_prov" ./build.sh pristine
+west flash -d build_prov            # boots into "PROVISIONING MODE" (AT host on VCOM0)
+```
+
+`prov.conf` enables `CONFIG_AT_HOST_LIBRARY`, disables logging (clean UART), and
+`main()` idles after `modem_init()` so the AT exchange isn't corrupted.
+
+**3. Free the serial port, then install credentials**
+
+> ⚠️ Any serial monitor holding the port (e.g. a `cat`/logger daemon) will
+> race the installer and corrupt the CSR. Stop it first.
+
+```sh
+device_credentials_installer \
+  --port /dev/cu.usbmodemXXXX --cmd-type at \
+  --ca     onboarding/*_ca.pem \
+  --ca-key onboarding/*_prv.pem \
+  --id-imei --id-str nrf- \
+  -S 16842753 -d \
+  --csv onboarding/onboard.csv --verify
+```
+
+`--id-imei --id-str nrf-` produces device ID `nrf-<IMEI>` and `-S 16842753`
+matches the firmware's JWT sec-tag — both **must** match or nRF Cloud rejects
+the JWT.
+
+**4. Register the device to your account**
+
+```sh
+nrf_cloud_onboard --api-key "$NRF_CLOUD_API_KEY" --csv onboarding/onboard.csv
+# verify:
+curl -s "https://api.nrfcloud.com/v1/devices" -H "Authorization: Bearer $NRF_CLOUD_API_KEY"
+```
+
+**5. Reflash the normal firmware**
+
+```sh
+./build.sh && west flash -d build
+```
+
+On the next cold boot the A-GNSS fetch authenticates with the device JWT and
+returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`).
+
+---
+
+## Configuration reference (`Kconfig`)
+
+| Symbol | Default | Meaning |
+|---|---|---|
+| `APP_LOG_LEVEL` | 3 | App module log level (0=off … 4=dbg) |
+| `APP_PROVISION_MODE` | n | Build as the AT-host provisioning bridge (set via `prov.conf`) |
+| `DK_PIN_WORKAROUNDS` | n | Use DK-compatible pins (K-line, accel SCL) |
+| `APP_ALWAYS_ON` | n | Hold the relay set regardless of ignition |
+| `APP_SERVER_HOST` | "" | Telemetry hostname (else `HOSTNAME` in `config.h`) |
+| `APP_APN` | "" | Cellular APN (else `DEFAULT_APN`) |
+| `APP_PSK_HEX` | "" | **Legacy** PSK for the old ChaCha20 transport |
+| `APP_ENGINE_OFF_LOOP_INTERVAL` | 0 | Engine-off telemetry interval (0 = off) |
+| `APP_IGNITION_ON_SLEEP_INTERVAL` | 30 | Send cadence: ignition on, engine off (s) |
+| `APP_VOLTAGE_POLL_INTERVAL` | 5 | Battery sample cadence in IDLE (s) |
+| `APP_BATTERY_CHECK_INTERVAL` | 86400 | Battery check during deep sleep (s) |
+| `APP_NETWORK_REGISTRATION_TIMEOUT` | 60 | Registration timeout (s) |
+| `APP_NETWORK_RETRY_INTERVAL` | 300 | Network retry interval (s) |
+| `APP_GPS_FIX_TIMEOUT_MS` | 60000 | GNSS fix timeout (ms) |
+| `APP_GPS_COLD_FIX_TIMEOUT_MS` | 300000 | Cold-start fix timeout (ms) |
+| `APP_BATTERY_WARNING_MV` / `_POWEROFF_MV` | 11900 / 11800 | Battery warning / power-off (mV) |
+| `APP_SLEEP_SAFETY_MV` | 12000 | Skip-send threshold while sleeping (mV) |
+| `APP_ENGINE_RUNNING_MV` | 13000 | Engine-running voltage threshold (mV) |
+| `APP_ACC_MOVEMENT_THRESHOLD` | 150 | Movement delta threshold (milli-g) |
+| `APP_MOVEMENT_CONFIRM_MS` / `_HITS` | 3000 / 2 | Movement confirmation window / samples |
+| `APP_MOVEMENT_INACTIVITY_RESET` | 1800 | Inactivity reset timer (s) |
+| `APP_MOVEMENT_ALARM` | n | Enable movement alarm |
+| `APP_COAST_STOP_SPEED_KMH_X10` | 50 | Coast-to-stop speed threshold (km/h ×10) |
+| `APP_COAST_MAX_ITERATIONS` | 60 | Coast-to-stop max iterations |
+| `APP_GSM_ESCALATION_POWERCYCLE` / `_SLEEP` | 3 / 5 | Send failures before power-cycle / sleep |
+| `APP_GSM_RECOVERY_SLEEP_INTERVAL` | 300 | Recovery sleep interval (s) |
+
+---
+
+## Logging / serial
+
+The console + logs are on the nRF9151 DK's first VCOM at **115200 baud, 8-N-1**.
+Note that macOS resets a USB-serial line to 9600 on each `open()`, so a monitor
+must hold the descriptor open while running `stty … 115200` (as the project's
+`monitor.sh` logger does).

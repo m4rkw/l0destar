@@ -114,12 +114,18 @@ int agnss_init(void)
 int agnss_fetch(void *agnss_request)
 {
 	struct nrf_modem_gnss_agnss_data_frame *request = agnss_request;
+
+	/* Authenticate to nRF Cloud with a per-device JWT signed by the key in
+	 * the nRF Cloud sec_tag.  Requires the device to be onboarded to the
+	 * nRF Cloud account (its public cert registered) — otherwise nRF Cloud
+	 * cannot verify the signature and returns 401 / 40100 "Auth token is
+	 * malformed".  Onboard once with nrfcloud-utils (device_credentials_
+	 * installer --api-key ...). */
 	int err = nrf_cloud_jwt_generate(0, jwt_buf, sizeof(jwt_buf));
 	if (err) {
-		LOG_ERR("JWT generate: %d (device claimed on nRF Cloud?)", err);
+		LOG_ERR("JWT generate: %d", err);
 		return err;
 	}
-	LOG_INF("JWT len=%u first40=%.40s", (unsigned)strlen(jwt_buf), jwt_buf);
 
 	struct nrf_cloud_rest_context rest_ctx = {
 		.connect_socket = -1,

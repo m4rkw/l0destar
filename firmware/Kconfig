@@ -7,6 +7,17 @@ config APP_LOG_LEVEL
 	  Per-module Zephyr log level for app modules (0=off, 1=err, 2=wrn,
 	  3=inf, 4=dbg).
 
+config APP_PROVISION_MODE
+	bool "Provisioning build: AT-host bridge for nRF Cloud onboarding"
+	default n
+	help
+	  When set, main() brings up the modem and idles with the AT Host
+	  library bridging nrfcloud-utils to the modem over the console UART,
+	  instead of running the tracker.  Enabled via prov.conf
+	  (PROV=1 ./build.sh).  Onboard with device_credentials_installer
+	  --cmd-type at, then reflash the normal build; the device key/cert
+	  persist in modem NVM at CONFIG_NRF_CLOUD_SEC_TAG.
+
 config DK_PIN_WORKAROUNDS
 	bool "Use DK-compatible pin assignments"
 	default n

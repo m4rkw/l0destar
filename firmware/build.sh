@@ -34,8 +34,16 @@ BUILD_DIR="${BUILD_DIR:-$APP_DIR/build}"
 PRISTINE="${PRISTINE:-auto}"
 
 EXTRA_ARGS=()
+OVERLAYS=()
 if [[ -f "$APP_DIR/local.conf" ]]; then
-	EXTRA_ARGS+=("--" "-DOVERLAY_CONFIG=local.conf")
+	OVERLAYS+=("local.conf")
+fi
+# PROV=1 layers prov.conf on top (AT-host bridge for nRF Cloud onboarding).
+if [[ "${PROV:-}" == "1" && -f "$APP_DIR/prov.conf" ]]; then
+	OVERLAYS+=("prov.conf")
+fi
+if [[ ${#OVERLAYS[@]} -gt 0 ]]; then
+	EXTRA_ARGS+=("--" "-DOVERLAY_CONFIG=$(IFS=';'; echo "${OVERLAYS[*]}")")
 fi
 
 # `west` must run from inside the NCS workspace so it can find the manifest;
