@@ -5,3 +5,4 @@ certs/*.key
 certs/*.crt
 # nRF Cloud onboarding CA (contains a private key) + generated artifacts
 onboarding/
+CLAUDE_LOCAL.md
