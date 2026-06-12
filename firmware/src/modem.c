@@ -222,6 +222,17 @@ int modem_update_cell_info(void)
     return 0;
 }
 
+int modem_read_temp(float *temp_c)
+{
+    int raw;
+    int ret = nrf_modem_at_scanf("AT%XTEMP?", "%%XTEMP: %d", &raw);
+    if (ret != 1) {
+        return -EIO;
+    }
+    *temp_c = (float)raw;
+    return 0;
+}
+
 int modem_recover(int failure_count)
 {
     transport_teardown();

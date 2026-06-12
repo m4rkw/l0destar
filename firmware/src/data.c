@@ -125,7 +125,16 @@ int collect_data(int ignitionState)
     if (accel_read_temp(&imu_temp) == 0) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
-                     ",mt=%.1f", (double)imu_temp);
+                     ",it=%.1f", (double)imu_temp);
+        if (n > 0) data_index += n;
+    }
+
+    /* nRF9151 SiP die temperature (°C) */
+    float mcu_temp;
+    if (modem_read_temp(&mcu_temp) == 0) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1,
+                     ",mt=%.1f", (double)mcu_temp);
         if (n > 0) data_index += n;
     }
 
@@ -160,13 +169,19 @@ int collect_data(int ignitionState)
 
     data_current[data_index] = '\0';
 
-    /* Battery warning — skip when voltage is implausible (sensor absent/broken) */
-    if (v >= IMPLAUSIBLE_VOLTAGE) {
+    /* Battery warning - only meaningful with the engine off. While the engine
+     * runs the vehicle's smart/regenerative charging system swings the rail
+     * 11.8-14.9V by design (load-shed at idle/under acceleration, boosted on
+     * overrun), so an instantaneous low reading mid-drive says nothing about
+     * battery health. Gate on ignition-off (ignitionState != 0; the sense is
+     * active-low) and skip implausible readings (sensor absent/broken). Normal
+     * priority: a resting low battery is informational, not an emergency. */
+    if (ignitionState != 0 && v >= IMPLAUSIBLE_VOLTAGE) {
         if (v < BATTERY_WARNING_LEVEL) {
             if (s_battery_warning_status == 0) {
                 char msg[24];
                 snprintf(msg, sizeof(msg), "low battery: %.2fV", (double)v);
-                alert_enqueue(msg, 2);
+                alert_enqueue(msg, 0);
                 s_battery_warning_status = 1;
             }
         } else {

@@ -20,10 +20,15 @@
 
 ### Telemetry
 - Gyroscope enabled (104 Hz ±250 dps) — `gx/gy/gz` (raw LSB) per record
-- IMU die temperature — `mt` (°C) per record
+- nRF9151 SiP die temperature — `mt` (°C) per record, via `AT%XTEMP`
+- IMU die temperature — `it` (°C) per record
 - Accelerometer fields `ax/ay/az` now in milli-g (FS-independent; previously
   raw LSB at ±2 g)
 - Record batching support (`BATCH_SIZE`)
+- Low-battery warning gated to ignition-off and demoted to normal priority —
+  with smart/regenerative charging the rail swings 11.8–14.9 V by design while
+  driving (load-shed at idle/under acceleration, boosted on overrun), so an
+  instantaneous mid-drive dip is no longer mistaken for a failing battery
 
 ### Impact detection
 - While awake: accel at ±8 g with a high-g interrupt
