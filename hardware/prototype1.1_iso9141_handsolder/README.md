@@ -54,7 +54,7 @@ power.
 | [10K resistor](https://amzn.to/4gc8ZvK)                                                | 11       |
 | [56K resistor](https://amzn.to/4gc8ZvK)                                                | 2        |
 | [100K resistor](https://amzn.to/4gc8ZvK)                                               | 7        |
-| [MOSFET - ZVN4206A](https://amzn.to/3S775mb)                                           | 4        |
+| [MOSFET - ZVN4206A](https://amzn.to/3S775mb)                                           | 6        |
 | [TVS Diode - P6KE24CA](https://amzn.to/4aLxvAd)                                        | 4        |
 | [MOSFET - DMG3415U](https://amzn.to/4uvGYCY)                                           | 2        |
 | [100nF ceramic capacitor](https://amzn.to/4xpB60v)                                     | 3        |
@@ -75,8 +75,7 @@ power.
 
 ## Notes
 
-- If you don't care about ISO-9141 this can be omitted (I will post a CAN
-  version of this board soon)
+- If you don't care about ISO-9141 the L9637D and level shifter can be omitted
 - The breakouts can either be soldered directly or mounted on PCB pin headers, I
   would suggest the latter for ease of re-use
 - Never plug or unplug anything into the Nordic dev board while anything is
