@@ -66,6 +66,14 @@ unpowered that VDDIO is 0v.
 | [Diode - 1N4148](https://amzn.to/4vPo4bi)                                              | 2        |
 | [Molex 43045-0400 4-pin receptacle](https://uk.farnell.com/molex/43045-0400/conn-r-a-hdr-4pos-2row-3mm/dp/9733019) | 1 |
 
+## Tools and accessories
+
+- [Dupont connectors and pins](https://amzn.to/444K71B)
+- [Crimp tool for Dupont terminals](https://amzn.to/4xraxZ0)
+- [Ribbon cable](https://amzn.to/3PXOW9R)
+- [Klein 2100-5 scissors](https://amzn.to/4vEJpnA)
+- [PCB header pins](https://amzn.to/43xhjPk)
+
 ## Notes
 
 - The TVS diode isn't strictly necessary on a bench
