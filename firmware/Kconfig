@@ -257,12 +257,4 @@ config APP_GSM_RECOVERY_SLEEP_INTERVAL
 	int "Recovery sleep interval (seconds)"
 	default 300
 
-config NRF_CLOUD_KEY
-	string "nRF Cloud REST API key (service evaluation token)"
-	default ""
-	help
-	  Bearer token passed in the Authorization header when fetching
-	  A-GNSS data from api.nrfcloud.com.  Obtain from the nRF Cloud
-	  dashboard → Service evaluation tokens.
-
 source "Kconfig.zephyr"

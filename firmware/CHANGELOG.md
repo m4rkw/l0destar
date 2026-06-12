@@ -42,6 +42,16 @@
 - Rel-14 features + RAI requested before network attach; RAI URC logging
 - eDRX/PSM disabled for continuous tracking duty cycle
 
+### Configuration & hardware abstraction
+- All pin assignments moved to Kconfig (`APP_PIN_*`) with production-PCB
+  defaults — any signal remaps from `local.conf`; every pin has a defined
+  assignment even when the hardware isn't fitted (relay pins parked)
+- Bench debug overrides replace in-code stubs: `APP_DEBUG_IGNITION`,
+  `APP_DEBUG_BATTERY_MV`, `APP_RELAY_CONNECTED`; live GPIO ignition sense and
+  INA228 battery reading restored as the default paths
+- Removed dead code: duplicate `transport 2.c`, orphaned `stubs.c`, unused
+  `DK_PIN_WORKAROUNDS` and `NRF_CLOUD_KEY` Kconfig symbols
+
 ### Build & docs
 - `flash.sh` (auto-picks the connected J-Link); `build.sh` overlay support
   for `local.conf` + `prov.conf`

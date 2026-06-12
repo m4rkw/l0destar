@@ -126,8 +126,6 @@ account — otherwise the request fails with `401 / 40100 "Auth token is
 malformed"`. See **[nRF Cloud device provisioning](#nrf-cloud-device-provisioning)**.
 
 > A-GNSS is an optimisation, not a dependency: GNSS still cold-fixes without it.
-> `CONFIG_NRF_CLOUD_KEY` is a **legacy** option from an abandoned
-> service-evaluation-token approach and is unused by the current device-JWT path.
 
 ---
 
@@ -256,7 +254,12 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 |---|---|---|
 | `APP_LOG_LEVEL` | 3 | App module log level (0=off … 4=dbg) |
 | `APP_PROVISION_MODE` | n | Build as the AT-host provisioning bridge (set via `prov.conf`) |
-| `DK_PIN_WORKAROUNDS` | n | Use DK-compatible pins (K-line, accel SCL) |
+| `APP_PIN_*` | PCB map | Every signal's P0.x GPIO (K-line, I²C, IMU INTs, ignition, relay) — remap per-board in `local.conf` |
+| `APP_RELAY_CONNECTED` | n | Latching relay fitted; off = relay ops are no-ops |
+| `APP_DEBUG_IGNITION` | -1 | Force ignition state (0=ON, 1=OFF, -1=live GPIO) |
+| `APP_DEBUG_BATTERY_MV` | 0 | Force battery voltage in mV (0=live INA228) |
+| `APP_CRASH_THRESHOLD_MG` | 4000 | Impact alert threshold while awake (mg) |
+| `APP_PARKED_IMPACT_MG` | 800 | Parked-impact threshold from FIFO peak (mg) |
 | `APP_ALWAYS_ON` | n | Hold the relay set regardless of ignition |
 | `APP_SERVER_HOST` | "" | Telemetry hostname (else `HOSTNAME` in `config.h`) |
 | `APP_APN` | "" | Cellular APN (else `DEFAULT_APN`) |

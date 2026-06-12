@@ -3,8 +3,9 @@
  *
  * On cold start the modem fires NRF_MODEM_GNSS_EVT_AGNSS_REQ describing what
  * ephemeris/almanac/timing data it needs.  This module fetches that data from
- * nRF Cloud using the REST API with a service evaluation API key (Bearer
- * token), then injects it into the modem via nrf_cloud_agnss_process().
+ * nRF Cloud using the REST API, authenticated with a per-device JWT signed by
+ * the key at CONFIG_NRF_CLOUD_SEC_TAG (the device must be onboarded to the
+ * nRF Cloud account), then injects it via nrf_cloud_agnss_process().
  *
  * The nRF Cloud CA certificate (Amazon Root CA 1) is provisioned into the
  * modem on first boot at NRF_CLOUD_SEC_TAG.
