@@ -68,7 +68,6 @@ damage the nRF9151.
 
 ## Notes
 
-- The TVS diode isn't strictly necessary on a bench
 - I mounted the DMG3415Us on SOT-23 adapters but there's no reason you need to
   if you'd rather surface mount them
 - The breakouts can either be soldered directly or mounted on PCB pin headers, I
