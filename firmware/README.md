@@ -53,6 +53,19 @@ Extras handled in the loop: **movement alarm** with escalating cooldowns,
 rolling), and **progressive modem recovery** (power-cycle → sleep) on repeated
 send failures.
 
+### Impact detection
+
+While awake the IMU runs at ±8 g with a high-g interrupt
+(`APP_CRASH_THRESHOLD_MG`, default 4 g — set ~1200 in `local.conf` and rap the
+desk to bench-test) and batches accel+gyro at 26 Hz into the chip's 3 KB FIFO
+ring (~9 s of history). On impact, the ring is drained and an alert is sent
+with peak g (per-axis), peak rotation rate, disturbance duration, and speed;
+the ±0.5 s waveform around the peak is dumped to the serial log. While asleep,
+an unconfirmed movement wake whose peak exceeds `APP_PARKED_IMPACT_MG`
+(default 1.5 g) raises a `parked impact` alert instead of being ignored.
+Telemetry `ax/ay/az` are **milli-g** (FS-independent); `gx/gy/gz` are raw LSB
+at ±250 dps.
+
 ### Source layout (`src/`)
 
 | File | Description |

@@ -113,6 +113,22 @@ int collect_data(int ignitionState)
         if (n > 0) data_index += n;
     }
 
+    /* Gyro (raw LSB at ±250 dps) + IMU die temperature (°C) */
+    int gx, gy, gz;
+    if (accel_read_gyro(&gx, &gy, &gz) == 0) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1,
+                     ",gx=%d;gy=%d;gz=%d", gx, gy, gz);
+        if (n > 0) data_index += n;
+    }
+    float imu_temp;
+    if (accel_read_temp(&imu_temp) == 0) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1,
+                     ",mt=%.1f", (double)imu_temp);
+        if (n > 0) data_index += n;
+    }
+
     /* Cell tower fields — emit on first post-wake packet or as GPS fallback */
     if (g_cell.valid && (g_cell.dirty || cell_fallback)) {
         n = snprintf(&data_current[data_index],

@@ -134,6 +134,25 @@ config APP_MOVEMENT_ALARM
 	bool "Enable movement alarm"
 	default n
 
+config APP_CRASH_THRESHOLD_MG
+	int "Impact alert threshold (milli-g)"
+	default 4000
+	help
+	  Acceleration delta that triggers an impact alert while awake.
+	  Production ~4000 (4 g); set ~1200 in local.conf for bench testing —
+	  a firm rap on the desk reaches 1.5-3 g.  Rounded down to 125 mg
+	  steps (±8 g FS / 64).
+
+config APP_PARKED_IMPACT_MG
+	int "Parked impact alert threshold (milli-g)"
+	default 800
+	help
+	  Peak | |a| - 1g | from the FIFO ring during an unconfirmed movement
+	  wake (a "transient bump") that raises a parked-impact alert instead
+	  of being ignored.  Sleep runs the accel at ±2 g, so hard hits clip:
+	  the measurable deviation caps around ~1000-1200 mg — thresholds
+	  above that can never fire.
+
 # --- coast-to-stop ---------------------------------------------------------
 
 config APP_COAST_STOP_SPEED_KMH_X10

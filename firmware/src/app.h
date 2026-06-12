@@ -147,11 +147,31 @@ void kline_power_off(void);
 uint8_t kline_tx_rx_byte(uint8_t tx);
 
 int   accel_read(int *ax, int *ay, int *az);
+int   accel_read_gyro(int *gx, int *gy, int *gz);
+int   accel_read_temp(float *temp_c);
 int   ignition_read(void);
 float battery_read_voltage(void);
 
+int  accel_crash_int_enable(int threshold_mg);
+int  accel_crash_int_disable(void);
+int  accel_read_wake_src(uint8_t *src);
+
+/* impact forensics from the IMU FIFO ring buffer */
+struct accel_impact {
+    int peak_mg;          /* peak |a| vector magnitude (mg) */
+    int peak_delta_mg;    /* peak | |a| - 1g | — the impact metric */
+    int pax, pay, paz;    /* per-axis mg at the peak sample */
+    int peak_gyro_dps10;  /* peak |ω| (degrees/sec × 10) */
+    int samples;          /* accel samples drained from the ring */
+    int over_ms;          /* time with | |a| - 1g | > 250 mg */
+};
+int  accel_fifo_enable(void);
+int  accel_fifo_disable(void);
+int  accel_fifo_drain_impact(struct accel_impact *out);
+
 int  accel_read_baseline(void);
 int  accel_confirm_movement(void);
+int  accel_confirm_peak_mg(void);
 void accel_get_movement_info(int *tilt_tenths, int *delta_mg);
 int  accel_enable_wake_int(void);
 int  accel_disable_wake_int(void);

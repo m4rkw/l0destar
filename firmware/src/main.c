@@ -81,22 +81,29 @@ static void ign_irq_disable(void)
 /* -- accelerometer wake interrupt ------------------------------------------ */
 static struct gpio_callback s_accel_cb;
 static bool s_accel_cb_installed;
+static atomic_t s_accel_int_flag;
 
 static void accel_isr(const struct device *dev, struct gpio_callback *cb,
                       uint32_t pins)
 {
+    atomic_set(&s_accel_int_flag, 1);
     k_sem_give(&s_wake_sem);
 }
 
-static void accel_irq_enable(void)
+static void accel_cb_install(void)
 {
-    if (!accel_available()) return;
     if (!s_accel_cb_installed) {
         gpio_pin_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INPUT);
         gpio_init_callback(&s_accel_cb, accel_isr, BIT(PIN_ACC_INT1));
         gpio_add_callback(hw_gpio0, &s_accel_cb);
         s_accel_cb_installed = true;
     }
+}
+
+static void accel_irq_enable(void)
+{
+    if (!accel_available()) return;
+    accel_cb_install();
     accel_enable_wake_int();
     gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
                                  GPIO_INT_EDGE_TO_ACTIVE);
@@ -107,6 +114,57 @@ static void accel_irq_disable(void)
     if (!accel_available()) return;
     gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INT_DISABLE);
     accel_disable_wake_int();
+}
+
+/* -- crash (impact) interrupt while awake ----------------------------------- */
+static void crash_irq_enable(void)
+{
+    if (!accel_available()) return;
+    accel_cb_install();
+    atomic_clear(&s_accel_int_flag);
+    accel_fifo_enable();
+    accel_crash_int_enable(CRASH_THRESHOLD_MG);
+    gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
+                                 GPIO_INT_EDGE_TO_ACTIVE);
+}
+
+static void crash_irq_disable(void)
+{
+    if (!accel_available()) return;
+    gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INT_DISABLE);
+    accel_crash_int_disable();
+    accel_fifo_disable();
+}
+
+/* Called from the awake loops.  The FIFO ring holds ~9 s of accel+gyro
+ * history, so the impact profile is intact even with loop-cadence latency. */
+static void crash_check(void)
+{
+    if (!atomic_clear(&s_accel_int_flag)) return;
+
+    uint8_t src = 0;
+    accel_read_wake_src(&src);
+
+    struct accel_impact imp;
+    char msg[120];
+    if (accel_fifo_drain_impact(&imp) == 0 && imp.samples > 0) {
+        snprintf(msg, sizeof(msg),
+                 "impact %d.%02dg x=%d y=%d z=%d gyr=%d.%ddps dur=%dms spd=%.1f",
+                 imp.peak_mg / 1000, (imp.peak_mg % 1000) / 10,
+                 imp.pax, imp.pay, imp.paz,
+                 imp.peak_gyro_dps10 / 10, imp.peak_gyro_dps10 % 10,
+                 imp.over_ms, (double)g_gnss.speed_kmh);
+    } else {
+        int ax, ay, az;
+        accel_read(&ax, &ay, &az);
+        snprintf(msg, sizeof(msg),
+                 "impact: >%d.%dg (src=0x%02x) now=%d/%d/%dmg spd=%.1f",
+                 CRASH_THRESHOLD_MG / 1000, (CRASH_THRESHOLD_MG % 1000) / 100,
+                 src, ax, ay, az, (double)g_gnss.speed_kmh);
+    }
+    LOG_WRN("%s", msg);
+    alert_enqueue(msg, 2);
+    alert_send();
 }
 
 /* -- coast-to-stop --------------------------------------------------------- */
@@ -165,6 +223,7 @@ static bool should_send_data(void)
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
+    crash_irq_disable();
     led_off();
     LOG_INF("sleep: GNSS stop");
     gnss_stop();
@@ -251,7 +310,25 @@ static void do_sleep(void)
             gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
                                          GPIO_INT_DISABLE);
             if (!accel_confirm_movement()) {
-                LOG_INF("transient bump — ignoring");
+                /* True peak comes from the FIFO ring (the chip saw the
+                 * whole transient); the 100 ms confirm polls only see the
+                 * residual.  Fall back to the polled peak if drain fails. */
+                struct accel_impact imp;
+                int peak = (accel_fifo_drain_impact(&imp) == 0 && imp.samples)
+                         ? imp.peak_delta_mg : accel_confirm_peak_mg();
+                if (peak >= PARKED_IMPACT_MG) {
+                    LOG_WRN("parked impact: %d mg", peak);
+                    char msg[48];
+                    snprintf(msg, sizeof(msg), "parked impact %d.%02dg",
+                             peak / 1000, (peak % 1000) / 10);
+                    alert_enqueue(msg, 2);
+                    watchdog_kick();
+                    int reg = modem_get_network_status();
+                    if (reg != 1 && reg != 5) modem_connect();
+                    alert_send_standalone();
+                } else {
+                    LOG_INF("transient bump — ignoring (peak %d mg)", peak);
+                }
                 accel_read_baseline();
                 accel_irq_enable();
                 continue;
@@ -394,6 +471,7 @@ static void do_ignition_sleep(void)
 
     for (;;) {
         watchdog_kick();
+        crash_check();
 
         ignition = (char)ignition_read();
         if (ignition != 0) {
@@ -528,6 +606,8 @@ int main(void)
         relay_set();
     }
 
+    crash_irq_enable();
+
     watchdog_init();
     s_last_send_ms = k_uptime_get();
 
@@ -535,6 +615,7 @@ int main(void)
 
     for (;;) {
         watchdog_kick();
+        crash_check();
 
         if (power_reboot) {
             reboot_now();
@@ -669,6 +750,7 @@ int main(void)
 
         case STATE_SLEEP:
             do_sleep();
+            crash_irq_enable();   /* re-arm impact detection for awake */
             break;
         }
     }

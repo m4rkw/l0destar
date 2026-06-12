@@ -73,7 +73,7 @@ bool hw_power_available(void)
 
 float battery_read_voltage(void)
 {
-    return 13;
+    return 12.4;
 
 	if (!s_ok) return -1.0f;
 	uint8_t buf[3];
@@ -99,5 +99,5 @@ void hw_power_wake(void)
 
 int ignition_read(void)
 {
-	return 0;   /* hard-coded ON for testing (sense line not wired) */
+	return 1;   /* hard-coded ON for testing (sense line not wired) */
 }
