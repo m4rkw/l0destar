@@ -68,7 +68,7 @@
 
 /* -- hardware presence flags (compiled-out paths) -------------------------- */
 #define ALWAYS_ON_POWER             1
-#define RELAY_CONNECTED             0
+#define RELAY_CONNECTED             IS_ENABLED(CONFIG_APP_RELAY_CONNECTED)
 #define LOW_POWER_STANDBY           1
 
 /* -- coast-to-stop --------------------------------------------------------- */

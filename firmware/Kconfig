@@ -18,13 +18,93 @@ config APP_PROVISION_MODE
 	  --cmd-type at, then reflash the normal build; the device key/cert
 	  persist in modem NVM at CONFIG_NRF_CLOUD_SEC_TAG.
 
-config DK_PIN_WORKAROUNDS
-	bool "Use DK-compatible pin assignments"
+# --- pin assignments (P0.x GPIO numbers) ------------------------------------
+# Defaults match the production PCB.  Override per-board/bench in local.conf.
+# Pins for hardware that isn't fitted are still assigned (parked on free
+# GPIOs) so every signal has a defined home.
+
+config APP_PIN_K1_TX
+	int "K-line 1 TX pin"
+	default 2
+
+config APP_PIN_K1_RX
+	int "K-line 1 RX pin"
+	default 3
+
+config APP_PIN_K2_TX
+	int "K-line 2 TX pin"
+	default 4
+
+config APP_PIN_K2_RX
+	int "K-line 2 RX pin"
+	default 5
+
+config APP_PIN_AUX_SW
+	int "Auxiliary power switch pin"
+	default 7
+
+config APP_PIN_TWI_SDA
+	int "I2C SDA pin (INA228 + IMU shared bus)"
+	default 12
+
+config APP_PIN_TWI_SCL
+	int "I2C SCL pin (INA228 + IMU shared bus)"
+	default 11
+
+config APP_PIN_INA_ALRT
+	int "INA228 alert pin"
+	default 10
+
+config APP_PIN_ACC_INT1
+	int "IMU INT1 pin (wake/impact interrupt)"
+	default 31
+
+config APP_PIN_ACC_INT2
+	int "IMU INT2 pin (unused)"
+	default 30
+
+config APP_PIN_IGN_SENSE
+	int "Ignition sense pin"
+	default 6
+
+config APP_PIN_RLY_SET
+	int "Relay SET coil pin"
+	default 13
+
+config APP_PIN_RLY_RST
+	int "Relay RESET coil pin"
+	default 14
+
+config APP_PIN_RLY_SET_FB
+	int "Relay SET feedback pin"
+	default 15
+
+config APP_PIN_RLY_RST_FB
+	int "Relay RESET feedback pin"
+	default 16
+
+# --- hardware presence / debug overrides ------------------------------------
+
+config APP_RELAY_CONNECTED
+	bool "Latching relay fitted"
 	default n
 	help
-	  Override pins that conflict with DK onboard hardware:
-	  K-line from P0.14/P0.15 to P0.8/P0.9 (debugger VCOM),
-	  accel SCL from P0.17 to P0.18 (ADC buffer).
+	  When disabled, relay_init/set/reset are no-ops and the relay pins are
+	  never driven.
+
+config APP_DEBUG_IGNITION
+	int "Force ignition state (-1 = read the GPIO)"
+	default -1
+	help
+	  Debug override for benches without the ignition sense line wired:
+	  0 = ignition ON, 1 = ignition OFF, -1 = live GPIO read.
+
+config APP_DEBUG_BATTERY_MV
+	int "Force battery voltage in mV (0 = read the INA228)"
+	default 0
+	help
+	  Debug override for benches without the INA228/vehicle supply:
+	  e.g. 13000 reports 13.0 V.  0 = live reading.
 
 config APP_ALWAYS_ON
 	bool "Keep relay set regardless of ignition state"

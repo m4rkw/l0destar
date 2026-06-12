@@ -73,8 +73,10 @@ bool hw_power_available(void)
 
 float battery_read_voltage(void)
 {
-    return 12.4;
-
+#if CONFIG_APP_DEBUG_BATTERY_MV > 0
+	/* bench override from local.conf */
+	return CONFIG_APP_DEBUG_BATTERY_MV / 1000.0f;
+#else
 	if (!s_ok) return -1.0f;
 	uint8_t buf[3];
 	if (!bb_read_regs(&ina_bus, INA228_ADDR, 0x05, buf, 3)) {
@@ -82,6 +84,7 @@ float battery_read_voltage(void)
 	}
 	uint32_t raw = ((uint32_t)buf[0] << 16 | (uint32_t)buf[1] << 8 | buf[2]) >> 4;
 	return (float)raw * 195.3125e-6f;
+#endif
 }
 
 void hw_power_shutdown(void)
@@ -99,5 +102,11 @@ void hw_power_wake(void)
 
 int ignition_read(void)
 {
-	return 1;   /* hard-coded ON for testing (sense line not wired) */
+#if CONFIG_APP_DEBUG_IGNITION >= 0
+	/* bench override from local.conf: 0 = ON, 1 = OFF */
+	return CONFIG_APP_DEBUG_IGNITION;
+#else
+	/* MOSFET-gated 3.3 V rail: pin high = ignition present = 0 (ON) */
+	return !gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
+#endif
 }
