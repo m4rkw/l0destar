@@ -1,0 +1,24 @@
+(kicad_sch
+	(version 20260306)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "ab9efcb2-4f3c-43b1-b66a-afc23dd2b85d")
+	(paper "A4")
+	(lib_symbols)
+	(text "IDEAL DIODE 5V SUPPLY TO THE MCU"
+		(exclude_from_sim no)
+		(at 40.132 28.702 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "17fa7001-35a5-4ac0-829d-ba2f9f7073c0")
+	)
+	(sheet_instances
+		(path "/"
+			(page "7")
+		)
+	)
+	(embedded_fonts no)
+)

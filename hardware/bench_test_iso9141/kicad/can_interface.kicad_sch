@@ -1,0 +1,87 @@
+(kicad_sch
+	(version 20260306)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "b07f7f6c-a8c8-4c1b-86bf-ba1618e49299")
+	(paper "A4")
+	(lib_symbols)
+	(text "30/05/2026"
+		(exclude_from_sim no)
+		(at 205.994 193.294 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "058e4221-63c3-496a-87fd-fa916db13233")
+	)
+	(text "14"
+		(exclude_from_sim no)
+		(at 187.452 183.388 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "2fc46057-5726-4ccc-88d6-81578f0e506e")
+	)
+	(text "l0destar CAN interface"
+		(exclude_from_sim no)
+		(at 186.182 189.738 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 2.032 2.032)
+				(thickness 0.4064)
+				(bold yes)
+			)
+			(justify left)
+		)
+		(uuid "4b5f68a1-07b5-4120-b5d6-7c6d887a753a")
+	)
+	(text "9"
+		(exclude_from_sim no)
+		(at 185.166 183.388 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "7b75a946-6c0e-4255-87ed-0bceb277f03a")
+	)
+	(text "CAN interface with dedicated dual-line bus protector\n40MHz crystal"
+		(exclude_from_sim no)
+		(at 180.086 171.196 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "db3c8b4b-d092-4c9f-93d3-aefd9173b27a")
+	)
+	(text "1.0"
+		(exclude_from_sim no)
+		(at 268.478 193.294 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "dd59991e-145e-4f82-89c2-75ef2ecd681f")
+	)
+	(sheet_instances
+		(path "/"
+			(page "9")
+		)
+	)
+	(embedded_fonts no)
+)
