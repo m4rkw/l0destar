@@ -85,3 +85,6 @@ unpowered that VDDIO is 0v.
 - This PCB has not been tested or validated at all yet, I would strongly
   recommend carefully testing it (ideally with an oscilloscope) before
   connecting it to the dev board
+
+![l0destar board](images/pcb1.png)
+![l0destar board](images/pcb2.png)
