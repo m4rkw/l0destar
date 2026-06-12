@@ -38,6 +38,16 @@
   interrupt (and false impact) fired by the sensor's slope filter on every
   sleep entry
 
+### Theft detection (while parked/asleep)
+- Tow/jack: gravity vector polled against a sleep-entry reference every
+  `APP_TOW_POLL_S` (30 s); sustained tilt past `APP_TOW_TILT_DEG` (6°) raises
+  a `tow/jack` alert — catches slow, vibration-free flatbed lifts and jacking
+  that never trip the motion wake
+- Tamper: the IMU's 6D orientation engine is armed during sleep; a change of
+  orientation zone vs. the armed face (unit flipped / pried off its mount)
+  raises a `tamper` alert, checked on every wake (zone compare, not the
+  transient event flag)
+
 ### Modem
 - Rel-14 features + RAI requested before network attach; RAI URC logging
 - eDRX/PSM disabled for continuous tracking duty cycle

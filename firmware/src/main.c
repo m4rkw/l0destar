@@ -239,7 +239,11 @@ static void do_sleep(void)
     LOG_INF("sleep: all peripherals off");
 
     accel_read_baseline();
+    accel_snapshot_tilt_ref();
     accel_irq_enable();
+
+    bool tow_alerted = false;
+    bool tamper_alerted = false;
 
     if (s_saved_loop_interval < 0) {
         s_saved_loop_interval = g_settings.loop_interval;
@@ -263,6 +267,8 @@ static void do_sleep(void)
             sleep_secs = telemetry_remaining;
         if (s_move_cooldown_secs > 0 && s_move_cooldown_secs < sleep_secs)
             sleep_secs = s_move_cooldown_secs;
+        if (TOW_TILT_DEG > 0 && sleep_secs > TOW_POLL_S)
+            sleep_secs = TOW_POLL_S;   /* slow-tilt poll cadence */
         if (sleep_secs < 1) sleep_secs = 1;
 
         k_sem_reset(&s_wake_sem);
@@ -277,6 +283,50 @@ static void do_sleep(void)
         s_move_idle_secs += elapsed;
         if (s_move_idle_secs >= MOVEMENT_INACTIVITY_RESET)
             s_move_alert_level = 0;
+
+        /* --- slow-tilt check (tow / jack) --- */
+        if (TOW_TILT_DEG > 0 && accel_available()) {
+            int tilt = accel_tilt_from_ref_tenths();
+            if (tilt >= TOW_TILT_DEG * 10) {
+                k_msleep(2000);                       /* debounce */
+                tilt = accel_tilt_from_ref_tenths();
+                if (tilt >= TOW_TILT_DEG * 10 && !tow_alerted) {
+                    tow_alerted = true;
+                    LOG_WRN("sustained tilt %d.%ddeg - possible tow/jack",
+                            tilt / 10, tilt % 10);
+                    char msg[56];
+                    snprintf(msg, sizeof(msg),
+                             "tilt %d.%ddeg - possible tow/jack",
+                             tilt / 10, tilt % 10);
+                    alert_enqueue(msg, 2);
+                    watchdog_kick();
+                    int reg = modem_get_network_status();
+                    if (reg != 1 && reg != 5) modem_connect();
+                    alert_send_standalone();
+                }
+            } else if (tilt >= 0 && tilt < TOW_TILT_DEG * 5) {
+                tow_alerted = false;   /* re-arm once back near level */
+            }
+        }
+
+        /* --- 6D orientation tamper (unit flipped / off its mount) --- */
+        /* Checked on every wake, not gated on the INT pin: the wake pulse
+         * de-asserts before the loop runs, but the zone bits persist. */
+        if (accel_available()) {
+            uint8_t d6d = 0;
+            int changed = accel_d6d_tamper(&d6d);
+            if (changed && !tamper_alerted) {
+                tamper_alerted = true;
+                LOG_WRN("tamper: orientation changed (D6D_SRC=0x%02x)", d6d);
+                alert_enqueue("tamper: orientation changed", 2);
+                watchdog_kick();
+                int reg = modem_get_network_status();
+                if (reg != 1 && reg != 5) modem_connect();
+                alert_send_standalone();
+            } else if (!changed) {
+                tamper_alerted = false;   /* re-arm once back to armed face */
+            }
+        }
 
         /* --- ignition check --- */
         int ign_now = ignition_read();

@@ -155,6 +155,10 @@ float battery_read_voltage(void);
 int  accel_crash_int_enable(int threshold_mg);
 int  accel_crash_int_disable(void);
 int  accel_read_wake_src(uint8_t *src);
+int  accel_read_d6d_src(uint8_t *src);
+int  accel_d6d_tamper(uint8_t *src);
+int  accel_snapshot_tilt_ref(void);
+int  accel_tilt_from_ref_tenths(void);
 
 /* impact forensics from the IMU FIFO ring buffer */
 struct accel_impact {

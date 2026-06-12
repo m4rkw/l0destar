@@ -223,6 +223,24 @@ config APP_CRASH_THRESHOLD_MG
 	  a firm rap on the desk reaches 1.5-3 g.  Rounded down to 125 mg
 	  steps (±8 g FS / 64).
 
+config APP_TOW_TILT_DEG
+	int "Tow/jack tilt alert threshold (degrees, 0 = disabled)"
+	default 6
+	help
+	  While asleep, the gravity vector is compared against a reference
+	  snapped at sleep entry.  A sustained tilt beyond this angle raises a
+	  tow/jack alert — catches slow, vibration-free lifts (flatbed ramps
+	  reach 10-15°, jacking a corner 3-8°) that never trip the movement
+	  wake.  Suspension settling is ~1-2°, so keep above ~4.
+
+config APP_TOW_POLL_S
+	int "Tow tilt poll interval during sleep (seconds)"
+	default 30
+	help
+	  Sleep-loop wake cadence for the tilt check.  Each poll is a single
+	  accelerometer read (~ms); the power cost is negligible on vehicle
+	  power.
+
 config APP_PARKED_IMPACT_MG
 	int "Parked impact alert threshold (milli-g)"
 	default 800

@@ -29,6 +29,8 @@ static bool s_ok;
 #define ACC_OUT_TEMP_L 0x20
 #define ACC_OUTX_L_G   0x22
 #define ACC_OUTX_L_A   0x28
+#define ACC_D6D_SRC    0x1D
+#define ACC_TAP_THS_6D 0x59
 #define ACC_FIFO_STATUS1 0x3A
 #define ACC_FIFO_STATUS2 0x3B
 #define ACC_FIFO_DATA_TAG 0x78
@@ -46,6 +48,8 @@ static int16_t s_base_x, s_base_y, s_base_z;
  * accel_read() converts to milli-g so callers (and telemetry) are
  * FS-independent. */
 static float s_mg_per_lsb = 0.244f;
+
+static uint8_t s_d6d_zone;   /* orientation zone captured when 6D was armed */
 
 int hw_accel_init(void)
 {
@@ -260,13 +264,27 @@ int accel_enable_wake_int(void)
 	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_WAKE_UP_DUR, 0x00))
 		return -EIO;
 
-	/* Route wake-up to INT1 */
-	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_MD1_CFG, 0x20))
+	/* 6D orientation detection: 60° zone threshold — fires when the unit
+	 * settles into a different cardinal orientation (tamper / removal). */
+	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_TAP_THS_6D, 0x40))
 		return -EIO;
 
-	/* Clear any pending interrupt */
+	/* Route wake-up + 6D to INT1 */
+	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_MD1_CFG, 0x24))
+		return -EIO;
+
+	/* Clear any pending events */
 	uint8_t dummy;
 	bb_read_regs(&acc_bus, ACC_ADDR, ACC_WAKE_UP_SRC, &dummy, 1);
+	bb_read_regs(&acc_bus, ACC_ADDR, ACC_D6D_SRC, &dummy, 1);
+
+	/* The 6D engine classifies the *initial* orientation a few samples
+	 * after arming and fires for it — swallow that event and remember the
+	 * zone so only a genuine change reads as tamper. */
+	k_msleep(80);
+	if (bb_read_regs(&acc_bus, ACC_ADDR, ACC_D6D_SRC, &dummy, 1)) {
+		s_d6d_zone = dummy & 0x3F;
+	}
 
 	LOG_DBG("ACC wake-up interrupt enabled on INT1");
 	return 0;
@@ -336,6 +354,70 @@ int accel_read_wake_src(uint8_t *src)
 {
 	if (!s_ok) return -1;
 	return bb_read_regs(&acc_bus, ACC_ADDR, ACC_WAKE_UP_SRC, src, 1) ? 0 : -1;
+}
+
+int accel_read_d6d_src(uint8_t *src)
+{
+	if (!s_ok) return -1;
+	return bb_read_regs(&acc_bus, ACC_ADDR, ACC_D6D_SRC, src, 1) ? 0 : -1;
+}
+
+/* True when the current orientation zone (which face is down) differs from the
+ * one captured at arm time.  Uses the static zone bits, not the transient
+ * D6D_IA event flag — the no-latch config doesn't hold the event long enough
+ * to catch from the sleep loop. */
+int accel_d6d_tamper(uint8_t *src)
+{
+	uint8_t v = 0;
+	if (accel_read_d6d_src(&v) != 0) return 0;
+	if (src) *src = v;
+	uint8_t zone = v & 0x3F;
+	if (zone == 0) return 0;          /* no clear orientation classified */
+	return zone != s_d6d_zone;        /* changed from the armed orientation */
+}
+
+/* -- slow-tilt reference (tow/jack detection) -------------------------------
+ * Separate from the movement baseline: that one is re-read after every wake
+ * event, which would erase a lift in progress.  This reference is snapped
+ * once at sleep entry and persists for the whole parked session. */
+
+static int16_t s_tilt_ref[3];
+static bool    s_tilt_ref_ok;
+
+int accel_snapshot_tilt_ref(void)
+{
+	int x, y, z;
+	if (accel_read(&x, &y, &z) != 0) {
+		s_tilt_ref_ok = false;
+		return -1;
+	}
+	s_tilt_ref[0] = (int16_t)x;
+	s_tilt_ref[1] = (int16_t)y;
+	s_tilt_ref[2] = (int16_t)z;
+	s_tilt_ref_ok = true;
+	return 0;
+}
+
+/* Angle between the current gravity vector and the sleep-entry reference,
+ * in tenths of a degree.  Negative on error. */
+int accel_tilt_from_ref_tenths(void)
+{
+	if (!s_tilt_ref_ok) return -1;
+
+	int x, y, z;
+	if (accel_read(&x, &y, &z) != 0) return -1;
+
+	float rx = s_tilt_ref[0], ry = s_tilt_ref[1], rz = s_tilt_ref[2];
+	float cx = x, cy = y, cz = z;
+	float dot = rx * cx + ry * cy + rz * cz;
+	float mr = sqrtf(rx * rx + ry * ry + rz * rz);
+	float mc = sqrtf(cx * cx + cy * cy + cz * cz);
+	if (mr <= 0.0f || mc <= 0.0f) return -1;
+
+	float cos_a = dot / (mr * mc);
+	if (cos_a > 1.0f)  cos_a = 1.0f;
+	if (cos_a < -1.0f) cos_a = -1.0f;
+	return (int)(acosf(cos_a) * (1800.0f / 3.14159265f));
 }
 
 /* -- FIFO ring buffer: pre-impact forensics --------------------------------- */
