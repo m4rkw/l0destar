@@ -77,6 +77,17 @@
 #define COAST_STOP_SPEED_KMH        (CONFIG_APP_COAST_STOP_SPEED_KMH_X10 / 10.0f)
 #define COAST_MAX_ITERATIONS        CONFIG_APP_COAST_MAX_ITERATIONS
 
+/* -- gyro zero-rate auto-calibration --------------------------------------- */
+/* The ASM330 gyro has a temperature-dependent zero-rate offset (bench data:
+ * gy ~ -132 LSB, ~-1.2 dps, at standstill). When we have a good GNSS fix and
+ * are stopped, learn that offset and subtract it so logged rates are honest. */
+#define GYRO_REST_KMH               1.0f  /* treat as stationary below this  */
+#define GYRO_AUTOZERO_SAMPLES       16    /* raw samples averaged per update */
+#define GYRO_AUTOZERO_GAP_MS        5     /* spacing between those samples   */
+#define GYRO_AUTOZERO_REJECT_LSB    250   /* |raw-bias| above this = real    */
+                                          /* rotation, so skip the update    */
+#define GYRO_AUTOZERO_EMA_SHIFT     2     /* drift tracking: new += (m-b)>>n */
+
 /* -- movement confirmation ------------------------------------------------- */
 #define MOVEMENT_CONFIRM_MS         CONFIG_APP_MOVEMENT_CONFIRM_MS
 #define MOVEMENT_CONFIRM_HITS       CONFIG_APP_MOVEMENT_CONFIRM_HITS

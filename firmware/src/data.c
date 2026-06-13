@@ -113,7 +113,13 @@ int collect_data(int ignitionState)
         if (n > 0) data_index += n;
     }
 
-    /* Gyro (raw LSB at ±250 dps) + IMU die temperature (°C) */
+    /* Gyro (bias-corrected LSB at ±250 dps) + IMU die temperature (°C).
+     * Re-learn the zero-rate bias whenever we're genuinely stopped (good
+     * fix, ~0 speed) so the logged rates aren't skewed by the sensor's
+     * temperature-dependent offset. */
+    if (g_gnss.sats >= SPEED_MIN_SATS && g_gnss.speed_kmh < GYRO_REST_KMH) {
+        accel_gyro_autozero();
+    }
     int gx, gy, gz;
     if (accel_read_gyro(&gx, &gy, &gz) == 0) {
         n = snprintf(&data_current[data_index],

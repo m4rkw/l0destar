@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.1 - 13/06/2026
+
+### Telemetry
+- Gyro zero-rate bias auto-zero: while stopped (good GNSS fix, speed below
+  `GYRO_REST_KMH`) the device averages a short burst of raw samples and
+  EMA-tracks the sensor's temperature-dependent offset, subtracting it from
+  every `gx/gy/gz` reading. Bench data showed gy ≈ −132 LSB (~−1.2 dps) at
+  rest; logged rates are now honest. A per-burst rotation reject
+  (`GYRO_AUTOZERO_REJECT_LSB`) prevents a stale/zero GNSS speed during motion
+  from corrupting the offset.
+
 ## 0.2.0 - 12/06/2026
 
 ### Transport & security

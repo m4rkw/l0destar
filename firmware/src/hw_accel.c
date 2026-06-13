@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
@@ -42,6 +43,11 @@ static bool s_ok;
 #define ACC_MD1_CFG    0x5E
 
 static int16_t s_base_x, s_base_y, s_base_z;
+
+/* Gyro zero-rate bias (raw LSB), learned at standstill and subtracted from
+ * every gyro read. See GYRO_AUTOZERO_* in config.h. */
+static int  s_gyro_bias_x, s_gyro_bias_y, s_gyro_bias_z;
+static bool s_gyro_bias_valid;
 
 /* mg per LSB for the accel's current full-scale: ±8 g (0.244) while awake so
  * impacts don't clip, ±2 g (0.061) in sleep for fine wake sensitivity.
@@ -124,7 +130,7 @@ int accel_read(int *ax, int *ay, int *az)
 	return 0;
 }
 
-int accel_read_gyro(int *gx, int *gy, int *gz)
+static int gyro_read_raw(int *gx, int *gy, int *gz)
 {
 	if (!s_ok) return -1;
 
@@ -136,6 +142,66 @@ int accel_read_gyro(int *gx, int *gy, int *gz)
 	if (gx) *gx = (int)(int16_t)((b[1] << 8) | b[0]);
 	if (gy) *gy = (int)(int16_t)((b[3] << 8) | b[2]);
 	if (gz) *gz = (int)(int16_t)((b[5] << 8) | b[4]);
+	return 0;
+}
+
+int accel_read_gyro(int *gx, int *gy, int *gz)
+{
+	int rx, ry, rz;
+	if (gyro_read_raw(&rx, &ry, &rz) != 0) return -1;
+
+	if (gx) *gx = rx - s_gyro_bias_x;
+	if (gy) *gy = ry - s_gyro_bias_y;
+	if (gz) *gz = rz - s_gyro_bias_z;
+	return 0;
+}
+
+/* Re-learn the gyro zero-rate offset from a short burst of raw samples. Call
+ * only when the vehicle is known to be stationary (good fix, ~0 speed). The
+ * burst is rejected if any axis shows real rotation, so a stale/zero GNSS
+ * speed during motion can't corrupt the bias. */
+int accel_gyro_autozero(void)
+{
+	if (!s_ok) return -1;
+
+	int32_t sx = 0, sy = 0, sz = 0;
+	int n = 0;
+
+	for (int i = 0; i < GYRO_AUTOZERO_SAMPLES; i++) {
+		int rx, ry, rz;
+		if (gyro_read_raw(&rx, &ry, &rz) != 0) continue;
+
+		/* Anything well beyond the expected offset is real motion, not
+		 * bias — abort rather than learn a wrong zero. */
+		if (abs(rx - s_gyro_bias_x) > GYRO_AUTOZERO_REJECT_LSB ||
+		    abs(ry - s_gyro_bias_y) > GYRO_AUTOZERO_REJECT_LSB ||
+		    abs(rz - s_gyro_bias_z) > GYRO_AUTOZERO_REJECT_LSB) {
+			return -1;
+		}
+
+		sx += rx; sy += ry; sz += rz;
+		n++;
+		k_msleep(GYRO_AUTOZERO_GAP_MS);
+	}
+	if (n == 0) return -1;
+
+	int bx = sx / n, by = sy / n, bz = sz / n;
+
+	if (!s_gyro_bias_valid) {
+		s_gyro_bias_x = bx;
+		s_gyro_bias_y = by;
+		s_gyro_bias_z = bz;
+		s_gyro_bias_valid = true;
+	} else {
+		/* EMA so the bias tracks slow thermal drift but a single noisy
+		 * burst can't yank it. */
+		s_gyro_bias_x += (bx - s_gyro_bias_x) >> GYRO_AUTOZERO_EMA_SHIFT;
+		s_gyro_bias_y += (by - s_gyro_bias_y) >> GYRO_AUTOZERO_EMA_SHIFT;
+		s_gyro_bias_z += (bz - s_gyro_bias_z) >> GYRO_AUTOZERO_EMA_SHIFT;
+	}
+
+	LOG_DBG("gyro autozero: bias=%d,%d,%d (n=%d)",
+	        s_gyro_bias_x, s_gyro_bias_y, s_gyro_bias_z, n);
 	return 0;
 }
 

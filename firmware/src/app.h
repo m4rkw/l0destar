@@ -148,6 +148,7 @@ uint8_t kline_tx_rx_byte(uint8_t tx);
 
 int   accel_read(int *ax, int *ay, int *az);
 int   accel_read_gyro(int *gx, int *gy, int *gz);
+int   accel_gyro_autozero(void);
 int   accel_read_temp(float *temp_c);
 int   modem_read_temp(float *temp_c);
 int   ignition_read(void);
