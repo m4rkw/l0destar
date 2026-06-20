@@ -25,72 +25,74 @@ config APP_PROVISION_MODE
 
 config APP_PIN_K1_TX
 	int "K-line 1 TX pin"
-	default 2
+	default 22
 
 config APP_PIN_K1_RX
 	int "K-line 1 RX pin"
-	default 3
+	default 21
 
 config APP_PIN_K2_TX
 	int "K-line 2 TX pin"
-	default 4
+	default 24
 
 config APP_PIN_K2_RX
 	int "K-line 2 RX pin"
-	default 5
+	default 23
 
 config APP_PIN_AUX_SW
 	int "Auxiliary power switch pin"
-	default 7
+	default 10
 
 config APP_PIN_TWI_SDA
 	int "I2C SDA pin (INA228 + IMU shared bus)"
-	default 12
+	default 5
 
 config APP_PIN_TWI_SCL
 	int "I2C SCL pin (INA228 + IMU shared bus)"
-	default 11
+	default 4
 
 config APP_PIN_INA_ALRT
-	int "INA228 alert pin"
-	default 10
+	int "INA228 alert pin (VBAT_ALRT)"
+	default 11
 
 config APP_PIN_ACC_INT1
 	int "IMU INT1 pin (wake/impact interrupt)"
-	default 31
+	default 2
 
 config APP_PIN_ACC_INT2
 	int "IMU INT2 pin (unused)"
-	default 30
+	default 3
 
 config APP_PIN_IGN_SENSE
-	int "Ignition sense pin"
-	default 6
+	int "Ignition sense pin (active low: low = ignition on)"
+	default 31
 
 config APP_PIN_RLY_SET
 	int "Relay SET coil pin"
-	default 13
+	default 12
 
 config APP_PIN_RLY_RST
 	int "Relay RESET coil pin"
-	default 14
+	default 30
 
 config APP_PIN_RLY_SET_FB
 	int "Relay SET feedback pin"
-	default 15
+	default 7
 
 config APP_PIN_RLY_RST_FB
 	int "Relay RESET feedback pin"
-	default 16
+	default 6
 
 # --- hardware presence / debug overrides ------------------------------------
 
 config APP_RELAY_CONNECTED
 	bool "Latching relay fitted"
-	default n
+	default y
 	help
 	  When disabled, relay_init/set/reset are no-ops and the relay pins are
-	  never driven.
+	  never driven.  relay_init() self-detects an absent relay (both feedback
+	  lines low) and falls back to no-ops, so this can stay enabled on a
+	  bench without the relay wired.
 
 config APP_DEBUG_IGNITION
 	int "Force ignition state (-1 = read the GPIO)"

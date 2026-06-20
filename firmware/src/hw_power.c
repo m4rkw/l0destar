@@ -25,7 +25,7 @@ int hw_power_init(void)
 	bb_init(&ina_bus);
 	bb_pin_test(&ina_bus, "INA228");
 	gpio_pin_configure(hw_gpio0, PIN_INA_ALRT, GPIO_INPUT | GPIO_PULL_UP);
-	gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INPUT);
+	gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INPUT | GPIO_PULL_UP);
 
 	if (!bb_write16(&ina_bus, INA228_ADDR, 0x00, 0x8000)) {
 		LOG_ERR("INA228 reset NACK");
@@ -106,7 +106,7 @@ int ignition_read(void)
 	/* bench override from local.conf: 0 = ON, 1 = OFF */
 	return CONFIG_APP_DEBUG_IGNITION;
 #else
-	/* MOSFET-gated 3.3 V rail: pin high = ignition present = 0 (ON) */
-	return !gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
+	/* Active-low sense (pulled up): pin low = ignition present = 0 (ON) */
+	return gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
 #endif
 }
