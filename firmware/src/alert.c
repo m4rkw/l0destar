@@ -40,7 +40,13 @@ int alert_send(void)
         char line[ALERT_MSG_SIZE + 16];
         int n = snprintf(line, sizeof(line), "A,%d,%s",
                          alert_prio[i], alert_queue[i]);
-        if (n > 0 && transport_send((const uint8_t *)line, (size_t)n) != 0) {
+        if (n <= 0) continue;
+
+        int rc = transport_send((const uint8_t *)line, (size_t)n);
+#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
+        transport_close();
+#endif
+        if (rc != 0) {
             /* Leave remaining alerts queued for the next attempt. */
             if (i > 0) {
                 int remaining = alert_count - i;
