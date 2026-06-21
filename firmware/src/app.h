@@ -142,6 +142,7 @@ int  relay_reset(void);
 bool relay_available(void);
 int  kline_init(void);
 int  kline_self_test(void);
+int  kline_test(void);
 void kline_power_on(void);
 void kline_power_off(void);
 uint8_t kline_tx_rx_byte(uint8_t tx);

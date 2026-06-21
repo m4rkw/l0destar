@@ -116,6 +116,14 @@ config APP_ALWAYS_ON
 	  reset by the state machine.  Use for installations where the tracker
 	  supplies its own load and should stay powered continuously.
 
+config APP_KLINE_TEST
+	bool "Run the L9637D K-line bring-up test at boot"
+	default n
+	help
+	  At startup, stream a run of bytes K1 -> K2 and K2 -> K1 over the shared
+	  K-line to verify the two transceivers talk to each other across the
+	  wire.  Bench bring-up aid; leave off in production.
+
 config APP_PSK_HEX
 	string "32-byte device PSK as 64 hex chars"
 	default ""
