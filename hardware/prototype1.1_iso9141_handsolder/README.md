@@ -2,7 +2,7 @@
 
 ## Overview
 
-NOTE: THIS HAS NOT BEEN TESTED, USE AT YOUR OWN RISK
+NOTE: ISSUES FOUND DURING TESTING - SEE KNOWN ISSUES
 
 This is a prototype l0destar vehicle tracker PCB designed to be hand-solderable.
 It makes use of the [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) to provide the LTE and GPS
@@ -36,6 +36,19 @@ in a vehicle for testing the pragmatic decision was taken to power it with a
 4.2V buck feeding the battery connector. With this power connection we can
 connect USB-C at any time to update the firmware without needing to disconnect
 power.
+
+## Known issues
+
+- When AUX_SW is low the +5V_AUX rail reads 2.8v due to voltage from the 12V
+  supply to the L9637D backfeeding through the body of the chip into the +5V_AUX
+  rail. As this doesn't power anything else it's probably mostly harmless but is
+  technically a fault of the design so I'll be correcting it, probably by adding
+  a gated +12V_AUX rail controlled by another pair of MOSFETs. This backfeeding
+  might also degrade the chip over time possibly, although in my experience the
+  L9637D is a pretty tough chip.
+- The clearance between the traces is way too low in several places making this
+  board very difficult to assemble without bridging nets. I did eventually
+  manage to do it on the 3rd attempt but it's not ideal.
 
 ## Parts list
 
