@@ -33,7 +33,7 @@ BUILD_DIR="${BUILD_DIR:-$APP_DIR/build}"
 # `-p auto` re-runs cmake when build settings change; pass `-p always` to force a clean build.
 PRISTINE="${PRISTINE:-auto}"
 
-EXTRA_ARGS=()
+CMAKE_ARGS=()
 OVERLAYS=()
 if [[ -f "$APP_DIR/local.conf" ]]; then
 	OVERLAYS+=("local.conf")
@@ -43,7 +43,17 @@ if [[ "${PROV:-}" == "1" && -f "$APP_DIR/prov.conf" ]]; then
 	OVERLAYS+=("prov.conf")
 fi
 if [[ ${#OVERLAYS[@]} -gt 0 ]]; then
-	EXTRA_ARGS+=("--" "-DOVERLAY_CONFIG=$(IFS=';'; echo "${OVERLAYS[*]}")")
+	CMAKE_ARGS+=("-DOVERLAY_CONFIG=$(IFS=';'; echo "${OVERLAYS[*]}")")
+fi
+# Optional bench-only devicetree overlay (gitignored), e.g. to free DK pins
+# for a bench peripheral remap without touching the committed board overlay.
+if [[ -f "$APP_DIR/local.overlay" ]]; then
+	CMAKE_ARGS+=("-DEXTRA_DTC_OVERLAY_FILE=local.overlay")
+fi
+
+EXTRA_ARGS=()
+if [[ ${#CMAKE_ARGS[@]} -gt 0 ]]; then
+	EXTRA_ARGS+=("--" "${CMAKE_ARGS[@]}")
 fi
 
 # `west` must run from inside the NCS workspace so it can find the manifest;

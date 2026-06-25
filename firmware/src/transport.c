@@ -33,7 +33,16 @@ LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
 
 #define SERVER_HOST \
     (sizeof(CONFIG_APP_SERVER_HOST) > 1 ? CONFIG_APP_SERVER_HOST : HOSTNAME)
-#define SERVER_PORT DTLS_PORT
+
+#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
+#define SERVER_PORT  TLS_PORT
+#define SOCK_TYPE    SOCK_STREAM
+#define SOCK_PROTO   IPPROTO_TLS_1_2
+#else
+#define SERVER_PORT  DTLS_PORT
+#define SOCK_TYPE    SOCK_DGRAM
+#define SOCK_PROTO   IPPROTO_DTLS_1_2
+#endif
 
 static int s_sock = -1;
 static struct sockaddr_in s_server;
@@ -44,8 +53,8 @@ int transport_open(void)
 
     struct zsock_addrinfo hints = {
         .ai_family   = AF_INET,
-        .ai_socktype = SOCK_DGRAM,
-        .ai_protocol = IPPROTO_DTLS_1_2,
+        .ai_socktype = SOCK_TYPE,
+        .ai_protocol = SOCK_PROTO,
     };
     struct zsock_addrinfo *res = NULL;
     char port_str[8];
@@ -59,7 +68,7 @@ int transport_open(void)
     memcpy(&s_server, res->ai_addr, sizeof(s_server));
     zsock_freeaddrinfo(res);
 
-    s_sock = zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_DTLS_1_2);
+    s_sock = zsock_socket(AF_INET, SOCK_TYPE, SOCK_PROTO);
     if (s_sock < 0) {
         LOG_ERR("socket: %d", errno);
         return -errno;
@@ -76,9 +85,11 @@ int transport_open(void)
     zsock_setsockopt(s_sock, SOL_TLS, TLS_HOSTNAME,
                      SERVER_HOST, strlen(SERVER_HOST));
 
+#if !IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
     int cid = TLS_DTLS_CID_ENABLED;
     zsock_setsockopt(s_sock, SOL_TLS, TLS_DTLS_CID,
                      &cid, sizeof(cid));
+#endif
 
     int cache = TLS_SESSION_CACHE_ENABLED;
     zsock_setsockopt(s_sock, SOL_TLS, TLS_SESSION_CACHE,
@@ -93,7 +104,11 @@ int transport_open(void)
         return -errno;
     }
 
+#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
+    LOG_INF("TLS connected");
+#else
     LOG_INF("DTLS connected");
+#endif
     return 0;
 }
 
@@ -153,6 +168,12 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
     }
 
     LOG_INF("sent %u bytes", (unsigned)total);
+
+#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
+    if (!read_udp_response) {
+        transport_teardown();
+    }
+#endif
     return 0;
 }
 
@@ -166,15 +187,29 @@ int transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms)
     };
     zsock_setsockopt(s_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
+    int rai;
+
+#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
+    rai = RAI_NO_DATA;
+    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+#endif
+
     int n = zsock_recv(s_sock, out_plaintext, out_len - 1, 0);
     if (n < 0) {
         if (errno != EAGAIN) LOG_WRN("recv: %d", errno);
+#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
+        transport_teardown();
+#endif
         return -errno;
     }
     out_plaintext[n] = '\0';
 
-    int rai = RAI_NO_DATA;
+#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
+    transport_teardown();
+#else
+    rai = RAI_NO_DATA;
     zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+#endif
 
     return n;
 }

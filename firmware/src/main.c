@@ -621,6 +621,10 @@ int main(void)
 
     relay_init();
 
+#if IS_ENABLED(CONFIG_APP_KLINE_TEST)
+    kline_test();
+#endif
+
     LOG_INF("ignition=%s battery=%.2fV",
             ignition_read() == 0 ? "ON" : "OFF",
             (double)battery_read_voltage());

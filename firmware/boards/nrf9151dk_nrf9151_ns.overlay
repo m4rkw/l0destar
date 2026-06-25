@@ -1,14 +1,15 @@
-/* Disable UART1 so P0.15-P0.18 are free for K-line GPIO. */
-&uart1 {
-	status = "disabled";
-};
+/* The tracker drives I2C, the relay and the K-lines as plain GPIO on gpio0,
+ * so any DK peripheral whose default pinctrl claims one of those pins must be
+ * disabled to hand the pin back to the app.  (UART0 keeps its default pins
+ * P0.14/15/26/27 — none of which the tracker uses — for the USB VCOM console.)
+ */
 
-/* Disable I2C2 so P0.30 is free for ACC_INT2. */
+/* I2C2 default pinctrl owns P0.30/P0.31 — needed for RLY_RST / IGN_SENSE. */
 &i2c2 {
 	status = "disabled";
 };
 
-/* Disable SPI3 so P0.11-P0.13 are free for relay GPIO. */
+/* SPI3 default pinctrl owns P0.11/P0.12 — needed for VBAT_ALRT / RLY_SET. */
 &spi3 {
 	status = "disabled";
 };
