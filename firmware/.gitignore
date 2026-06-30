@@ -2,10 +2,11 @@ build/
 build_prov/
 local.conf
 local.overlay
-# Makerdiary nRF9151 Connect Kit bench profile (auto-applied by build.sh when
-# its CMSIS-DAP probe is detected) — board-specific bench config, kept local.
+# Makerdiary nRF9151 Connect Kit profile + vendored board definition (used by
+# build.sh when its CMSIS-DAP probe is detected) — board-specific, kept local.
 makerdiary.conf
-makerdiary.overlay
+boards/makerdiary/
+boards/nrf9151_connectkit_*
 certs/*.key
 certs/*.crt
 # nRF Cloud onboarding CA (contains a private key) + generated artifacts

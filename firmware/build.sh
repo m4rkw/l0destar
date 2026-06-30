@@ -5,10 +5,12 @@
 #   dk          Nordic nRF9151 DK (default).  Console on the J-Link VCOM pins
 #               (P0.27/P0.26) via the committed boards/nrf9151dk overlay.
 #   makerdiary  Makerdiary nRF9151 Connect Kit, detected via its CMSIS-DAP probe.
-#               Same nrf9151dk board target, but layers makerdiary.{conf,overlay}
-#               to move the console onto the board's USB-serial bridge pins
-#               (P0.11/P0.12) and re-park the app GPIOs that would otherwise
-#               collide with them.
+#               Builds the vendored nrf9151_connectkit board target (boards/
+#               makerdiary/, found via BOARD_ROOT) so the console pins AND the
+#               GNSS antenna config match the hardware — the DK target wrongly
+#               sends AT%XCOEX0 for the DK's RF switch, which breaks GPS on this
+#               board.  makerdiary.conf re-parks the two app GPIOs that collide
+#               with the board's console pins (P0.11/P0.12).
 set -euo pipefail
 
 if [ "${1:-}" = "pristine" ] ; then
@@ -17,7 +19,7 @@ fi
 
 NCS_VERSION="${NCS_VERSION:-v3.3.0}"
 NCS_ROOT="${NCS_ROOT:-/opt/nordic/ncs/$NCS_VERSION}"
-BOARD="${BOARD:-nrf9151dk/nrf9151/ns}"
+BOARD_OVERRIDE="${BOARD:-}"   # explicit BOARD=... wins over the per-profile default
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Zephyr's CMake/kconfig pipeline mishandles spaces in source paths. When the
@@ -55,15 +57,25 @@ if [[ -z "$PROFILE" ]]; then
 		PROFILE=dk
 	fi
 fi
-echo "Board profile: $PROFILE"
+# Board target per profile (an explicit BOARD=... still wins).
+if [[ -n "$BOARD_OVERRIDE" ]]; then
+	BOARD="$BOARD_OVERRIDE"
+elif [[ "$PROFILE" == makerdiary ]]; then
+	BOARD="nrf9151_connectkit/nrf9151/ns"
+else
+	BOARD="nrf9151dk/nrf9151/ns"
+fi
+echo "Board profile: $PROFILE  (target: $BOARD)"
 
-# Switching profiles leaves the other board's devicetree/Kconfig cached in the
-# build dir; force a clean rebuild when the profile differs from last time.
+# Switching profiles/targets leaves the other board's devicetree/Kconfig cached
+# in the build dir; force a clean rebuild when the (profile, board) signature
+# differs from last time.
 MARKER="$BUILD_DIR/.board_profile"
+SIG="$PROFILE|$BOARD"
 if [[ -f "$MARKER" ]]; then
 	LAST="$(cat "$MARKER" 2>/dev/null || true)"
-	if [[ -n "$LAST" && "$LAST" != "$PROFILE" ]]; then
-		echo "Profile changed ($LAST -> $PROFILE) — forcing pristine rebuild."
+	if [[ -n "$LAST" && "$LAST" != "$SIG" ]]; then
+		echo "Build target changed ($LAST -> $SIG) — forcing pristine rebuild."
 		PRISTINE=always
 	fi
 fi
@@ -72,17 +84,18 @@ CMAKE_ARGS=()
 CONF_OVERLAYS=()
 DTC_OVERLAYS=()
 
-# Makerdiary profile deltas go first so the personal local.* layer (below) can
-# still override them on the bench.
+# Makerdiary profile: the board target supplies the console pins and GNSS
+# antenna default, so we only need BOARD_ROOT (to find the vendored board def)
+# and makerdiary.conf for the app GPIO re-park.  Layered first so the personal
+# local.* files below can still override on the bench.
 if [[ "$PROFILE" == makerdiary ]]; then
+	CMAKE_ARGS+=("-DBOARD_ROOT=$APP_DIR")
+	if [[ ! -d "$APP_DIR/boards/makerdiary/nrf9151_connectkit" ]]; then
+		echo "WARNING: makerdiary profile selected but boards/makerdiary/nrf9151_connectkit" >&2
+		echo "         is missing — the $BOARD target won't resolve. Re-vendor the board def." >&2
+	fi
 	if [[ -f "$APP_DIR/makerdiary.conf" ]]; then
 		CONF_OVERLAYS+=("makerdiary.conf")
-	fi
-	if [[ -f "$APP_DIR/makerdiary.overlay" ]]; then
-		DTC_OVERLAYS+=("makerdiary.overlay")
-	else
-		echo "WARNING: makerdiary profile selected but makerdiary.overlay is missing —" >&2
-		echo "         the console stays on DK pins and you'll get no serial output." >&2
 	fi
 fi
 
@@ -118,8 +131,8 @@ nrfutil sdk-manager toolchain launch \
 	-- west build -p "$PRISTINE" -b "$BOARD" -d "$BUILD_DIR" "$APP_DIR" \
 	"${EXTRA_ARGS[@]}"
 
-# Record which profile this build dir now holds (drives the switch check above).
-echo "$PROFILE" > "$MARKER"
+# Record what this build dir now holds (drives the switch check above).
+echo "$SIG" > "$MARKER"
 
 echo
-echo "Built: $BUILD_DIR/merged.hex  (profile: $PROFILE)"
+echo "Built: $BUILD_DIR/merged.hex  (profile: $PROFILE, target: $BOARD)"
