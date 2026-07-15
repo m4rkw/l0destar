@@ -39,8 +39,7 @@ power.
 | Part | Description | Quantity |
 |------|-------------|----------|
 | [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) | MCU and GSM/GPS | 1 |
-| [Molex
-43045-1400](https://uk.farnell.com/molex/43045-1400/conn-r-a-pcb-hdr-14pos-2row-3mm/dp/9732985) | Main connector | 1 |
+| [Molex 43045-1400](https://uk.farnell.com/molex/43045-1400/conn-r-a-pcb-hdr-14pos-2row-3mm/dp/9732985) | Main connector | 1 |
 | [20-pin pcb header](https://amzn.to/44hTFGN) | Makerdiary board connector | 2 |
 | [U.FL-R-SMT(01) RF COAXIAL, U.FL, STRAIGHT JACK, 50O](https://uk.farnell.com/3908021) | u.FL connectors | 2 |
 | [SMA-J-P-H-RA-TH1 RF COAXIAL, SMA JACK, 50 OHM](https://uk.farnell.com/2856817) | through-hole SMA connectors | 2 |
