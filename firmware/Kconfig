@@ -83,6 +83,26 @@ config APP_PIN_RLY_RST_FB
 	int "Relay RESET feedback pin"
 	default 6
 
+# --- status LEDs (makerdiary bench / proto) --------------------------------
+# Default -1 = not fitted.  When LED1 is set, all three LEDs are driven as
+# raw GPIO (ignoring the DT led0 alias); when -1, the single DT LED is used.
+
+config APP_PIN_LED1
+	int "Status LED 1 pin (-1 = use DT led0 alias)"
+	default -1
+
+config APP_PIN_LED2
+	int "Status LED 2 pin (-1 = not fitted)"
+	default -1
+
+config APP_PIN_LED3
+	int "Status LED 3 pin (-1 = not fitted)"
+	default -1
+
+config APP_LED_ACTIVE_LOW
+	bool "Status LEDs are active-low"
+	default y
+
 # --- hardware presence / debug overrides ------------------------------------
 
 config APP_RELAY_CONNECTED

@@ -6,11 +6,13 @@
 #               (P0.27/P0.26) via the committed boards/nrf9151dk overlay.
 #   makerdiary  Makerdiary nRF9151 Connect Kit, detected via its CMSIS-DAP probe.
 #               Builds the vendored nrf9151_connectkit board target (boards/
-#               makerdiary/, found via BOARD_ROOT) so the console pins AND the
-#               GNSS antenna config match the hardware — the DK target wrongly
-#               sends AT%XCOEX0 for the DK's RF switch, which breaks GPS on this
-#               board.  makerdiary.conf re-parks the two app GPIOs that collide
-#               with the board's console pins (P0.11/P0.12).
+#               makerdiary/, found via BOARD_ROOT) so the console pins match the
+#               hardware.  That board target does NOT default CONFIG_MODEM_ANTENNA
+#               on (only the DK target does), so makerdiary.conf re-enables it and
+#               sends AT%XCOEX0=1,1,1565,1586 — the Connect Kit's GNSS LNA LDO is
+#               gated by COEX0, so without that command the LNA stays off and GPS
+#               sees no satellites.  makerdiary.conf also re-parks the two app
+#               GPIOs that collide with the board's console pins (P0.11/P0.12).
 set -euo pipefail
 
 if [ "${1:-}" = "pristine" ] ; then
@@ -57,6 +59,9 @@ if [[ -z "$PROFILE" ]]; then
 		PROFILE=dk
 	fi
 fi
+
+PROFILE=makerdiary
+
 # Board target per profile (an explicit BOARD=... still wins).
 if [[ -n "$BOARD_OVERRIDE" ]]; then
 	BOARD="$BOARD_OVERRIDE"

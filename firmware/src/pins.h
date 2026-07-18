@@ -25,6 +25,11 @@
 #define PIN_RLY_SET_FB CONFIG_APP_PIN_RLY_SET_FB
 #define PIN_RLY_RST_FB CONFIG_APP_PIN_RLY_RST_FB
 
+/* Status LEDs (bench / proto boards; -1 = not fitted) */
+#define PIN_LED1       CONFIG_APP_PIN_LED1
+#define PIN_LED2       CONFIG_APP_PIN_LED2
+#define PIN_LED3       CONFIG_APP_PIN_LED3
+
 /* INA and accelerometer share the TWIM bus */
 #define PIN_INA_SDA    PIN_TWI_SDA
 #define PIN_INA_SCL    PIN_TWI_SCL

@@ -224,7 +224,7 @@ static void do_sleep(void)
 {
     LOG_INF("entering sleep");
     crash_irq_disable();
-    led_off();
+    led_sleep_enter();
     LOG_INF("sleep: GNSS stop");
     gnss_stop();
     LOG_INF("sleep: transport close");
@@ -233,9 +233,12 @@ static void do_sleep(void)
     lte_lc_power_off();
     LOG_INF("sleep: K-line power off");
     kline_power_off();
+    LOG_INF("sleep: aux power off");
+    hw_aux_power_off();
     LOG_INF("sleep: INA228 shutdown");
     hw_power_shutdown();
     network_ready = false;
+    led_all_off();
     LOG_INF("sleep: all peripherals off");
 
     accel_read_baseline();
@@ -341,11 +344,11 @@ static void do_sleep(void)
                 accel_irq_disable();
                 LOG_INF("wake: INA228 wake");
                 hw_power_wake();
+                led_on();
                 LOG_INF("wake: modem connect");
                 modem_connect();
                 LOG_INF("wake: GNSS start");
                 gnss_start();
-                led_on();
                 LOG_INF("wake: relay set");
                 relay_set();
                 s_state = STATE_IDLE;
@@ -496,11 +499,11 @@ static void do_sleep(void)
             accel_irq_disable();
             LOG_INF("wake: INA228 wake");
             hw_power_wake();
+            led_on();
             LOG_INF("wake: modem connect");
             modem_connect();
             LOG_INF("wake: GNSS start");
             gnss_start();
-            led_on();
             LOG_INF("wake: relay set");
             relay_set();
             s_state = STATE_IDLE;
@@ -614,10 +617,11 @@ int main(void)
         return 0;
     }
 
+    hw_aux_power_on();
+    k_msleep(10);
+
     if (hw_power_init())  LOG_WRN("INA228 init failed — voltage unavailable");
     if (hw_accel_init())  LOG_WRN("accel init failed — readings unavailable");
-
-    hw_aux_power_on();
 
     relay_init();
 
@@ -645,7 +649,7 @@ int main(void)
         LOG_WRN("A-GNSS init failed — will run without assistance");
     }
 
-    led_on();
+    led_boot_animation();
     if (modem_connect() == 0) {
         char imei[32] = {0};
         if (modem_get_imei(imei, sizeof(imei)) == 0) {
@@ -666,6 +670,8 @@ int main(void)
     s_last_send_ms = k_uptime_get();
 
     LOG_INF("entering main loop");
+
+    //do_sleep();
 
     for (;;) {
         watchdog_kick();
@@ -713,9 +719,12 @@ int main(void)
             break;
 
         case STATE_GPS_COLLECT: {
+            led_gps_searching();
             int have_fix = collect_data(ignition);
+            if (have_fix) led_gps_fixed();
             if (!have_fix) {
                 LOG_WRN("no fix, skipping send");
+                led_idle();
                 data_reset();
                 s_last_send_ms = k_uptime_get();
                 previous_ignition = ignition;
@@ -745,7 +754,9 @@ int main(void)
 
             LOG_INF("sending %d records", s_buffered_records);
             if (g_cell.mcc == 0) modem_update_cell_info();
+            led_sending();
             send_data();
+            led_sent();
             s_last_send_ms = k_uptime_get();
             s_buffered_records = 0;
             data_reset();
@@ -781,6 +792,7 @@ int main(void)
             }
 
             previous_ignition = ignition;
+            led_idle();
 
             /* state transition */
             if (ignition != 0 && !s_coasting) {

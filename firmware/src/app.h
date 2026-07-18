@@ -120,6 +120,14 @@ extern int  alert_count;
 void led_on(void);
 void led_off(void);
 void led_toggle(void);
+void led_boot_animation(void);
+void led_gps_searching(void);
+void led_gps_fixed(void);
+void led_sending(void);
+void led_sent(void);
+void led_idle(void);
+void led_sleep_enter(void);
+void led_all_off(void);
 
 void watchdog_init(void);
 void watchdog_kick(void);
