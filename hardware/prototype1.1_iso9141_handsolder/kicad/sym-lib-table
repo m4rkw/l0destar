@@ -1,8 +1,0 @@
-(sym_lib_table
-	(version 7)
-	(lib (name "LT8609") (type "KiCad") (uri "${KIPRJMOD}/libs/LT8609SIV_PBF.kicad_sym") (options "") (descr ""))
-	(lib (name "L9637D") (type "KiCad") (uri "${KIPRJMOD}/libs/L9637D.kicad_sym") (options "") (descr ""))
-	(lib (name "SI2301CDS-T1-GE3") (type "KiCad") (uri "${KIPRJMOD}/libs/SI2301CDS-T1-GE3.kicad_sym") (options "") (descr ""))
-	(lib (name "ASM330LHHXG1TR") (type "KiCad") (uri "${KIPRJMOD}/libs/2026-05-24_22-25-36.kicad_sym") (options "") (descr ""))
-	(lib (name "XFL4020-222ME") (type "KiCad") (uri "${KIPRJMOD}/libs/XFL4020-222ME.kicad_sym") (options "") (descr ""))
-)

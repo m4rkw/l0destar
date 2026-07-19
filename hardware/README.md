@@ -32,13 +32,6 @@ the battery connector so USB-C can be connected for firmware updates without
 removing power. Include TVS/reverse-polarity protection and a 2200uF bulk cap
 for cranking.
 
-- **[prototype1.1_iso9141_handsolder](prototype1.1_iso9141_handsolder/)** —
-  ISO-9141 (K-line) via L9637D
-- **[prototype1.1_can_handsolder](prototype1.1_can_handsolder/)** — CAN-FD
-  via MIKROE-2379 Click board
-
-### Prototype board — SMD
-
-- **[prototype1.0](prototype1.0/)** — Full-feature SMD board with on-board
-  ASM330LHHXG1TR IMU, CAN, ISO-9141, and six general-purpose 0-36V digital
-  GPIO pins. Not yet fabbed.
+- **[l0destar v2.1](prototype2.1/)** - supports CAN and ISO-9141
+- **[l0destar v2.1 mini](prototype2.1_mini/)** - mini version with no OBD
+  capability or AIO pins
