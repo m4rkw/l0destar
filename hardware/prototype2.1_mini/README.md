@@ -69,7 +69,7 @@ power.
 | 0805 22uF | 0805 22uF ceramic cap | 1 |
 | 220uF | 220uF SMD capacitor | 1 |
 | [EEEFK1E222AM 2200uF SMD 25V capacitor](https://uk.farnell.com/panasonic/eeefk1e222am/cap-2200-f-25v-radial-smd/dp/2326204) 2200uF | 1 |
-| 0603 LED | 0603 status LED | 3 |
+| 0603 LED | 0603 status LED | 5 |
 | 1N4148W | 1N4148W diode | 2 |
 | SMBJ30A | SMBJ30A TVS diode | 2 |
 | BZX84C15 | BZX84C15 zener diode | 2 |
