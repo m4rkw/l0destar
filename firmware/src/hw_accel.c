@@ -27,6 +27,7 @@ static bool s_ok;
 #define ACC_CTRL1_XL   0x10
 #define ACC_CTRL2_G    0x11
 #define ACC_CTRL3_C    0x12
+#define ACC_CTRL6_C    0x15
 #define ACC_OUT_TEMP_L 0x20
 #define ACC_OUTX_L_G   0x22
 #define ACC_OUTX_L_A   0x28
@@ -298,6 +299,10 @@ int accel_enable_wake_int(void)
 	/* Gyro off for sleep (it draws ~0.6 mA and wake-up only needs accel) */
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL2_G, 0x00);
 
+	/* XL_HM_MODE=1: without this the accel stays in high-performance mode
+	 * (~170 µA) at every ODR; true low-power at 52 Hz is ~25 µA */
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL6_C, 0x10);
+
 	/* Switch to low-power 52 Hz ±2 g for sleep (fine wake sensitivity) */
 	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL1_XL, 0x30))
 		return -EIO;
@@ -367,7 +372,8 @@ int accel_disable_wake_int(void)
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_TAP_CFG2, 0x00);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_TAP_CFG0, 0x00);
 
-	/* Back to 416 Hz ±8 g, gyro back on */
+	/* Back to 416 Hz ±8 g in high-performance mode, gyro back on */
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL6_C, 0x00);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL1_XL, 0x6C);
 	s_mg_per_lsb = 0.244f;
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL2_G, 0x40);

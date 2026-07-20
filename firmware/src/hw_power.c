@@ -63,7 +63,7 @@ void hw_aux_power_on(void)
 void hw_aux_power_off(void)
 {
     gpio_pin_configure(hw_gpio0, PIN_AUX_SW, GPIO_OUTPUT_LOW);
-    LOG_INF("AUX_SW HIGH");
+    LOG_INF("AUX_SW LOW");
 }
 
 bool hw_power_available(void)
