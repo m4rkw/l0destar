@@ -142,6 +142,7 @@ bool hw_power_available(void);
 void hw_power_shutdown(void);
 void hw_power_wake(void);
 void hw_aux_power_on(void);
+void hw_aux_power_off(void);
 int  hw_accel_init(void);
 bool accel_available(void);
 int  relay_init(void);
