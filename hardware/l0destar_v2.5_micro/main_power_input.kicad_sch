@@ -1898,7 +1898,7 @@
 				)
 			)
 		)
-		(property "Value" "PTVS30VS1UTR,115"
+		(property "Value" "PTVS33VS1UTR,115"
 			(at 49.53 58.42 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2219,7 +2219,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "PTVS30VS1UTR,115"
+		(property "Value" "PTVS33VS1UTR,115"
 			(at 40.64 93.9799 90)
 			(show_name no)
 			(do_not_autoplace no)
