@@ -2739,7 +2739,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "68130ed7-981d-4a76-b304-d47f32d6a7ac")
-		(property "Reference" "S6C4"
+		(property "Reference" "S6C5"
 			(at 161.036 90.17 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2803,7 +2803,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6C4")
+					(reference "S6C5")
 					(unit 1)
 				)
 			)
