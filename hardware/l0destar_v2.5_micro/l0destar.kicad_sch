@@ -4307,7 +4307,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "721fe0b8-3e30-4511-af20-9fa4bb9b98c7")
-		(property "Reference" "C3"
+		(property "Reference" "S1C2"
 			(at 63.5 80.0099 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4371,7 +4371,7 @@
 		(instances
 			(project "l0destar"
 				(path "/463fa308-d92b-480b-9c45-50693d427ea2"
-					(reference "C3")
+					(reference "S1C2")
 					(unit 1)
 				)
 			)
@@ -4603,7 +4603,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a6fe3418-0776-4f3b-b002-11915999af05")
-		(property "Reference" "C2"
+		(property "Reference" "S1C1"
 			(at 48.26 80.0099 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4667,7 +4667,7 @@
 		(instances
 			(project "l0destar"
 				(path "/463fa308-d92b-480b-9c45-50693d427ea2"
-					(reference "C2")
+					(reference "S1C1")
 					(unit 1)
 				)
 			)
