@@ -1727,7 +1727,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0ecfa61b-a074-4d0b-b8e0-a1964d75da6c")
-		(property "Reference" "C1"
+		(property "Reference" "S2C1"
 			(at 106.68 91.4399 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1889,7 +1889,7 @@
 		(instances
 			(project "l0destar"
 				(path "/4c869692-bd36-4728-928b-8610efd597cf"
-					(reference "C1")
+					(reference "S2C1")
 					(unit 1)
 				)
 			)

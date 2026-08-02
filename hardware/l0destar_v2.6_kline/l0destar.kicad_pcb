@@ -17234,7 +17234,7 @@
 		(layer "F.Cu")
 		(uuid "a5ffdc87-d007-426a-ba55-3d441f2d2410")
 		(at 50.08 82.82 90)
-		(property "Reference" "C1"
+		(property "Reference" "S2C1"
 			(at -2.6 -3.35 90)
 			(layer "F.SilkS")
 			(hide yes)
