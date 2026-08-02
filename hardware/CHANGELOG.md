@@ -13,6 +13,10 @@ tree are noted where they were removed.
   - Added stacked 47uF ceramic bulk capacitance (2220, 50V X7R,
     CKG57NX7R1H476M500JH) on the 12V input for additional resilience against
     automotive transient spikes
+- Added **lodestar v2.6 CAN (v2.6C)**. Changes from v2.5 CAN:
+  - Added stacked 47uF ceramic bulk capacitance (2220, 50V X7R,
+    CKG57NX7R1H476M500JH) on the 12V input for additional resilience against
+    automotive transient spikes
 
 ## 01/08/2026
 

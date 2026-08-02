@@ -17835,15 +17835,26 @@
 			(justify left bottom mirror)
 		)
 	)
-	(gr_text "120Ω"
-		(at 56.22 78 0)
+	(gr_text "GND"
+		(at 31.53 93.58 90)
 		(layer "B.SilkS")
-		(uuid "50d35683-fc4e-4557-a826-86da83ff094f")
+		(uuid "efe67c3d-218f-4206-9320-befcd643fe34")
 		(effects
 			(font
 				(size 0.8 0.8)
 				(thickness 0.15)
-				(bold yes)
+			)
+			(justify left bottom mirror)
+		)
+	)
+	(gr_text "4.2V"
+		(at 31.53 96.1 90)
+		(layer "B.SilkS")
+		(uuid "9f9b68f1-d63c-4f08-b220-ed5f3b4e8743")
+		(effects
+			(font
+				(size 0.8 0.8)
+				(thickness 0.15)
 			)
 			(justify left bottom mirror)
 		)
