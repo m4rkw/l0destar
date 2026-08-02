@@ -1,13 +1,8 @@
 (sym_lib_table
 	(version 7)
-	(lib (name "LT8609SIV") (type "KiCad") (uri "${KIPRJMOD}/libs/LT8609SIV_PBF.kicad_sym") (options "") (descr ""))
 	(lib (name "L9637D") (type "KiCad") (uri "${KIPRJMOD}/libs/L9637D.kicad_sym") (options "") (descr ""))
-	(lib (name "SI2301CDS-T1-GE3") (type "KiCad") (uri "${KIPRJMOD}/libs/SI2301CDS-T1-GE3.kicad_sym") (options "") (descr ""))
 	(lib (name "ASM330LHHXG1TR") (type "KiCad") (uri "${KIPRJMOD}/libs/2026-05-24_22-25-36.kicad_sym") (options "") (descr ""))
 	(lib (name "XFL4020-222ME") (type "KiCad") (uri "${KIPRJMOD}/libs/XFL4020-222ME.kicad_sym") (options "") (descr ""))
 	(lib (name "LT8609AIMSE") (type "KiCad") (uri "${KIPRJMOD}/libs/LT8609AIMSE_PBF.kicad_sym") (options "") (descr ""))
-	(lib (name "MCP2518FDT-E_SL") (type "KiCad") (uri "${KIPRJMOD}/libs/MCP2518FDT-E_SL.step") (options "") (descr ""))
-	(lib (name "Molex 73100-0114") (type "KiCad") (uri "${KIPRJMOD}/libs/731000114.kicad_sym") (options "") (descr ""))
 	(lib (name "SMA-J-P-H-RA-TH1") (type "KiCad") (uri "${KIPRJMOD}/libs/SMA-J-P-H-RA-TH1.kicad_sym") (options "") (descr ""))
-	(lib (name "NPM1300") (type "KiCad") (uri "${KIPRJMOD}/libs/NPM1300-CAAA-R.kicad_sym") (options "") (descr ""))
 )
