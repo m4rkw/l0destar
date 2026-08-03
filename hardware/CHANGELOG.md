@@ -3,6 +3,10 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 03/08/2026
+
+- Minor PCB layout tweaks
+
 ## 02/08/2026
 
 - Added **l0destar v2.6 micro (v2.6M)**. Changes from v2.5 micro:
