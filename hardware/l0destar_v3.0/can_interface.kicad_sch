@@ -4474,7 +4474,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0603 10uF 10V 20% X7R"
+		(property "Value" "0603 10uF 10V 20% X7T"
 			(at 177.8 114.9349 0)
 			(show_name no)
 			(do_not_autoplace no)
