@@ -837,13 +837,13 @@
 		(at 76.2 53.34)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "33824a35-3fc6-4917-859f-94750aea8f68")
+		(uuid "73a01f19-bd23-4536-b5be-0d93f34e6b9d")
 	)
 	(junction
-		(at 95.25 38.1)
+		(at 108.585 38.1)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "7918af24-e2ea-4a95-af89-0c09c4268a97")
+		(uuid "de5028ed-d8ee-4497-ad7c-ea476a465793")
 	)
 	(wire
 		(pts
@@ -867,7 +867,7 @@
 	)
 	(wire
 		(pts
-			(xy 95.25 68.58) (xy 95.25 58.42)
+			(xy 108.585 68.58) (xy 108.585 58.42)
 		)
 		(stroke
 			(width 0)
@@ -897,7 +897,7 @@
 	)
 	(wire
 		(pts
-			(xy 76.2 38.1) (xy 95.25 38.1)
+			(xy 76.2 38.1) (xy 108.585 38.1)
 		)
 		(stroke
 			(width 0)
@@ -937,7 +937,7 @@
 	)
 	(wire
 		(pts
-			(xy 95.25 38.1) (xy 95.25 48.26)
+			(xy 108.585 38.1) (xy 108.585 48.26)
 		)
 		(stroke
 			(width 0)
@@ -947,7 +947,7 @@
 	)
 	(wire
 		(pts
-			(xy 76.2 53.34) (xy 87.63 53.34)
+			(xy 76.2 53.34) (xy 100.965 53.34)
 		)
 		(stroke
 			(width 0)
@@ -967,13 +967,13 @@
 	)
 	(wire
 		(pts
-			(xy 95.25 38.1) (xy 101.6 38.1)
+			(xy 108.585 38.1) (xy 114.935 38.1)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "f2f3b5e7-92a4-400e-808f-f74b2eacf75e")
+		(uuid "fcc573db-f005-4e13-97ab-e85fb302468e")
 	)
 	(global_label "PP3V3"
 		(shape input)
@@ -1001,7 +1001,7 @@
 	)
 	(global_label "IGN_SENSE"
 		(shape input)
-		(at 101.6 38.1 0)
+		(at 114.935 38.1 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -1011,7 +1011,7 @@
 		)
 		(uuid "50935789-e549-4458-ad5a-8e92e156fbcb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 114.8056 38.1 0)
+			(at 128.1406 38.1 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1057,10 +1057,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "00b08042-0c64-4bc2-9e30-9fac8fa25469")
 		(property "Reference" "S4R2"
-			(at 66.04 60.9599 0)
+			(at 46.99 60.96 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1070,8 +1069,8 @@
 				(justify right)
 			)
 		)
-		(property "Value" "100K"
-			(at 66.04 63.4999 0)
+		(property "Value" "0402 100K 1%"
+			(at 46.99 63.5 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1229,7 +1228,7 @@
 				)
 			)
 		)
-		(property "Value" "56K"
+		(property "Value" "0402 56K 1%"
 			(at 72.39 34.29 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1289,7 +1288,7 @@
 	)
 	(symbol
 		(lib_id "Transistor_FET:2N7002")
-		(at 92.71 53.34 0)
+		(at 106.045 53.34 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1299,7 +1298,7 @@
 		(dnp no)
 		(uuid "4e17319d-4e9d-4b92-a3df-49eecbca6e2a")
 		(property "Reference" "S4Q1"
-			(at 97.028 49.276 0)
+			(at 110.363 49.276 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1310,7 +1309,7 @@
 			)
 		)
 		(property "Value" "2N7002"
-			(at 97.028 46.736 0)
+			(at 110.363 46.736 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1321,7 +1320,7 @@
 			)
 		)
 		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-			(at 97.79 55.245 0)
+			(at 111.125 55.245 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1334,7 +1333,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.onsemi.com/pub/Collateral/NDS7002A-D.PDF"
-			(at 97.79 57.15 0)
+			(at 111.125 57.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1346,7 +1345,7 @@
 			)
 		)
 		(property "Description" "0.115A Id, 60V Vds, N-Channel MOSFET, SOT-23"
-			(at 92.71 53.34 0)
+			(at 106.045 53.34 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1474,7 +1473,7 @@
 				)
 			)
 		)
-		(property "Value" "120K"
+		(property "Value" "0402 120K 1%"
 			(at 55.88 49.53 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1534,7 +1533,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 95.25 68.58 0)
+		(at 108.585 68.58 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1545,7 +1544,7 @@
 		(fields_autoplaced yes)
 		(uuid "7b22fda4-9e15-4ff5-9940-135ce23870f6")
 		(property "Reference" "#PWR010"
-			(at 95.25 74.93 0)
+			(at 108.585 74.93 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1556,7 +1555,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 95.25 73.66 0)
+			(at 108.585 73.66 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1566,7 +1565,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 95.25 68.58 0)
+			(at 108.585 68.58 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1577,7 +1576,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 95.25 68.58 0)
+			(at 108.585 68.58 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1588,7 +1587,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 95.25 68.58 0)
+			(at 108.585 68.58 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1633,7 +1632,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 50V 10% X7R"
 			(at 80.01 63.4999 0)
 			(show_name no)
 			(do_not_autoplace no)

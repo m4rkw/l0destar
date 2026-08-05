@@ -1738,7 +1738,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "CKG57NX7R1H476M500JH - 47uF"
+		(property "Value" "47uF 2220 50V 20% X7R"
 			(at 106.68 93.9799 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1761,7 +1761,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "CKG57NX7R1H476M500JH"
 			(at 102.87 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -1917,7 +1917,7 @@
 				)
 			)
 		)
-		(property "Value" "SQ2361"
+		(property "Value" "SQ2361ES-T1_GE3"
 			(at 63.5 36.83 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2004,7 +2004,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "1M"
+		(property "Value" "0402 1M 1%"
 			(at 66.04 58.4199 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2171,7 +2171,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10M"
+		(property "Value" "0402 10M 1%"
 			(at 66.04 100.3299 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2330,7 +2330,7 @@
 				)
 			)
 		)
-		(property "Value" "SQ2361"
+		(property "Value" "SQ2361ES-T1_GE3"
 			(at 63.5 80.01 90)
 			(show_name no)
 			(do_not_autoplace no)

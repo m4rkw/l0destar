@@ -5,6 +5,12 @@ tree are noted where they were removed.
 
 ## 05/08/2026
 
+- Annotated the v3.0 schematics with specific part requirements
+- Updated the v3.0 parts lists with the specific part requirements
+- Relaxed tolerances where they don't matter
+
+## 05/08/2026
+
 - Added **l0destar v3.0** — the CAN and K-line variants consolidated onto a
   single PCB. Changes from v2.6:
   - Both the CAN and ISO-9141 (K-line) circuits are on the one board; either,

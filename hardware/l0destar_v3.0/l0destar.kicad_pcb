@@ -168,7 +168,7 @@
 				)
 			)
 		)
-		(property "Value" "0R"
+		(property "Value" "0402 0R"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -1695,7 +1695,7 @@
 				)
 			)
 		)
-		(property "Value" "1uF"
+		(property "Value" "0402 1uF 10V 10% X7R"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1843,7 +1843,7 @@
 				)
 			)
 		)
-		(property "Value" "4.7K"
+		(property "Value" "0402 4.7K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -1991,7 +1991,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 50V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -2245,7 +2245,7 @@
 				)
 			)
 		)
-		(property "Value" "1uF"
+		(property "Value" "0402 1uF 10V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -2673,7 +2673,7 @@
 				)
 			)
 		)
-		(property "Value" "10uF"
+		(property "Value" "0603 10uF 6.3V 20% X7T"
 			(at 0 1.43 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3082,7 +3082,7 @@
 				)
 			)
 		)
-		(property "Value" "220nF"
+		(property "Value" "0603 220nF 50V 10% X7R"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3230,7 +3230,7 @@
 				)
 			)
 		)
-		(property "Value" "220uF"
+		(property "Value" "220uF 1210 6.3V 20% X5R"
 			(at 0 2.3 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3755,7 +3755,7 @@
 				)
 			)
 		)
-		(property "Value" "27pF"
+		(property "Value" "0402 27pF 25V 1% C0G/NP0"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3903,7 +3903,7 @@
 				)
 			)
 		)
-		(property "Value" "1uF"
+		(property "Value" "0402 1uF 10V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4562,7 +4562,7 @@
 				)
 			)
 		)
-		(property "Value" "22uF"
+		(property "Value" "0805 22uF 10V 20% X7T"
 			(at 0 1.68 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -4710,7 +4710,7 @@
 				)
 			)
 		)
-		(property "Value" "0R"
+		(property "Value" "0402 0R"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4859,7 +4859,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 25V 10% X7R"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5359,7 +5359,7 @@
 				)
 			)
 		)
-		(property "Value" "100K"
+		(property "Value" "0402 100K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5507,7 +5507,7 @@
 				)
 			)
 		)
-		(property "Value" "18.2K"
+		(property "Value" "0402 18.2K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6018,7 +6018,7 @@
 				)
 			)
 		)
-		(property "Value" "0R"
+		(property "Value" "0402 0R"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6167,7 +6167,7 @@
 				)
 			)
 		)
-		(property "Value" "120R"
+		(property "Value" "2010 120R 1% 0.5W"
 			(at 0 2.28 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6315,7 +6315,7 @@
 				)
 			)
 		)
-		(property "Value" "56K"
+		(property "Value" "0402 56K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6463,7 +6463,7 @@
 				)
 			)
 		)
-		(property "Value" "10K"
+		(property "Value" "0402 10K 1%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -7175,7 +7175,7 @@
 				)
 			)
 		)
-		(property "Value" "100K"
+		(property "Value" "0402 100K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7492,7 +7492,7 @@
 				)
 			)
 		)
-		(property "Value" "226K"
+		(property "Value" "0402 226K 1%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -7640,7 +7640,7 @@
 				)
 			)
 		)
-		(property "Value" "SQ2361"
+		(property "Value" "SQ2361ES-T1_GE3"
 			(at 0 2.4 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8012,7 +8012,7 @@
 				)
 			)
 		)
-		(property "Value" "10K"
+		(property "Value" "0402 10K 1%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8160,7 +8160,7 @@
 				)
 			)
 		)
-		(property "Value" "10uF"
+		(property "Value" "0603 10uF 10V 20% X7R"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8308,7 +8308,7 @@
 				)
 			)
 		)
-		(property "Value" "10K"
+		(property "Value" "0402 10K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8456,7 +8456,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 25V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8604,7 +8604,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 50V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8740,7 +8740,7 @@
 		(at 54.41 99.41 90)
 		(descr "SO8: plastic small outline package; 8 leads; body width 3.9 mm")
 		(tags "Integrated Circuit")
-		(property "Reference" "S10U3"
+		(property "Reference" "S10U1"
 			(at 0 0 90)
 			(layer "F.SilkS")
 			(uuid "2802e291-f4d8-49b0-8f2c-eae335741e99")
@@ -9034,7 +9034,7 @@
 			(at -2.725 0.635 180)
 			(size 0.7 1.55)
 			(layers "F.Cu" "F.Mask" "F.Paste")
-			(net "unconnected-(S10U3-N.C._1-Pad3)")
+			(net "unconnected-(S10U1-N.C._1-Pad3)")
 			(pinfunction "N.C._1_3")
 			(pintype "passive")
 			(uuid "890ef933-fb1b-484f-bdb7-0016e2016358")
@@ -9079,7 +9079,7 @@
 			(at 2.725 -1.905 180)
 			(size 0.7 1.55)
 			(layers "F.Cu" "F.Mask" "F.Paste")
-			(net "unconnected-(S10U3-N.C._2-Pad8)")
+			(net "unconnected-(S10U1-N.C._2-Pad8)")
 			(pinfunction "N.C._2_8")
 			(pintype "passive")
 			(uuid "6d29d32b-fb69-4e3c-8c64-9dc0c0ea0ed1")
@@ -9115,7 +9115,7 @@
 				)
 			)
 		)
-		(property "Value" "510R"
+		(property "Value" "2512 510R 1% 2W"
 			(at 0 2.63 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9804,7 +9804,7 @@
 				)
 			)
 		)
-		(property "Value" "10nF"
+		(property "Value" "0402 10nF 10V 5% C0G/NP0"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10304,7 +10304,7 @@
 				)
 			)
 		)
-		(property "Value" "10K"
+		(property "Value" "0402 10K 1%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10452,7 +10452,7 @@
 				)
 			)
 		)
-		(property "Value" "1M"
+		(property "Value" "0402 1M 1%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10706,7 +10706,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 25V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11896,7 +11896,7 @@
 				)
 			)
 		)
-		(property "Value" "10K"
+		(property "Value" "0402 10K 1%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -12044,7 +12044,7 @@
 				)
 			)
 		)
-		(property "Value" "0R"
+		(property "Value" "0402 0R"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12193,7 +12193,7 @@
 				)
 			)
 		)
-		(property "Value" "1K"
+		(property "Value" "0402 1K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12928,7 +12928,7 @@
 				)
 			)
 		)
-		(property "Value" "1M"
+		(property "Value" "0402 1M 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -13958,7 +13958,7 @@
 				)
 			)
 		)
-		(property "Value" "100pF"
+		(property "Value" "0402 100pF 25V 1% C0G/NP0"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -14106,7 +14106,7 @@
 				)
 			)
 		)
-		(property "Value" "1K"
+		(property "Value" "0402 1K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -14964,7 +14964,7 @@
 				)
 			)
 		)
-		(property "Value" "0R"
+		(property "Value" "0402 0R"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -15282,7 +15282,7 @@
 				)
 			)
 		)
-		(property "Value" "SQ2361"
+		(property "Value" "SQ2361ES-T1_GE3"
 			(at 0 2.4 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -15654,7 +15654,7 @@
 				)
 			)
 		)
-		(property "Value" "1nF"
+		(property "Value" "0402 1nF 50V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -16260,7 +16260,7 @@
 				)
 			)
 		)
-		(property "Value" "CKG57NX7R1H476M500JH - 47uF"
+		(property "Value" "47uF 2220 50V 20% X7R"
 			(at -0.6 3.35 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -16272,7 +16272,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "CKG57NX7R1H476M500JH"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -16558,7 +16558,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 25V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -16706,7 +16706,7 @@
 				)
 			)
 		)
-		(property "Value" "1uF"
+		(property "Value" "0402 1uF 10V 10% X7R"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -16854,7 +16854,7 @@
 				)
 			)
 		)
-		(property "Value" "4.7K"
+		(property "Value" "0402 4.7K 1%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -17002,7 +17002,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 25V 10% X7R"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -17150,7 +17150,7 @@
 				)
 			)
 		)
-		(property "Value" "1K"
+		(property "Value" "0402 1K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -17298,7 +17298,7 @@
 				)
 			)
 		)
-		(property "Value" "100K"
+		(property "Value" "0402 100K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -17446,7 +17446,7 @@
 				)
 			)
 		)
-		(property "Value" "120K"
+		(property "Value" "0402 120K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -17806,7 +17806,7 @@
 				)
 			)
 		)
-		(property "Value" "10K"
+		(property "Value" "0402 10K 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -17954,7 +17954,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 25V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -18102,7 +18102,7 @@
 				)
 			)
 		)
-		(property "Value" "220uF"
+		(property "Value" "220uF 1210 6.3V 20% X5R"
 			(at 0 2.3 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -18622,7 +18622,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 25V 10% X7R"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -18770,7 +18770,7 @@
 				)
 			)
 		)
-		(property "Value" "27pF"
+		(property "Value" "0402 27pF 25V 1% C0G/NP0"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -19024,7 +19024,7 @@
 				)
 			)
 		)
-		(property "Value" "4.7uF"
+		(property "Value" "0805 4.7uF 50V 10% X7R"
 			(at 0 1.68 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -19172,7 +19172,7 @@
 				)
 			)
 		)
-		(property "Value" "100K"
+		(property "Value" "0402 100K 1%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -19692,7 +19692,7 @@
 				)
 			)
 		)
-		(property "Value" "100pF"
+		(property "Value" "0402 100pF 10V 1% C0G/NP0"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -20502,7 +20502,7 @@
 				)
 			)
 		)
-		(property "Value" "1uF"
+		(property "Value" "0402 1uF 25V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -20650,7 +20650,7 @@
 				)
 			)
 		)
-		(property "Value" "600R"
+		(property "Value" "0402 600R 100mA 25%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -20662,7 +20662,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "BLM15PX601SZ1D"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -20766,7 +20766,7 @@
 		(at 47.45 102.55 180)
 		(descr "SOT, 3 Pin (JEDEC TO-236 Var AB https://www.jedec.org/document_search?search_api_views_fulltext=TO-236)")
 		(tags "SOT TO_SOT_SMD")
-		(property "Reference" "S10Q3"
+		(property "Reference" "S10Q1"
 			(at 0 -2.4 0)
 			(layer "F.SilkS")
 			(hide yes)
@@ -22010,7 +22010,7 @@
 				)
 			)
 		)
-		(property "Value" "510R"
+		(property "Value" "2512 510R 1% 2W"
 			(at 0 2.63 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -22438,7 +22438,7 @@
 				)
 			)
 		)
-		(property "Value" "10M"
+		(property "Value" "0402 10M 1%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -22586,7 +22586,7 @@
 				)
 			)
 		)
-		(property "Value" "0R"
+		(property "Value" "0402 0R"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -23678,7 +23678,7 @@
 				)
 			)
 		)
-		(property "Value" "0R"
+		(property "Value" "0402 0R"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -23827,7 +23827,7 @@
 				)
 			)
 		)
-		(property "Value" "100nF"
+		(property "Value" "0402 100nF 25V 10% X7R"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
