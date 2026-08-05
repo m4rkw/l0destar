@@ -3,6 +3,27 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 05/08/2026
+
+- Added **l0destar v3.0** — the CAN and K-line variants consolidated onto a
+  single PCB. Changes from v2.6:
+  - Both the CAN and ISO-9141 (K-line) circuits are on the one board; either,
+    neither or both can be populated, with the external connector pins and OBD
+    power rails selected by shorting jumper pads (which double as power rail
+    test points to save board space)
+  - The L9637D was replaced with a TJA1027T LIN transceiver, dramatically
+    simplifying the K-line circuit — the separate 5V buck converter and level
+    shifter are gone
+  - CAN transceiver swapped for a MAX33041EASA+ for more robust transient
+    protection, with a pulldown added to STBY so the transceiver defaults to
+    normal mode instead of floating
+  - Auxiliary power MOSFETs and several ideal diodes replaced with load
+    switches to simplify the system and reduce board footprint
+  - OBD power rails are switched separately from the GPS power rail to cut
+    power use during engine-off telemetry wakes
+  - S2R2 increased to 10M and S4R2 to 100K for lower quiescent draw and more
+    resilient ignition sensing at low system voltage
+
 ## 03/08/2026
 
 - Minor PCB layout tweaks
