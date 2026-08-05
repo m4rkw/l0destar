@@ -6,7 +6,7 @@ Inspired by the [Geolink Opentracker](https://github.com/geolink/opentracker/) a
 
 ## Status
 
-Pre-prototype / design phase. No working hardware yet. The repository currently contains project intent and technology selection; schematics, firmware, and server code will land in subsequent commits.
+Prototyping / design phase. The v2.1 board layout worked on a bench, testing of newer versions is pending and should begin soon.
 
 ## What it is
 
