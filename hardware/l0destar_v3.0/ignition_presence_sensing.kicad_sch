@@ -1069,7 +1069,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "0402 100K 1%"
+		(property "Value" "0402 100K 5%"
 			(at 46.99 63.5 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1228,7 +1228,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 56K 1%"
+		(property "Value" "0402 56K 5%"
 			(at 72.39 34.29 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1473,7 +1473,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 120K 1%"
+		(property "Value" "0402 120K 5%"
 			(at 55.88 49.53 90)
 			(show_name no)
 			(do_not_autoplace no)

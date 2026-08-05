@@ -760,7 +760,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 1K 1%"
+		(property "Value" "0402 1K 5%"
 			(at 44.45 27.686 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1097,7 +1097,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 1K 1%"
+		(property "Value" "0402 1K 5%"
 			(at 44.45 37.846 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1266,7 +1266,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 1K 1%"
+		(property "Value" "0402 1K 5%"
 			(at 44.45 48.006 90)
 			(show_name no)
 			(do_not_autoplace no)

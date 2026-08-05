@@ -1818,7 +1818,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100pF 25V 1% C0G/NP0"
+		(property "Value" "0402 100pF 10V 5% C0G/NP0"
 			(at 93.98 60.9599 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2991,7 +2991,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100pF 10V 1% C0G/NP0"
+		(property "Value" "0402 100pF 10V 5% C0G/NP0"
 			(at 36.83 66.04 90)
 			(show_name no)
 			(do_not_autoplace no)

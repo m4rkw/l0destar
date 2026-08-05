@@ -1843,7 +1843,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 4.7K 1%"
+		(property "Value" "0402 4.7K 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -2131,7 +2131,7 @@
 			(at 0 -3.15 0)
 			(layer "F.SilkS")
 			(hide yes)
-			(uuid "5afad03d-f48c-4bef-bc33-0aaae7cc13bb")
+			(uuid "4e64dbb4-7c07-4078-822d-9b775ac65009")
 			(effects
 				(font
 					(size 1 1)
@@ -2143,7 +2143,7 @@
 			(at 0 3.15 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "a4ac78bc-a5e1-4651-b232-af529da2b541")
+			(uuid "e36e7a93-e93f-4448-987d-da8360ce17e3")
 			(effects
 				(font
 					(size 1 1)
@@ -2155,7 +2155,7 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "0c54fd44-5e6e-4d30-8864-3970259bd280")
+			(uuid "14c7b9c2-49ef-46d5-b422-b9bc10ac164f")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2166,7 +2166,7 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "4c0d20cb-0997-4737-97e8-6bca43b4ab36")
+			(uuid "a0bc85b0-0f5f-4588-9b63-85e93adf7f5e")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3755,7 +3755,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 27pF 25V 1% C0G/NP0"
+		(property "Value" "0402 27pF 10V 5% C0G/NP0"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -4859,7 +4859,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100nF 25V 10% X7R"
+		(property "Value" "0402 100nF 10V 10% X7R"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5359,7 +5359,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100K 1%"
+		(property "Value" "0402 100K 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6167,7 +6167,7 @@
 				)
 			)
 		)
-		(property "Value" "2010 120R 1% 0.5W"
+		(property "Value" "2010 120R 5% 0.5W"
 			(at 0 2.28 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6315,7 +6315,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 56K 1%"
+		(property "Value" "0402 56K 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6463,7 +6463,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 10K 1%"
+		(property "Value" "0402 10K 5%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -7175,7 +7175,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100K 1%"
+		(property "Value" "0402 100K 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8012,7 +8012,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 10K 1%"
+		(property "Value" "0402 10K 5%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8308,7 +8308,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 10K 1%"
+		(property "Value" "0402 10K 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8456,7 +8456,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100nF 25V 10% X7R"
+		(property "Value" "0402 100nF 10V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9115,7 +9115,7 @@
 				)
 			)
 		)
-		(property "Value" "2512 510R 1% 2W"
+		(property "Value" "2512 510R 5% 2W"
 			(at 0 2.63 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10304,7 +10304,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 10K 1%"
+		(property "Value" "0402 10K 5%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10452,7 +10452,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 1M 1%"
+		(property "Value" "0402 1M 5%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10592,7 +10592,7 @@
 			(at 0 -3.15 0)
 			(layer "F.SilkS")
 			(hide yes)
-			(uuid "a31011b7-bc84-486b-a5e0-e930b1d03f66")
+			(uuid "474b3ca9-d7a8-4ded-975a-20f1f6a8f9cf")
 			(effects
 				(font
 					(size 1 1)
@@ -10604,7 +10604,7 @@
 			(at 0 3.15 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "f68d4dd7-b1f2-4a14-b3c1-fd6b45fa5ced")
+			(uuid "6fcf648d-33a0-48df-b3b5-89bf179d6b95")
 			(effects
 				(font
 					(size 1 1)
@@ -10616,7 +10616,7 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "ee875634-09bb-4306-9c7c-e67ff9e3969f")
+			(uuid "ec688e41-e2ec-4e4d-87b1-13a2e54fb369")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10627,7 +10627,7 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "76d02231-1abd-49e0-b7a5-e9cfbd1595fb")
+			(uuid "c2f8607a-f151-472b-8cc0-438f0aae09c2")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10706,7 +10706,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100nF 25V 10% X7R"
+		(property "Value" "0402 100nF 10V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11896,7 +11896,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 10K 1%"
+		(property "Value" "0402 10K 5%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -12193,7 +12193,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 1K 1%"
+		(property "Value" "0402 1K 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -12333,7 +12333,7 @@
 			(at 0 -3.15 0)
 			(layer "F.SilkS")
 			(hide yes)
-			(uuid "2c05b054-d4b8-4874-a8b2-ea3702ac67d4")
+			(uuid "35b7b3ac-c8a6-4c2d-aab2-8ee51963ffd9")
 			(effects
 				(font
 					(size 1 1)
@@ -12345,7 +12345,7 @@
 			(at 0 3.15 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "1765ef97-00f8-4c2d-a3fb-96cce01d06d1")
+			(uuid "75370135-4514-4b7f-9768-c69a3df8fe14")
 			(effects
 				(font
 					(size 1 1)
@@ -12357,7 +12357,7 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "f142d265-9d42-44e2-b1ff-6ee3cf6e60d7")
+			(uuid "aa10f753-bf67-4f36-bc54-ba474adb855d")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12368,7 +12368,7 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "2ffe5cd7-16d8-4b1b-82f8-de22bc36b261")
+			(uuid "73fe2a27-6400-4d7a-82a6-8cdba4f0730c")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13958,7 +13958,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100pF 25V 1% C0G/NP0"
+		(property "Value" "0402 100pF 10V 5% C0G/NP0"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -14106,7 +14106,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 1K 1%"
+		(property "Value" "0402 1K 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -16558,7 +16558,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100nF 25V 10% X7R"
+		(property "Value" "0402 100nF 10V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -16854,7 +16854,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 4.7K 1%"
+		(property "Value" "0402 4.7K 5%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -17002,7 +17002,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100nF 25V 10% X7R"
+		(property "Value" "0402 100nF 10V 10% X7R"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -17150,7 +17150,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 1K 1%"
+		(property "Value" "0402 1K 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -17298,7 +17298,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100K 1%"
+		(property "Value" "0402 100K 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -17446,7 +17446,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 120K 1%"
+		(property "Value" "0402 120K 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -18622,7 +18622,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100nF 25V 10% X7R"
+		(property "Value" "0402 100nF 10V 10% X7R"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -18770,7 +18770,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 27pF 25V 1% C0G/NP0"
+		(property "Value" "0402 27pF 10V 5% C0G/NP0"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -18910,7 +18910,7 @@
 			(at 0 -3.15 0)
 			(layer "F.SilkS")
 			(hide yes)
-			(uuid "f85c7e01-80a4-47e7-a84a-c49371a115f9")
+			(uuid "cd7acca8-b1e7-4a5e-9b59-a3d31a8f73ad")
 			(effects
 				(font
 					(size 1 1)
@@ -18922,7 +18922,7 @@
 			(at 0 3.15 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "b2bdffcf-9fd0-4c9f-9c61-472bab4d1058")
+			(uuid "225edd88-d172-49ee-a3e8-2c177f3a0628")
 			(effects
 				(font
 					(size 1 1)
@@ -18934,7 +18934,7 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "e08eb824-67da-47eb-a835-6e2ae0eee896")
+			(uuid "a161f8d1-c740-4c75-a9eb-1af5655b14b3")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -18945,7 +18945,7 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "8153cca4-d19d-4f34-b370-fdae6b9f4298")
+			(uuid "7b82c0dc-2377-4dce-aa50-e3711ed8b0b4")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -19172,7 +19172,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100K 1%"
+		(property "Value" "0402 100K 5%"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -19692,7 +19692,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100pF 10V 1% C0G/NP0"
+		(property "Value" "0402 100pF 10V 5% C0G/NP0"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -20112,7 +20112,7 @@
 			(at 3 -10.12 90)
 			(layer "F.SilkS")
 			(hide yes)
-			(uuid "8653417c-1fb8-4d04-9972-49638e49cea4")
+			(uuid "4dbf3599-8e90-4dde-a312-2365a15bed94")
 			(effects
 				(font
 					(size 1 1)
@@ -20124,7 +20124,7 @@
 			(at 3 5.7 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "0d639dfa-4727-4f15-9a19-4fbb4ac21cdd")
+			(uuid "298d790b-aab0-4cc2-8332-fb7a6cf6b7e0")
 			(effects
 				(font
 					(size 1 1)
@@ -20136,7 +20136,7 @@
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "b30f716e-c798-42bc-aeb4-1e6b81ca534a")
+			(uuid "a048ed19-17d7-4396-a564-4e4c67a38f56")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -20147,7 +20147,7 @@
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "7fee1500-b712-44c7-934b-805e6e0d4c93")
+			(uuid "970fbb0e-67a4-425a-a8e9-12a6f53c33fb")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -20502,7 +20502,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 1uF 25V 10% X7R"
+		(property "Value" "0402 1uF 10V 10% X7R"
 			(at 0 1.16 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -22010,7 +22010,7 @@
 				)
 			)
 		)
-		(property "Value" "2512 510R 1% 2W"
+		(property "Value" "2512 510R 5% 2W"
 			(at 0 2.63 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -22438,7 +22438,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 10M 1%"
+		(property "Value" "0402 10M 5%"
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -23827,7 +23827,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100nF 25V 10% X7R"
+		(property "Value" "0402 100nF 10V 10% X7R"
 			(at 0 1.16 90)
 			(layer "F.Fab")
 			(hide yes)

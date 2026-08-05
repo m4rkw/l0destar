@@ -5225,7 +5225,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100K 1%"
+		(property "Value" "0402 100K 5%"
 			(at 113.03 41.91 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5386,7 +5386,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "0402 100K 1%"
+		(property "Value" "0402 100K 5%"
 			(at 176.53 96.5199 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5628,7 +5628,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "0402 100K 1%"
+		(property "Value" "0402 100K 5%"
 			(at 135.89 95.8849 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5708,7 +5708,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 4.7K 1%"
+		(property "Value" "0402 4.7K 5%"
 			(at 209.55 27.94 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6966,7 +6966,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 4.7K 1%"
+		(property "Value" "0402 4.7K 5%"
 			(at 189.23 27.94 0)
 			(show_name no)
 			(do_not_autoplace no)

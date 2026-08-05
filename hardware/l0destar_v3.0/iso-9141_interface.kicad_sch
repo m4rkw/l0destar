@@ -2457,7 +2457,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "0402 10K 1%"
+		(property "Value" "0402 10K 5%"
 			(at 61.976 35.56 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2940,7 +2940,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "2512 510R 1% 2W"
+		(property "Value" "2512 510R 5% 2W"
 			(at 116.84 51.435 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3099,7 +3099,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "0402 10K 1%"
+		(property "Value" "0402 10K 5%"
 			(at 49.276 66.04 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3414,7 +3414,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "2512 510R 1% 2W"
+		(property "Value" "2512 510R 5% 2W"
 			(at 37.465 102.87 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3496,7 +3496,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 10K 1%"
+		(property "Value" "0402 10K 5%"
 			(at 77.47 123.1899 0)
 			(show_name no)
 			(do_not_autoplace no)

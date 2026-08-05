@@ -1096,7 +1096,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 1uF 25V 10% X7R"
+		(property "Value" "0402 1uF 10V 10% X7R"
 			(at 112.395 48.895 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1253,7 +1253,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 100nF 25V 10% X7R"
+		(property "Value" "0402 100nF 10V 10% X7R"
 			(at 147.32 48.895 0)
 			(show_name no)
 			(do_not_autoplace no)

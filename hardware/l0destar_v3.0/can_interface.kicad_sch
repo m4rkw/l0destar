@@ -3195,7 +3195,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "2010 120R 1% 0.5W"
+		(property "Value" "2010 120R 5% 0.5W"
 			(at 177.165 26.67 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3432,7 +3432,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 10K 1%"
+		(property "Value" "0402 10K 5%"
 			(at 40.513 101.219 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3513,7 +3513,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 27pF 25V 1% C0G/NP0"
+		(property "Value" "0402 27pF 10V 5% C0G/NP0"
 			(at 37.084 138.049 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3832,7 +3832,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 10K 1%"
+		(property "Value" "0402 10K 5%"
 			(at 119.888 26.289 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4392,7 +4392,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 27pF 25V 1% C0G/NP0"
+		(property "Value" "0402 27pF 10V 5% C0G/NP0"
 			(at 72.644 137.414 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4633,7 +4633,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100nF 25V 10% X7R"
+		(property "Value" "0402 100nF 10V 10% X7R"
 			(at 143.129 115.189 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4714,7 +4714,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100nF 25V 10% X7R"
+		(property "Value" "0402 100nF 10V 10% X7R"
 			(at 40.64 47.625 0)
 			(show_name no)
 			(do_not_autoplace no)
