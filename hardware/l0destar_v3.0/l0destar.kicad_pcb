@@ -2673,7 +2673,7 @@
 				)
 			)
 		)
-		(property "Value" "0603 10uF 6.3V 20% X7T"
+		(property "Value" "0603 10uF 10V 20% X7T"
 			(at 0 1.43 90)
 			(layer "F.Fab")
 			(hide yes)
