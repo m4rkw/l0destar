@@ -40,7 +40,7 @@ power rail and its associated buck converter.
 | ISO-9141 | K-wire connectivity | NOT TESTED | |
 | ISO-9141 | L-line pulldown | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
-| CAN standby via XSTBY signal | NOT TESTED | |
+| CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
 | Board | Quiescent current | NOT TESTED | Estimated at around 370 µA |
 
 ## Features
@@ -105,7 +105,7 @@ Connect the pads as required by bridging them with solder or placing a 0R
 resistor. **Make sure the pads that should be unconnected are not connected.**
 
 | Interface | S1R4 | S1R5 | S1R6 | S1R7 | S1R8 | S1R9 | S1R10 |
-|-----------|------|-------|
+|-----------|------|------|------|------|------|------|-------|
 | None      | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN |
 | CAN bus   | CONNECT | OPEN | CONNECT | OPEN | CONNECT | OPEN | OPEN |
 | K-line    | OPEN | CONNECT | OPEN | CONNECT | OPEN | CONNECT | CONNECT |
