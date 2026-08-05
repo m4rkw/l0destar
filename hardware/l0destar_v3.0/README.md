@@ -10,7 +10,7 @@
 functions
 - Component vias are dogleg-routed deliberately in order to keep the PCB costs
 as low as possible
-- The RF trace width is calculated using a standard 4-layer stackup at JLPCB,
+- The RF trace width is calculated using a standard 4-layer stackup at JLCPCB,
   different fabrication processes may require adjustment
 
 The CAN and K-line versions have been consolidated in version 3.0. There is now
