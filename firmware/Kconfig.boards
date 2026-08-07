@@ -1,0 +1,445 @@
+# l0destar carrier-board definitions.
+#
+# Every l0destar PCB is a carrier for the Makerdiary nRF9151 Connect Kit; the
+# Zephyr board target is always nrf9151_connectkit (or the DK on the bench).
+# What differs per PCB is which Connect Kit header pin each signal lands on,
+# which subsystems are fitted, and how the switched power domains are wired.
+#
+# Selecting a board here re-defaults every APP_PIN_* and capability flag below
+# (pin tables extracted from the KiCad PCBs in ../hardware/).  Any individual
+# value can still be overridden from local.conf.
+#
+# Power-domain wiring per board — this drives the sequencing rules in
+# src/hw_domain.c.  Signal pins that terminate in a switched domain MUST be
+# parked (input + pulldown) whenever that domain's rail is off: the powered
+# nRF would otherwise backfeed the dead rail through the peripheral's ESD
+# clamp diodes (MCP2518FD abs max on any I/O is VDD + 0.3 V; TXS0104E A-port
+# is VCCA + 0.5 V), and pull-ups that live on the switched rail (e.g. the
+# 10K on CAN_INT) float when the rail is down.
+#
+#   v2.1       AUX_ENABLE gates 3V3/5V/12V aux rails together: the whole CAN
+#              interface (MCP2518FD + TJA1051), the whole K-line interface
+#              (L9637D + TXS0104E shifter) and the relay-feedback supply all
+#              die with AUX.  TJA1051 S pin is grounded (no standby control).
+#   v2.1 mini  AUX_ENABLE gates the GPS bias tee + relay-feedback supply.
+#   v2.5/v2.6  AUX_ENABLE gates PP3V3_AUX (GPS bias tee; CAN variants: also
+#              the whole CAN interface).  K-line variants add K_ENABLE for
+#              the 5V/12V K rails; the shifter A-side sits on the AUX rail.
+#              CAN variants: TCAN334 STB is driven only by MCP2518FD
+#              GPIO0/XSTBY — firmware must configure it or STB floats.
+#   v3.0       GPS_ENABLE gates only the GPS bias tee (no signal pins).
+#              OBD_ENABLE gates PP3V3_OBD + PP12V_OBD feeding both the CAN
+#              circuit (MCP2518FD + MAX33041) and the K-line circuit
+#              (TJA1027T); jumpers select which reaches the connector.
+#              K_TX/K_RX 10K pull-ups and CAN_INT/CAN_CS 10K pull-ups are
+#              on the switched rail.  MAX33041 STBY has a 10K pulldown and
+#              is driven by MCP2518FD GPIO0/XSTBY.
+
+choice APP_BOARD
+	prompt "Carrier board"
+	default APP_BOARD_BENCH
+	help
+	  Which l0destar PCB (or bench setup) this firmware runs on.  Selecting
+	  a board sets the GPIO map, fitted-hardware flags and power-domain
+	  topology to match that PCB.
+
+config APP_BOARD_BENCH
+	bool "Bench (DK or Connect Kit + breadboard)"
+	help
+	  Development bench: nRF9151 DK or Makerdiary Connect Kit with the
+	  INA228/ASM330LHHX on a breadboard.  Preserves the original pin
+	  defaults (including the makerdiary console re-park).
+
+config APP_BOARD_L0DESTAR_V2_1
+	bool "l0destar v2.1 (CAN + ISO-9141 + AIO + relay)"
+
+config APP_BOARD_L0DESTAR_V2_1_MINI
+	bool "l0destar v2.1 mini (no OBD, 5 LEDs, relay)"
+
+config APP_BOARD_L0DESTAR_V2_5_CAN
+	bool "l0destar v2.5C (CAN)"
+
+config APP_BOARD_L0DESTAR_V2_5_KLINE
+	bool "l0destar v2.5K (ISO-9141 K-line)"
+
+config APP_BOARD_L0DESTAR_V2_5_MICRO
+	bool "l0destar v2.5M (micro, no OBD)"
+
+config APP_BOARD_L0DESTAR_V2_6_CAN
+	bool "l0destar v2.6C (CAN)"
+
+config APP_BOARD_L0DESTAR_V2_6_KLINE
+	bool "l0destar v2.6K (ISO-9141 K-line)"
+
+config APP_BOARD_L0DESTAR_V2_6_MICRO
+	bool "l0destar v2.6M (micro, no OBD)"
+
+config APP_BOARD_L0DESTAR_V3_0
+	bool "l0destar v3.0 (combined CAN/K-line, jumper-selected)"
+
+endchoice
+
+config APP_BOARD_IS_L0DESTAR
+	bool
+	default y if !APP_BOARD_BENCH
+
+# --- fitted-hardware capability flags ---------------------------------------
+# Defaults follow the PCB; each can be overridden (e.g. a v3.0 built with only
+# the CAN parts populated should set CONFIG_APP_BOARD_HAS_KLINE=n).
+
+config APP_BOARD_HAS_CAN
+	bool "CAN interface fitted (MCP2518FD)"
+	default y if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_5_CAN || \
+		     APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V3_0
+	default n
+
+config APP_BOARD_HAS_KLINE
+	bool "ISO-9141 (K-line) interface fitted"
+	default y if APP_BOARD_BENCH || APP_BOARD_L0DESTAR_V2_1 || \
+		     APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE || \
+		     APP_BOARD_L0DESTAR_V3_0
+	default n
+
+config APP_BOARD_HAS_AIO
+	bool "General-purpose 0-30V AIO inputs fitted"
+	default y if APP_BOARD_L0DESTAR_V2_1
+	default n
+
+# --- power-domain topology flags --------------------------------------------
+
+config APP_BOARD_CAN_ON_AUX
+	bool
+	default y if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_5_CAN || \
+		     APP_BOARD_L0DESTAR_V2_6_CAN
+	help
+	  The CAN circuit is powered from the AUX_SW domain (no separate CAN
+	  enable).  CAN pins are parked/released with the AUX domain, and
+	  "CAN off" can only mean MCP2518FD sleep + transceiver standby.
+
+config APP_BOARD_KLINE_ON_AUX
+	bool
+	default y if APP_BOARD_L0DESTAR_V2_1
+	help
+	  The whole K-line circuit (transceiver + shifter) is powered from the
+	  AUX_SW domain.  K-line pins are parked/released with the AUX domain.
+
+config APP_BOARD_KLINE_SHIFT_ON_AUX
+	bool
+	default y if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	help
+	  The TXS0104E level shifter's nRF-facing side (VCCA) is on the AUX
+	  rail while the L9637D's 5V/12V rails are gated by K_EN.  K-line pins
+	  are only released when BOTH domains are up, and parked before either
+	  drops.
+
+config APP_BOARD_OBD_DOMAIN
+	bool
+	default y if APP_BOARD_L0DESTAR_V3_0
+	help
+	  CAN and K-line share the OBD_EN domain (PP3V3_OBD + PP12V_OBD),
+	  switched separately from the GPS/aux rail.
+
+config APP_BOARD_CAN_XSTBY
+	bool
+	default y if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_6_CAN || \
+		     APP_BOARD_L0DESTAR_V3_0
+	help
+	  The CAN transceiver's standby pin is driven by MCP2518FD GPIO0
+	  (XSTBY).  Firmware must configure IOCON at boot: on v2.5/v2.6 the
+	  TCAN334 STB pin has no other drive and floats until then; on v3.0
+	  the MAX33041 STBY has a 10K pulldown (defaults to normal mode).
+	  With XSTBYEN set, putting the MCP2518FD into sleep automatically
+	  puts the transceiver into standby — the power-efficiency path for
+	  boards where the CAN rail shares the (GPS) AUX domain.
+
+config APP_BOARD_RELAY_FB_ON_AUX
+	bool
+	default y if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
+	help
+	  The relay feedback contacts are fed from PP3V3_RLY_FB on the AUX
+	  domain: feedback reads are only valid while AUX_SW is high, and the
+	  FB pins are parked when AUX is off.
+
+config APP_BOARD_IGN_EXT_PULLUP
+	bool
+	default y if APP_BOARD_IS_L0DESTAR
+	help
+	  IGN_SENSE has an external 56K pull-up to the always-on 3.3V rail
+	  (2N7002 open-drain sense).  Skip the nRF internal pull-up — in
+	  parallel it would roughly triple the sense current whenever the
+	  ignition is on.
+
+# --- pin assignments (P0.x GPIO numbers, -1 = not fitted) --------------------
+# One column per board, extracted from the KiCad PCBs.  P0.11/P0.12 are never
+# used: they are the Connect Kit's console UART.  P0.25 is the Connect Kit USR
+# button and is not exposed on the headers.
+
+config APP_PIN_K1_TX
+	int "K-line TX pin"
+	default 5  if APP_BOARD_L0DESTAR_V2_1
+	default 0  if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	default 2  if APP_BOARD_L0DESTAR_V3_0
+	default -1 if APP_BOARD_IS_L0DESTAR
+	default 22
+
+config APP_PIN_K1_RX
+	int "K-line RX pin"
+	default 4  if APP_BOARD_L0DESTAR_V2_1
+	default 1  if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	default 4  if APP_BOARD_L0DESTAR_V3_0
+	default -1 if APP_BOARD_IS_L0DESTAR
+	default 21
+
+config APP_PIN_K2_TX
+	int "K-line 2 TX pin (bench second transceiver)"
+	default -1 if APP_BOARD_IS_L0DESTAR
+	default 24
+
+config APP_PIN_K2_RX
+	int "K-line 2 RX pin (bench second transceiver)"
+	default -1 if APP_BOARD_IS_L0DESTAR
+	default 23
+
+config APP_PIN_L_SEND
+	int "ISO-9141 L-line send pin (gates the L pulldown FET)"
+	default 3  if APP_BOARD_L0DESTAR_V2_1
+	default 19 if APP_BOARD_L0DESTAR_V2_5_KLINE
+	default 17 if APP_BOARD_L0DESTAR_V2_6_KLINE
+	default 5  if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_L_RECV
+	int "ISO-9141 L-line receive pin"
+	default 6  if APP_BOARD_L0DESTAR_V2_1
+	default 31 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	default -1
+
+config APP_PIN_K_EN
+	int "K-line 5V/12V rail enable pin (v2.5K/v2.6K)"
+	default 23 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	default -1
+
+config APP_PIN_K_SLEEP
+	int "TJA1027T SLP_N pin (v3.0; high = awake)"
+	default 3  if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_CAN_SCK
+	int "MCP2518FD SPI SCK pin"
+	default 31 if APP_BOARD_L0DESTAR_V2_1
+	default 14 if APP_BOARD_L0DESTAR_V2_5_CAN
+	default 29 if APP_BOARD_L0DESTAR_V2_6_CAN
+	default 13 if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_CAN_SDI
+	int "MCP2518FD SPI SDI pin (nRF out -> MCP in)"
+	default 0  if APP_BOARD_L0DESTAR_V2_1
+	default 15 if APP_BOARD_L0DESTAR_V2_5_CAN
+	default 30 if APP_BOARD_L0DESTAR_V2_6_CAN
+	default 14 if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_CAN_SDO
+	int "MCP2518FD SPI SDO pin (MCP out -> nRF in)"
+	default 1  if APP_BOARD_L0DESTAR_V2_1
+	default 16 if APP_BOARD_L0DESTAR_V2_5_CAN
+	default 31 if APP_BOARD_L0DESTAR_V2_6_CAN
+	default 15 if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_CAN_CS
+	int "MCP2518FD SPI CS pin (10K pull-up on the switched CAN rail)"
+	default 2  if APP_BOARD_L0DESTAR_V2_1
+	default 17 if APP_BOARD_L0DESTAR_V2_5_CAN
+	default 0  if APP_BOARD_L0DESTAR_V2_6_CAN
+	default 16 if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_CAN_INT
+	int "MCP2518FD INT pin (open-drain, 10K pull-up on the switched CAN rail)"
+	default 30 if APP_BOARD_L0DESTAR_V2_1
+	default 18 if APP_BOARD_L0DESTAR_V2_5_CAN
+	default 1  if APP_BOARD_L0DESTAR_V2_6_CAN
+	default 17 if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_AUX_SW
+	int "Auxiliary power switch pin (v3.0: GPS_ENABLE)"
+	default 13 if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
+	default 24 if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_5_KLINE || \
+		      APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_CAN || \
+		      APP_BOARD_L0DESTAR_V2_6_KLINE || APP_BOARD_L0DESTAR_V2_6_MICRO
+	default 26 if APP_BOARD_L0DESTAR_V3_0
+	default 10
+
+config APP_PIN_OBD_EN
+	int "OBD power domain enable pin (v3.0: PP3V3_OBD + PP12V_OBD)"
+	default 24 if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_TWI_SDA
+	int "I2C SDA pin (INA228 + IMU shared bus)"
+	default 18 if APP_BOARD_L0DESTAR_V2_1
+	default 16 if APP_BOARD_L0DESTAR_V2_1_MINI
+	default 22 if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_5_MICRO
+	default 21 if APP_BOARD_L0DESTAR_V2_5_KLINE
+	default 19 if APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V2_6_KLINE || \
+		      APP_BOARD_L0DESTAR_V3_0
+	default 20 if APP_BOARD_L0DESTAR_V2_6_MICRO
+	default 5
+
+config APP_PIN_TWI_SCL
+	int "I2C SCL pin (INA228 + IMU shared bus)"
+	default 17 if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
+	default 21 if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_5_MICRO
+	default 20 if APP_BOARD_L0DESTAR_V2_5_KLINE
+	default 18 if APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V2_6_KLINE || \
+		      APP_BOARD_L0DESTAR_V3_0
+	default 19 if APP_BOARD_L0DESTAR_V2_6_MICRO
+	default 4
+
+config APP_PIN_INA_ALRT
+	int "INA228 alert pin (VBAT_ALRT)"
+	default 19 if APP_BOARD_L0DESTAR_V2_1
+	default 21 if APP_BOARD_L0DESTAR_V2_1_MINI
+	default 23 if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_5_MICRO
+	default 22 if APP_BOARD_L0DESTAR_V2_5_KLINE
+	default 21 if APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V2_6_MICRO
+	default 20 if APP_BOARD_L0DESTAR_V2_6_KLINE || APP_BOARD_L0DESTAR_V3_0
+	default 26 if BOARD_NRF9151_CONNECTKIT
+	default 11
+
+config APP_PIN_ACC_INT1
+	int "IMU INT1 pin (wake/impact interrupt)"
+	default 28 if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_5_KLINE || \
+		      APP_BOARD_L0DESTAR_V2_6_KLINE
+	default 19 if APP_BOARD_L0DESTAR_V2_1_MINI
+	default 31 if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_5_MICRO || \
+		      APP_BOARD_L0DESTAR_V2_6_MICRO
+	default 20 if APP_BOARD_L0DESTAR_V2_6_CAN
+	default 29 if APP_BOARD_L0DESTAR_V3_0
+	default 2
+
+config APP_PIN_ACC_INT2
+	int "IMU INT2 pin (unused)"
+	default 29 if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_5_CAN || \
+		      APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_MICRO
+	default 18 if APP_BOARD_L0DESTAR_V2_1_MINI
+	default 26 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	default 17 if APP_BOARD_L0DESTAR_V2_6_CAN
+	default 27 if APP_BOARD_L0DESTAR_V3_0
+	default 3
+
+config APP_PIN_IGN_SENSE
+	int "Ignition sense pin (active low: low = ignition on)"
+	default 16 if APP_BOARD_L0DESTAR_V2_1
+	default 10 if APP_BOARD_IS_L0DESTAR
+	default 31
+
+config APP_PIN_RLY_SET
+	int "Relay SET coil pin"
+	default 15 if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
+	default -1 if APP_BOARD_IS_L0DESTAR
+	default 27 if BOARD_NRF9151_CONNECTKIT
+	default 12
+
+config APP_PIN_RLY_RST
+	int "Relay RESET coil pin"
+	default 14 if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
+	default -1 if APP_BOARD_IS_L0DESTAR
+	default 30
+
+config APP_PIN_RLY_SET_FB
+	int "Relay SET feedback pin"
+	default 26 if APP_BOARD_L0DESTAR_V2_1
+	default 27 if APP_BOARD_L0DESTAR_V2_1_MINI
+	default -1 if APP_BOARD_IS_L0DESTAR
+	default 7
+
+config APP_PIN_RLY_RST_FB
+	int "Relay RESET feedback pin"
+	default 27 if APP_BOARD_L0DESTAR_V2_1
+	default 26 if APP_BOARD_L0DESTAR_V2_1_MINI
+	default -1 if APP_BOARD_IS_L0DESTAR
+	default 6
+
+# --- status LEDs -------------------------------------------------------------
+# All l0destar PCBs drive the LEDs active-high (GPIO -> 1K -> LED -> GND).
+# The bench default (-1) falls back to the DT led0 alias.
+
+config APP_PIN_LED1
+	int "Status LED 1 pin (-1 = use DT led0 alias)"
+	default 9  if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
+	default 26 if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_6_CAN
+	default 27 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	default 13 if APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_MICRO
+	default 28 if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_LED2
+	int "Status LED 2 pin (-1 = not fitted)"
+	default 8  if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
+	default 27 if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_6_CAN
+	default 29 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	default 14 if APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_MICRO
+	default 30 if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_LED3
+	int "Status LED 3 pin (-1 = not fitted)"
+	default 7  if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
+	default 28 if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_6_CAN
+	default 30 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	default 15 if APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_MICRO
+	default 31 if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_LED4
+	int "Status LED 4 pin (v2.1 mini only; -1 = not fitted)"
+	default 6  if APP_BOARD_L0DESTAR_V2_1_MINI
+	default -1
+
+config APP_PIN_LED5
+	int "Status LED 5 pin (v2.1 mini only; -1 = not fitted)"
+	default 5  if APP_BOARD_L0DESTAR_V2_1_MINI
+	default -1
+
+config APP_LED_ACTIVE_LOW
+	bool "Status LEDs are active-low"
+	default n if APP_BOARD_IS_L0DESTAR
+	default y
+
+# --- AIO inputs (v2.1 only) --------------------------------------------------
+# 0-30V inputs through 100K/10K dividers with BAT54S clamps to the always-on
+# 3.3V rail; safe to read at any time.  Only AIO6 (P0.20/AIN7) is ADC-capable.
+
+config APP_PIN_AIO1
+	int "AIO1 input pin"
+	default 10 if APP_BOARD_L0DESTAR_V2_1
+	default -1
+
+config APP_PIN_AIO2
+	int "AIO2 input pin"
+	default 24 if APP_BOARD_L0DESTAR_V2_1
+	default -1
+
+config APP_PIN_AIO3
+	int "AIO3 input pin"
+	default 23 if APP_BOARD_L0DESTAR_V2_1
+	default -1
+
+config APP_PIN_AIO4
+	int "AIO4 input pin"
+	default 22 if APP_BOARD_L0DESTAR_V2_1
+	default -1
+
+config APP_PIN_AIO5
+	int "AIO5 input pin"
+	default 21 if APP_BOARD_L0DESTAR_V2_1
+	default -1
+
+config APP_PIN_AIO6
+	int "AIO6 input pin"
+	default 20 if APP_BOARD_L0DESTAR_V2_1
+	default -1

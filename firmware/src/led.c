@@ -103,6 +103,9 @@ static int led_init_once(void)
 		gpio_pin_configure(s_gpio, PIN_LED1, flags);
 		if (PIN_LED2 >= 0) gpio_pin_configure(s_gpio, PIN_LED2, flags);
 		if (PIN_LED3 >= 0) gpio_pin_configure(s_gpio, PIN_LED3, flags);
+		/* v2.1 mini extras — no animation role yet, keep them off */
+		if (PIN_LED4 >= 0) gpio_pin_configure(s_gpio, PIN_LED4, flags);
+		if (PIN_LED5 >= 0) gpio_pin_configure(s_gpio, PIN_LED5, flags);
 		return 0;
 	}
 

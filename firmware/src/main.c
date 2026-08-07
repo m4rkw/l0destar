@@ -20,6 +20,7 @@
 
 #include "app.h"
 #include "hw_common.h"
+#include "hw_domain.h"
 #include "pins.h"
 
 #include <modem/lte_lc.h>
@@ -231,6 +232,8 @@ static void do_sleep(void)
     transport_close();
     LOG_INF("sleep: modem power off");
     lte_lc_power_off();
+    LOG_INF("sleep: CAN power off");
+    hw_can_power_off();
     LOG_INF("sleep: K-line power off");
     kline_power_off();
     LOG_INF("sleep: aux power off");
@@ -344,6 +347,8 @@ static void do_sleep(void)
                 accel_irq_disable();
                 LOG_INF("wake: INA228 wake");
                 hw_power_wake();
+                LOG_INF("wake: aux power on");
+                hw_aux_power_on();
                 led_on();
                 LOG_INF("wake: modem connect");
                 modem_connect();
@@ -456,6 +461,8 @@ static void do_sleep(void)
             modem_update_cell_info();
 
             if (s_move_needs_gps) {
+                /* the GPS antenna bias tee lives on the AUX domain */
+                hw_domain_request(HW_DOMAIN_AUX, HW_DOMAIN_USER_GNSS);
                 gnss_start();
                 use_cached_gps = false;
             } else {
@@ -477,6 +484,7 @@ static void do_sleep(void)
 
             if (s_move_needs_gps) {
                 gnss_stop();
+                hw_domain_release(HW_DOMAIN_AUX, HW_DOMAIN_USER_GNSS);
                 s_move_needs_gps = false;
             }
             use_cached_gps = false;
@@ -499,6 +507,8 @@ static void do_sleep(void)
             accel_irq_disable();
             LOG_INF("wake: INA228 wake");
             hw_power_wake();
+            LOG_INF("wake: aux power on");
+            hw_aux_power_on();
             led_on();
             LOG_INF("wake: modem connect");
             modem_connect();
@@ -617,11 +627,13 @@ int main(void)
         return 0;
     }
 
+    hw_domain_init();
     hw_aux_power_on();
     k_msleep(10);
 
     if (hw_power_init())  LOG_WRN("INA228 init failed — voltage unavailable");
     if (hw_accel_init())  LOG_WRN("accel init failed — readings unavailable");
+    if (hw_can_init())    LOG_WRN("CAN controller init failed");
 
     relay_init();
 
