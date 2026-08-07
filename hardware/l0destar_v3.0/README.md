@@ -13,6 +13,8 @@ as low as possible
 - The RF trace width is calculated using a standard 4-layer stackup at JLCPCB,
   different fabrication processes may require adjustment
 
+## New features
+
 The CAN and K-line versions have been consolidated in version 3.0. There is now
 a single PCB which can be configured for either CAN or K-line operation. The
 components for each of these circuits are optional, both can be included or
@@ -21,6 +23,8 @@ either CAN or K-line by shorting the jumper pads on the board.
 
 Several significant improvements have been made, including the removal of the 5V
 power rail and its associated buck converter.
+
+See below for a full change summary.
 
 ## Test status
 
