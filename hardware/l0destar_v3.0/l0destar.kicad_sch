@@ -5546,7 +5546,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "220uF 1210 6.3V 20% X5R"
+		(property "Value" "220uF 1210 10V 20% X5R"
 			(at 74.93 77.4699 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6004,7 +6004,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "220uF 1210 6.3V 20% X5R"
+		(property "Value" "220uF 1210 10V 20% X5R"
 			(at 41.275 77.4699 0)
 			(show_name no)
 			(do_not_autoplace no)

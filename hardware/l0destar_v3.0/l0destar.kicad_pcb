@@ -3230,7 +3230,7 @@
 				)
 			)
 		)
-		(property "Value" "220uF 1210 6.3V 20% X5R"
+		(property "Value" "220uF 1210 10V 20% X5R"
 			(at 0 2.3 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -18102,7 +18102,7 @@
 				)
 			)
 		)
-		(property "Value" "220uF 1210 6.3V 20% X5R"
+		(property "Value" "220uF 1210 10V 20% X5R"
 			(at 0 2.3 90)
 			(layer "F.Fab")
 			(hide yes)

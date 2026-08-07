@@ -3,6 +3,10 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 07/08/2026
+
+- Fixed voltage spec of the buck output caps
+
 ## 05/08/2026
 
 - Annotated the v3.0 schematics with specific part requirements
