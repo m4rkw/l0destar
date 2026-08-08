@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.3.0 - 07/08/2026
+
+### Carrier-board definitions
+- One selectable board definition per l0destar PCB (`Kconfig.boards`, chosen
+  via `CONFIG_APP_BOARD_*` in local.conf): full GPIO map, fitted-hardware
+  flags and power-domain topology for v2.1, v2.1 mini, v2.5C/K/M, v2.6C/K/M
+  and v3.0, extracted from the KiCad PCBs and verified against the board
+  netlists. Bench (DK / Connect Kit + breadboard) remains the default and
+  keeps the previous pin assignments, including the Connect Kit console
+  re-park (now a `BOARD_NRF9151_CONNECTKIT`-conditional Kconfig default
+  instead of makerdiary.conf, so it no longer overrides PCB pin maps)
+- Per-board hardware presence handled in code: relay skipped when the pins
+  aren't fitted, K-wire test skipped without the second bench transceiver,
+  LEDs active-high on all PCBs (bench stays active-low), external ignition
+  pull-up used on PCBs instead of the internal one (~3x lower sense current
+  with ignition on), LED4/5 parked on v2.1 mini
+
+### Power-domain sequencing (`src/hw_domain.c`)
+- All signals terminating in a switched rail are parked (input + pulldown)
+  before that rail drops and released only after it rises: CAN SPI pins
+  (MCP2518FD abs max is VDD + 0.3 V — a high pin would backfeed the dead
+  rail through the clamp diodes), CAN_INT/CAN_CS whose 10K pull-ups sit on
+  the switched rail, K-line pins (TXS0104E A-port / TJA1027T with switched
+  pull-ups), and v2.1 relay feedback (supplied from the AUX domain)
+- Domains are reference-counted per board topology: v2.x single AUX domain,
+  v2.5K/v2.6K AUX + K_EN (pins released only with both rails up), v3.0
+  GPS_ENABLE and OBD_ENABLE switched separately — engine-off telemetry
+  wakes now power only the GPS bias rail, and sleep wakes re-enable it
+  (previously the aux rail stayed off after the first sleep, killing GPS)
+- v3.0 TJA1027T put to sleep (SLP_N low) before its rail is cut
+
+### CAN controller power handling (`src/hw_can.c`)
+- MCP2518FD verified and configured at boot, then left in sleep mode
+  (~10 uA); `IOCON.XSTBYEN` drives the transceiver standby pin from sleep
+  state on v2.5C/v2.6C (TCAN334 STB otherwise floats — it has no other
+  drive) and v3.0 (MAX33041). On v2.5/v2.6 the CAN rail shares the GPS AUX
+  domain, so controller sleep + transceiver standby is the only power-off
+  path during engine-off telemetry wakes; on v3.0 the OBD domain switches
+  off entirely
+
 ## 0.2.1 - 13/06/2026
 
 ### Telemetry

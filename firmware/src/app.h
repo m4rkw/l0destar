@@ -137,6 +137,7 @@ void status_delay(long ms);   /* watchdog-aware sleep */
 
 /* Hardware modules */
 int  hw_gpio_init(void);
+int  hw_domain_init(void);
 int  hw_power_init(void);
 bool hw_power_available(void);
 void hw_power_shutdown(void);
@@ -155,6 +156,10 @@ int  kline_test(void);
 void kline_power_on(void);
 void kline_power_off(void);
 uint8_t kline_tx_rx_byte(uint8_t tx);
+int  hw_can_init(void);
+int  hw_can_power_on(void);
+void hw_can_power_off(void);
+bool hw_can_available(void);
 
 int   accel_read(int *ax, int *ay, int *az);
 int   accel_read_gyro(int *gx, int *gy, int *gz);

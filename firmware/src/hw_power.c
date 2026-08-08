@@ -4,6 +4,7 @@
 
 #include "app.h"
 #include "hw_common.h"
+#include "hw_domain.h"
 #include "pins.h"
 
 LOG_MODULE_REGISTER(hw_power, CONFIG_APP_LOG_LEVEL);
@@ -25,7 +26,15 @@ int hw_power_init(void)
 	bb_init(&ina_bus);
 	bb_pin_test(&ina_bus, "INA228");
 	gpio_pin_configure(hw_gpio0, PIN_INA_ALRT, GPIO_INPUT | GPIO_PULL_UP);
-	gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INPUT | GPIO_PULL_UP);
+	/* The PCBs sense ignition through a 2N7002 open-drain with an external
+	 * 56K pull-up to the always-on 3.3V rail; adding the internal pull-up
+	 * would roughly triple the sense current whenever ignition is on. */
+	if (IS_ENABLED(CONFIG_APP_BOARD_IGN_EXT_PULLUP)) {
+		gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INPUT);
+	} else {
+		gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE,
+				   GPIO_INPUT | GPIO_PULL_UP);
+	}
 
 	if (!bb_write16(&ina_bus, INA228_ADDR, 0x00, 0x8000)) {
 		LOG_ERR("INA228 reset NACK");
@@ -54,16 +63,18 @@ int hw_power_init(void)
 	return 0;
 }
 
+/* The AUX domain (GPS bias tee; on v2.x also the OBD/aux rails) is
+ * reference-counted in hw_domain so subsystem users can't fight the main
+ * state machine.  These wrappers hold/release the main state's claim, with
+ * all domain-pin park/release sequencing handled inside hw_domain. */
 void hw_aux_power_on(void)
 {
-    gpio_pin_configure(hw_gpio0, PIN_AUX_SW, GPIO_OUTPUT_HIGH);
-    LOG_INF("AUX_SW HIGH");
+    hw_domain_request(HW_DOMAIN_AUX, HW_DOMAIN_USER_MAIN);
 }
 
 void hw_aux_power_off(void)
 {
-    gpio_pin_configure(hw_gpio0, PIN_AUX_SW, GPIO_OUTPUT_LOW);
-    LOG_INF("AUX_SW LOW");
+    hw_domain_release(HW_DOMAIN_AUX, HW_DOMAIN_USER_MAIN);
 }
 
 bool hw_power_available(void)

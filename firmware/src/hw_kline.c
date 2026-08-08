@@ -4,24 +4,68 @@
 
 #include "app.h"
 #include "hw_common.h"
+#include "hw_domain.h"
 #include "pins.h"
 
 LOG_MODULE_REGISTER(hw_kline, CONFIG_APP_LOG_LEVEL);
 
 #define KLINE_BIT_US 96
 
+/* Bring up the rails the K-line circuit needs on this board, releasing the
+ * K pins from their parked state.  Domain wiring per board:
+ *   bench / v2.1        everything on the AUX domain
+ *   v2.5K / v2.6K       shifter A-side on AUX, L9637D 5V/12V rails on K_EN —
+ *                       both must be up before the pins are released
+ *   v3.0                TJA1027T on the OBD domain; SLP_N (K_SLEEP) must then
+ *                       be raised to wake the transceiver
+ */
 void kline_power_on(void)
 {
-	k_msleep(500);
+	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
+		return;
+	}
+	if (IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN)) {
+		hw_domain_request(HW_DOMAIN_OBD, HW_DOMAIN_USER_KLINE);
+		if (PIN_K_SLEEP >= 0) {
+			gpio_pin_configure(hw_gpio0, PIN_K_SLEEP,
+					   GPIO_OUTPUT_HIGH);
+		}
+	} else {
+		hw_domain_request(HW_DOMAIN_AUX, HW_DOMAIN_USER_KLINE);
+		if (IS_ENABLED(CONFIG_APP_BOARD_KLINE_SHIFT_ON_AUX)) {
+			hw_domain_request(HW_DOMAIN_K, HW_DOMAIN_USER_KLINE);
+		}
+	}
+	k_msleep(500);		/* rails + K bus settle */
 }
 
+/* Park the K pins and drop the rails this board lets us drop.  The TJA1027
+ * is put to sleep (K_SLEEP low, via the park) before its rail is cut. */
 void kline_power_off(void)
 {
+	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
+		return;
+	}
 	LOG_INF("K-line power off");
+	if (IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN)) {
+		if (PIN_K_SLEEP >= 0) {
+			gpio_pin_configure(hw_gpio0, PIN_K_SLEEP,
+					   GPIO_OUTPUT_LOW);
+		}
+		hw_domain_release(HW_DOMAIN_OBD, HW_DOMAIN_USER_KLINE);
+	} else {
+		if (IS_ENABLED(CONFIG_APP_BOARD_KLINE_SHIFT_ON_AUX)) {
+			hw_domain_release(HW_DOMAIN_K, HW_DOMAIN_USER_KLINE);
+		}
+		hw_domain_release(HW_DOMAIN_AUX, HW_DOMAIN_USER_KLINE);
+	}
 }
 
 int kline_init(void)
 {
+	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE) || PIN_K1_TX < 0) {
+		return -ENODEV;
+	}
 	kline_power_on();
 	gpio_pin_configure(hw_gpio0, PIN_K1_TX, GPIO_OUTPUT_HIGH);
 	gpio_pin_configure(hw_gpio0, PIN_K1_RX, GPIO_INPUT | GPIO_PULL_UP);
@@ -126,6 +170,10 @@ static int kline_stream(const char *dir, uint8_t tx_pin, uint8_t rx_pin)
  * other across the wire (the loopback test only proves each chip's own path). */
 int kline_test(void)
 {
+	if (PIN_K1_TX < 0 || PIN_K2_TX < 0) {
+		LOG_INF("K-wire test skipped (single/no K-line on this board)");
+		return 0;
+	}
 	gpio_pin_configure(hw_gpio0, PIN_K1_TX, GPIO_OUTPUT_HIGH);
 	gpio_pin_configure(hw_gpio0, PIN_K2_TX, GPIO_OUTPUT_HIGH);
 	gpio_pin_configure(hw_gpio0, PIN_K1_RX, GPIO_INPUT | GPIO_PULL_UP);

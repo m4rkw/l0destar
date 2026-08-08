@@ -14,6 +14,11 @@ static bool s_connected = true;
 
 int relay_init(void)
 {
+	if (PIN_RLY_SET < 0 || PIN_RLY_RST < 0) {
+		LOG_INF("no relay on this board");
+		s_connected = false;
+		return 0;
+	}
 	gpio_pin_configure(hw_gpio0, PIN_RLY_SET, GPIO_OUTPUT_LOW);
 	gpio_pin_configure(hw_gpio0, PIN_RLY_RST, GPIO_OUTPUT_LOW);
 	gpio_pin_configure(hw_gpio0, PIN_RLY_SET_FB, GPIO_INPUT);

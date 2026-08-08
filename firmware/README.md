@@ -27,6 +27,38 @@ on a custom carrier around the MakerDiary nRF9151 Connect Kit module. Pin
 assignments live in `src/pins.h`; DK-specific peripheral conflicts are resolved
 in `boards/nrf9151dk_nrf9151_ns.overlay` (+ `.conf`).
 
+### Carrier boards
+
+Every l0destar PCB carries the same Connect Kit but lands each signal on a
+different header pin and wires the switched power rails differently.
+`Kconfig.boards` defines one selectable definition per PCB — GPIO map,
+fitted-hardware flags, and power-domain topology, all extracted from the KiCad
+designs in `../hardware/`. Select the board in `local.conf` and everything
+else follows:
+
+```
+CONFIG_APP_BOARD_L0DESTAR_V3_0=y
+```
+
+Available: `APP_BOARD_BENCH` (default), `..._L0DESTAR_V2_1`, `..._V2_1_MINI`,
+`..._V2_5_CAN/_KLINE/_MICRO`, `..._V2_6_CAN/_KLINE/_MICRO`, `..._V3_0`.
+Individual pins/flags can still be overridden after the board defaults apply
+(on v3.0, set `CONFIG_APP_BOARD_HAS_CAN=n` or `..._HAS_KLINE=n` to match the
+jumper configuration of the physical board).
+
+Selecting a board also arms the **power-domain sequencing** in
+`src/hw_domain.c`. Signals that terminate inside a switched rail (CAN SPI
+pins, K-line pins, relay feedback) are parked as input+pulldown whenever that
+rail is off and only released while it is powered — a pin driven high into an
+unpowered MCP2518FD/TXS0104E would backfeed the dead rail through its ESD
+clamp diodes (abs max VDD + 0.3 V), and the CAN_INT/CAN_CS/K-line pull-ups
+live on the switched rails, so they float when the domain is down. On boards
+with transceiver standby control (v2.5C/v2.6C TCAN334, v3.0 MAX33041),
+`src/hw_can.c` configures MCP2518FD `IOCON.XSTBYEN` at boot so sleep mode
+automatically drops the transceiver into standby — required on v2.5/v2.6
+where the CAN rail shares the GPS AUX domain and stays powered during
+engine-off telemetry wakes.
+
 ---
 
 ## Architecture
@@ -81,7 +113,9 @@ at ±250 dps.
 | `settings.c`  | Runtime settings (in-memory; Kconfig-backed defaults) |
 | `crypto.c`    | CSPRNG + PSK hex parsing (PSK used only by the legacy transport) |
 | `hw_common.c` | GPIO init + bit-banged I²C bus |
-| `hw_power.c`  | INA228 voltage, ignition read, INA shutdown/wake |
+| `hw_domain.c` | Switched power-domain sequencing (park/release of pins in AUX/OBD/K domains) |
+| `hw_power.c`  | INA228 voltage, ignition read, INA shutdown/wake, AUX domain wrappers |
+| `hw_can.c`    | MCP2518FD power/domain handling, sleep mode + transceiver standby (XSTBY) |
 | `hw_accel.c`  | ASM330LHHX IMU (accel path): polling + hardware wake interrupt |
 | `hw_relay.c`  | Latching relay with feedback verification |
 | `hw_kline.c`  | K-line bit-bang UART (L9637D) |
