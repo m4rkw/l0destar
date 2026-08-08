@@ -3,6 +3,12 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 08/08/2026
+
+- Removed excessive stitching vias and optimised placements
+- Removed unnecessary ENABLE resistor
+- Other minor PCB layout tweaks
+
 ## 07/08/2026
 
 - Fixed voltage spec of the buck output caps

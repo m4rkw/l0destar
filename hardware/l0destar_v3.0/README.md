@@ -138,9 +138,15 @@ resistor. **Make sure the pads that should be unconnected are not connected.**
 | S1J3 | Makerdiary header 2 | 20-pin 2.54mm header | [20-pin pcb header](https://amzn.to/44hTFGN) | |
 | S1R1 | I2C pull-up resistor | 0402 4.7K 5% | [MP003476](https://uk.farnell.com/multicomp-pro/mp003476/res-4k7-1-0-0625w-0402-thick-film/dp/3392645) | |
 | S1R2 | I2C pull-up resistor | 0402 4.7K 5% | [MP003476](https://uk.farnell.com/multicomp-pro/mp003476/res-4k7-1-0-0625w-0402-thick-film/dp/3392645) | |
-| S1R3 | 100K enable resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
+| S1R3 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 3 to CAN\_H, see config section |
+| S1R4 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 3 to ISO-9141\_K, see config section |
+| S1R5 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 6 to CAN\_L, see config section |
+| S1R6 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 6 to ISO-9141\_L, see config section |
+| S1R7 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enables PP3V3\_CAN rail, see config section |
+| S1R8 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enables PP3V3\_K rail, see config section |
+| S1R9 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enables PP12V\_K rail, see config section |
+| S1R10 | 100K pulldown resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | S1R11 | 100K pulldown resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
-| S1R12 | 100K pulldown resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | S1C1 | 220uF buck output capacitor | 1210 220uF 10V 20% X5R | [1210 220UF 25V X5R M](https://www.aliexpress.com/item/1005007293718666.html) | |
 | S1C2 | 220uF buck output capacitor | 1210 220uF 10V 20% X5R | [1210 220UF 25V X5R M](https://www.aliexpress.com/item/1005007293718666.html) | |
 | S2Q1 | Reverse-polarity MOSFET | SQ2361 SOT-23 | [SQ2361ES-T1_GE3](https://uk.farnell.com/vishay/sq2361es-t1-ge3/mosfet-aec-q101-p-ch-60v-sot-23/dp/2889711) | |
@@ -262,7 +268,7 @@ Can be omited if K-line/ISO-9141 is not required
 | All | 4.7K 0402 resistor | 2 | 0402 4.7K 5% | [MP003476](https://uk.farnell.com/multicomp-pro/mp003476/res-4k7-1-0-0625w-0402-thick-film/dp/3392645) | |
 | All | 18.2K 0402 resistor | 1 | 0402 18.2K 1% | [RC0402FR-0718K2L](https://uk.farnell.com/yageo/rc0402fr-0718k2l/res-18k2-1-0-0625w-0402-thick/dp/3495542) | 18.2K == 2MHz |
 | All | 56K 0402 resistor | 1 | 0402 56K 1% | [MCMR04X5602FTL](https://uk.farnell.com/multicomp-pro/mcmr04x5602ftl/res-56k-1-0-0625w-0402-ceramic/dp/2073131) | |
-| All | 100K 0402 resistor | 4 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
+| All | 100K 0402 resistor | 3 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | All | 120K 0402 resistor | 1 | 0402 120K 1% | [RC0402FR-07120KL](https://uk.farnell.com/yageo/rc0402fr-07120kl/res-120k-1-0-063w-0402-thick-film/dp/9239480) | |
 | All | 226K 0402 resistor | 1 | 0402 226K 1% | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V |
 | All | 1M 0402 resistor | 2 | 0402 1% 1M | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |

@@ -341,6 +341,183 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Device:C_Polarized"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0.254)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "C"
+				(at 0.635 2.54 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "C_Polarized"
+				(at 0.635 -2.54 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Footprint" ""
+				(at 0.9652 -3.81 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Polarized capacitor"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "cap capacitor"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "CP_*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "C_Polarized_0_1"
+				(rectangle
+					(start -2.286 0.508)
+					(end 2.286 1.016)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.778 2.286) (xy -0.762 2.286)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 2.794) (xy -1.27 1.778)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start 2.286 -0.508)
+					(end -2.286 -1.016)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+			)
+			(symbol "C_Polarized_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 2.794)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 2.794)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Device:Crystal_GND24"
 			(pin_names
 				(offset 1.016)
@@ -3738,7 +3915,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "5f57471a-ca15-4fd9-a5b6-2c8313ba7714")
-		(property "Reference" "S9C2"
+		(property "Reference" "S9C7"
 			(at 58.674 147.574 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3802,7 +3979,7 @@
 		(instances
 			(project "l0destar"
 				(path "/da570340-c25f-43d9-9e24-f16e4364f6bf"
-					(reference "S9C2")
+					(reference "S9C7")
 					(unit 1)
 				)
 			)
@@ -4243,7 +4420,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ae8e5c01-5a8c-47c5-8a26-2383ccd521cf")
-		(property "Reference" "S9U3"
+		(property "Reference" "S9U4"
 			(at 59.69 60.96 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4317,7 +4494,7 @@
 		(instances
 			(project "l0destar"
 				(path "/da570340-c25f-43d9-9e24-f16e4364f6bf"
-					(reference "S9U3")
+					(reference "S9U4")
 					(unit 1)
 				)
 			)
@@ -4569,7 +4746,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "bef6ce87-bc98-4a1b-92e0-0935b3d4ea21")
-		(property "Reference" "S9C3"
+		(property "Reference" "S9C8"
 			(at 70.104 147.574 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4633,14 +4810,14 @@
 		(instances
 			(project "l0destar"
 				(path "/da570340-c25f-43d9-9e24-f16e4364f6bf"
-					(reference "S9C3")
+					(reference "S9C8")
 					(unit 1)
 				)
 			)
 		)
 	)
 	(symbol
-		(lib_id "Device:C")
+		(lib_id "Device:C_Polarized")
 		(at 153.67 130.81 0)
 		(unit 1)
 		(body_style 1)
@@ -4651,8 +4828,8 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d37707db-d706-4cba-8201-166b6b04bff6")
-		(property "Reference" "S9C5"
-			(at 157.48 129.5399 0)
+		(property "Reference" "S9C6"
+			(at 157.48 128.6509 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4663,7 +4840,7 @@
 			)
 		)
 		(property "Value" "10uF"
-			(at 157.48 132.0799 0)
+			(at 157.48 131.1909 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4695,7 +4872,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" "Polarized capacitor"
 			(at 153.67 130.81 0)
 			(hide yes)
 			(show_name no)
@@ -4715,7 +4892,7 @@
 		(instances
 			(project "l0destar"
 				(path "/da570340-c25f-43d9-9e24-f16e4364f6bf"
-					(reference "S9C5")
+					(reference "S9C6")
 					(unit 1)
 				)
 			)
@@ -4732,7 +4909,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "e114fc22-aa6e-4179-b81b-1db9b6211431")
-		(property "Reference" "S9C4"
+		(property "Reference" "S9C5"
 			(at 143.764 129.794 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4796,7 +4973,7 @@
 		(instances
 			(project "l0destar"
 				(path "/da570340-c25f-43d9-9e24-f16e4364f6bf"
-					(reference "S9C4")
+					(reference "S9C5")
 					(unit 1)
 				)
 			)
@@ -4813,7 +4990,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "e5affaa0-db9b-4a9f-a1af-74e59be64d66")
-		(property "Reference" "S9C1"
+		(property "Reference" "S9C2"
 			(at 119.38 28.448 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4877,7 +5054,7 @@
 		(instances
 			(project "l0destar"
 				(path "/da570340-c25f-43d9-9e24-f16e4364f6bf"
-					(reference "S9C1")
+					(reference "S9C2")
 					(unit 1)
 				)
 			)

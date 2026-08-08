@@ -2207,7 +2207,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "38a58d68-4732-48c7-8f89-abaa781fbe49")
-		(property "Reference" "S6L2"
+		(property "Reference" "S6L1"
 			(at 123.19 21.59 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2403,7 +2403,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6L2")
+					(reference "S6L1")
 					(unit 1)
 				)
 			)
@@ -2420,7 +2420,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "391eb42b-ee02-46fd-a5a7-8a41e890803d")
-		(property "Reference" "S6C8"
+		(property "Reference" "S6C3"
 			(at 152.4 53.34 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2484,7 +2484,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6C8")
+					(reference "S6C3")
 					(unit 1)
 				)
 			)
@@ -2579,7 +2579,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "48c7040d-e546-4894-b882-4fafab37d63e")
-		(property "Reference" "S6C6"
+		(property "Reference" "S6C1"
 			(at 28.956 43.434 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2643,7 +2643,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6C6")
+					(reference "S6C1")
 					(unit 1)
 				)
 			)
@@ -2660,7 +2660,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "6487e365-3b4c-423e-9a6a-fa2550e271b9")
-		(property "Reference" "S6R5"
+		(property "Reference" "S6R2"
 			(at 118.364 77.216 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2722,7 +2722,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6R5")
+					(reference "S6R2")
 					(unit 1)
 				)
 			)
@@ -2739,7 +2739,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "68130ed7-981d-4a76-b304-d47f32d6a7ac")
-		(property "Reference" "S6C10"
+		(property "Reference" "S6C5"
 			(at 161.036 90.17 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2803,7 +2803,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6C10")
+					(reference "S6C5")
 					(unit 1)
 				)
 			)
@@ -3133,7 +3133,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "bb5f9e30-3f2e-440c-8f31-80e3ed2b922d")
-		(property "Reference" "S6U2"
+		(property "Reference" "S6U1"
 			(at 88.9 33.02 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3332,7 +3332,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6U2")
+					(reference "S6U1")
 					(unit 1)
 				)
 			)
@@ -3428,7 +3428,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d5527b76-f456-48ea-9f3a-0d050684f829")
-		(property "Reference" "S6U3"
+		(property "Reference" "S6U2"
 			(at 180.34 30.48 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3502,7 +3502,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6U3")
+					(reference "S6U2")
 					(unit 1)
 				)
 			)
@@ -3519,7 +3519,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "d9084ca9-f52b-4f43-b40b-38866d94394c")
-		(property "Reference" "S6R6"
+		(property "Reference" "S6R3"
 			(at 144.526 83.566 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3581,7 +3581,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6R6")
+					(reference "S6R3")
 					(unit 1)
 				)
 			)
@@ -3598,7 +3598,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "daaabef2-d985-4a64-aa3e-45f98ba5e77a")
-		(property "Reference" "S6C7"
+		(property "Reference" "S6C2"
 			(at 41.148 67.564 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3662,7 +3662,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6C7")
+					(reference "S6C2")
 					(unit 1)
 				)
 			)
@@ -3679,7 +3679,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "ea397e50-f4e8-4a59-ade4-f88b8dd86bcd")
-		(property "Reference" "S6C9"
+		(property "Reference" "S6C4"
 			(at 142.748 72.39 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3743,7 +3743,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6C9")
+					(reference "S6C4")
 					(unit 1)
 				)
 			)
@@ -3761,7 +3761,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f89bb22b-fe50-4bc0-bf6c-96e0165f1413")
-		(property "Reference" "S6R4"
+		(property "Reference" "S6R1"
 			(at 52.07 67.3099 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3825,7 +3825,7 @@
 		(instances
 			(project "l0destar"
 				(path "/3b34a799-c26a-4c86-88e6-720fda4c7fd2"
-					(reference "S6R4")
+					(reference "S6R1")
 					(unit 1)
 				)
 			)

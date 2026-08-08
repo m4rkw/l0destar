@@ -1362,7 +1362,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "612dd74a-db3f-4cfd-96fe-41375a9a02a1")
-		(property "Reference" "S7Q4"
+		(property "Reference" "S7Q2"
 			(at 120.65 30.48 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1430,7 +1430,7 @@
 		(instances
 			(project "l0destar"
 				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
-					(reference "S7Q4")
+					(reference "S7Q2")
 					(unit 1)
 				)
 			)
@@ -1447,7 +1447,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "699de616-e5dc-435a-99b6-b219e616a753")
-		(property "Reference" "S7Q3"
+		(property "Reference" "S7Q1"
 			(at 84.328 34.798 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1517,7 +1517,7 @@
 		(instances
 			(project "l0destar"
 				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
-					(reference "S7Q3")
+					(reference "S7Q1")
 					(unit 1)
 				)
 			)
@@ -1535,7 +1535,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "768f6d48-6a2f-4613-990e-65c49e35590f")
-		(property "Reference" "S7R8"
+		(property "Reference" "S7R4"
 			(at 99.06 53.34 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1597,7 +1597,7 @@
 		(instances
 			(project "l0destar"
 				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
-					(reference "S7R8")
+					(reference "S7R4")
 					(unit 1)
 				)
 			)
@@ -1693,7 +1693,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "c97fd931-d698-4588-8316-405ab4de75c7")
-		(property "Reference" "S7R6"
+		(property "Reference" "S7R2"
 			(at 67.31 43.1799 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1757,7 +1757,7 @@
 		(instances
 			(project "l0destar"
 				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
-					(reference "S7R6")
+					(reference "S7R2")
 					(unit 1)
 				)
 			)
@@ -1775,7 +1775,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e668961d-8336-47ab-94ec-08725b90322c")
-		(property "Reference" "S7R5"
+		(property "Reference" "S7R1"
 			(at 57.15 31.75 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1837,7 +1837,7 @@
 		(instances
 			(project "l0destar"
 				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
-					(reference "S7R5")
+					(reference "S7R1")
 					(unit 1)
 				)
 			)
@@ -1855,7 +1855,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ee81437a-8536-4a55-ba74-826cb9d4c562")
-		(property "Reference" "S7R7"
+		(property "Reference" "S7R3"
 			(at 99.06 25.4 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1917,7 +1917,7 @@
 		(instances
 			(project "l0destar"
 				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
-					(reference "S7R7")
+					(reference "S7R3")
 					(unit 1)
 				)
 			)
