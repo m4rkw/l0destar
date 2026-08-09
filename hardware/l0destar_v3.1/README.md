@@ -1,4 +1,4 @@
-# l0destar v3.0
+# l0destar v3.1
 
 ## Overview
 
@@ -15,14 +15,13 @@ as low as possible
 
 ## New features
 
-The CAN and K-line versions have been consolidated in version 3.0. There is now
-a single PCB which can be configured for either CAN or K-line operation. The
-components for each of these circuits are optional, both can be included or
-excluded. The external connector pins and OBD power rails can be configured for
-either CAN or K-line by shorting the jumper pads on the board.
+Relay power control has been added back into the design in a new low-profile
+small footprint form that is now also completely optional using the same jumper
+pad mechanism as the K-line and CAN bus features.
 
-Several significant improvements have been made, including the removal of the 5V
-power rail and its associated buck converter.
+To facilitate this the layout has been changed extensively and some components
+re-selected for smaller parts, but the overall PCB footprint is identical to
+v3.0 with the same mounting hole positions.
 
 See below for a full change summary.
 
@@ -32,6 +31,7 @@ See below for a full change summary.
 |---------|------|--------|-------|
 | Input stage | 12V input reverse polarity | NOT TESTED | |
 | Input stage | 12V ignition input reverse polarity | NOT TESTED | |
+| Relay | Power source switching from firmware | NOT TESTED | |
 | INA228 | Voltage reading function | NOT TESTED |
 | Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
 | LT8609#1 | 4.2V output | NOT TESTED | |
@@ -57,31 +57,18 @@ See below for a full change summary.
  - ASM330LHHXG1TR 6-axis IMU gyro/accelerometer
  - USB-C can be connected and disconnected for programming without any power
    disruption
+ - Optional bistable relay power switching between the 12V live and ignition rails
  - Optional CAN interface
  - Optional ISO-9141 (K-line) interface with L and K connections for full functionality
  - CAN/ISO-9141 switchable via jumper pads
+ - Relay enable/bypass via jumper pads
 
-## Changes from v2.6
+## Changes from v3.0
 
- - Both CAN and ISO-9141 (K-line) circuits are included on a single PCB, either
-   one, none or both can be populated
- - Switch between CAN/ISO-9141 functionality by shorting jumper pads on the
-   board with solder bridges. These config pads also double as test points for
-   the power rails, saving board space
- - S2R2 increased to 10M for slightly reduced quiescent power draw
- - S4R2 increased to 100K for better resiliency of ignition sensing with low
-   system voltage
- - Auxillary power MOSFETs and several ideal diodes swapped out for load switches to
-   simplify the system and reduce board footprint
- - OBD power rails are switched separately from the GPS power rail to reduce
-   power consumption when engine-off telemetry wakes occur
- - The L9637D was swapped out for a TJA1027T, dramatically simplifying the
-   circuit. This eliminates the need for a separate 5V buck converter and the
-   level shifter, saving quite a bit of board space
- - CAN transceiver swapped out for MAX33041EASA+ for more robust protection
-   against transients
- - Pulldown added to the STBY pin in order to set normal mode by default rather
-   than the state be floating
+ - Bistable relay power source switching added back into the design as an
+   optional feature, its components can be omited if not needed
+ - CAN termination resistor reduced to 0805 footprint, 0.5W is sufficient
+ - K-line pullup resistors changed to 0508 footprint, 1W is sufficient
 
 ## Power supply
 
@@ -113,6 +100,14 @@ resistor. **Make sure the pads that should be unconnected are not connected.**
 | None      | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN |
 | CAN bus   | CONNECT | OPEN | CONNECT | OPEN | CONNECT | OPEN | OPEN |
 | K-line    | OPEN | CONNECT | OPEN | CONNECT | OPEN | CONNECT | CONNECT |
+
+The relay is also optional and its components can either be placed or not.
+The configuration pads for it are S1R12 and S1R13:
+
+| Mode | S1R12 | S1R13 |
+|------|-------|-------|
+| Relay bypassed | CONNECT | OPEN | 
+| Relay active | OPEN | CONNECT |
 
 ## Notes
 
@@ -147,8 +142,9 @@ resistor. **Make sure the pads that should be unconnected are not connected.**
 | S1R9 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enables PP12V\_K rail, see config section |
 | S1R10 | 100K pulldown resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | S1R11 | 100K pulldown resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
-| S1C1 | 220uF buck output capacitor | 1210 220uF 10V 20% X5R | [1210 220UF 25V X5R M](https://www.aliexpress.com/item/1005007293718666.html) | |
-| S1C2 | 220uF buck output capacitor | 1210 220uF 10V 20% X5R | [1210 220UF 25V X5R M](https://www.aliexpress.com/item/1005007293718666.html) | |
+| S1R12 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Bypass relay, power from 12V input, see config section |
+| S1R13 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enable relay, see config section |
+| S1C1 | 47uF input capacitor | 2220 >= 50V 20% X7R | [CKG57NX7R1H476M500JH](https://uk.farnell.com/tdk/ckg57nx7r1h476m500jh/cap-stacked-47uf-50v-mlcc-2220/dp/3816888) | |
 | S2Q1 | Reverse-polarity MOSFET | SQ2361 SOT-23 | [SQ2361ES-T1_GE3](https://uk.farnell.com/vishay/sq2361es-t1-ge3/mosfet-aec-q101-p-ch-60v-sot-23/dp/2889711) | |
 | S2Q2 | Reverse-polarity MOSFET | SQ2361 SOT-23 | [SQ2361ES-T1_GE3](https://uk.farnell.com/vishay/sq2361es-t1-ge3/mosfet-aec-q101-p-ch-60v-sot-23/dp/2889711) | |
 | S2D1 | 15V Zener diode | BZX84C15 | [BZX84C15](https://uk.farnell.com/multicomp-pro/bzx84c15/zener-diode-0-3w-15v-sot-23/dp/2675186) | |
@@ -157,7 +153,6 @@ resistor. **Make sure the pads that should be unconnected are not connected.**
 | S2D4 | 400W TVS diode | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://uk.farnell.com/nexperia/ptvs33vs1utr-115/tvs-diode-aecq101-unidir-33v-400w/dp/3440137) | |
 | S2R1 | Pulldown resistor | 0402 5% 1M | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | S2R2 | Pulldown resistor | 0402 5% 10M | [RK73H1ETTP1005F](https://uk.farnell.com/koa/rk73h1ettp1005f/res-10m-1-0-1w-0402/dp/3538659) | |
-| S2C1 | 47uF input capacitor | 2220 >= 50V 20% X7R | [CKG57NX7R1H476M500JH](https://uk.farnell.com/tdk/ckg57nx7r1h476m500jh/cap-stacked-47uf-50v-mlcc-2220/dp/3816888) | |
 | S3U1 | INA228 voltage read IC | INA228 10-VSSOP | [INA228](https://www.aliexpress.com/item/1005008704299153.html) | |
 | S3C1 | 1uF capacitor | 0402 >= 10V 10% X7R | [KAM05CR71A105KH](https://uk.farnell.com/kyocera-avx/kam05cr71a105kh/capacitor-mlcc-1uf-x7r-10v-0402/dp/4365709) | |
 | S3C2 | 100nF capacitor | 0402 >= 25V 10% X7R | [MC0402B104K250CT](https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759) | |
@@ -174,6 +169,8 @@ resistor. **Make sure the pads that should be unconnected are not connected.**
 | S6C3 | 4.7uF capacitor | 0805 >= 50V 10% X7R | [GRM21BZ71H475KE15K](https://uk.farnell.com/murata/grm21bz71h475ke15k/cap-4-7uf-50v-mlcc-0805/dp/3582887) | |
 | S6C4 | 10pF capacitor | 0402 >= 10V 10% X7R | [C0402C100K5RACTU](https://uk.farnell.com/kemet/c0402c100k5ractu/cap-10pf-50v-10-x7r-0402/dp/2821254) | |
 | S6C5 | 22uF capacitor | 0805 >= 10V 20% X7T | [GCM21BD71A226MEC4L](https://uk.farnell.com/murata/gcm21bd71a226mec4l/cap-mlcc-22uf-x7t-10v-0805/dp/4813843) | Higher voltage rating/X7R is better if available |
+| S6C6 | 220uF buck output capacitor | 1210 220uF 10V 20% X5R | [1210 220UF 25V X5R M](https://www.aliexpress.com/item/1005007293718666.html) | |
+| S6C7 | 220uF buck output capacitor | 1210 220uF 10V 20% X5R | [1210 220UF 25V X5R M](https://www.aliexpress.com/item/1005007293718666.html) | |
 | S6R1 | Oscillator frequency resistor | 0402 18.2K 1% | [RC0402FR-0718K2L](https://uk.farnell.com/yageo/rc0402fr-0718k2l/res-18k2-1-0-0625w-0402-thick/dp/3495542) | 18.2K == 2MHz |
 | S6R2 | Output voltage divider resistor | 0402 226K 1% | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V |
 | S6R3 | Output voltage divider resistor | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V |
@@ -231,7 +228,7 @@ Can be omited if CAN is not required.
 | S9Y1 | 40MHz crystal | ABM8G-40.000MHZ-18-D2Y-T | [ABM8G-40.000MHZ-18-D2Y-T](https://uk.farnell.com/abracon/abm8g-40-000mhz-18-d2y-t/crystal-40mhz-18pf-3-2mm-x-2-5mm/dp/3819752) | |
 | S9R1 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S9R2 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
-| S9R3 | 120R 2010 resistor | 2010 120R 5% | [RC2010JK-07120RL](https://uk.farnell.com/yageo/rc2010jk-07120rl/res-120r-5-0-75w-2010-thick-film/dp/3496395) | |
+| S9R3 | 120R 0805 resistor | 0805 120R 5% | [MCWR08X1200FTL](https://uk.farnell.com/multicomp-pro/mcwr08x1200ftl/res-120r-1-0-125w-0805-thick-film/dp/2447561) | |
 | S9R4 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S9J1 | 2-pin 2.54mm header | 2-pin 2.54mm header | [68001-402HLF](https://uk.farnell.com/amphenol-communications-solutions/68001-402hlf/conn-header-2pos-1row-2-54mm-th/dp/3881905) | |
 
@@ -252,10 +249,26 @@ Can be omited if K-line/ISO-9141 is not required
 | S10D4 | 400W TVS diode | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://uk.farnell.com/nexperia/ptvs33vs1utr-115/tvs-diode-aecq101-unidir-33v-400w/dp/3440137) | |
 | S10R1 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S10R2 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
-| S10R3 | 510R 2512 resistor | 2512 510R 5% 2W | [3521510RFT](https://uk.farnell.com/cgs-te-connectivity/3521510rft/res-510r-1-2w-2512/dp/2117495) | |
-| S10R4 | 510R 2512 resistor | 2512 510R 5% 2W | [3521510RFT](https://uk.farnell.com/cgs-te-connectivity/3521510rft/res-510r-1-2w-2512/dp/2117495) | |
+| S10R3 | 510R 0508 resistor | 0508 510R 5% 1W | [4206859](https://uk.farnell.com/cgs-te-connectivity/3430a2f510rtdf/res-510r-1w-thick-film-0508-wide/dp/4206859) | |
+| S10R4 | 510R 0508 resistor | 0508 510R 5% 1W | [4206859](https://uk.farnell.com/cgs-te-connectivity/3430a2f510rtdf/res-510r-1w-thick-film-0508-wide/dp/4206859) | |
 | S10R5 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S10C1 | 100nF capacitor | 0402 >= 50V 10% X7R | [MCASU105SB7104KFNA01](https://uk.farnell.com/taiyo-yuden/mcasu105sb7104kfna01/capacitor-mlcc-0-1uf-50v-x7r-0402/dp/4666632) | |
+
+## Bill of materials - relay power switching
+
+Can be omited if the relay is not required
+
+| Item | Description | Specification | Example | Notes |
+|------|-------------|---------------|---------|-------|
+| S5U1 | Low voltage H-bridge driver | 3.3V, two outputs | [DRV8837DSGR](https://uk.farnell.com/texas-instruments/drv8837dsgr/motor-driver-dc-brushed-1-8a-wson/dp/3005855) | |
+| S5K1 | 3.3V latching relay DPDT | 3.3V latching DPDT | [IM41GR](https://uk.farnell.com/te-connectivity/5-1462037-4/relay-signal-dpdt-250vac-220vdc/dp/2708426) | |
+| S5D1 | Schottky diode | BAT54C | [BAT54C](https://uk.farnell.com/diotec/bat54c/schottky-diode-1v-0-6a-sot-23/dp/4553386) | |
+| S5C1 | 100nF 10V 0402 capacitor | 0402 >= 10V 10% X7R | [MC0402B104K250CT](https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759) | |
+| S5C2 | 100nF 10V 0402 capacitor | 0402 >= 10V 10% X7R | [MC0402B104K250CT](https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759) | |
+| S5C3 | 10uF 0603 capacitor | 0603 >= 10V 20% X7T | [GRT188D71A106ME13D](https://uk.farnell.com/murata/grt188d71a106me13d/cap-mlcc-10uf-x7t-10v-0603/dp/4335734) | Higher voltage/X7R is better if available |
+| S5R1 | 100K 0402 resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
+| S5R2 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
+| S5R3 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 
 ## Parts list
 
@@ -311,7 +324,7 @@ Can be omited if K-line/ISO-9141 is not required
 | CAN | 27pF capacitor | 2 | 0402 >= 25V 5% C0G / NP0 | [GCM1555C1H270FA16D](https://uk.farnell.com/murata/gcm1555c1h270fa16d/cap-aec-q200-27pf-50v-mlcc-0402/dp/3581175) | |
 | CAN | 10uF capacitor | 1 | 0603 >= 10V 20% X7T | [GRT188D71A106ME13D](https://uk.farnell.com/murata/grt188d71a106me13d/cap-mlcc-10uf-x7t-10v-0603/dp/4335734) | |
 | CAN | 40MHz crystal | 1 | ABM8G-40.000MHZ-18-D2Y-T | [ABM8G-40.000MHZ-18-D2Y-T](https://uk.farnell.com/abracon/abm8g-40-000mhz-18-d2y-t/crystal-40mhz-18pf-3-2mm-x-2-5mm/dp/3819752) | |
-| CAN | 120R 2010 resistor | 1 | 2010 120R 5% | [RC2010JK-07120RL](https://uk.farnell.com/yageo/rc2010jk-07120rl/res-120r-5-0-75w-2010-thick-film/dp/3496395) | |
+| CAN | 120R 0805 resistor | 1 | 0805 120R 5% | [MCWR08X1200FTL](https://uk.farnell.com/multicomp-pro/mcwr08x1200ftl/res-120r-1-0-125w-0805-thick-film/dp/2447561) | |
 | CAN | 10K 0402 resistor | 3 | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | ISO-9141 | 12V load switch | 1 | Active high 12v load switch | [ITS4060SSJNXUMA1](https://uk.farnell.com/infineon/its4060ssjnxuma1/power-load-sw-aec-q100-13-5v-soic/dp/2710048) | |
 | ISO-9141 | 1nF capacitor | 1 | 0402 >= 50V 10% X7R | [0402B102K500CT](https://uk.farnell.com/multicomp-pro/0402b102k500ct/cap-1000pf-50v-10-x7r-0402/dp/2496767) | |
@@ -322,7 +335,14 @@ Can be omited if K-line/ISO-9141 is not required
 | ISO-9141 | 1N4148W diode | 2 | 1N4148W | [1N4148W-E3-08](https://uk.farnell.com/vishay/1n4148w-e3-08/diode-switching-100v-sod-123/dp/2433353) | |
 | ISO-9141 | 400W TVS diode | 2 | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://uk.farnell.com/nexperia/ptvs33vs1utr-115/tvs-diode-aecq101-unidir-33v-400w/dp/3440137) | |
 | ISO-9141 | 10K 0402 resistor | 3 | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
-| ISO-9141 | 510R 2512 resistor | 2 | 2512 510R 5% 2W | [3521510RFT](https://uk.farnell.com/cgs-te-connectivity/3521510rft/res-510r-1-2w-2512/dp/2117495) | |
+| ISO-9141 | 510R 0508 resistor | 2 | 0508 510R 5% 1W | [4206859](https://uk.farnell.com/cgs-te-connectivity/3430a2f510rtdf/res-510r-1w-thick-film-0508-wide/dp/4206859) | |
+| Relay | Low voltage H-bridge driver | 1 | 3.3V, two outputs | [DRV8837DSGR](https://uk.farnell.com/texas-instruments/drv8837dsgr/motor-driver-dc-brushed-1-8a-wson/dp/3005855) | |
+| Relay | 3.3V latching relay DPDT | 1 | 3.3V latching DPDT | [IM41GR](https://uk.farnell.com/te-connectivity/5-1462037-4/relay-signal-dpdt-250vac-220vdc/dp/2708426) | |
+| Relay | Schottky diode | 1 | BAT54C | [BAT54C](https://uk.farnell.com/diotec/bat54c/schottky-diode-1v-0-6a-sot-23/dp/4553386) | |
+| Relay | 100nF 10V 0402 capacitor | 2 | 0402 >= 10V 10% X7R | [MC0402B104K250CT](https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759) | |
+| Relay | 10uF 0603 capacitor | 1 | 0603 >= 10V 20% X7T | [GRT188D71A106ME13D](https://uk.farnell.com/murata/grt188d71a106me13d/cap-mlcc-10uf-x7t-10v-0603/dp/4335734) | Higher voltage/X7R is better if available |
+| Relay | 100K 0402 resistor | 1 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
+| Relay | 10K 0402 resistor | 2 | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 
 ## Images
 
