@@ -3,6 +3,11 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 09/08/2026
+
+- Added missing 510R pullup resistor to the L line on v2.5k and v2.6k
+- Added v2.5k test results
+
 ## 08/08/2026
 
 - Removed excessive stitching vias and optimised placements

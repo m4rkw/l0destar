@@ -141,6 +141,7 @@ power.
 | S10R1 | 10K 0402 resistor | 0402 10K 1% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S10R2 | 510R 2512 resistor | 2512 510R 1% 2W | [3521510RFT](https://uk.farnell.com/cgs-te-connectivity/3521510rft/res-510r-1-2w-2512/dp/2117495) | |
 | S10R3 | 10K 0402 resistor | 0402 10K 1% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
+| S10R4 | 510R 2512 resistor | 2512 510R 1% 2W | [3521510RFT](https://uk.farnell.com/cgs-te-connectivity/3521510rft/res-510r-1-2w-2512/dp/2117495) | |
 | S10C1 | 100nF capacitor | 0402 >= 25V 10% X7R | [MC0402B104K250CT](https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759) | |
 | S10C2 | 100nF capacitor | 0402 >= 25V 10% X7R | [MC0402B104K250CT](https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759) | |
 | S10C3 | 10uF capacitor | 0805 >= 25V 10% X7S | [GCM21BC71E106KE36K](https://uk.farnell.com/murata/gcm21bc71e106ke36k/capacitor-mlcc-10uf-25v-0805/dp/4334713) | |
@@ -173,7 +174,7 @@ power.
 | MCU and GSM/GPS 40pin board | 1 | nRF9151 Connect Kit | [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) | |
 | Molex Micro-fit 3.0 2x03 PCB connector | 1 | 43045-0600 | [43045-0600](https://uk.farnell.com/molex/43045-0600/conn-r-a-pcb-hdr-6pos-2row-3mm/dp/1012252) | |
 | 20pin header | 2 | 20-pin 2.54mm header | [20-pin pcb header](https://amzn.to/44hTFGN) | |
-| 510R 2512 resistor | 1 | 2512 510R 1% 2W | [3521510RFT](https://uk.farnell.com/cgs-te-connectivity/3521510rft/res-510r-1-2w-2512/dp/2117495) | |
+| 510R 2512 resistor | 2 | 2512 510R 1% 2W | [3521510RFT](https://uk.farnell.com/cgs-te-connectivity/3521510rft/res-510r-1-2w-2512/dp/2117495) | |
 | 1K 0402 resistor | 3 | 0402 1K 1% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
 | 4.7K 0402 resistor | 2 | 0402 4.7K 1% | [MP003476](https://uk.farnell.com/multicomp-pro/mp003476/res-4k7-1-0-0625w-0402-thick-film/dp/3392645) | |
 | 10K 0402 resistor | 2 | 0402 10K 1% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
