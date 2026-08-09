@@ -17,21 +17,21 @@ as low as possible
 
 | Item | Test | Result | Notes |
 |---------|------|--------|-------|
-| Input stage | 12V input reverse polarity | NOT TESTED | |
-| Input stage | 12V ignition input reverse polarity | NOT TESTED | |
-| INA228 | Voltage reading function | NOT TESTED |
-| Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
-| LT8609#1 | 4.2V output | NOT TESTED | |
-| LT8609#2 | 5V output | NOT TESTED | |
-| LT8609#2 | on/off with k-enable signal | NOT TESTED | |
-| Auxillary 3.3V rail | Switches on enable signal | NOT TESTED | |
+| Input stage | 12V input reverse polarity | PASSED | |
+| Input stage | 12V ignition input reverse polarity | PASSED | |
+| INA228 | Voltage reading function | PASSED |
+| Ignition presence | Ignition sense 3.3v signal | PASSED | |
+| LT8609#1 | 4.2V output | PASSED | |
+| LT8609#2 | 5V output | PASSED | |
+| LT8609#2 | on/off with k-enable signal | PASSED | |
+| Auxillary 3.3V rail | Switches on enable signal | PASSED | |
 | Auxillary 12V rail | Switches on k-enable signal | NOT TESTED | |
-| Accelerometer | Operates while awake | NOT TESTED | |
-| Accelerometer | Wake on motion | NOT TESTED | |
-| GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
+| Accelerometer | Operates while awake | PASSED | |
+| Accelerometer | Wake on motion | PASSED | |
+| GPS antenna bias tee | Obtains GPS signal | PASSED | |
 | ISO-9141 | K-wire connectivity | NOT TESTED | |
 | ISO-9141 | L-line pulldown | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 370 µA |
+| Board | Quiescent current | ~300 µA | 0.003V across a 10R shunt resistor |
 
 ## Features
 
