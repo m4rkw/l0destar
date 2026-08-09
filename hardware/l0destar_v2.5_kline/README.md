@@ -17,8 +17,8 @@ as low as possible
 
 | Item | Test | Result | Notes |
 |---------|------|--------|-------|
-| Input stage | 12V input reverse polarity | PASSED | |
-| Input stage | 12V ignition input reverse polarity | PASSED | |
+| Input stage | 12V input reverse polarity | PASSED | TVS clamps at 0.7V, 2A external fuse required |
+| Input stage | 12V ignition input reverse polarity | PASSED | TVS clamps at 0.7V, 2A external fuse required |
 | INA228 | Voltage reading function | PASSED |
 | Ignition presence | Ignition sense 3.3v signal | PASSED | |
 | LT8609#1 | 4.2V output | PASSED | |
