@@ -31,7 +31,7 @@ as low as possible
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
 | ISO-9141 | K-wire connectivity | PASSED | |
 | ISO-9141 | L-line pulldown | NOT TESTED | Missing pullup on initial PCB version |
-| Board | Quiescent current | ~300 µA | 0.003V across a 10R shunt resistor |
+| Board | Quiescent current | ~~~300 µA~~ 100 µA | reduced to 100 with this firmware change: https://github.com/m4rkw/l0destar/commit/e978881df25eb1239fddc0f996daa8788794e178 |
 
 ## Features
 
