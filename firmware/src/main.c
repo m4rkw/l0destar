@@ -17,6 +17,8 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/dt-bindings/gpio/nordic-nrf-gpio.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/logging/log_ctrl.h>
+#include <zephyr/pm/device.h>
 
 #include "app.h"
 #include "hw_common.h"
@@ -77,6 +79,49 @@ static void ign_irq_enable(void)
 static void ign_irq_disable(void)
 {
     gpio_pin_interrupt_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INT_DISABLE);
+}
+
+/* -- console suspend across the sleep wait ---------------------------------- */
+/* An enabled UARTE holds the HF clock even with no traffic (~600-900 uA at
+ * 3.3 V — the bulk of the parked board's input draw).  The console is
+ * suspended only for the blocking wait in do_sleep(), so everything logged
+ * while awake still reaches the port.  A message logged mid-wait is dropped
+ * harmlessly: with the device suspended the driver's tx path is a no-op. */
+#if DT_HAS_CHOSEN(zephyr_console)
+static const struct device *const s_console_dev =
+    DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zephyr_console));
+#else
+static const struct device *const s_console_dev = NULL;
+#endif
+
+static void console_suspend(void)
+{
+    if (s_console_dev == NULL || !device_is_ready(s_console_dev)) {
+        return;
+    }
+
+    /* Bounded drain of the deferred log queue so the tail isn't lost. */
+    for (int i = 0; i < 40 && log_data_pending(); i++) {
+        k_msleep(5);
+    }
+    k_msleep(2);
+
+    int err = pm_device_action_run(s_console_dev, PM_DEVICE_ACTION_SUSPEND);
+    if (err && err != -EALREADY) {
+        static bool s_warned;
+        if (!s_warned) {
+            s_warned = true;
+            LOG_WRN("console suspend failed (%d)", err);
+        }
+    }
+}
+
+static void console_resume(void)
+{
+    if (s_console_dev == NULL || !device_is_ready(s_console_dev)) {
+        return;
+    }
+    (void)pm_device_action_run(s_console_dev, PM_DEVICE_ACTION_RESUME);
 }
 
 /* -- accelerometer wake interrupt ------------------------------------------ */
@@ -279,7 +324,9 @@ static void do_sleep(void)
 
         k_sem_reset(&s_wake_sem);
         int64_t t0 = k_uptime_get();
+        console_suspend();
         k_sem_take(&s_wake_sem, K_SECONDS(sleep_secs));
+        console_resume();
         int elapsed = (int)((k_uptime_get() - t0) / 1000);
         if (elapsed < 1) elapsed = 1;
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Sleep-state power
+- Console UARTE is suspended for the duration of the blocking wait in
+  `do_sleep()` and resumed on every wake (`CONFIG_PM_DEVICE`).  An enabled
+  UARTE holds the nRF91 HF clock even with no traffic (~600-900 µA at 3.3 V),
+  which accounted for the bulk of the ~300 µA parked input draw measured on
+  v2.5K; the expected parked floor is now ~40-55 µA at the 12 V input.  All
+  logging while awake is unaffected — the deferred log queue is drained
+  before each suspend, and anything logged during the wait is dropped by the
+  suspended driver rather than blocking.
+
 ## 0.3.0 - 07/08/2026
 
 ### Carrier-board definitions
