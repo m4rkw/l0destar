@@ -431,6 +431,8 @@ static void do_sleep(void)
                     int reg = modem_get_network_status();
                     if (reg != 1 && reg != 5) modem_connect();
                     alert_send_standalone();
+                    lte_lc_power_off();
+                    network_ready = false;
                 } else {
                     LOG_INF("transient bump — ignoring (peak %d mg)", peak);
                 }
@@ -538,6 +540,12 @@ static void do_sleep(void)
             transport_close();
             hw_power_shutdown();
             telemetry_remaining = g_settings.loop_interval;
+        }
+
+        /* power modem back off if any alert or telemetry path woke it */
+        if (network_ready) {
+            lte_lc_power_off();
+            network_ready = false;
         }
 
         /* re-read baseline and re-arm accel interrupt before next sleep cycle */
