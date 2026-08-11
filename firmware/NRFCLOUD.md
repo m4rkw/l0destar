@@ -30,7 +30,8 @@ Note: if you get redirected to memfault, this is the wrong interface. Click the 
 5. Onboard the device to nRFCloud:
 
 ```
-nrf_cloud_onboard --api-key f15c2a5266207bce8e843798b6bf1111417aa677 --csv onboarding/onboard.csv
+nrf_cloud_onboard --api-key <key>
+--csv onboarding/onboard.csv
 ```
 
 6. Rebuild and re-flash the l0destar firmware:
