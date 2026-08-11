@@ -48,7 +48,6 @@ static float battery_sample_with_engine_check(void)
 int collect_data(int ignitionState)
 {
     int have_fix = 0;
-    bool cell_fallback = false;
 
     if (use_cached_gps) {
         have_fix = g_gnss.valid;
@@ -61,12 +60,8 @@ int collect_data(int ignitionState)
     }
 
     if (!have_fix) {
-        if (g_cell.valid) {
-            cell_fallback = true;
-        } else {
-            LOG_WRN("no GPS fix, no cell info");
-            return 0;
-        }
+        LOG_WRN("no GPS fix");
+        return 0;
     }
 
     float v = battery_sample_with_engine_check();
@@ -80,27 +75,18 @@ int collect_data(int ignitionState)
     const char *ts = g_gnss.time_iso[0] ? g_gnss.time_iso
                                          : "01/01/00,00:00:00.000000+00";
 
-    if (cell_fallback) {
-        n = snprintf(&data_current[data_index], remaining,
-            "%s,0,0,0.00,0.00,0.00,0,0,%.2f,%d,%lld,%d",
-            ts, (double)v,
-            (ignitionState == 0) ? 1 : 0,
-            k_uptime_get() / 1000,
-            powered_on ? 1 : 0);
-    } else {
-        float speed = (g_gnss.sats >= SPEED_MIN_SATS)
-                      ? g_gnss.speed_kmh : 0.0f;
-        n = snprintf(&data_current[data_index], remaining,
-            "%s,%s,%s,%.2f,%.2f,%.2f,%ld,%ld,%.2f,%d,%lld,%d",
-            ts, g_gnss.lat_str, g_gnss.lon_str,
-            (double)speed, (double)g_gnss.altitude_m,
-            (double)g_gnss.heading_deg,
-            g_gnss.hdop_x10, g_gnss.sats,
-            (double)v,
-            (ignitionState == 0) ? 1 : 0,
-            k_uptime_get() / 1000,
-            powered_on ? 1 : 0);
-    }
+    float speed = (g_gnss.sats >= SPEED_MIN_SATS)
+                  ? g_gnss.speed_kmh : 0.0f;
+    n = snprintf(&data_current[data_index], remaining,
+        "%s,%s,%s,%.2f,%.2f,%.2f,%ld,%ld,%.2f,%d,%lld,%d",
+        ts, g_gnss.lat_str, g_gnss.lon_str,
+        (double)speed, (double)g_gnss.altitude_m,
+        (double)g_gnss.heading_deg,
+        g_gnss.hdop_x10, g_gnss.sats,
+        (double)v,
+        (ignitionState == 0) ? 1 : 0,
+        k_uptime_get() / 1000,
+        powered_on ? 1 : 0);
 
     if (n > 0 && n < remaining) data_index += n;
 
@@ -145,15 +131,14 @@ int collect_data(int ignitionState)
     }
 
     /* Cell tower fields — emit on first post-wake packet or as GPS fallback */
-    if (g_cell.valid && (g_cell.dirty || cell_fallback)) {
+    if (g_cell.valid && g_cell.dirty) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
-                     ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=%d;rat=CATM1",
+                     ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=0;rat=CATM1",
                      g_cell.mcc, g_cell.mnc,
-                     g_cell.tac, g_cell.cid,
-                     cell_fallback ? 1 : 0);
+                     g_cell.tac, g_cell.cid);
         if (n > 0) data_index += n;
-        if (!cell_fallback) g_cell.dirty = false;
+        g_cell.dirty = false;
     }
 
     /* Uptime */

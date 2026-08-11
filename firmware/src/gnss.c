@@ -48,7 +48,7 @@ static void on_gnss_event(int event)
         }
         s_tracked_sv = tracked;
 
-        if (pvt.flags & NRF_MODEM_GNSS_PVT_FLAG_FIX_VALID) {
+        if ((pvt.flags & NRF_MODEM_GNSS_PVT_FLAG_FIX_VALID) && in_fix > 0) {
             s_pvt = pvt;
             s_have_fix = true;
             k_sem_give(&s_fix_sem);
@@ -161,14 +161,13 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     nrf_modem_gnss_prio_mode_disable();
 
     if (err) {
-        if (cold) {
-            LOG_WRN("cold fix timeout — restarting GNSS");
-            nrf_modem_gnss_stop();
-            k_msleep(500);
-            s_have_fix = false;
-            k_sem_reset(&s_fix_sem);
-            nrf_modem_gnss_start();
-        }
+        LOG_WRN("%s fix timeout — restarting GNSS",
+                cold ? "cold" : "warm");
+        nrf_modem_gnss_stop();
+        k_msleep(500);
+        s_have_fix = false;
+        k_sem_reset(&s_fix_sem);
+        nrf_modem_gnss_start();
         out->valid = false;
         return err;
     }

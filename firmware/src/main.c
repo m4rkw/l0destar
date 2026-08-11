@@ -363,6 +363,8 @@ static void do_sleep(void)
         }
 
         /* --- 6D orientation tamper (unit flipped / off its mount) --- */
+        /* TODO: re-enable once unit is permanently mounted */
+#if 0
         /* Checked on every wake, not gated on the INT pin: the wake pulse
          * de-asserts before the loop runs, but the zone bits persist. */
         if (accel_available()) {
@@ -380,6 +382,7 @@ static void do_sleep(void)
                 tamper_alerted = false;   /* re-arm once back to armed face */
             }
         }
+#endif
 
         /* --- ignition check --- */
         int ign_now = ignition_read();
@@ -692,6 +695,23 @@ int main(void)
 
     relay_init();
 
+#if IS_ENABLED(CONFIG_APP_ACCEL_TEST)
+    if (accel_available()) {
+        printk("\n*** ACCEL TEST — streaming at 10 Hz ***\n");
+        printk("ax,ay,az,gx,gy,gz,temp\n");
+        for (;;) {
+            int ax, ay, az, gx = 0, gy = 0, gz = 0;
+            float temp = 0;
+            accel_read(&ax, &ay, &az);
+            accel_read_gyro(&gx, &gy, &gz);
+            accel_read_temp(&temp);
+            printk("%d,%d,%d,%d,%d,%d,%.1f\n",
+                   ax, ay, az, gx, gy, gz, (double)temp);
+            k_msleep(100);
+        }
+    }
+#endif
+
 #if IS_ENABLED(CONFIG_APP_KLINE_TEST)
     kline_test();
 #endif
@@ -773,6 +793,19 @@ int main(void)
                        battery_v < ENGINE_RUNNING_VOLTAGE) {
                 engine_running = false;
                 LOG_INF("engine stopped (%.2fV)", (double)battery_v);
+            }
+
+            if (ignition == 0 && previous_ignition != 0 &&
+                g_gnss.valid) {
+                LOG_INF("ignition on — sending cached position");
+                use_cached_gps = true;
+                read_udp_response = false;
+                if (collect_data(ignition) > 0) {
+                    send_data();
+                    data_reset();
+                }
+                s_last_send_ms = k_uptime_get();
+                previous_ignition = ignition;
             }
 
             if (should_send_data()) {

@@ -66,7 +66,7 @@
 #define DATA_LIMIT                  2500
 #define BATCH_SIZE                  1
 #define BATCH_HEADROOM              400
-#define SPEED_MIN_SATS              5
+#define SPEED_MIN_SATS              4
 
 /* -- hardware presence flags (compiled-out paths) -------------------------- */
 #define ALWAYS_ON_POWER             1

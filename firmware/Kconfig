@@ -60,6 +60,13 @@ config APP_ALWAYS_ON
 	  reset by the state machine.  Use for installations where the tracker
 	  supplies its own load and should stay powered continuously.
 
+config APP_ACCEL_TEST
+	bool "Stream accelerometer data at boot"
+	default n
+	help
+	  At startup, print accel/gyro/temp readings continuously at 10 Hz
+	  for noise analysis.  Loops forever; does not enter the main loop.
+
 config APP_KLINE_TEST
 	bool "Run the L9637D K-line bring-up test at boot"
 	default n
@@ -166,11 +173,11 @@ config APP_ACC_MOVEMENT_THRESHOLD
 
 config APP_MOVEMENT_CONFIRM_MS
 	int "Movement confirmation window (ms)"
-	default 3000
+	default 10000
 
 config APP_MOVEMENT_CONFIRM_HITS
 	int "Required above-threshold samples to confirm"
-	default 2
+	default 20
 
 config APP_MOVEMENT_INACTIVITY_RESET
 	int "Inactivity reset timer (seconds)"
