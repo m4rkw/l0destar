@@ -763,6 +763,7 @@ int main(void)
     for (;;) {
         watchdog_kick();
         crash_check();
+        handle_ignition_state();
 
         if (power_reboot) {
             reboot_now();
@@ -770,7 +771,6 @@ int main(void)
 
         switch (s_state) {
         case STATE_IDLE:
-            handle_ignition_state();
 
             if (!network_ready) {
                 LOG_INF("waiting for network registration...");
@@ -800,6 +800,7 @@ int main(void)
                 LOG_INF("ignition on — sending cached position");
                 use_cached_gps = true;
                 read_udp_response = false;
+                if (g_cell.mcc == 0) modem_update_cell_info();
                 if (collect_data(ignition) > 0) {
                     send_data();
                     data_reset();
@@ -820,6 +821,7 @@ int main(void)
 
         case STATE_GPS_COLLECT: {
             led_gps_searching();
+            if (g_cell.mcc == 0) modem_update_cell_info();
             int have_fix = collect_data(ignition);
             if (have_fix) led_gps_fixed();
             if (!have_fix) {
@@ -853,7 +855,6 @@ int main(void)
                  || g_gnss.speed_kmh < 0.005f);
 
             LOG_INF("sending %d records", s_buffered_records);
-            if (g_cell.mcc == 0) modem_update_cell_info();
             led_sending();
             send_data();
             led_sent();
