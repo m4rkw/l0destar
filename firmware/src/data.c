@@ -75,8 +75,7 @@ int collect_data(int ignitionState)
     const char *ts = g_gnss.time_iso[0] ? g_gnss.time_iso
                                          : "01/01/00,00:00:00.000000+00";
 
-    float speed = (g_gnss.sats >= SPEED_MIN_SATS)
-                  ? g_gnss.speed_kmh : 0.0f;
+    float speed = g_gnss.speed_kmh;
     n = snprintf(&data_current[data_index], remaining,
         "%s,%s,%s,%.2f,%.2f,%.2f,%ld,%ld,%.2f,%d,%lld,%d",
         ts, g_gnss.lat_str, g_gnss.lon_str,
