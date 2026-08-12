@@ -1,21 +1,17 @@
 /*
- * DTLS transport over UDP, offloaded to the nRF modem.
+ * Plain UDP transport with ChaCha20-Poly1305 AEAD encryption.
  *
- * The modem handles the DTLS handshake, encryption, and certificate
- * verification.  The application sends/receives plaintext.
+ * Each send is a single UDP datagram — no handshake, no session state.
+ * The socket is closed after each send/recv cycle so the LTE radio is
+ * fully released for GNSS.
  *
- * Wire format (single DTLS datagram per send):
- *   request:  [2] payload_len (big-endian)  [N] plaintext
- *   response: plaintext (single datagram)
+ * Wire format (matches the server's _decrypt_request / _encrypt_response):
+ *   request:  [1] imei_len  [imei_len] IMEI  [12] nonce  [N+16] ct+tag
+ *   response: [12] nonce  [N+16] ct+tag
  *
- * The IMEI is sent as the first line of the payload so the server can
- * identify the device.
- *
- * After each exchange, RAI_NO_DATA hints the network to release the
- * radio so GNSS can use it.  The socket is closed immediately so the
- * modem can complete the DTLS close_notify while the server session is
- * still alive.  Session caching lets the modem abbreviate subsequent
- * handshakes.
+ * AEAD parameters:
+ *   request:  key=PSK, nonce=random, AAD=IMEI, plaintext=CSV data
+ *   response: key=PSK, nonce=random, AAD=IMEI||req_nonce, plaintext=resp
  */
 
 #include <string.h>
@@ -24,8 +20,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/net/socket.h>
-#include <zephyr/net/tls_credentials.h>
-#include <modem/modem_key_mgmt.h>
 
 #include "app.h"
 
@@ -33,19 +27,14 @@ LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
 
 #define SERVER_HOST \
     (sizeof(CONFIG_APP_SERVER_HOST) > 1 ? CONFIG_APP_SERVER_HOST : HOSTNAME)
+#define SERVER_PORT  UDP_PORT
 
-#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
-#define SERVER_PORT  TLS_PORT
-#define SOCK_TYPE    SOCK_STREAM
-#define SOCK_PROTO   IPPROTO_TLS_1_2
-#else
-#define SERVER_PORT  DTLS_PORT
-#define SOCK_TYPE    SOCK_DGRAM
-#define SOCK_PROTO   IPPROTO_DTLS_1_2
-#endif
+#define NONCE_LEN    12
+#define TAG_LEN      16
 
 static int s_sock = -1;
 static struct sockaddr_in s_server;
+static uint8_t s_req_nonce[NONCE_LEN];
 
 int transport_open(void)
 {
@@ -53,8 +42,7 @@ int transport_open(void)
 
     struct zsock_addrinfo hints = {
         .ai_family   = AF_INET,
-        .ai_socktype = SOCK_TYPE,
-        .ai_protocol = SOCK_PROTO,
+        .ai_socktype = SOCK_DGRAM,
     };
     struct zsock_addrinfo *res = NULL;
     char port_str[8];
@@ -68,32 +56,11 @@ int transport_open(void)
     memcpy(&s_server, res->ai_addr, sizeof(s_server));
     zsock_freeaddrinfo(res);
 
-    s_sock = zsock_socket(AF_INET, SOCK_TYPE, SOCK_PROTO);
+    s_sock = zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (s_sock < 0) {
         LOG_ERR("socket: %d", errno);
         return -errno;
     }
-
-    sec_tag_t sec_tags[] = { TLS_SEC_TAG };
-    zsock_setsockopt(s_sock, SOL_TLS, TLS_SEC_TAG_LIST,
-                     sec_tags, sizeof(sec_tags));
-
-    int verify = TLS_PEER_VERIFY_REQUIRED;
-    zsock_setsockopt(s_sock, SOL_TLS, TLS_PEER_VERIFY,
-                     &verify, sizeof(verify));
-
-    zsock_setsockopt(s_sock, SOL_TLS, TLS_HOSTNAME,
-                     SERVER_HOST, strlen(SERVER_HOST));
-
-#if !IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
-    int cid = TLS_DTLS_CID_ENABLED;
-    zsock_setsockopt(s_sock, SOL_TLS, TLS_DTLS_CID,
-                     &cid, sizeof(cid));
-#endif
-
-    int cache = TLS_SESSION_CACHE_ENABLED;
-    zsock_setsockopt(s_sock, SOL_TLS, TLS_SESSION_CACHE,
-                     &cache, sizeof(cache));
 
     err = zsock_connect(s_sock, (struct sockaddr *)&s_server,
                         sizeof(s_server));
@@ -104,11 +71,6 @@ int transport_open(void)
         return -errno;
     }
 
-#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
-    LOG_INF("TLS connected");
-#else
-    LOG_INF("DTLS connected");
-#endif
     return 0;
 }
 
@@ -143,37 +105,60 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
         return -EACCES;
     }
 
-    size_t payload_len = imei_len + 1 + pt_len;
-    if (payload_len > UINT16_MAX || payload_len + 2 > UDP_PACKET_SIZE) {
-        LOG_ERR("payload too large: %u", (unsigned)payload_len);
+    /* Envelope: [1 imei_len][IMEI][12 nonce][ct + 16 tag] */
+    size_t hdr_len = 1 + imei_len + NONCE_LEN;
+    size_t needed = hdr_len + pt_len + TAG_LEN;
+    if (needed > UDP_PACKET_SIZE) {
+        LOG_ERR("payload too large: %u", (unsigned)needed);
         return -EMSGSIZE;
     }
 
-    /* Single datagram: [2-byte len][IMEI\n][csv_data] */
     uint8_t buf[UDP_PACKET_SIZE];
-    buf[0] = (uint8_t)(payload_len >> 8);
-    buf[1] = (uint8_t)(payload_len & 0xFF);
-    memcpy(buf + 2, g_settings.imei, imei_len);
-    buf[2 + imei_len] = '\n';
-    memcpy(buf + 2 + imei_len + 1, plaintext, pt_len);
-    size_t total = 2 + payload_len;
+
+    buf[0] = (uint8_t)imei_len;
+    memcpy(buf + 1, g_settings.imei, imei_len);
+
+    if (!crypto_random(s_req_nonce, NONCE_LEN)) {
+        LOG_ERR("nonce generation failed");
+        return -EIO;
+    }
+    memcpy(buf + 1 + imei_len, s_req_nonce, NONCE_LEN);
+
+    size_t ct_len;
+    int err = crypto_encrypt(plaintext, pt_len,
+                             (const uint8_t *)g_settings.imei, imei_len,
+                             s_req_nonce,
+                             buf + hdr_len, UDP_PACKET_SIZE - hdr_len,
+                             &ct_len);
+    if (err) {
+        LOG_ERR("encrypt: %d", err);
+        return err;
+    }
+
+    size_t total = hdr_len + ct_len;
 
     int rai = read_udp_response ? RAI_ONE_RESP : RAI_LAST;
     zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
 
     if (zsock_send(s_sock, buf, total, 0) < 0) {
-        LOG_ERR("send: %d", errno);
+        LOG_WRN("send failed (%d), reconnecting", errno);
         transport_teardown();
-        return -errno;
+        err = transport_open();
+        if (err) return err;
+        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+        if (zsock_send(s_sock, buf, total, 0) < 0) {
+            LOG_ERR("send retry failed: %d", errno);
+            transport_teardown();
+            return -errno;
+        }
     }
 
     LOG_INF("sent %u bytes", (unsigned)total);
 
-#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
     if (!read_udp_response) {
-        transport_teardown();
+        transport_close();
     }
-#endif
+
     return 0;
 }
 
@@ -187,29 +172,37 @@ int transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms)
     };
     zsock_setsockopt(s_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    int rai;
-
-#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
-    rai = RAI_NO_DATA;
-    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
-#endif
-
-    int n = zsock_recv(s_sock, out_plaintext, out_len - 1, 0);
+    uint8_t buf[UDP_PACKET_SIZE];
+    int n = zsock_recv(s_sock, buf, sizeof(buf), 0);
     if (n < 0) {
         if (errno != EAGAIN) LOG_WRN("recv: %d", errno);
-#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
-        transport_teardown();
-#endif
+        transport_close();
         return -errno;
     }
-    out_plaintext[n] = '\0';
 
-#if IS_ENABLED(CONFIG_APP_TRANSPORT_TLS)
-    transport_teardown();
-#else
-    rai = RAI_NO_DATA;
-    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
-#endif
+    transport_close();
 
-    return n;
+    if (n < NONCE_LEN + TAG_LEN) {
+        LOG_WRN("response too short: %d", n);
+        return -EPROTO;
+    }
+
+    /* Response: [12 nonce][ct + 16 tag], AAD = IMEI || request_nonce */
+    size_t imei_len = strlen(g_settings.imei);
+    uint8_t aad[20 + NONCE_LEN];
+    memcpy(aad, g_settings.imei, imei_len);
+    memcpy(aad + imei_len, s_req_nonce, NONCE_LEN);
+
+    size_t pt_len;
+    int err = crypto_decrypt(buf + NONCE_LEN, n - NONCE_LEN,
+                             aad, imei_len + NONCE_LEN,
+                             buf,
+                             (uint8_t *)out_plaintext, out_len - 1, &pt_len);
+    if (err) {
+        LOG_WRN("response decrypt failed: %d", err);
+        return -EPROTO;
+    }
+
+    out_plaintext[pt_len] = '\0';
+    return (int)pt_len;
 }

@@ -105,6 +105,10 @@ int modem_connect(void)
 {
     modem_set_apn(g_settings.apn);
 
+    /* +COPS selection mode persists in modem NVM across power cycles; force
+     * automatic PLMN selection in case a manual selection was ever stored. */
+    nrf_modem_at_printf("AT+COPS=0");
+
     nrf_modem_at_printf("AT+CPSMS=0");
     nrf_modem_at_printf("AT%%XEDRX=0");
     nrf_modem_at_printf("AT+CEDRXS=0,4");

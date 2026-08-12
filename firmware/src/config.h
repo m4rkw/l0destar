@@ -13,9 +13,9 @@
 
 /* -- protocol / endpoint --------------------------------------------------- */
 #define HOSTNAME            ""
-#define UDP_PORT            0
+#define UDP_PORT            65480
 #define TLS_PORT            65481
-#define DTLS_PORT           65482
+#define DTLS_PORT           5684
 #define UDP_PACKET_SIZE     1200
 #define TLS_SEC_TAG         1
 

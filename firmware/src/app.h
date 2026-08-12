@@ -77,6 +77,14 @@ extern float battery_v;
 int  crypto_init(void);
 int  crypto_random(uint8_t *out, size_t len);
 int  crypto_psk_from_hex(const char *hex, uint8_t out[32]);
+int  crypto_encrypt(const uint8_t *pt, size_t pt_len,
+                    const uint8_t *aad, size_t aad_len,
+                    const uint8_t nonce[12],
+                    uint8_t *out, size_t out_size, size_t *out_len);
+int  crypto_decrypt(const uint8_t *ct, size_t ct_len,
+                    const uint8_t *aad, size_t aad_len,
+                    const uint8_t nonce[12],
+                    uint8_t *out, size_t out_size, size_t *out_len);
 
 void settings_load(void);
 void settings_print(void);
@@ -137,13 +145,11 @@ void status_delay(long ms);   /* watchdog-aware sleep */
 
 /* Hardware modules */
 int  hw_gpio_init(void);
-int  hw_domain_init(void);
 int  hw_power_init(void);
 bool hw_power_available(void);
 void hw_power_shutdown(void);
 void hw_power_wake(void);
 void hw_aux_power_on(void);
-void hw_aux_power_off(void);
 int  hw_accel_init(void);
 bool accel_available(void);
 int  relay_init(void);
@@ -156,10 +162,6 @@ int  kline_test(void);
 void kline_power_on(void);
 void kline_power_off(void);
 uint8_t kline_tx_rx_byte(uint8_t tx);
-int  hw_can_init(void);
-int  hw_can_power_on(void);
-void hw_can_power_off(void);
-bool hw_can_available(void);
 
 int   accel_read(int *ax, int *ay, int *az);
 int   accel_read_gyro(int *gx, int *gy, int *gz);

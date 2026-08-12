@@ -84,18 +84,6 @@ config APP_PSK_HEX
 	  all-zero key disables sends).  Real device keys should be provisioned
 	  out-of-band, never checked in.
 
-config APP_TRANSPORT_TLS
-	bool "Use TLS (TCP) instead of DTLS (UDP) for telemetry"
-	default y
-	help
-	  When enabled, telemetry uses modem-offloaded TLS 1.2 over TCP
-	  (port TLS_PORT, 65481) with a fresh connection per send.  When
-	  disabled, telemetry uses DTLS 1.2 over UDP (port DTLS_PORT, 65482)
-	  with a persistent session.  TLS/TCP is the more reliable path over
-	  cellular NAT/firewalls (UDP bindings time out and inbound UDP to a
-	  self-hosted endpoint is easily dropped).  Both use the same CA at
-	  TLS_SEC_TAG, the same wire framing, and the same server.
-
 config APP_SERVER_HOST
 	string "Telemetry server hostname"
 	default ""
