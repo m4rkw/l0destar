@@ -163,6 +163,8 @@ void kline_power_on(void);
 void kline_power_off(void);
 uint8_t kline_tx_rx_byte(uint8_t tx);
 
+int  hw_can_test(void);
+
 int   accel_read(int *ax, int *ay, int *az);
 int   accel_read_gyro(int *gx, int *gy, int *gz);
 int   accel_gyro_autozero(void);

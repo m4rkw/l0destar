@@ -712,6 +712,12 @@ int main(void)
     }
 #endif
 
+#if IS_ENABLED(CONFIG_APP_CAN_TEST)
+    hw_can_test();
+    printk("CAN test complete — halting.\n");
+    for (;;) { k_msleep(10000); }
+#endif
+
 #if IS_ENABLED(CONFIG_APP_KLINE_TEST)
     kline_test();
 #endif

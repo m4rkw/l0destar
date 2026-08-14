@@ -67,6 +67,14 @@ config APP_ACCEL_TEST
 	  At startup, print accel/gyro/temp readings continuously at 10 Hz
 	  for noise analysis.  Loops forever; does not enter the main loop.
 
+config APP_CAN_TEST
+	bool "Run the CAN bus loopback test at boot"
+	default n
+	help
+	  At startup, send a CAN frame (ID 0x100, "PING") and wait for a
+	  reply (ID 0x101, "PONG") from an external adapter.  Loops forever
+	  after the test; does not enter the main loop.
+
 config APP_KLINE_TEST
 	bool "Run the L9637D K-line bring-up test at boot"
 	default n

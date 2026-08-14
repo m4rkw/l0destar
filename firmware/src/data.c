@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
@@ -72,8 +73,27 @@ int collect_data(int ignitionState)
 
     int remaining = DATA_LIMIT - data_index - 1;
     int n;
-    const char *ts = g_gnss.time_iso[0] ? g_gnss.time_iso
-                                         : "01/01/00,00:00:00.000000+00";
+    char now_iso[40] = "";
+    const char *ts;
+
+    if (!use_cached_gps && g_gnss.time_iso[0]) {
+        ts = g_gnss.time_iso;
+    } else {
+        struct timespec tp;
+        if (clock_gettime(CLOCK_REALTIME, &tp) == 0 && tp.tv_sec > 1000000000) {
+            struct tm tm;
+            gmtime_r(&tp.tv_sec, &tm);
+            snprintf(now_iso, sizeof(now_iso),
+                     "%02d/%02d/%02d,%02d:%02d:%02d.%06ld+00",
+                     tm.tm_mday, tm.tm_mon + 1, tm.tm_year % 100,
+                     tm.tm_hour, tm.tm_min, tm.tm_sec,
+                     tp.tv_nsec / 1000);
+            ts = now_iso;
+        } else {
+            ts = g_gnss.time_iso[0] ? g_gnss.time_iso
+                                     : "01/01/00,00:00:00.000000+00";
+        }
+    }
 
     float speed = g_gnss.speed_kmh;
     n = snprintf(&data_current[data_index], remaining,
