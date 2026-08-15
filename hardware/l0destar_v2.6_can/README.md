@@ -25,7 +25,7 @@ as low as possible
 | Accelerometer | Wake on motion | PASSED | |
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
 | CAN | Connectivity | PASSED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 120 µA |
+| Board | Quiescent current | 120 µA | |
 
 ## Features
 

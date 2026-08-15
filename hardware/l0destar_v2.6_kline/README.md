@@ -29,7 +29,7 @@ as low as possible
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
 | ISO-9141 | K-wire connectivity | PASSED | |
 | ISO-9141 | L-line pulldown | PASSED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 120 µA |
+| Board | Quiescent current | 120 µA | |
 
 ## Features
 

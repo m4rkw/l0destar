@@ -2,8 +2,6 @@
 
 ## Overview
 
-**NOTE: THIS HAS NOT YET BEEN TESTED, USE AT YOUR OWN RISK**
-
 - This is a prototype l0destar vehicle tracker PCB designed to be
   hand-solderable (hot air required)
 - It makes use of the [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) to provide the LTE and GPS
@@ -17,16 +15,16 @@ as low as possible
 
 | Item | Test | Result | Notes |
 |---------|------|--------|-------|
-| Input stage | 12V input reverse polarity | NOT TESTED | |
-| Input stage | 12V ignition input reverse polarity | NOT TESTED | |
-| INA228 | Voltage reading function | NOT TESTED |
-| Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
-| LT8609 | 4.2V output | NOT TESTED | |
-| Auxillary 3.3V rail | Switches on enable signal | NOT TESTED | |
-| Accelerometer | Operates while awake | NOT TESTED | |
-| Accelerometer | Wake on motion | NOT TESTED | |
-| GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 370 µA |
+| Input stage | 12V input reverse polarity | PASSED | |
+| Input stage | 12V ignition input reverse polarity | PASSED | |
+| INA228 | Voltage reading function | PASSED |
+| Ignition presence | Ignition sense 3.3v signal | PASSED | |
+| LT8609 | 4.2V output | PASSED | |
+| Auxillary 3.3V rail | Switches on enable signal | PASSED | |
+| Accelerometer | Operates while awake | PASSED | |
+| Accelerometer | Wake on motion | PASSED | |
+| GPS antenna bias tee | Obtains GPS signal | PASSED | |
+| Board | Quiescent current | 120 µA | |
 
 ## Features
 
