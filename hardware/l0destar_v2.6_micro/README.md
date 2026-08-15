@@ -171,6 +171,7 @@ power.
 
 ## Images
 
+![l0destar board](images/pcb0.png)
 ![l0destar board](images/pcb1.png)
 ![l0destar board](images/pcb2.png)
 ![l0destar board](images/pcb3.png)
