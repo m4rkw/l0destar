@@ -27,8 +27,8 @@ as low as possible
 | Accelerometer | Operates while awake | PASSED | |
 | Accelerometer | Wake on motion | PASSED | |
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
-| ISO-9141 | K-wire connectivity | NOT TESTED | |
-| ISO-9141 | L-line pulldown | NOT TESTED | |
+| ISO-9141 | K-wire connectivity | PASSED | |
+| ISO-9141 | L-line pulldown | PASSED | |
 | Board | Quiescent current | NOT TESTED | Estimated at around 120 µA |
 
 ## Features

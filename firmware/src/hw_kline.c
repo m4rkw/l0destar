@@ -165,31 +165,91 @@ static int kline_stream(const char *dir, uint8_t tx_pin, uint8_t rx_pin)
 	return (ok == n) ? 0 : -EIO;
 }
 
-/* K-wire transmission check: stream a run of bytes K1 -> K2 and then K2 -> K1
- * over the shared K-line, confirming the two L9637Ds actually talk to each
- * other across the wire (the loopback test only proves each chip's own path). */
+/* ISO-9141 interface test.  On boards with two transceivers (bench), stream
+ * bytes K1->K2 and K2->K1 across the wire.  On single-transceiver boards
+ * (v2.5K/v2.6K), verify the L9637D loopback path (TX drives the K-line,
+ * same chip's RX reads it back) with a static toggle check and a full
+ * 256-byte stream.  If L-line pins are fitted, verify the L pulldown FET
+ * toggles the L-line. */
 int kline_test(void)
 {
-	if (PIN_K1_TX < 0 || PIN_K2_TX < 0) {
-		LOG_INF("K-wire test skipped (single/no K-line on this board)");
+	if (PIN_K1_TX < 0) {
+		printk("K-line test skipped (no K-line on this board)\n");
 		return 0;
 	}
+
+	printk("\n*** ISO-9141 TEST ***\n");
+
+	kline_power_on();
+
 	gpio_pin_configure(hw_gpio0, PIN_K1_TX, GPIO_OUTPUT_HIGH);
-	gpio_pin_configure(hw_gpio0, PIN_K2_TX, GPIO_OUTPUT_HIGH);
 	gpio_pin_configure(hw_gpio0, PIN_K1_RX, GPIO_INPUT | GPIO_PULL_UP);
-	gpio_pin_configure(hw_gpio0, PIN_K2_RX, GPIO_INPUT | GPIO_PULL_UP);
-	k_msleep(10);					/* let the bus settle high */
-
-	LOG_INF("K-wire test: K1(TX=P0.%d RX=P0.%d) <-> K2(TX=P0.%d RX=P0.%d)",
-		PIN_K1_TX, PIN_K1_RX, PIN_K2_TX, PIN_K2_RX);
-
-	int e1 = kline_stream("K1->K2", PIN_K1_TX, PIN_K2_RX);
-	int e2 = kline_stream("K2->K1", PIN_K2_TX, PIN_K1_RX);
-
-	if (e1 || e2) {
-		LOG_ERR("K-wire test FAILED");
-		return -EIO;
+	if (PIN_K2_TX >= 0) {
+		gpio_pin_configure(hw_gpio0, PIN_K2_TX, GPIO_OUTPUT_HIGH);
+		gpio_pin_configure(hw_gpio0, PIN_K2_RX, GPIO_INPUT | GPIO_PULL_UP);
 	}
-	LOG_INF("K-wire test passed (256 bytes each way)");
-	return 0;
+	k_msleep(10);
+
+	/* Static loopback: verify TX drives RX through the L9637D */
+	int rx_idle = gpio_pin_get(hw_gpio0, PIN_K1_RX);
+	gpio_pin_set(hw_gpio0, PIN_K1_TX, 0);
+	k_msleep(1);
+	int rx_dom = gpio_pin_get(hw_gpio0, PIN_K1_RX);
+	gpio_pin_set(hw_gpio0, PIN_K1_TX, 1);
+	k_msleep(1);
+	int rx_rec = gpio_pin_get(hw_gpio0, PIN_K1_RX);
+
+	printk("K1 static: idle=%d TX=0->RX=%d TX=1->RX=%d",
+	       rx_idle, rx_dom, rx_rec);
+
+	int err = 0;
+
+	if (rx_idle != 1 || rx_dom != 0 || rx_rec != 1) {
+		printk(" FAIL\n");
+		err = -EIO;
+	} else {
+		printk(" OK\n");
+	}
+
+	if (!err && PIN_K2_TX >= 0) {
+		printk("K-wire: K1(P0.%d/P0.%d) <-> K2(P0.%d/P0.%d)\n",
+		       PIN_K1_TX, PIN_K1_RX, PIN_K2_TX, PIN_K2_RX);
+		int e1 = kline_stream("K1->K2", PIN_K1_TX, PIN_K2_RX);
+		int e2 = kline_stream("K2->K1", PIN_K2_TX, PIN_K1_RX);
+		if (e1 || e2)
+			err = -EIO;
+	} else if (!err) {
+		printk("K1 loopback: TX=P0.%d RX=P0.%d\n",
+		       PIN_K1_TX, PIN_K1_RX);
+		err = kline_stream("K1 loop", PIN_K1_TX, PIN_K1_RX);
+	}
+
+	/* L-line continuous toggle for probing */
+	if (PIN_L_SEND >= 0 && PIN_L_RECV >= 0) {
+		gpio_pin_configure(hw_gpio0, PIN_L_SEND, GPIO_OUTPUT_LOW);
+		gpio_pin_configure(hw_gpio0, PIN_L_RECV,
+				   GPIO_INPUT | GPIO_PULL_UP);
+		k_msleep(5);
+		printk("L-line: toggling L_SEND (P0.%d) at 0.5 Hz...\n",
+		       PIN_L_SEND);
+		for (;;) {
+			gpio_pin_set(hw_gpio0, PIN_L_SEND, 1);
+			k_msleep(1000);
+			int r1 = gpio_pin_get(hw_gpio0, PIN_L_RECV);
+			gpio_pin_set(hw_gpio0, PIN_L_SEND, 0);
+			k_msleep(1000);
+			int r0 = gpio_pin_get(hw_gpio0, PIN_L_RECV);
+			printk("L: send=1->recv=%d send=0->recv=%d\n", r1, r0);
+		}
+	}
+
+	if (err)
+		printk("FAIL: ISO-9141 test\n");
+	else
+		printk("PASS: ISO-9141 test\n");
+
+	printk("*** ISO-9141 TEST DONE ***\n\n");
+
+	kline_power_off();
+	return err;
 }

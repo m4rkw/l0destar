@@ -720,6 +720,8 @@ int main(void)
 
 #if IS_ENABLED(CONFIG_APP_KLINE_TEST)
     kline_test();
+    printk("K-line test complete — halting.\n");
+    for (;;) { k_msleep(10000); }
 #endif
 
     LOG_INF("ignition=%s battery=%.2fV",
