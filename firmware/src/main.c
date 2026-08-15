@@ -587,6 +587,7 @@ static void do_sleep(void)
 static void do_ignition_sleep(void)
 {
     LOG_INF("ignition sleep (ign=ON, engine=OFF)");
+    led_all_off();
     int64_t last_voltage_ms = k_uptime_get();
     int64_t last_send_ms    = k_uptime_get();
 
