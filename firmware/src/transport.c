@@ -34,12 +34,11 @@ LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
 
 static int s_sock = -1;
 static struct sockaddr_in s_server;
+static bool s_resolved;
 static uint8_t s_req_nonce[NONCE_LEN];
 
-int transport_open(void)
+static int transport_resolve(void)
 {
-    if (s_sock >= 0) return 0;
-
     struct zsock_addrinfo hints = {
         .ai_family   = AF_INET,
         .ai_socktype = SOCK_DGRAM,
@@ -55,6 +54,18 @@ int transport_open(void)
     }
     memcpy(&s_server, res->ai_addr, sizeof(s_server));
     zsock_freeaddrinfo(res);
+    s_resolved = true;
+    return 0;
+}
+
+int transport_open(void)
+{
+    if (s_sock >= 0) return 0;
+
+    if (!s_resolved) {
+        int err = transport_resolve();
+        if (err) return err;
+    }
 
     s_sock = zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (s_sock < 0) {
@@ -62,8 +73,8 @@ int transport_open(void)
         return -errno;
     }
 
-    err = zsock_connect(s_sock, (struct sockaddr *)&s_server,
-                        sizeof(s_server));
+    int err = zsock_connect(s_sock, (struct sockaddr *)&s_server,
+                            sizeof(s_server));
     if (err) {
         LOG_ERR("connect: %d", errno);
         zsock_close(s_sock);
@@ -137,20 +148,15 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
 
     size_t total = hdr_len + ct_len;
 
-    if (read_udp_response) {
-        int rai = RAI_ONE_RESP;
-        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
-    }
+    int rai = read_udp_response ? RAI_ONE_RESP : RAI_LAST;
+    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
 
     if (zsock_send(s_sock, buf, total, 0) < 0) {
         LOG_WRN("send failed (%d), reconnecting", errno);
         transport_teardown();
         err = transport_open();
         if (err) return err;
-        if (read_udp_response) {
-            int rai = RAI_ONE_RESP;
-            zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
-        }
+        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
         if (zsock_send(s_sock, buf, total, 0) < 0) {
             LOG_ERR("send retry failed: %d", errno);
             transport_teardown();

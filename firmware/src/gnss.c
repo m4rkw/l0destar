@@ -27,6 +27,33 @@ static bool s_agnss_needed;
 static int  s_tracked_sv;
 static bool s_blocked;
 
+static void pvt_to_fix(const struct nrf_modem_gnss_pvt_data_frame *pvt,
+                       struct gnss_fix *out)
+{
+    out->valid         = true;
+    out->fix_uptime_ms = k_uptime_get();
+    snprintf(out->lat_str, sizeof(out->lat_str), "%.6f", pvt->latitude);
+    snprintf(out->lon_str, sizeof(out->lon_str), "%.6f", pvt->longitude);
+    out->speed_kmh   = pvt->speed * 3.6f;
+    out->altitude_m  = pvt->altitude;
+    out->heading_deg = pvt->heading;
+    out->hdop_x10    = (long)(pvt->hdop * 10.0f);
+    long sats = 0;
+    for (int i = 0; i < NRF_MODEM_GNSS_MAX_SATELLITES; i++) {
+        if (pvt->sv[i].sv != 0 &&
+            (pvt->sv[i].flags & NRF_MODEM_GNSS_SV_FLAG_USED_IN_FIX))
+            sats++;
+    }
+    out->sats = sats;
+    snprintf(out->time_iso, sizeof(out->time_iso),
+             "%02u/%02u/%02u,%02u:%02u:%02u.%06u+00",
+             pvt->datetime.day, pvt->datetime.month,
+             (unsigned)(pvt->datetime.year % 100),
+             pvt->datetime.hour, pvt->datetime.minute,
+             pvt->datetime.seconds,
+             (unsigned)pvt->datetime.ms * 1000U);
+}
+
 static void on_gnss_event(int event)
 {
     switch (event) {
@@ -51,6 +78,7 @@ static void on_gnss_event(int event)
         if ((pvt.flags & NRF_MODEM_GNSS_PVT_FLAG_FIX_VALID) && in_fix > 0) {
             s_pvt = pvt;
             s_have_fix = true;
+            pvt_to_fix(&pvt, &g_gnss);
             k_sem_give(&s_fix_sem);
         } else if (!s_have_fix && !s_blocked) {
             LOG_INF("searching: %d SVs tracked, best cn0=%d.%d",
@@ -172,29 +200,6 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
         return err;
     }
 
-    out->valid          = true;
-    out->fix_uptime_ms  = k_uptime_get();
-    snprintf(out->lat_str, sizeof(out->lat_str), "%.6f", s_pvt.latitude);
-    snprintf(out->lon_str, sizeof(out->lon_str), "%.6f", s_pvt.longitude);
-    out->speed_kmh   = s_pvt.speed * 3.6f;            /* m/s → km/h */
-    out->altitude_m  = s_pvt.altitude;
-    out->heading_deg = s_pvt.heading;
-    out->hdop_x10    = (long)(s_pvt.hdop * 10.0f);
-    /* Count satellites with sv > 0 and tracked flag set. */
-    long sats = 0;
-    for (int i = 0; i < NRF_MODEM_GNSS_MAX_SATELLITES; i++) {
-        if (s_pvt.sv[i].sv != 0 &&
-            (s_pvt.sv[i].flags & NRF_MODEM_GNSS_SV_FLAG_USED_IN_FIX)) {
-            sats++;
-        }
-    }
-    out->sats = sats;
-    snprintf(out->time_iso, sizeof(out->time_iso),
-             "%02u/%02u/%02u,%02u:%02u:%02u.%06u+00",
-             s_pvt.datetime.day, s_pvt.datetime.month,
-             (unsigned)(s_pvt.datetime.year % 100),
-             s_pvt.datetime.hour, s_pvt.datetime.minute,
-             s_pvt.datetime.seconds,
-             (unsigned)s_pvt.datetime.ms * 1000U);
+    pvt_to_fix(&s_pvt, out);
     return 0;
 }

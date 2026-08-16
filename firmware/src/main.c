@@ -752,6 +752,8 @@ int main(void)
             strncpy(g_settings.imei, imei, sizeof(g_settings.imei) - 1);
             LOG_INF("imei=%s", g_settings.imei);
         }
+        transport_open();
+        transport_teardown();
     }
 
     gnss_start();
@@ -865,7 +867,10 @@ int main(void)
 
             LOG_INF("sending %d records", s_buffered_records);
             led_sending();
+            gnss_stop();
             send_data();
+            transport_close();
+            k_msleep(200);
             led_sent();
             s_last_send_ms = k_uptime_get();
             s_buffered_records = 0;
@@ -906,16 +911,11 @@ int main(void)
 
             /* state transition */
             if (ignition != 0 && !s_coasting) {
-                LOG_INF("ignition off -> sleep");
-                gnss_stop();
-                transport_close();
                 s_state = STATE_SLEEP;
             } else if (!engine_running && !s_coasting) {
-                LOG_INF("engine off -> ignition sleep");
-                gnss_stop();
-                transport_close();
                 s_state = STATE_IGNITION_SLEEP;
             } else {
+                gnss_resume();
                 s_state = STATE_GPS_COLLECT;
             }
             break;
