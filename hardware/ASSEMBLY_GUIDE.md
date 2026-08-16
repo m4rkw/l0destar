@@ -82,6 +82,23 @@ solder them.
 4. Solder the configuration pads according to the configuration of the board,
 this can be either CAN, K-line or no OBD comms.
 
+5. Once all the SMD components are placed, next do the Molex collector. General
+rule of assembly for through-hole components is in order of vertical height.
+
+6. Next is the 20-pin headers. I recommend using tape to hold them in position,
+solder a single pin on each row to hold them, then remove the tape and solder
+the rest.
+
+7. Finally the SMA connectors. Easiest way I've found is to rest the board
+upside down with the connectors in place, surround each pin with solder paste
+and then apply hot air. Because the connectors are metal they have a lot of
+thermal mass so turn heat and airflow up to maximum (500C in my case). As soon
+as the solder melts again the pin remove the heat, if you let too much of it
+drain down by the pins you can end up shorting the centre pin to ground.
+
+Once an SMA connector has been through this once or twice it's generally got too
+much solder on it to be easily reused so I've begun treating them as disposable.
+
 ## Testing
 
 **Don't connect the Makerdiary Connect Kit until these checks have been
