@@ -224,23 +224,33 @@ int kline_test(void)
 		err = kline_stream("K1 loop", PIN_K1_TX, PIN_K1_RX);
 	}
 
-	/* L-line continuous toggle for probing */
+	/* L-line: verify the L pulldown FET toggles the L-line */
 	if (PIN_L_SEND >= 0 && PIN_L_RECV >= 0) {
 		gpio_pin_configure(hw_gpio0, PIN_L_SEND, GPIO_OUTPUT_LOW);
 		gpio_pin_configure(hw_gpio0, PIN_L_RECV,
 				   GPIO_INPUT | GPIO_PULL_UP);
 		k_msleep(5);
-		printk("L-line: toggling L_SEND (P0.%d) at 0.5 Hz...\n",
-		       PIN_L_SEND);
-		for (;;) {
-			gpio_pin_set(hw_gpio0, PIN_L_SEND, 1);
-			k_msleep(1000);
-			int r1 = gpio_pin_get(hw_gpio0, PIN_L_RECV);
-			gpio_pin_set(hw_gpio0, PIN_L_SEND, 0);
-			k_msleep(1000);
-			int r0 = gpio_pin_get(hw_gpio0, PIN_L_RECV);
-			printk("L: send=1->recv=%d send=0->recv=%d\n", r1, r0);
+
+		int l_idle = gpio_pin_get(hw_gpio0, PIN_L_RECV);
+		gpio_pin_set(hw_gpio0, PIN_L_SEND, 1);
+		k_msleep(1);
+		int l_active = gpio_pin_get(hw_gpio0, PIN_L_RECV);
+		gpio_pin_set(hw_gpio0, PIN_L_SEND, 0);
+		k_msleep(1);
+		int l_release = gpio_pin_get(hw_gpio0, PIN_L_RECV);
+
+		printk("L-line: idle=%d send=1->%d send=0->%d",
+		       l_idle, l_active, l_release);
+
+		if (l_idle != 1 || l_active != 0 || l_release != 1) {
+			printk(" FAIL\n");
+			err = -EIO;
+		} else {
+			printk(" OK\n");
 		}
+
+		gpio_pin_configure(hw_gpio0, PIN_L_SEND,
+				   GPIO_INPUT | GPIO_PULL_DOWN);
 	}
 
 	if (err)

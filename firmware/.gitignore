@@ -1,5 +1,6 @@
 build/
 build_prov/
+build_ifmcu/
 local.conf
 local.overlay
 # Makerdiary nRF9151 Connect Kit profile + vendored board definition (used by
@@ -11,6 +12,8 @@ certs/*.key
 certs/*.crt
 # nRF Cloud onboarding CA (contains a private key) + generated artifacts
 onboarding/
+# IF MCU: cloned upstream repo + build output
+ifmcu/.makerdiary-repo/
 CLAUDE_LOCAL.md
 .claude
 screenlog.0
