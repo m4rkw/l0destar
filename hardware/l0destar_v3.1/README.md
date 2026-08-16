@@ -41,11 +41,12 @@ See below for a full change summary.
 | ISO-9141 | L-line pulldown | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 370 µA |
+| Board | Quiescent current | NOT TESTED | Estimated at around 120 µA |
 
 ## Features
 
  - 12V live and 12V ignition inputs with TVS and reverse polarity protection
+ - Enhanced input protection sized for pulse 2a at the ISO 7637-2:2011 maximum
  - Ignition presence sensing
  - INA228 voltage reading
  - High efficiency buck converter
@@ -56,6 +57,7 @@ See below for a full change summary.
  - Optional CAN interface
  - Optional ISO-9141 (K-line) interface with L and K connections for full functionality
  - CAN/ISO-9141 switchable via jumper pads
+ - Auxillary rail sensing/fault detection
 
 ## Changes from v3.0
 

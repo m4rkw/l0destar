@@ -45,7 +45,7 @@ See below for a full change summary.
 | ISO-9141 | L-line pulldown | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 370 µA |
+| Board | Quiescent current | NOT TESTED | Estimated at around 120 µA |
 
 ## Features
 
