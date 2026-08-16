@@ -70,8 +70,7 @@ Same as v2.5 with a stacked 47uF ceramic bulk cap (2220, 50V X7R) added on the
   MAX33041EASA+, auxiliary MOSFETs replaced with load switches, OBD power rails
   switched separately from GPS. Not tested.
 
-### v3.2 — v3.0 + battery backup
+### v3.1 — v3.0 with better input resilience, hardened antenna feed and
+auxillary power rail sensing/fault detection
 
-- **[l0destar v3.2](l0destar_v3.2/)** — same footprint as v3.0 with an optional
-  charging circuit and JST connector for an external backup battery. Not tested.
-  Design files only (no README yet).
+- **[l0destar v3.1](l0destar_v3.1/)** — same footprint as v3.0. Not yet tested.
