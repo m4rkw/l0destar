@@ -137,15 +137,20 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
 
     size_t total = hdr_len + ct_len;
 
-    int rai = read_udp_response ? RAI_ONE_RESP : RAI_LAST;
-    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+    if (read_udp_response) {
+        int rai = RAI_ONE_RESP;
+        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+    }
 
     if (zsock_send(s_sock, buf, total, 0) < 0) {
         LOG_WRN("send failed (%d), reconnecting", errno);
         transport_teardown();
         err = transport_open();
         if (err) return err;
-        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+        if (read_udp_response) {
+            int rai = RAI_ONE_RESP;
+            zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+        }
         if (zsock_send(s_sock, buf, total, 0) < 0) {
             LOG_ERR("send retry failed: %d", errno);
             transport_teardown();
@@ -154,10 +159,6 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
     }
 
     LOG_INF("sent %u bytes", (unsigned)total);
-
-    if (!read_udp_response) {
-        transport_close();
-    }
 
     return 0;
 }
