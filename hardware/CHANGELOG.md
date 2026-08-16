@@ -3,14 +3,15 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 16/08/2026
+
+- Added v3.1 board with more robust input protection, auxillary power rail
+  sensing/fault detection and a hardened antenna feed with 15R series resistance
+  and ESD protection.
+
 ## 10/08/2026
 
 - Fixed a few discrepencies in the BOM / parts lists
-- Added v3.1 board with relay power switching added back in as a configurable
-  build option, keeping the same PCB footprint
-- Added v3.2 board with an optional charging circuit and JST connector for
-  connecting an external battery as a backup for the vehicle power being cut,
-  keeping the same PCB footprint
 
 ## 09/08/2026
 
