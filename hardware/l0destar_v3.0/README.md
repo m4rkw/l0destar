@@ -68,7 +68,6 @@ See below for a full change summary.
  - Switch between CAN/ISO-9141 functionality by shorting jumper pads on the
    board with solder bridges. These config pads also double as test points for
    the power rails, saving board space
- - S2R2 increased to 10M for slightly reduced quiescent power draw
  - S4R2 increased to 100K for better resiliency of ignition sensing with low
    system voltage
  - Auxillary power MOSFETs and several ideal diodes swapped out for load switches to
@@ -156,7 +155,7 @@ resistor. **Make sure the pads that should be unconnected are not connected.**
 | S2D3 | 15V Zener diode | BZX84C15 | [BZX84C15](https://uk.farnell.com/multicomp-pro/bzx84c15/zener-diode-0-3w-15v-sot-23/dp/2675186) | |
 | S2D4 | 400W TVS diode | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://uk.farnell.com/nexperia/ptvs33vs1utr-115/tvs-diode-aecq101-unidir-33v-400w/dp/3440137) | |
 | S2R1 | Pulldown resistor | 0402 5% 1M | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
-| S2R2 | Pulldown resistor | 0402 5% 10M | [RK73H1ETTP1005F](https://uk.farnell.com/koa/rk73h1ettp1005f/res-10m-1-0-1w-0402/dp/3538659) | |
+| S2R2 | Pulldown resistor | 0402 5% 1M | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | S2C1 | 47uF input capacitor | 2220 >= 50V 20% X7R | [CKG57NX7R1H476M500JH](https://uk.farnell.com/tdk/ckg57nx7r1h476m500jh/cap-stacked-47uf-50v-mlcc-2220/dp/3816888) | |
 | S3U1 | INA228 voltage read IC | INA228 10-VSSOP | [INA228](https://www.aliexpress.com/item/1005008704299153.html) | |
 | S3C1 | 1uF capacitor | 0402 >= 10V 10% X7R | [KAM05CR71A105KH](https://uk.farnell.com/kyocera-avx/kam05cr71a105kh/capacitor-mlcc-1uf-x7r-10v-0402/dp/4365709) | |
@@ -271,8 +270,7 @@ Can be omited if K-line/ISO-9141 is not required
 | All | 100K 0402 resistor | 3 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | All | 120K 0402 resistor | 1 | 0402 120K 5% | [RC0402FR-07120KL](https://uk.farnell.com/yageo/rc0402fr-07120kl/res-120k-1-0-063w-0402-thick-film/dp/9239480) | |
 | All | 226K 0402 resistor | 1 | 0402 226K 1% | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V |
-| All | 1M 0402 resistor | 2 | 0402 1% 1M | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
-| All | 10M 0402 resistor | 1 | 0402 1% 10M | [RK73H1ETTP1005F](https://uk.farnell.com/koa/rk73h1ettp1005f/res-10m-1-0-1w-0402/dp/3538659) | |
+| All | 1M 0402 resistor | 3 | 0402 1% 1M | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | All | 10pF 0402 capacitor | 1 | 0402 >= 25V 10% X7R | [C0402C100K5RACTU](https://uk.farnell.com/kemet/c0402c100k5ractu/cap-10pf-50v-10-x7r-0402/dp/2821254) | |
 | All | 100nF 25V 0402 capacitor | 5 | 0402 >= 25V 10% X7R | [MC0402B104K250CT](https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759) | |
 | All | 100nF 50V 0402 capacitor | 1 | 0402 >= 50V 10% X7R | [MCASU105SB7104KFNA01](https://uk.farnell.com/taiyo-yuden/mcasu105sb7104kfna01/capacitor-mlcc-0-1uf-50v-x7r-0402/dp/4666632) | |

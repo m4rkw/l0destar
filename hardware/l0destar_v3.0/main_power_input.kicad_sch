@@ -2171,7 +2171,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 10M 5%"
+		(property "Value" "0402 1M 5%"
 			(at 66.04 100.3299 0)
 			(show_name no)
 			(do_not_autoplace no)
