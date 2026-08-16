@@ -8,6 +8,7 @@ tree are noted where they were removed.
 - Added v3.1 board with more robust input protection, auxillary power rail
   sensing/fault detection and a hardened antenna feed with 15R series resistance
   and ESD protection.
+- Fixed bias tee cap placement order on all v2.5, v2.6 and v3.0 boards.
 
 ## 10/08/2026
 
