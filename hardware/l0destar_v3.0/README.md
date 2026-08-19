@@ -2,8 +2,6 @@
 
 ## Overview
 
-**NOTE: THIS HAS NOT YET BEEN TESTED, USE AT YOUR OWN RISK**
-
 - This is a prototype l0destar vehicle tracker PCB designed to be
   hand-solderable (hot air required)
 - It makes use of the [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) to provide the LTE and GPS
@@ -30,22 +28,22 @@ See below for a full change summary.
 
 | Item | Test | Result | Notes |
 |---------|------|--------|-------|
-| Input stage | 12V input reverse polarity | NOT TESTED | |
-| Input stage | 12V ignition input reverse polarity | NOT TESTED | |
-| INA228 | Voltage reading function | NOT TESTED |
-| Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
-| LT8609#1 | 4.2V output | NOT TESTED | |
-| GPS auxillary 3.3V rail | Switches on enable signal | NOT TESTED | |
-| OBD auxillary 3.3V rail | Switches on OBD-enable signal | NOT TESTED | |
-| OBD Auxillary 12V rail | Switches on OBD-enable signal | NOT TESTED | |
-| Accelerometer | Operates while awake | NOT TESTED | |
-| Accelerometer | Wake on motion | NOT TESTED | |
-| GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
-| ISO-9141 | K-wire connectivity | NOT TESTED | |
-| ISO-9141 | L-line pulldown | NOT TESTED | |
+| Input stage | 12V input reverse polarity | PASSED | |
+| Input stage | 12V ignition input reverse polarity | PASSED | |
+| INA228 | Voltage reading function | PASSED |
+| Ignition presence | Ignition sense 3.3v signal | PASSED | |
+| LT8609#1 | 4.2V output | PASSED | |
+| GPS auxillary 3.3V rail | Switches on enable signal | PASSED | |
+| OBD auxillary 3.3V rail | Switches on OBD-enable signal | PASSED | |
+| OBD Auxillary 12V rail | Switches on OBD-enable signal | PASSED | |
+| Accelerometer | Operates while awake | PASSED | |
+| Accelerometer | Wake on motion | PASSED | |
+| GPS antenna bias tee | Obtains GPS signal | PASSED | |
+| ISO-9141 | K-wire connectivity | PASSED | |
+| ISO-9141 | L-line pulldown | PASSED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 120 µA |
+| Board | Quiescent current | 120 µA | |
 
 ## Features
 
