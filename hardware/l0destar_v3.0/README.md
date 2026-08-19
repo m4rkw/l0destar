@@ -41,8 +41,8 @@ See below for a full change summary.
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
 | ISO-9141 | K-wire connectivity | PASSED | |
 | ISO-9141 | L-line pulldown | PASSED | |
-| CAN | Connectivity | NOT TESTED | |
-| CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
+| CAN | Connectivity | PASSED | |
+| CAN standby via XSTBY signal | Low standby current | PASSED | |
 | Board | Quiescent current | 120 µA | |
 
 ## Features
