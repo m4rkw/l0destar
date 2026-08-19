@@ -1,0 +1,190 @@
+# Static flash layout for the nRF9151 (1 MB), pinned so every future build
+# stays compatible with the MCUboot already programmed onto deployed units.
+#
+# Without this file the partition manager re-derives the map on every build.
+# The moment TF-M or the app crosses a boundary the slots move, and an image
+# built against the new map cannot be installed by a bootloader flashed with
+# the old one — fielded units silently become un-updatable and need SWD.
+# Pinning it also turns "the image outgrew its slot" into a build error
+# instead of a quiet re-layout.
+#
+#   0x00000  mcuboot            48K   31K used
+#   0x0c000  (gap)              16K   mcuboot_primary must start 32K-aligned
+#   0x10000  mcuboot_primary   416K   pad 512B + TF-M 95.5K + app 320K
+#   0x78000  mcuboot_secondary 416K   OTA download target
+#   0xe0000  (gap)              32K   slack from the 32K slot alignment
+#   0xe8000  tfm_storage        80K   ITS / OTP counters / PS
+#   0xfc000  (gap)              16K
+#
+# CAUTION: the TF-M partition (0x17e00, the NCS default) is 99.4% full —
+# ~580 bytes spare.  Anything that grows the secure image (an NCS upgrade, a
+# new PSA algorithm) will now fail the build rather than silently reshuffle
+# the map.  Buying headroom costs app space 1:1 and only in 32K steps,
+# because the non-secure image has to start on an SPU boundary: set
+# CONFIG_PM_PARTITION_SIZE_TFM=0x1fe00 to move the app to 0x30000, taking
+# TF-M to 127.5K (33K spare) and the app slot to 288K.  Decide before
+# shipping units — after that, changing it means re-flashing them over SWD.
+#
+# Regenerate only when the layout must genuinely change: delete this file,
+# ./build.sh pristine, then copy build/partitions.yml back here keeping only
+# the flash_primary entries.
+EMPTY_0:
+  address: 0xc000
+  end_address: 0x10000
+  placement:
+    before:
+      - mcuboot_pad
+  region: flash_primary
+  size: 0x4000
+EMPTY_1:
+  address: 0xfc000
+  end_address: 0x100000
+  placement:
+    after:
+      - tfm_ps
+  region: flash_primary
+  size: 0x4000
+EMPTY_2:
+  address: 0xf2000
+  end_address: 0xf8000
+  placement:
+    after:
+      - tfm_otp_nv_counters
+  region: flash_primary
+  size: 0x6000
+EMPTY_3:
+  address: 0xea000
+  end_address: 0xf0000
+  placement:
+    after:
+      - tfm_its
+  region: flash_primary
+  size: 0x6000
+EMPTY_4:
+  address: 0xe0000
+  end_address: 0xe8000
+  placement:
+    after:
+      - mcuboot_secondary
+  region: flash_primary
+  size: 0x8000
+app:
+  address: 0x28000
+  end_address: 0x78000
+  region: flash_primary
+  size: 0x50000
+mcuboot:
+  address: 0x0
+  end_address: 0xc000
+  placement:
+    align:
+      end: 0x1000
+    before:
+      - mcuboot_primary
+  region: flash_primary
+  size: 0xc000
+mcuboot_pad:
+  address: 0x10000
+  end_address: 0x10200
+  placement:
+    align:
+      start: 0x8000
+    before:
+      - mcuboot_primary_app
+  region: flash_primary
+  size: 0x200
+mcuboot_primary:
+  address: 0x10000
+  end_address: 0x78000
+  region: flash_primary
+  sharers: 0x1
+  size: 0x68000
+  span:
+    - mcuboot_pad
+    - tfm
+    - app
+mcuboot_primary_app:
+  address: 0x10200
+  end_address: 0x78000
+  region: flash_primary
+  size: 0x67e00
+  span:
+    - app
+    - tfm
+mcuboot_secondary:
+  address: 0x78000
+  end_address: 0xe0000
+  placement:
+    after:
+      - mcuboot_primary
+    align:
+      start: 0x8000
+  region: flash_primary
+  share_size: ['mcuboot_primary']
+  size: 0x68000
+tfm:
+  address: 0x10200
+  end_address: 0x28000
+  inside: ['mcuboot_primary_app']
+  placement:
+    before:
+      - app
+  region: flash_primary
+  size: 0x17e00
+tfm_its:
+  address: 0xe8000
+  end_address: 0xea000
+  inside: ['tfm_storage']
+  placement:
+    align:
+      start: 0x8000
+    before:
+      - tfm_otp_nv_counters
+  region: flash_primary
+  size: 0x2000
+tfm_nonsecure:
+  address: 0x28000
+  end_address: 0x78000
+  region: flash_primary
+  size: 0x50000
+  span:
+    - app
+tfm_otp_nv_counters:
+  address: 0xf0000
+  end_address: 0xf2000
+  inside: ['tfm_storage']
+  placement:
+    align:
+      start: 0x8000
+    before:
+      - tfm_ps
+  region: flash_primary
+  size: 0x2000
+tfm_ps:
+  address: 0xf8000
+  end_address: 0xfc000
+  inside: ['tfm_storage']
+  placement:
+    align:
+      start: 0x8000
+    before:
+      - end
+  region: flash_primary
+  size: 0x4000
+tfm_secure:
+  address: 0x10000
+  end_address: 0x28000
+  region: flash_primary
+  size: 0x18000
+  span:
+    - mcuboot_pad
+    - tfm
+tfm_storage:
+  address: 0xe8000
+  end_address: 0xfc000
+  region: flash_primary
+  size: 0x14000
+  span:
+    - tfm_ps
+    - tfm_its
+    - tfm_otp_nv_counters

@@ -73,6 +73,8 @@ int modem_init(void)
     return 0;
 }
 
+static int provision_fota_tag(void);
+
 int modem_provision_tls(void)
 {
     int err;
@@ -87,7 +89,7 @@ int modem_provision_tls(void)
     }
     if (exists) {
         LOG_INF("TLS CA already provisioned (sec_tag %d)", TLS_SEC_TAG);
-        return 0;
+        return provision_fota_tag();
     }
 
     err = modem_key_mgmt_write(TLS_SEC_TAG,
@@ -98,6 +100,46 @@ int modem_provision_tls(void)
         return err;
     }
     LOG_INF("TLS CA provisioned (sec_tag %d)", TLS_SEC_TAG);
+    return provision_fota_tag();
+}
+
+/* The FOTA HTTPS fetch gets its own sec_tag with the same CA.  Sharing
+ * TLS_SEC_TAG broke in the field: DTLS/PSK experiments left extra credential
+ * types on tag 1 in modem NVM, and a tag whose contents mix PSK and CA
+ * entries makes a certificate-mode TLS connect() fail with EINVAL before any
+ * packet is sent.  A dedicated tag holds exactly one CA chain and nothing
+ * else, and this provisioning (pre-CFUN=1, from modem_provision_tls) keeps
+ * it that way. */
+static int provision_fota_tag(void)
+{
+#if IS_ENABLED(CONFIG_APP_FOTA) && CONFIG_APP_FOTA_SEC_TAG >= 0
+    int err;
+    bool exists;
+
+    if (CONFIG_APP_FOTA_SEC_TAG == TLS_SEC_TAG) {
+        return 0;
+    }
+
+    err = modem_key_mgmt_exists(CONFIG_APP_FOTA_SEC_TAG,
+                                MODEM_KEY_MGMT_CRED_TYPE_CA_CHAIN,
+                                &exists);
+    if (err) {
+        LOG_ERR("fota key_mgmt_exists: %d", err);
+        return err;
+    }
+    if (exists) {
+        return 0;
+    }
+
+    err = modem_key_mgmt_write(CONFIG_APP_FOTA_SEC_TAG,
+                               MODEM_KEY_MGMT_CRED_TYPE_CA_CHAIN,
+                               ca_cert_pem, sizeof(ca_cert_pem) - 1);
+    if (err) {
+        LOG_ERR("fota key_mgmt_write: %d", err);
+        return err;
+    }
+    LOG_INF("FOTA CA provisioned (sec_tag %d)", CONFIG_APP_FOTA_SEC_TAG);
+#endif
     return 0;
 }
 

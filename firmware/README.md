@@ -119,6 +119,7 @@ at ±250 dps.
 | `hw_accel.c`  | ASM330LHHX IMU (accel path): polling + hardware wake interrupt |
 | `hw_relay.c`  | Latching relay with feedback verification |
 | `hw_kline.c`  | K-line bit-bang UART (L9637D) |
+| `fota.c`      | Over-the-air updates: manifest check, battery gate, MCUboot image download ([FOTA.md](FOTA.md)) |
 | `led.c` · `watchdog.c` · `reboot.c` | Status LED · 32 s task watchdog (HW fallback) · reboot helper |
 | `config.h` · `pins.h` · `app.h` · `ca_cert.h` | Compile-time defaults · pins · shared API/state · server CA cert |
 
@@ -210,6 +211,28 @@ west flash -d build                 # or: nrfutil device program / the nRF Conne
 `west build`.) On Apple Silicon, flashing needs a **native arm64** SEGGER
 J-Link install — an Intel-only J-Link library cannot be loaded by the arm64
 toolchain Python.
+
+---
+
+## Over-the-air updates
+
+The build carries **MCUboot** (`sysbuild.conf`), which splits the 1 MB flash
+into two 416 KB slots pinned by `pm_static.yml`. `fota.c` checks a manifest on
+the telemetry host at power-on and on each engine-off telemetry wake, and
+installs anything newer — provided the battery is above
+`CONFIG_APP_FOTA_MIN_BATTERY_MV` (12.0 V). A swapped image that never finishes
+booting is rolled back automatically.
+
+The firmware version lives in one place, the `VERSION` file: it feeds
+`<zephyr/app_version.h>`, the MCUboot image header, and the version comparison.
+Bump it before publishing.
+
+> The first build with MCUboot has to be flashed over SWD — a unit running a
+> pre-MCUboot image has no bootloader to swap slots.
+
+See **[FOTA.md](FOTA.md)** for the manifest format, the server requirements
+(range requests are mandatory over TLS), the release procedure and the signing
+key.
 
 ---
 

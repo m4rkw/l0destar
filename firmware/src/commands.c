@@ -108,10 +108,38 @@ void cmd_run(char *cmd)
         alert_enqueue(msg, 0);
     }
 
+    /* Update indication / force.  The check itself runs from the state
+     * machine (STATE_IDLE or the sleep telemetry wake), not from here — a
+     * download must not start in the middle of a send.
+     *
+     * "fota=<version>" rides on every server response: compare against the
+     * running build and only mark a check pending when the server has
+     * something newer (fota.c logs it once).  A bare "fota" is the manual
+     * override — check now regardless of version or failure holdoff. */
+    tmp = strstr(cmd, "fota");
+    if (tmp) {
+        if (tmp[4] == '=') {
+            char ver[16];
+            int n = 0;
+            tmp += 5;
+            while (tmp[n] && tmp[n] != ',' && tmp[n] != ' ' &&
+                   n < (int)sizeof(ver) - 1) {
+                ver[n] = tmp[n];
+                n++;
+            }
+            ver[n] = '\0';
+            fota_notify_available(ver);
+        } else {
+            fota_request_check();
+            alert_enqueue("fota: check queued", 0);
+        }
+    }
+
     if (strstr(cmd, "config")) {
         char msg[160];
         snprintf(msg, sizeof(msg),
-                 "int=%d ao=%d ma=%d bat=%.1fV ign=%s up=%llus",
+                 "fw=%s int=%d ao=%d ma=%d bat=%.1fV ign=%s up=%llus",
+                 fota_version(),
                  g_settings.loop_interval,
                  (int)g_settings.always_on,
                  (int)g_settings.movement_alarm,

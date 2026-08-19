@@ -10,6 +10,9 @@ boards/makerdiary/
 boards/nrf9151_connectkit_*
 certs/*.key
 certs/*.crt
+# MCUboot image-signing key (see sysbuild.conf / FOTA.md) — the public half is
+# baked into every deployed bootloader, so keep a backup somewhere safe.
+mcuboot_priv.pem
 # nRF Cloud onboarding CA (contains a private key) + generated artifacts
 onboarding/
 # IF MCU: cloned upstream repo + build output

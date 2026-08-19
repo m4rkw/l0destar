@@ -2,6 +2,45 @@
 
 ## Unreleased
 
+### Over-the-air updates (`src/fota.c`, [FOTA.md](FOTA.md))
+- MCUboot added via `sysbuild.conf`, splitting the 1 MB flash into two 416 KB
+  slots. **The first build carrying it must be flashed over SWD** — a unit
+  running a pre-MCUboot image has no bootloader to swap slots
+- `pm_static.yml` pins the flash map so later builds stay installable by the
+  bootloader already on deployed units, and an image that outgrows its slot
+  fails the build instead of silently re-laying-out the map
+- Zero-polling trigger: every telemetry response carries `fota=<latest>`
+  (server reads fw/manifest.txt, cached on mtime); the device compares against
+  its running build locally and only fetches the manifest + image when the
+  server has something newer.  Steady state costs no extra requests.  One
+  unconditional check at power-on; bare `fota` server command forces one
+- Served from the telemetry TLS port 65481 — the one TCP path forwarded to
+  the server — whose listener protocol-sniffs the first two bytes and answers
+  HTTP GET/HEAD on /fw/* with keep-alive + 2 KB range support alongside the
+  telemetry framing (`_handle_fw_http` in the server)
+- Device trusts the endpoint via a dedicated sec_tag (42, auto-provisioned
+  with the same private CA): telemetry tag 1 carries leftover DTLS/PSK
+  credential types in modem NVM, and a mixed tag breaks cert-mode TLS connects
+- `./push_fw.sh` releases an update: build, stale/non-newer refusal, upload,
+  atomic manifest flip, then end-to-end endpoint verification (CA, manifest,
+  ranged 206) the way a device fetches.  Manifest URL carries `?imei=&v=` for
+  per-device staging
+- Failed attempts hold off retries (10 min doubling to 80 min) since the
+  server re-advertises on every response
+- Verified on the bench (v3.0): 0.4.0 -> 0.4.1 advertised on a sleep
+  telemetry wake, downloaded, swapped, rebooted and self-confirmed unattended,
+  with `fota:` alerts at both ends of the swap
+- Downloads are deferred below `CONFIG_APP_FOTA_MIN_BATTERY_MV` (12.0 V);
+  nothing is written to flash before that gate, so an update can't drain a
+  weak battery and a brownout mid-download can only spoil the secondary slot
+- A swapped image is `BOOT_UPGRADE_TEST` until `main()` finishes bring-up and
+  calls `boot_write_img_confirmed()`, so firmware that hangs or faults during
+  init is rolled back on the next boot
+- Version lives only in the `VERSION` file, feeding `<zephyr/app_version.h>`,
+  the MCUboot image header and the comparison in `fota.c` — they can't drift.
+  Reported to the server as `fw=` in the settings-sync field and by `config`
+- Application flash use 156 KB -> 178 KB of the 320 KB app partition
+
 ### Sleep-state power
 - Console UARTE is suspended for the duration of the blocking wait in
   `do_sleep()` and resumed on every wake (`CONFIG_PM_DEVICE`).  An enabled

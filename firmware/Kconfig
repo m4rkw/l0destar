@@ -67,6 +67,18 @@ config APP_ACCEL_TEST
 	  At startup, print accel/gyro/temp readings continuously at 10 Hz
 	  for noise analysis.  Loops forever; does not enter the main loop.
 
+config APP_OBD_MODE
+	int "OBD interface mode (0=none, 1=CAN, 2=K-line)"
+	default 0
+	help
+	  Which OBD interface is populated on a v3.1 board.  The jumper pads
+	  select the electrical path; this tells firmware which rails to test
+	  and which protocol driver to start.
+	    0 = no OBD interface (S5R1-S5R7 all open)
+	    1 = CAN bus (3.3V OBD only)
+	    2 = K-line / ISO-9141 (3.3V + 12V OBD)
+	  Ignored on boards other than v3.1.
+
 config APP_CAN_TEST
 	bool "Run the CAN bus loopback test at boot"
 	default n
@@ -104,6 +116,117 @@ config APP_APN
 	default ""
 	help
 	  Network APN.  Leave empty to fall back to DEFAULT_APN in config.h.
+
+# --- over-the-air updates ---------------------------------------------------
+
+menuconfig APP_FOTA
+	bool "Over-the-air application updates"
+	default y
+	select FOTA_DOWNLOAD
+	select DOWNLOADER
+	select DFU_TARGET
+	select DFU_TARGET_MCUBOOT
+	select IMG_MANAGER
+	select IMG_ERASE_PROGRESSIVELY
+	select STREAM_FLASH
+	select FLASH
+	select FLASH_MAP
+	select REST_CLIENT
+	select HTTP_CLIENT
+	help
+	  Fetch a version manifest over HTTPS at power-on and on each engine-off
+	  telemetry wake, and install the image it advertises when that version
+	  is newer than this build.  Requires MCUboot (sysbuild.conf) — the
+	  download lands in the secondary slot and the bootloader swaps it in on
+	  the next boot.  See FOTA.md.
+
+if APP_FOTA
+
+config APP_FOTA_HOST
+	string "Update server hostname"
+	default ""
+	help
+	  Host serving the manifest and the signed images.  Leave empty to reuse
+	  APP_SERVER_HOST (the telemetry endpoint), which is also what the CA at
+	  APP_FOTA_SEC_TAG was issued for.
+
+config APP_FOTA_PORT
+	int "Update server port"
+	default 65481
+	help
+	  Defaults to the telemetry TLS port: public 443 terminates on a
+	  different host, but this port is already forwarded to the tracker
+	  server, whose TLS listener sniffs the first two bytes and serves
+	  HTTP range requests for /fw/* alongside the telemetry protocol
+	  (_handle_fw_http in the server's main.py).
+
+config APP_FOTA_SEC_TAG
+	int "Modem sec_tag holding the update server's CA (-1 = plain HTTP)"
+	default 42
+	help
+	  modem_provision_tls() installs the l0destar CA from src/ca_cert.h
+	  here on first boot, so the same private CA authenticates telemetry
+	  and updates.  It is deliberately NOT the telemetry TLS_SEC_TAG:
+	  past DTLS/PSK experiments left extra credential types on tag 1 in
+	  modem NVM, and a mixed tag makes certificate-mode TLS connect()
+	  fail with EINVAL.  A dedicated tag holds one CA chain and nothing
+	  else.  Set -1 to fetch over plain HTTP; the image is still
+	  signature-checked by MCUboot, but the manifest and the URL it names
+	  are then unauthenticated.
+
+config APP_FOTA_MANIFEST_PATH
+	string "Manifest path on the update server"
+	default "/fw/manifest.txt"
+	help
+	  Requested with ?imei=<imei>&v=<running version> appended so a dynamic
+	  endpoint can stage rollouts per device.  A static file server ignores
+	  the query string.
+
+config APP_FOTA_MIN_BATTERY_MV
+	int "Minimum battery voltage to install an update (mV)"
+	default 12000
+	help
+	  Below this the check still runs but the download is deferred to the
+	  next one, so a weak battery is never asked to carry a multi-minute
+	  radio session plus a flash write.
+
+config APP_FOTA_REQUIRE_BATTERY_READING
+	bool "Block updates when the battery voltage is unknown"
+	default n
+	help
+	  A reading below IMPLAUSIBLE_VOLTAGE (5 V) means no INA228 rather than
+	  a flat battery — on the bench there is no vehicle supply at all.  By
+	  default that case is allowed to update; enable this to require a real
+	  measurement above the threshold instead.
+
+config APP_FOTA_RETRY_HOLDOFF_S
+	int "Holdoff after a failed update attempt (seconds)"
+	default 600
+	help
+	  Checks are driven by the server (fota=<version> on each telemetry
+	  response) plus one unconditional check at power-on, so there is no
+	  periodic polling to rate-limit.  This holdoff only gates retries
+	  after a failed attempt — the server keeps advertising the same
+	  version on every response, and without it each send would burn a
+	  fresh download attempt.  Doubles per consecutive failure, up to 8x.
+	  A bare `fota` command overrides it.
+
+config APP_FOTA_MANIFEST_TIMEOUT_S
+	int "Manifest request timeout (seconds)"
+	default 30
+
+config APP_FOTA_DOWNLOAD_TIMEOUT_S
+	int "Image download timeout (seconds)"
+	default 1200
+	help
+	  Upper bound on the whole download.  A ~300 KB image over LTE-M
+	  typically takes 2-5 minutes; the watchdog is fed throughout.
+
+config APP_FOTA_FRAGMENT_SIZE
+	int "HTTP range request size (0 = single continuous response)"
+	default 0
+
+endif # APP_FOTA
 
 # --- intervals (seconds) ---------------------------------------------------
 

@@ -541,6 +541,14 @@ static void do_sleep(void)
             }
             use_cached_gps = false;
             transport_close();
+
+            /* Run a server-indicated update now, while the modem is still
+             * registered and GNSS is already stopped: the response that was
+             * just processed (cmd_run above) may have advertised a newer
+             * version via fota=<ver>.  No-op otherwise — no extra traffic on
+             * an ordinary wake. */
+            fota_check(FOTA_CTX_ASLEEP);
+
             hw_power_shutdown();
             telemetry_remaining = g_settings.loop_interval;
         }
@@ -647,6 +655,11 @@ static void do_ignition_sleep(void)
                 }
                 if (!last_send_ok) modem_recover(gsm_send_failures);
                 gnss_resume();
+
+                /* The response just processed may have advertised a newer
+                 * firmware (fota=<ver>); no-op otherwise.  GNSS was resumed
+                 * above, so the awake variant puts it back on failure. */
+                fota_check(FOTA_CTX_AWAKE);
             }
             last_send_ms = k_uptime_get();
         }
@@ -660,7 +673,7 @@ static void do_ignition_sleep(void)
 /* ========================================================================= */
 int main(void)
 {
-    LOG_INF("=== l0destar firmware boot ===");
+    LOG_INF("=== l0destar firmware boot (v%s) ===", fota_version());
 
 #if defined(CONFIG_APP_PROVISION_MODE)
     /* Provisioning build (prov.conf): bring up the modem library so the AT
@@ -689,6 +702,8 @@ int main(void)
     hw_domain_init();
     hw_aux_power_on();
     k_msleep(10);
+
+    hw_selftest();
 
     if (hw_power_init())  LOG_WRN("INA228 init failed — voltage unavailable");
     if (hw_accel_init())  LOG_WRN("accel init failed — readings unavailable");
@@ -767,6 +782,17 @@ int main(void)
     watchdog_init();
     s_last_send_ms = k_uptime_get();
 
+    /* Everything above got through without hanging or faulting, so a freshly
+     * swapped image has proved itself enough to keep.  Until this runs, an
+     * update is still on probation and MCUboot reverts it on the next boot. */
+    fota_confirm_image();
+
+    /* The one unconditional update check: power-on.  Later checks only run
+     * when a telemetry response advertises a newer version (fota=<ver>).
+     * GNSS is up, so fota_check restores it if a download fails; on success
+     * it reboots and never returns. */
+    fota_check(FOTA_CTX_AWAKE);
+
     LOG_INF("entering main loop");
 
     //do_sleep();
@@ -819,6 +845,13 @@ int main(void)
                 s_last_send_ms = k_uptime_get();
                 previous_ignition = ignition;
             }
+
+            /* Server-indicated update (fota=<ver> in a response), manual
+             * `fota` command, or a power-on check that hit a dead link and
+             * is still pending.  Serviced here so the download happens
+             * between sends rather than mid-collection; a no-op (single
+             * flag test) when nothing is pending. */
+            fota_check(FOTA_CTX_AWAKE);
 
             if (should_send_data()) {
                 LOG_INF("collecting GPS fix (%d/%d)",

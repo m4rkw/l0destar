@@ -25,7 +25,9 @@ int hw_power_init(void)
 {
 	bb_init(&ina_bus);
 	bb_pin_test(&ina_bus, "INA228");
-	gpio_pin_configure(hw_gpio0, PIN_INA_ALRT, GPIO_INPUT);
+	if (PIN_INA_ALRT >= 0) {
+		gpio_pin_configure(hw_gpio0, PIN_INA_ALRT, GPIO_INPUT);
+	}
 	/* The PCBs sense ignition through a 2N7002 open-drain with an external
 	 * 56K pull-up to the always-on 3.3V rail; adding the internal pull-up
 	 * would roughly triple the sense current whenever ignition is on. */

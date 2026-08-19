@@ -166,14 +166,17 @@ int collect_data(int ignitionState)
                  ",up=%lld", k_uptime_get() / 1000);
     if (n > 0) data_index += n;
 
-    /* Settings sync */
+    /* Settings sync — also the only packet carrying the firmware version, so
+     * the server can see what a unit is actually running without paying for
+     * the field on every record. */
     if (send_int_to_server) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
-                     ",int=%d;ao=%d;ma=%d",
+                     ",int=%d;ao=%d;ma=%d;fw=%s",
                      g_settings.loop_interval,
                      (int)g_settings.always_on,
-                     (int)g_settings.movement_alarm);
+                     (int)g_settings.movement_alarm,
+                     fota_version());
         if (n > 0) data_index += n;
     }
 

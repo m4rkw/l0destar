@@ -120,6 +120,23 @@ int  send_data(void);
 
 void cmd_run(char *cmd);
 
+/* -- over-the-air update (fota.c) ------------------------------------------ */
+/* Whether the caller is holding GNSS up, which decides if fota_check() has to
+ * put it back after a download that didn't end in a reboot. */
+enum fota_ctx {
+    FOTA_CTX_AWAKE,    /* GNSS running — restart it if no update is applied */
+    FOTA_CTX_ASLEEP,   /* GNSS already stopped — leave it that way */
+};
+
+const char *fota_version(void);        /* APP_VERSION_STRING, e.g. "0.4.0" */
+void        fota_request_check(void);  /* force a check now (bare `fota` cmd) */
+void        fota_notify_available(const char *ver);  /* fota=<ver> from the
+                                          server response: check only if newer */
+bool        fota_check_requested(void);
+void        fota_confirm_image(void);  /* stop MCUboot reverting this image */
+/* 0 = no update, 1 = updating (reboots, does not return), <0 = check failed */
+int         fota_check(enum fota_ctx ctx);
+
 void alert_enqueue(const char *msg, int priority);
 int  alert_send(void);
 int  alert_send_standalone(void);
@@ -145,6 +162,7 @@ void status_delay(long ms);   /* watchdog-aware sleep */
 
 /* Hardware modules */
 int  hw_gpio_init(void);
+int  hw_selftest(void);
 int  hw_power_init(void);
 bool hw_power_available(void);
 void hw_power_shutdown(void);

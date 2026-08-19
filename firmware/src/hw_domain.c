@@ -148,6 +148,20 @@ int hw_domain_init(void)
 		}
 	}
 
+	/* Rail-sense inputs (v3.1+): always-on status from the load switches. */
+	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_RAIL_SENSE)) {
+		static const int8_t rail_st[] = {
+			PIN_GPS_RAIL_ST, PIN_OBD3V3_RAIL_ST,
+			PIN_OBD12V_RAIL_ST
+		};
+		for (int i = 0; i < (int)ARRAY_SIZE(rail_st); i++) {
+			if (rail_st[i] >= 0) {
+				gpio_pin_configure(hw_gpio0, rail_st[i],
+						   GPIO_INPUT);
+			}
+		}
+	}
+
 	/* AIO inputs (v2.1): external 100K/10K dividers define the level. */
 	static const int8_t aio[] = { PIN_AIO1, PIN_AIO2, PIN_AIO3,
 				      PIN_AIO4, PIN_AIO5, PIN_AIO6 };

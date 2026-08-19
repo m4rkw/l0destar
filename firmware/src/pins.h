@@ -43,6 +43,11 @@
 #define PIN_LED4       CONFIG_APP_PIN_LED4
 #define PIN_LED5       CONFIG_APP_PIN_LED5
 
+/* Switched-rail status sense inputs (v3.1+) */
+#define PIN_GPS_RAIL_ST    CONFIG_APP_PIN_GPS_RAIL_ST
+#define PIN_OBD3V3_RAIL_ST CONFIG_APP_PIN_OBD3V3_RAIL_ST
+#define PIN_OBD12V_RAIL_ST CONFIG_APP_PIN_OBD12V_RAIL_ST
+
 /* 0-30V AIO inputs (v2.1 only) */
 #define PIN_AIO1       CONFIG_APP_PIN_AIO1
 #define PIN_AIO2       CONFIG_APP_PIN_AIO2

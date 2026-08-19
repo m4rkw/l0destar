@@ -10,6 +10,7 @@ target_sources(app PRIVATE
     src/settings.c
     src/hw_common.c
     src/hw_domain.c
+    src/hw_selftest.c
     src/hw_power.c
     src/hw_can.c
     src/hw_accel.c
@@ -22,6 +23,7 @@ target_sources(app PRIVATE
     src/data.c
     src/alert.c
     src/commands.c
+    src/fota.c
     src/led.c
     src/watchdog.c
     src/reboot.c
