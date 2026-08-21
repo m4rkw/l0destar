@@ -1,6 +1,6 @@
 # Disclaimer
 
-This applies to everything in this repository — every board, the firmware, the
+This applies to everything in this repository - every board, the firmware, the
 documentation and the analysis. It is referenced from the individual READMEs
 and guides rather than repeated in each of them.
 
@@ -12,7 +12,7 @@ board here, and the firmware, as unvalidated and unsafe by default.
 Nothing in this repository has been through automotive qualification, EMC
 testing, or formal ISO 7637-2 or ISO 16750 compliance testing. The analysis
 documents are desk work backed by datasheets and manufacturer characterisation
-data — they are estimates and reasoning, not test reports, and the reasoning may
+data - they are estimates and reasoning, not test reports, and the reasoning may
 be wrong.
 
 ## Test results are mine, and unverified
@@ -34,7 +34,7 @@ distributor links go stale.
 
 Check every part against its current datasheet, satisfy yourself about
 footprint, tolerance and voltage rating, and buy from a distributor you trust.
-Distributor and manufacturer links are for identification only — they are not
+Distributor and manufacturer links are for identification only - they are not
 endorsements and imply no relationship with those vendors. Where this
 repository interprets a manufacturer's datasheet or characterisation data, that
 interpretation is mine and may be wrong.
@@ -64,7 +64,7 @@ server software is provided with this project.
 ## Location data
 
 If you operate one, you are the data controller for the location data it
-collects — including where the tracked vehicle is driven by an employee, a
+collects - including where the tracked vehicle is driven by an employee, a
 family member or anyone else. Those obligations are yours, as is any consent or
 notification the law where you live requires.
 
@@ -75,7 +75,7 @@ carried out. Running an LTE radio may require type approval where you live.
 
 The licences permit commercial manufacture and sale, but anyone placing a
 product on the market becomes the manufacturer of radio equipment and takes on
-the resulting obligations — UKCA or CE marking and a Declaration of Conformity
+the resulting obligations - UKCA or CE marking and a Declaration of Conformity
 in the UK and EU, FCC equipment authorisation in the US, and UNECE Regulation
 10 for vehicle installation. The nRF9151's modular approval does not transfer
 to a finished product.
@@ -87,7 +87,7 @@ for any other purpose.
 
 Neither I nor any contributor offers any warranty, express or implied, and to
 the fullest extent permitted by law neither I nor any contributor is liable for
-any loss or damage arising from its use — including damage to vehicles or other
+any loss or damage arising from its use - including damage to vehicles or other
 property, personal injury, financial loss or regulatory penalty.
 
 All responsibility for the safety, legality and fitness for purpose of anything
