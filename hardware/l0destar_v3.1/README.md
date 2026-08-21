@@ -42,8 +42,9 @@ See below for a full change summary.
 | Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
 | LT8609#1 | 4.2V output | NOT TESTED | |
 | GPS auxillary 3.3V rail | Switches on enable signal | NOT TESTED | |
-| OBD auxillary 3.3V rail | Switches on OBD-enable signal | NOT TESTED | |
-| OBD Auxillary 12V rail | Switches on OBD-enable signal | NOT TESTED | |
+| CAN auxillary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
+| K-line auxillary 3.3V rail | Switches on K-enable signal | NOT TESTED | |
+| K-line auxillary 12V rail | Switches on K-enable signal | NOT TESTED | |
 | Accelerometer | Operates while awake | NOT TESTED | |
 | Accelerometer | Wake on motion | NOT TESTED | |
 | GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
@@ -123,20 +124,37 @@ occur **
 Connect the pads as required by bridging them with solder or placing a 0R
 resistor. **Make sure the pads that should be unconnected are not connected.**
 
-| Interface | S5R1 | S5R2 | S5R3 | S5R4 | S5R5 | S5R6 | S5R7 |
-|-----------|------|------|------|------|------|------|-------|
-| None      | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN |
-| CAN bus   | CONNECT | OPEN | CONNECT | OPEN | CONNECT | OPEN | OPEN |
-| K-line    | OPEN | CONNECT | OPEN | CONNECT | OPEN | CONNECT | CONNECT |
+| Interface | S5R1 | S5R2 | S5R3 | S5R4 |
+|-----------|------|------|------|------|
+| None      | OPEN | OPEN | OPEN | OPEN |
+| CAN bus   | CONNECT | OPEN | CONNECT | OPEN |
+| K-line    | OPEN | CONNECT | OPEN | CONNECT |
+
+The pads only route the two vehicle bus lines (S1J1 pin 3 and pin 6) to one
+interface or the other. Unlike v3.0 there are no rail-selection pads: CAN and
+K-line each have their own load switch, so PP3V3\_CAN, PP3V3\_K and PP12V\_K
+are generated directly and only the enabled interface is ever powered.
 
 ## Notes
 
  - All caps on the 12V rails must be >= 50V in order to handle transients
  - MCP2518FD with PP3V3\_CAN off - abs max on all I/O is VDD + 0.3V. Firmware
-   must drive CAN\_SCK/SDI/CS low or tri-state them before dropping OBD_ENABLE,
-   or the nRF backfeeds the dead rail through the clamp diodes. Additionally,
-   CAN\_INT's pull-up (S9R2) is on the switched rail, so CAN\_INT floats when
-   the domain is off - enable the nRF internal pulldown on that input
+   must drive CAN\_SCK/SDI/CS low or tri-state them before dropping
+   CAN\_ENABLE, or the nRF backfeeds the dead rail through the clamp diodes.
+   Additionally, CAN\_CS and CAN\_INT have their pull-ups (S9R1, S9R2) on the
+   switched rail, so both float when the domain is off - enable the nRF
+   internal pulldown on those pins
+ - K-line side, now its own domain - K\_ENABLE gates PP3V3\_K and PP12V\_K
+   together. Both K\_TX and K\_SLEEP land on the TJA1027T, which is supplied
+   from PP12V\_K (VBAT, pin 7), so driving either high with the rail down
+   backfeeds it through the transceiver's ESD clamps. K\_TX and K\_RX also
+   carry 10K pull-ups (S10R2, S10R1) to PP3V3\_K, which float when that rail
+   is down. Firmware must take the TJA1027T to sleep (K\_SLEEP low) and then
+   park K\_TX/K\_RX/K\_SLEEP before dropping K\_ENABLE
+ - L\_SEND is not on a switched rail - it gates a 2N7002 (S10Q1) with a 10K
+   pulldown (S10R5) to ground, so it is safe to drive at any time. K\_SLEEP
+   likewise now has a 100K pulldown (S10R6), so the transceiver stays asleep
+   while the nRF is in reset or the pin is parked
  - Indicated voltages and tolerances are the minimum, I generally always buy the
    tightest tolerances and highest voltages possible of everything as it's just
    simpler for managing inventory. Because of this, several of the "example"
@@ -252,7 +270,7 @@ Can be omited if CAN is not required.
 | S9R5 | 1K series damping resistor | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
 | S9R6 | 220R series damping resistor | 0402 220R 5% | [MC00625W04021220R](https://uk.farnell.com/multicomp/mc00625w04021220r/res-220r-1-0-0625w-0402-thick/dp/1358024) | |
 | S9R7 | 220R series damping resistor | 0402 220R 5% | [MC00625W04021220R](https://uk.farnell.com/multicomp/mc00625w04021220r/res-220r-1-0-0625w-0402-thick/dp/1358024) | |
-| S9J1 | 2-pin 2.54mm header | 2-pin 2.54mm header | [68001-402HLF](https://uk.farnell.com/amphenol-communications-solutions/68001-402hlf/conn-header-2pos-1row-2-54mm-th/dp/3881905) | |
+| S9J1 | 2-pin 2.54mm header | 2-pin 2.54mm header | [68001-402HLF](https://uk.farnell.com/amphenol-communications-solutions/68001-402hlf/conn-header-2pos-1row-2-54mm-th/dp/3881905) | CAN termination jumper, in series with S9R3 - fit a shunt only if the tracker is at the end of the bus |
 
 ### Optional: CAN common-mode choke (S9FL1)
 
