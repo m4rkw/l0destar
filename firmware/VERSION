@@ -1,6 +1,1 @@
-# l0destar firmware version — read FOTA.md before bumping.
-VERSION_MAJOR = 0
-VERSION_MINOR = 4
-PATCHLEVEL = 5
-VERSION_TWEAK = 0
-EXTRAVERSION =
+0.4

@@ -224,6 +224,10 @@ static int  s_move_cooldown_secs;
 static int  s_move_idle_secs;
 static bool s_move_needs_gps;
 static int  s_saved_loop_interval = -1;
+/* Ignition state baked into the record currently buffered for sending.
+ * previous_ignition means "what the server has been told", so it is latched
+ * from this rather than from a fresh read — see STATE_SEND. */
+static char s_record_ignition;
 
 void movement_reset(void)
 {
@@ -608,13 +612,16 @@ static void do_ignition_sleep(void)
             LOG_INF("ignition OFF — sending final position");
             use_cached_gps = true;
             read_udp_response = false;
-            if (collect_data(ignition) > 0) {
-                gnss_stop();
+            /* Report even with no cached fix — the point of this record is
+             * the ignition state, not the position. */
+            force_record = true;
+            int have_record = collect_data(ignition);
+            force_record = false;
+            gnss_stop();
+            if (have_record > 0) {
                 send_data();
                 transport_close();
                 data_reset();
-            } else {
-                gnss_stop();
             }
             previous_ignition = ignition;
             s_state = STATE_SLEEP;
@@ -673,7 +680,8 @@ static void do_ignition_sleep(void)
 /* ========================================================================= */
 int main(void)
 {
-    LOG_INF("=== l0destar firmware boot (v%s) ===", fota_version());
+    LOG_INF("=== l0destar firmware boot (v%s, board %s) ===",
+            fota_version(), fota_board_id());
 
 #if defined(CONFIG_APP_PROVISION_MODE)
     /* Provisioning build (prov.conf): bring up the modem library so the AT
@@ -866,13 +874,35 @@ int main(void)
         case STATE_GPS_COLLECT: {
             led_gps_searching();
             if (g_cell.mcc == 0) modem_update_cell_info();
-            int have_fix = collect_data(ignition);
-            if (have_fix) led_gps_fixed();
-            if (!have_fix) {
+
+            /* An ignition change is the one thing that must not wait for a
+             * fix.  Without this the no-fix path below dropped the record and
+             * still advanced previous_ignition, so the transition was gone:
+             * should_send_data() no longer saw it, nothing retried, and the
+             * final ignition-off point never arrived — the common case being
+             * switching off indoors, where a fix is least likely. */
+            force_record = (previous_ignition != -1 &&
+                            ignition != previous_ignition);
+
+            s_record_ignition = ignition;
+            int have_record = collect_data(ignition);
+            force_record = false;
+
+            if (have_record && !last_record_stale) led_gps_fixed();
+            if (!have_record) {
                 LOG_WRN("no fix, skipping send");
                 led_idle();
                 data_reset();
                 s_last_send_ms = k_uptime_get();
+                /* With a transition pending, force_record gets a record
+                 * built from the last known position, so this branch is
+                 * normally a routine no-fix collection and the assignment is
+                 * a no-op.  It is still reached in two cases, and both want
+                 * the assignment: the very first collection (leaving
+                 * previous_ignition at -1 would make should_send_data() spin
+                 * on 60 s GNSS attempts), and a unit with no last known
+                 * position at all, where no valid record can be produced no
+                 * matter how often it retries. */
                 previous_ignition = ignition;
                 s_state = STATE_IDLE;
                 break;
@@ -924,6 +954,7 @@ int main(void)
             /* coast-to-stop: keep sending after ignition off while moving */
             if (!s_coasting &&
                 previous_ignition == 0 && ignition != 0 &&
+                g_gnss.valid &&
                 g_gnss.speed_kmh > COAST_STOP_SPEED_KMH) {
                 s_coasting = true;
                 s_coast_iters = 0;
@@ -939,11 +970,42 @@ int main(void)
                 }
             }
 
-            previous_ignition = ignition;
+            /* previous_ignition is "what the server has been told", so it
+             * takes the state the record carried — not a fresh reading.
+             *
+             * The two differ far more often than it looks.  collect_data()
+             * blocks up to GPS_FIX_TIMEOUT_MS waiting for a fix, and
+             * handle_ignition_state() re-reads the line at the top of every
+             * loop iteration, so with BATCH_SIZE 1 the key routinely turns
+             * between the record being built and this line running.  Taking
+             * the fresh value here marked the server as having been told
+             * "off" when the record it actually received said "on": the
+             * transition was consumed without ever being sent, the state
+             * machine slept, and the drive ended on an ignition-on point at
+             * the parking spot.
+             *
+             * A send that failed is likewise still owed, so it isn't latched
+             * either. */
+            if (last_send_ok) {
+                previous_ignition = s_record_ignition;
+            }
             led_idle();
 
+            /* The key can also turn during send_data() itself. */
+            ignition = (char)ignition_read();
+
             /* state transition */
-            if (ignition != 0 && !s_coasting) {
+            if (previous_ignition != ignition) {
+                /* Ignition changed while that record was being built or sent,
+                 * so the server has not been told.  Go round once more to
+                 * report it before sleeping; force_record in
+                 * STATE_GPS_COLLECT guarantees that pass yields a record even
+                 * if GNSS cannot reacquire indoors. */
+                LOG_INF("ignition changed during send — reporting %s",
+                        ignition == 0 ? "ON" : "OFF");
+                gnss_resume();
+                s_state = STATE_GPS_COLLECT;
+            } else if (ignition != 0 && !s_coasting) {
                 s_state = STATE_SLEEP;
             } else if (!engine_running && !s_coasting) {
                 s_state = STATE_IGNITION_SLEEP;

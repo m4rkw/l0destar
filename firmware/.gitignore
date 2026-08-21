@@ -3,6 +3,12 @@ build_prov/
 build_ifmcu/
 local.conf
 local.overlay
+# Deployed-device registry — contains the PSK.  remote.conf.example is the
+# committed template.
+remote.conf
+build_remote_*/
+# Per-device Kconfig fragments generated from remote.conf by push_fw.sh
+.remote/
 # Makerdiary nRF9151 Connect Kit profile + vendored board definition (used by
 # build.sh when its CMSIS-DAP probe is detected) — board-specific, kept local.
 makerdiary.conf

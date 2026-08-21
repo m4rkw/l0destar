@@ -97,6 +97,30 @@ config APP_BOARD_L0DESTAR_V3_1
 
 endchoice
 
+# Stable identifier for the selected carrier board, published in the FOTA
+# manifest as `board=` and checked by the device before it installs an image
+# (fota.c).  The identity that actually matters for image compatibility is the
+# board plus its fitted interfaces, so the full id appends those flags:
+#
+#     <APP_BOARD_ID>[+can][+kline][+aio]
+#
+# fota.c composes that string at compile time and push_fw.sh composes the same
+# one from the build's .config.  Add a flag here and both need updating.
+config APP_BOARD_ID
+	string
+	default "bench"  if APP_BOARD_BENCH
+	default "v2.1"   if APP_BOARD_L0DESTAR_V2_1
+	default "v2.1m"  if APP_BOARD_L0DESTAR_V2_1_MINI
+	default "v2.5c"  if APP_BOARD_L0DESTAR_V2_5_CAN
+	default "v2.5k"  if APP_BOARD_L0DESTAR_V2_5_KLINE
+	default "v2.5m"  if APP_BOARD_L0DESTAR_V2_5_MICRO
+	default "v2.6c"  if APP_BOARD_L0DESTAR_V2_6_CAN
+	default "v2.6k"  if APP_BOARD_L0DESTAR_V2_6_KLINE
+	default "v2.6m"  if APP_BOARD_L0DESTAR_V2_6_MICRO
+	default "v3.0"   if APP_BOARD_L0DESTAR_V3_0
+	default "v3.1"   if APP_BOARD_L0DESTAR_V3_1
+	default "unknown"
+
 config APP_BOARD_IS_L0DESTAR
 	bool
 	default y if !APP_BOARD_BENCH

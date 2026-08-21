@@ -67,6 +67,11 @@ extern bool  power_reboot;
 extern int   gsm_send_failures;
 extern bool  network_ready;
 extern bool  use_cached_gps;
+/* Build the record even without a GPS fix (last known position, flagged
+ * cl=1).  Set only for ignition changes — see collect_data(). */
+extern bool  force_record;
+/* Set by collect_data(): the record it just built has no live fix behind it. */
+extern bool  last_record_stale;
 extern bool  powered_on;
 extern char  ignition;
 extern int8_t previous_ignition;
@@ -129,6 +134,7 @@ enum fota_ctx {
 };
 
 const char *fota_version(void);        /* APP_VERSION_STRING, e.g. "0.4.0" */
+const char *fota_board_id(void);       /* board + fitted ifaces, e.g. "v3.0+kline" */
 void        fota_request_check(void);  /* force a check now (bare `fota` cmd) */
 void        fota_notify_available(const char *ver);  /* fota=<ver> from the
                                           server response: check only if newer */

@@ -41,10 +41,72 @@ if [[ "$APP_DIR" == *" "* ]]; then
 	fi
 fi
 
-BUILD_DIR="${BUILD_DIR:-$APP_DIR/build}"
+# BUILD_SUBDIR names a build directory relative to APP_DIR — use it rather
+# than an absolute BUILD_DIR so the space-free reroute above still applies
+# (push_fw.sh gives every device its own).
+BUILD_DIR="${BUILD_DIR:-$APP_DIR/${BUILD_SUBDIR:-build}}"
+
+# Personal bench overlay, named relative to APP_DIR.  push_fw.sh points
+# LOCAL_CONF at a per-device fragment generated from remote.conf instead, so an
+# image published to a deployed unit never picks up bench-only settings.
+# LOCAL_CONF= (empty) layers none at all.
+LOCAL_CONF="${LOCAL_CONF-local.conf}"
+if [[ -n "$LOCAL_CONF" && ! -f "$APP_DIR/$LOCAL_CONF" ]]; then
+	echo "Error: LOCAL_CONF=$LOCAL_CONF not found under $APP_DIR." >&2
+	exit 1
+fi
 
 # `-p auto` re-runs cmake when build settings change; pass `-p always` to force a clean build.
 PRISTINE="${PRISTINE:-auto}"
+
+# --- version ---------------------------------------------------------------
+# VERSION holds MAJOR.MINOR and nothing else, so no patch number is ever
+# committed.  Zephyr insists on reading $APP_DIR/VERSION in its own format
+# (cmake/modules/version.cmake hard-errors unless PATCHLEVEL is present, and an
+# absent line silently reuses the previous regex capture), and -DVERSION_FILE
+# does not survive sysbuild's per-image cmake — tested, it built 0.4.0 while
+# pointed at a file saying 42.  So the long form is generated in place for the
+# duration of the build and the short form is put back on the way out.
+#
+# FW_PATCH comes from push_fw.sh, which derives it from what is published on
+# the server.  A bench build gets 0.
+#
+# Both forms are accepted on the way in, so a build killed hard enough to skip
+# the trap self-heals next run instead of leaving the long form behind.
+if grep -q '^VERSION_MAJOR' "$APP_DIR/VERSION" 2>/dev/null; then
+	FW_MAJOR=$(sed -n 's/^VERSION_MAJOR[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$APP_DIR/VERSION" | head -1)
+	FW_MINOR=$(sed -n 's/^VERSION_MINOR[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$APP_DIR/VERSION" | head -1)
+else
+	_v=$(tr -d '[:space:]' < "$APP_DIR/VERSION")
+	FW_MAJOR="${_v%%.*}"
+	FW_MINOR="${_v#*.}"
+	FW_MINOR="${FW_MINOR%%.*}"
+fi
+FW_PATCH="${FW_PATCH:-0}"
+for _f in "$FW_MAJOR" "$FW_MINOR" "$FW_PATCH"; do
+	if ! [[ "$_f" =~ ^[0-9]+$ ]] || [[ "$_f" -gt 255 ]]; then
+		echo "Error: version field '$_f' is not 0-255 (VERSION should read MAJOR.MINOR)." >&2
+		exit 1
+	fi
+done
+
+restore_version() { printf '%s.%s\n' "$FW_MAJOR" "$FW_MINOR" > "$APP_DIR/VERSION"; }
+trap restore_version EXIT INT TERM
+
+printf 'VERSION_MAJOR = %s\nVERSION_MINOR = %s\nPATCHLEVEL = %s\nVERSION_TWEAK = 0\nEXTRAVERSION =\n' \
+	"$FW_MAJOR" "$FW_MINOR" "$FW_PATCH" > "$APP_DIR/VERSION"
+
+# Zephyr puts VERSION on CMAKE_CONFIGURE_DEPENDS, so a fresh mtime every build
+# would re-run cmake every build.  When the generated content is byte-identical
+# to last time, hand back the old mtime instead.
+_vgen="$BUILD_DIR/.version.gen"
+if [[ -f "$_vgen" ]] && cmp -s "$_vgen" "$APP_DIR/VERSION"; then
+	touch -r "$_vgen" "$APP_DIR/VERSION"
+else
+	mkdir -p "$BUILD_DIR"
+	cp "$APP_DIR/VERSION" "$_vgen"
+fi
+echo "Version: $FW_MAJOR.$FW_MINOR.$FW_PATCH"
 
 # --- board profile ---------------------------------------------------------
 # Build for the Makerdiary nRF9151 Connect Kit when its CMSIS-DAP probe is
@@ -56,11 +118,13 @@ if [[ -z "$PROFILE" ]]; then
 	if command -v pyocd >/dev/null 2>&1 && pyocd list 2>/dev/null | grep -qiE 'makerdiary'; then
 		PROFILE=makerdiary
 	else
-		PROFILE=dk
+		# Bench fallback.  The Connect Kit is the usual target here and its
+		# CMSIS-DAP probe doesn't always enumerate, so default to it rather
+		# than the DK.  PROFILE=dk still forces the DK, and push_fw.sh sets
+		# PROFILE explicitly for every deployed device.
+		PROFILE=makerdiary
 	fi
 fi
-
-PROFILE=makerdiary
 
 # Board target per profile (an explicit BOARD=... still wins).
 if [[ -n "$BOARD_OVERRIDE" ]]; then
@@ -76,7 +140,7 @@ echo "Board profile: $PROFILE  (target: $BOARD)"
 # in the build dir; force a clean rebuild when the (profile, board) signature
 # differs from last time.
 MARKER="$BUILD_DIR/.board_profile"
-SIG="$PROFILE|$BOARD"
+SIG="$PROFILE|$BOARD|$LOCAL_CONF"
 if [[ -f "$MARKER" ]]; then
 	LAST="$(cat "$MARKER" 2>/dev/null || true)"
 	if [[ -n "$LAST" && "$LAST" != "$SIG" ]]; then
@@ -104,8 +168,8 @@ if [[ "$PROFILE" == makerdiary ]]; then
 	fi
 fi
 
-if [[ -f "$APP_DIR/local.conf" ]]; then
-	CONF_OVERLAYS+=("local.conf")
+if [[ -n "$LOCAL_CONF" ]]; then
+	CONF_OVERLAYS+=("$LOCAL_CONF")
 fi
 # PROV=1 layers prov.conf on top (AT-host bridge for nRF Cloud onboarding).
 if [[ "${PROV:-}" == "1" && -f "$APP_DIR/prov.conf" ]]; then

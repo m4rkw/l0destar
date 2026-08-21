@@ -2,6 +2,48 @@
 
 ## Unreleased
 
+### Ignition-off telemetry (`src/main.c`, `src/data.c`)
+- **The final ignition-off point is no longer lost to a latching race.**
+  `collect_data()` bakes the ignition state into the record, but `STATE_SEND`
+  then set `previous_ignition` from a *fresh* read of the line.  Those differ
+  routinely: the collect blocks up to `GPS_FIX_TIMEOUT_MS`,
+  `handle_ignition_state()` re-reads every loop iteration, and `BATCH_SIZE` is
+  1, so turning the key any time between the two left the server marked as
+  told "off" while the record it received said "on".  The transition was
+  consumed unsent, the state machine slept, and the drive ended on an
+  ignition-on point at the parking spot.  `previous_ignition` now tracks what
+  the record actually carried, the line is re-read after `send_data()`, and a
+  pending change routes back through `STATE_GPS_COLLECT` instead of to sleep
+- A no-fix record is no longer discarded outright either.  `collect_data()`
+  returned 0 without a fix, and both ignition-off paths advanced
+  `previous_ignition` regardless, so that transition was lost too
+- `force_record` (set only for an ignition change) builds the record from the
+  last known position instead.  At ignition-off that is where the vehicle is;
+  `speed` and `satellites` report 0 rather than stale values, and the cell
+  fields go out with `cl=1`
+- `cl` was previously hardcoded to 0, so the GPS fallback the protocol already
+  described could never actually occur
+- A transition whose send fails no longer advances `previous_ignition`, so it
+  is retried rather than lost to one bad send
+- Coast-to-stop now requires a live fix, so a stale speed can't start it
+- Still dropped if the unit has had no fix at all since boot: the CSV would
+  carry empty lat/lon into the server's `log` row
+
+### Per-device firmware builds (`remote.conf`, `push_fw.sh`, `src/fota.c`)
+- Images are built and published per IMEI, from `remote.conf` rather than
+  `local.conf`, so a bench session's board config can't ship to a deployed
+  unit.  The server resolves `/fw/manifest.txt?imei=` to that device's
+  manifest; a device not listed gets no `fota=` and no update
+- Manifests carry `board=<APP_BOARD_ID>[+can][+kline][+aio]` and the device
+  refuses an image that doesn't match its own build
+- `push_fw.sh` refuses to publish a build carrying bench settings, and reads
+  the server over HTTPS (`/fw/published.txt`) rather than ssh
+- `VERSION` holds `0.4`; the patch number is derived from what is published
+  and never committed
+- Removed a stray `CONFIG_APP_DEBUG_IGNITION=0` from `makerdiary.conf`, which
+  applied to every Connect Kit build including deployed units and was masked
+  on the bench by `local.conf`
+
 ### Over-the-air updates (`src/fota.c`, [FOTA.md](FOTA.md))
 - MCUboot added via `sysbuild.conf`, splitting the 1 MB flash into two 416 KB
   slots. **The first build carrying it must be flashed over SWD** - a unit

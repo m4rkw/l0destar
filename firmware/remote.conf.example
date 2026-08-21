@@ -1,0 +1,51 @@
+# Deployed devices, keyed by IMEI.  Copy to remote.conf (gitignored) and fill
+# in the units you actually have in the field.
+#
+# WHY THIS EXISTS
+# ---------------
+# local.conf describes whatever is on the bench right now — board profile,
+# fitted interfaces, debug overrides.  push_fw.sh used to publish one image
+# built from it to every device, so a bench session spent on, say, CAN would
+# ship a CAN build to a K-line unit in a car.  Nothing downstream catches
+# that: MCUboot checks the signature, not the hardware the image expects.
+#
+# So the fleet is described here instead.  push_fw.sh builds one image per
+# IMEI from this file (local.conf is not layered in at all), publishes each as
+# fw/l0destar-<ver>-<imei>.bin, and writes a matching fw/manifest-<imei>.txt.
+# The server picks the manifest from the ?imei= the device already sends, and
+# the device refuses an image whose board= doesn't match its own build.
+#
+# FORMAT
+# ------
+# INI sections.  Two kinds of line inside a section:
+#
+#   key = value        build metadata, lowercase keys (see below)
+#   CONFIG_FOO=bar     Kconfig fragment line, copied verbatim into the overlay
+#
+# [common] is layered first and applies to every device; the per-IMEI section
+# goes on top and wins.  '#' comments and blank lines are ignored.
+#
+# Metadata keys:
+#   name     label used in push_fw.sh output only (e.g. the vehicle)
+#   profile  dk | makerdiary — selects the west board target, as in build.sh
+#   board    explicit west board target, overrides profile (rarely needed)
+#
+# A device that is not listed here gets no manifest and therefore no update:
+# the server stops advertising fota= to it entirely.  That is deliberate —
+# silence is the safe failure, shipping it a stranger's build is not.
+
+[common]
+# Everything a deployed unit shares.  Keep bench-only settings out: this file
+# is the production build, not a copy of local.conf.
+CONFIG_APP_PSK_HEX="<64 hex chars — same value as local.conf>"
+CONFIG_APP_SERVER_HOST="tracker.example.com"
+CONFIG_APP_ALWAYS_ON=y
+CONFIG_APP_MOVEMENT_ALARM=y
+
+[000000000000000]
+name    = example car
+profile = makerdiary
+CONFIG_APP_BOARD_L0DESTAR_V3_0=y
+CONFIG_APP_BOARD_HAS_CAN=n
+CONFIG_APP_BOARD_HAS_KLINE=y
+CONFIG_APP_RELAY_CONNECTED=y

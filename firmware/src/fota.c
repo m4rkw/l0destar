@@ -49,9 +49,37 @@
 
 LOG_MODULE_REGISTER(fota, CONFIG_APP_LOG_LEVEL);
 
+/* Composite board identity, published in the manifest as `board=`.  Images
+ * built from one source version still differ by carrier board and by which
+ * OBD/AIO interfaces are populated — that combination, not the version, is
+ * what makes an image wrong for a given unit.  push_fw.sh composes the same
+ * string from the build's .config (see Kconfig.boards:APP_BOARD_ID). */
+#if IS_ENABLED(CONFIG_APP_BOARD_HAS_CAN)
+#define BOARD_ID_CAN   "+can"
+#else
+#define BOARD_ID_CAN   ""
+#endif
+#if IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)
+#define BOARD_ID_KLINE "+kline"
+#else
+#define BOARD_ID_KLINE ""
+#endif
+#if IS_ENABLED(CONFIG_APP_BOARD_HAS_AIO)
+#define BOARD_ID_AIO   "+aio"
+#else
+#define BOARD_ID_AIO   ""
+#endif
+#define FOTA_BOARD_ID                                                          \
+    CONFIG_APP_BOARD_ID BOARD_ID_CAN BOARD_ID_KLINE BOARD_ID_AIO
+
 const char *fota_version(void)
 {
     return APP_VERSION_STRING;
+}
+
+const char *fota_board_id(void)
+{
+    return FOTA_BOARD_ID;
 }
 
 #if IS_ENABLED(CONFIG_APP_FOTA)
@@ -418,6 +446,32 @@ int fota_check(enum fota_ctx ctx)
 
     if (manifest_value(s_manifest, "file", s_dl_file, sizeof(s_dl_file)) != 0) {
         LOG_WRN("manifest has no file=");
+        fail_backoff();
+        return -EPROTO;
+    }
+
+    /* The server picks the manifest from the ?imei= in the request, so a
+     * manifest naming a different board means that mapping is wrong or
+     * missing (device not in remote.conf, fallen back to a bench build).
+     * That is precisely the case where installing would leave a unit running
+     * firmware for hardware it doesn't have — refuse rather than brick it.
+     * A manifest with no board= line predates the check and is accepted. */
+    char board[32];
+    switch (manifest_value(s_manifest, "board", board, sizeof(board))) {
+    case 0:
+        if (strcmp(board, FOTA_BOARD_ID) != 0) {
+            LOG_ERR("manifest targets board '%s', this unit is '%s' — refusing",
+                    board, FOTA_BOARD_ID);
+            fail_backoff();
+            return -EPROTO;
+        }
+        break;
+    case -ENOENT:
+        LOG_WRN("manifest has no board= — installing unverified (this is '%s')",
+                FOTA_BOARD_ID);
+        break;
+    default:
+        LOG_WRN("manifest board= malformed");
         fail_backoff();
         return -EPROTO;
     }

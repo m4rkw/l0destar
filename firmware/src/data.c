@@ -17,6 +17,8 @@ LOG_MODULE_REGISTER(data, CONFIG_APP_LOG_LEVEL);
 char  data_current[DATA_LIMIT];
 int   data_index;
 bool  send_int_to_server;
+bool  force_record;
+bool  last_record_stale;
 bool  last_send_ok;
 
 static int  s_battery_warning_status;
@@ -52,6 +54,7 @@ static float battery_sample_with_engine_check(void)
 int collect_data(int ignitionState)
 {
     int have_fix = 0;
+    bool stale = false;
 
     if (use_cached_gps) {
         have_fix = g_gnss.valid;
@@ -64,9 +67,33 @@ int collect_data(int ignitionState)
     }
 
     if (!have_fix) {
-        LOG_WRN("no GPS fix");
-        return 0;
+        /* An ignition change has to reach the server whether or not GNSS can
+         * see the sky, and "parked in a garage" is both when the final point
+         * matters most and when there is no fix to be had.  Dropping the
+         * record also swallowed the transition: the caller updated
+         * previous_ignition regardless, so nothing ever retried it and the
+         * ignition-off point was simply lost.
+         *
+         * So when the caller marks the record as one that must go out, build
+         * it from the last known position instead.  At ignition-off that is
+         * where the vehicle actually is, and cl=1 tells the server the
+         * position is not a fresh fix. */
+        if (!force_record) {
+            LOG_WRN("no GPS fix");
+            return 0;
+        }
+        /* Needs a last known position to fall back to.  With none — a unit
+         * that has not had a fix since boot — the CSV would carry empty
+         * lat/lon straight into the server's `log` row, which is worse than
+         * the missing record.  Rare in practice: this path follows a drive. */
+        if (g_gnss.lat_str[0] == '\0' || g_gnss.lon_str[0] == '\0') {
+            LOG_WRN("no GPS fix and no last known position — record dropped");
+            return 0;
+        }
+        stale = true;
+        LOG_INF("no GPS fix — reporting from last known position");
     }
+    last_record_stale = stale;
 
     float v = battery_sample_with_engine_check();
 
@@ -98,13 +125,16 @@ int collect_data(int ignitionState)
         }
     }
 
-    float speed = g_gnss.speed_kmh;
+    /* Both describe a fix we don't have.  A stale speed would also read as
+     * motion, which is wrong for a vehicle that has just been switched off. */
+    float speed = stale ? 0.0f : g_gnss.speed_kmh;
+    long  sats  = stale ? 0     : g_gnss.sats;
     n = snprintf(&data_current[data_index], remaining,
         "%s,%s,%s,%.2f,%.2f,%.2f,%ld,%ld,%.2f,%d,%lld,%d",
         ts, g_gnss.lat_str, g_gnss.lon_str,
         (double)speed, (double)g_gnss.altitude_m,
         (double)g_gnss.heading_deg,
-        g_gnss.hdop_x10, g_gnss.sats,
+        g_gnss.hdop_x10, sats,
         (double)v,
         (ignitionState == 0) ? 1 : 0,
         k_uptime_get() / 1000,
@@ -152,13 +182,16 @@ int collect_data(int ignitionState)
         if (n > 0) data_index += n;
     }
 
-    /* Cell tower fields — emit on first post-wake packet or as GPS fallback */
-    if (g_cell.valid && g_cell.dirty) {
+    /* Cell tower fields — emit on first post-wake packet or as GPS fallback.
+     * cl=1 is the server's "this position came from the network, not GNSS"
+     * flag; until now it was hardcoded to 0, so the fallback the protocol
+     * already allowed for could never actually happen. */
+    if (g_cell.valid && (g_cell.dirty || stale)) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
-                     ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=0;rat=CATM1",
+                     ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=%d;rat=CATM1",
                      g_cell.mcc, g_cell.mnc,
-                     g_cell.tac, g_cell.cid);
+                     g_cell.tac, g_cell.cid, stale ? 1 : 0);
         if (n > 0) data_index += n;
         g_cell.dirty = false;
     }
