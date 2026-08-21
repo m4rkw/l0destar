@@ -22,8 +22,18 @@ FW_DIR="${FW_DIR:-/var/www/tracker/fw}"
 # path to the server; its listener doubles as the /fw/ HTTP endpoint.  The
 # LAN can't hairpin through the public IP, so verification curls run on the
 # server itself against 127.0.0.1 with the production SNI.
-VERIFY_URL="${VERIFY_URL:-https://tracker.rkw.io:65481}"
-VERIFY_RESOLVE="--resolve tracker.rkw.io:65481:127.0.0.1"
+#
+# The hostname comes from CONFIG_APP_SERVER_HOST in local.conf (gitignored) so
+# no endpoint is baked into the repo.  Override with FW_HOST or VERIFY_URL.
+VERIFY_PORT="${VERIFY_PORT:-65481}"
+FW_HOST="${FW_HOST:-$(sed -n 's/^CONFIG_APP_SERVER_HOST="\(.*\)"$/\1/p' local.conf 2>/dev/null | tail -1)}"
+if [[ -z "$FW_HOST" ]]; then
+    echo "error: no server hostname — set CONFIG_APP_SERVER_HOST in local.conf" >&2
+    echo "       (see QUICKSTART.md) or pass FW_HOST=..." >&2
+    exit 1
+fi
+VERIFY_URL="${VERIFY_URL:-https://${FW_HOST}:${VERIFY_PORT}}"
+VERIFY_RESOLVE="--resolve ${FW_HOST}:${VERIFY_PORT}:127.0.0.1"
 
 BUILD=1
 FORCE=0

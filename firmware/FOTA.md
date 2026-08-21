@@ -1,5 +1,7 @@
 # Over-the-air firmware updates
 
+**Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
+
 The tracker pulls updates; the server never pushes — and it doesn't poll
 either. Every telemetry response carries `fota=<latest>` (appended by
 `_process_telemetry` in the server from `fw/manifest.txt`), the device
@@ -75,13 +77,13 @@ Everything lives on machine `a` in `/var/www/tracker`:
   expects `206` + `Content-Range` for each.
 
 TLS uses the existing private CA: the listener serves `certs/server.{crt,key}`
-(CN=tracker.rkw.io, ECDSA P-256, issued by that CA), and the device trusts it
-via a **dedicated FOTA sec_tag** (`APP_FOTA_SEC_TAG`, default 42) that
-`modem_provision_tls()` fills with `src/ca_cert.h` on first boot.  It is
-deliberately not the telemetry `TLS_SEC_TAG` (1): past DTLS/PSK experiments
-left extra credential types on tag 1 in modem NVM, and a tag mixing PSK and CA
-entries makes certificate-mode TLS `connect()` fail.  No manual provisioning
-needed either way.
+(CN matching `CONFIG_APP_SERVER_HOST`, ECDSA P-256, issued by that CA), and
+the device trusts it via a **dedicated FOTA sec_tag** (`APP_FOTA_SEC_TAG`,
+default 42) that `modem_provision_tls()` fills with `src/ca_cert.h` on first
+boot.  It is deliberately not the telemetry `TLS_SEC_TAG` (1): past DTLS/PSK
+experiments left extra credential types on tag 1 in modem NVM, and a tag
+mixing PSK and CA entries makes certificate-mode TLS `connect()` fail.  No
+manual provisioning needed either way.
 
 One field gotcha worth recording: on mfw 2.0.4 a TLS `connect()` that cannot
 reach the server reports `EINVAL` (22) rather than a timeout — if FOTA fails
@@ -168,7 +170,7 @@ the field can ever be updated again.
 | `APP_FOTA` | `y` | Master switch; pulls in the FOTA libraries |
 | `APP_FOTA_HOST` | `""` | Update host; empty reuses `APP_SERVER_HOST` |
 | `APP_FOTA_PORT` | `65481` | The telemetry TLS port doubles as the fw endpoint |
-| `APP_FOTA_SEC_TAG` | `1` | Modem sec_tag holding the server CA; `-1` = plain HTTP |
+| `APP_FOTA_SEC_TAG` | `42` | Modem sec_tag holding the server CA; `-1` = plain HTTP |
 | `APP_FOTA_MANIFEST_PATH` | `/fw/manifest.txt` | |
 | `APP_FOTA_MIN_BATTERY_MV` | `12000` | Below this, defer the download |
 | `APP_FOTA_REQUIRE_BATTERY_READING` | `n` | Also defer when no INA228 is fitted |

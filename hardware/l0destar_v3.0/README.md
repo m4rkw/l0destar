@@ -11,6 +11,16 @@ as low as possible
 - The RF trace width is calculated using a standard 4-layer stackup at JLCPCB,
   different fabrication processes may require adjustment
 
+## Disclaimer
+
+This is a prototype, not a product. Nothing here is validated or certified,
+the parts lists are examples rather than a verified BOM, and any test results
+recorded below are my own unverified bench observations — repeat the testing
+yourself rather than taking them on trust.
+
+**Before building or installing anything from this repository, read the
+[full disclaimer](../../DISCLAIMER.md).**
+
 ## New features
 
 The CAN and K-line versions have been consolidated in version 3.0. There is now
@@ -135,13 +145,13 @@ resistor. **Make sure the pads that should be unconnected are not connected.**
 | S1J3 | Makerdiary header 2 | 20-pin 2.54mm header | [20-pin pcb header](https://amzn.to/44hTFGN) | |
 | S1R1 | I2C pull-up resistor | 0402 4.7K 5% | [MP003476](https://uk.farnell.com/multicomp-pro/mp003476/res-4k7-1-0-0625w-0402-thick-film/dp/3392645) | |
 | S1R2 | I2C pull-up resistor | 0402 4.7K 5% | [MP003476](https://uk.farnell.com/multicomp-pro/mp003476/res-4k7-1-0-0625w-0402-thick-film/dp/3392645) | |
-| S1R3 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 3 to CAN\_H, see config section |
-| S1R4 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 3 to ISO-9141\_K, see config section |
-| S1R5 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 6 to CAN\_L, see config section |
-| S1R6 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 6 to ISO-9141\_L, see config section |
-| S1R7 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enables PP3V3\_CAN rail, see config section |
-| S1R8 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enables PP3V3\_K rail, see config section |
-| S1R9 | 0402 jumper pads | solder bridge or 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enables PP12V\_K rail, see config section |
+| S1R3 | 0402 jumper pads | 0402 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 3 to CAN\_H, see config section |
+| S1R4 | 0402 jumper pads | 0402 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 3 to ISO-9141\_K, see config section |
+| S1R5 | 0402 jumper pads | 0402 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 6 to CAN\_L, see config section |
+| S1R6 | 0402 jumper pads | 0402 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Connects Molex pin 6 to ISO-9141\_L, see config section |
+| S1R7 | 0402 jumper pads | 0402 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enables PP3V3\_CAN rail, see config section |
+| S1R8 | 0402 jumper pads | 0402 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enables PP3V3\_K rail, see config section |
+| S1R9 | 0402 jumper pads | 0402 0R resistor | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Enables PP12V\_K rail, see config section |
 | S1R10 | 100K pulldown resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | S1R11 | 100K pulldown resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | S1C1 | 220uF buck output capacitor | 1210 220uF 10V 20% X5R | [1210 220UF 25V X5R M](https://www.aliexpress.com/item/1005007293718666.html) | |
@@ -297,6 +307,7 @@ Can be omited if K-line/ISO-9141 is not required
 | All | 10nF RF capacitor | 1 | 0402 >= 25V 10% C0G / NP0 | [GRM1555CYA103JE01D](https://uk.farnell.com/murata/grm1555cya103je01d/cap-mlcc-0-01uf-c0g-np0-35v-0402/dp/4792250) | |
 | All | u.FL cable - LTE | 2 | 50 ohm 35mm | [U.FL-2LPHF6-04N1TV-A-35](https://uk.farnell.com/hirose-hrs/u-fl-2lphf6-04n1tv-a-35/cbl-assy-u-fl-r-a-plug-r-a-plug/dp/4294251) | |
 | All | JST power cable | 1 | Ultra-thin MX1.25 51146 | [10PCS MX1.25 51146 Cable](https://www.aliexpress.com/item/4000586964114.html) | |
+| All | 0402 0R jumper resistor | 7 | 0402 0R | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Config jumpers — fit only those your configuration needs, see board configuration |
 | CAN/ISO-9141 | Reverse-blocking load switch | 1 | Active high 3.3v load switch with reverse blocking | [SiP32431DR3](https://uk.farnell.com/vishay/sip32431dr3-t1ge3/ic-load-switch-1-1v-5-5v-1a-sc70/dp/2361509) | |
 | CAN/ISO-9141 | 1uF 0402 capacitor | 1 | 0402 >= 10V 10% X7R | [KAM05CR71A105KH](https://uk.farnell.com/kyocera-avx/kam05cr71a105kh/capacitor-mlcc-1uf-x7r-10v-0402/dp/4365709) | |
 | CAN/ISO-9141 | 100nF 0402 capacitor | 1 | 0402 >= 25V 10% X7R | [MC0402B104K250CT](https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759) | |
@@ -309,6 +320,7 @@ Can be omited if K-line/ISO-9141 is not required
 | CAN | 40MHz crystal | 1 | ABM8G-40.000MHZ-18-D2Y-T | [ABM8G-40.000MHZ-18-D2Y-T](https://uk.farnell.com/abracon/abm8g-40-000mhz-18-d2y-t/crystal-40mhz-18pf-3-2mm-x-2-5mm/dp/3819752) | |
 | CAN | 120R 2010 resistor | 1 | 2010 120R 5% | [RC2010JK-07120RL](https://uk.farnell.com/yageo/rc2010jk-07120rl/res-120r-5-0-75w-2010-thick-film/dp/3496395) | |
 | CAN | 10K 0402 resistor | 3 | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
+| CAN | 2-pin 2.54mm header | 1 | 2-pin 2.54mm header | [68001-402HLF](https://uk.farnell.com/amphenol-communications-solutions/68001-402hlf/conn-header-2pos-1row-2-54mm-th/dp/3881905) | |
 | ISO-9141 | 12V load switch | 1 | Active high 12v load switch | [ITS4060SSJNXUMA1](https://uk.farnell.com/infineon/its4060ssjnxuma1/power-load-sw-aec-q100-13-5v-soic/dp/2710048) | |
 | ISO-9141 | 1nF capacitor | 1 | 0402 >= 50V 10% X7R | [0402B102K500CT](https://uk.farnell.com/multicomp-pro/0402b102k500ct/cap-1000pf-50v-10-x7r-0402/dp/2496767) | |
 | ISO-9141 | 220nF capacitor | 1 | 0603 >= 50V 10% X7R | [GRM188R71H224KAC4D](https://uk.farnell.com/murata/grm188r71h224kac4d/cap-0-22-f-50v-10-x7r-0603/dp/2688525) | |

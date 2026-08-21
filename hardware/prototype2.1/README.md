@@ -23,6 +23,16 @@ Features:
  - 2200uF bulk cap on the 12V supply to keep it alive during turnover
  - Six general-purpose digital AIO pins capable of handling 0-30V
 
+## Disclaimer
+
+This is a prototype, not a product. Nothing here is validated or certified,
+the parts lists are examples rather than a verified BOM, and any test results
+recorded below are my own unverified bench observations — repeat the testing
+yourself rather than taking them on trust.
+
+**Before building or installing anything from this repository, read the
+[full disclaimer](../../DISCLAIMER.md).**
+
 ## Power supply
 
 The Connect Kit can be powered through VBUS which would be much simpler as it
@@ -65,7 +75,7 @@ power.
 | 0805 10uF | 0805 10uF ceramic cap | 2 |
 | 0805 22uF | 0805 22uF ceramic cap | 2 |
 | 220uF | 220uF SMD capacitor | 1 |
-| [EEEFK1E222AM 2200uF SMD 25V capacitor](https://uk.farnell.com/panasonic/eeefk1e222am/cap-2200-f-25v-radial-smd/dp/2326204) 2200uF | 1 |
+| [EEEFK1E222AM 2200uF SMD 25V capacitor](https://uk.farnell.com/panasonic/eeefk1e222am/cap-2200-f-25v-radial-smd/dp/2326204) | 2200uF capacitor | 1 |
 | 0603 LED | 0603 status LED | 3 |
 | 1N4148W | 1N4148W diode | 2 |
 | SMBJ30A | SMBJ30A TVS diode | 6 |
@@ -74,8 +84,7 @@ power.
 | A03407A | A03407A P-channel MOSFET | 2 |
 | 2N7002 | 2N7002 N-channel MOSFET | 6 |
 | DMG3415U | DMG3415U P-channel MOSFET | 2 |
-| [ABM8G-40.000MHZ-18-D2Y-T](https://uk.farnell.com/abracon/abm8g-40-000mhz-18-d2y-t/crystal-40mhz-18pf-3-2mm-x-2-5mm/dp/3819752)
-| 40MHz crystal (CAN interface) | 1 |
+| [ABM8G-40.000MHZ-18-D2Y-T](https://uk.farnell.com/abracon/abm8g-40-000mhz-18-d2y-t/crystal-40mhz-18pf-3-2mm-x-2-5mm/dp/3819752) | 40MHz crystal (CAN interface) | 1 |
 | [XFL4020-222ME](https://uk.farnell.com/coilcraft/xfl4020-222mec/inductor-2-2uh-8a-20-pwr-38mhz/dp/2289216) | Power inductor, buck converter | 2 |
 | [0603HP-68NXGLU](https://uk.farnell.com/coilcraft/0603hp-68nxglu/inductor-68nh-2-2ghz-rf-smd/dp/2286163) | Wirewound inductor, antenna, 47-100 nH, SRF > 2 GHz | 1 |
 | [BLM18KG601SN1D](https://uk.farnell.com/murata/blm18kg601sn1d/ferrite-bead-0603-600r-1-3a/dp/1781094) | Ferrite bead 600R | 1 |

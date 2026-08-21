@@ -1,5 +1,7 @@
 # l0destar firmware
 
+**Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
+
 Automotive telemetry tracker firmware for the **Nordic nRF9151** SiP (LTE-M +
 GNSS), built on Zephyr RTOS via the nRF Connect SDK (NCS). It reports position,
 speed, battery and ignition state to a back-end over an encrypted link, sleeps

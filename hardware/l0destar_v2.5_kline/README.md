@@ -2,8 +2,6 @@
 
 ## Overview
 
-**NOTE: THIS HAS NOT YET BEEN TESTED, USE AT YOUR OWN RISK**
-
 - This is a prototype l0destar vehicle tracker PCB designed to be
   hand-solderable (hot air required)
 - It makes use of the [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) to provide the LTE and GPS
@@ -12,6 +10,16 @@ functions
 as low as possible
 - The RF trace width is calculated using a standard 4-layer stackup at JLCPCB,
   different fabrication processes may require adjustment
+
+## Disclaimer
+
+This is a prototype, not a product. Nothing here is validated or certified,
+the parts lists are examples rather than a verified BOM, and any test results
+recorded below are my own unverified bench observations — repeat the testing
+yourself rather than taking them on trust.
+
+**Before building or installing anything from this repository, read the
+[full disclaimer](../../DISCLAIMER.md).**
 
 ## Test status
 
@@ -125,7 +133,7 @@ power.
 | S6R2 | Output voltage divider resistor | 0402 226K 1% | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V |
 | S6R3 | Output voltage divider resistor | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V |
 | S6R4 | Oscillator frequency resistor | 0402 18.2K 1% | [RC0402FR-0718K2L](https://uk.farnell.com/yageo/rc0402fr-0718k2l/res-18k2-1-0-0625w-0402-thick/dp/3495542) | 18.2K == 2MHz |
-| S6R5 | Output voltage divider resistor | 0402 226K 1% | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R6/S6R5) == 5V |
+| S6R5 | Output voltage divider resistor | 0402 187K 1% | [CRCW0402187KFKED](https://uk.farnell.com/vishay/crcw0402187kfked/res-187k-0-1w-75v-0402-thick-film/dp/2932022) | VOUT == 0.782V x (1 + S6R6/S6R5) == 5V |
 | S6R6 | Output voltage divider resistor | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | VOUT == 0.782V x (1 + S6R6/S6R5) == 4.24V |
 | S7Q1 | Aux power MOSFET | 2N7002 SOT-23 | [2N7002](https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174) | |
 | S7Q2 | Aux power MOSFET | DMG3415U SOT-23 | [DMG3415UQ-7](https://uk.farnell.com/diodes-inc/dmg3415uq-7/mosfet-p-ch-20v-4a-sot-23/dp/3943490) | |
@@ -201,7 +209,7 @@ power.
 | 187K 0402 resistor | 1 | 0402 187K 1% | [CRCW0402187KFKED](https://uk.farnell.com/vishay/crcw0402187kfked/res-187k-0-1w-75v-thick-film-0402/dp/4844021) | |
 | 226K 0402 resistor | 1 | 0402 226K 1% | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V |
 | 470K 0402 resistor | 2 | 0402 470K 1% | [ERJ2RKF4703X](https://uk.farnell.com/panasonic/erj2rkf4703x/res-470k-1-0-1w-0402-thick-film/dp/2302916) | |
-| 1M 0402 resistor | 5 | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
+| 1M 0402 resistor | 6 | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | 10pF 0402 capacitor | 2 | 0402 >= 25V 10% X7R | [C0402C100K5RACTU](https://uk.farnell.com/kemet/c0402c100k5ractu/cap-10pf-50v-10-x7r-0402/dp/2821254) | |
 | 100pF 0402 RF capacitor | 2 | 0402 >= 25V 1% C0G / NP0 | [AC0402FRNPO9BN101](https://uk.farnell.com/yageo/ac0402frnpo9bn101/cap-100pf-50v-mlcc-0402/dp/4166091) | |
 | 10nF 0402 RF capacitor | 1 | 0402 >= 25V 5% C0G / NP0 | [GRM1555CYA103JE01D](https://uk.farnell.com/murata/grm1555cya103je01d/cap-mlcc-0-01uf-c0g-np0-35v-0402/dp/4792250) | |

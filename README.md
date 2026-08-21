@@ -6,13 +6,19 @@ Inspired by the [Geolink Opentracker](https://github.com/geolink/opentracker/) a
 
 ## Status
 
-Prototyping / design phase. The v2.1 board layout worked on a bench, testing of newer versions is pending and should begin soon.
+Prototyping / design phase. The v2.1 layout worked on a bench, and v2.6 (CAN, K-line and micro) and v3.0 have since been built and tested working, with every recorded bench test passing — see the test status table in each board's README. v3.1 is designed but untested, pending arrival of the first batch of boards.
+
+## Disclaimer
+
+This is a prototype, not a product. Nothing here is validated, qualified or certified, the parts lists are examples rather than a verified BOM, and any test results are my own unverified bench observations. All responsibility for anything built from it rests with the person building and installing it.
+
+**Before building, installing or relying on any of this, read the [full disclaimer](DISCLAIMER.md).**
 
 ## What it is
 
 - **Mission** — the world's best fully open-source vehicle tracker, no profit motive. See [`MISSION.md`](MISSION.md).
 - **Goals** — KiCad reference design, open enclosure CAD, open firmware and server, weeks of standby on a typical car battery, 1 Hz GNSS, LTE-M/NB-IoT, CAN + K-Line diagnostics, accelerometer-driven wake. Full list in [`GOALS.md`](GOALS.md).
-- **Technology choices** — Nordic nRF9151 SiP (LTE-M/NB-IoT + GNSS), nPM1300 PMIC, LT8609S pre-regulator, ASM330LHHX-Q1 IMU, TCAN4550-Q1 CAN, L9637D K-Line. Rationale and trade-offs in [`TECHNOLOGY.md`](TECHNOLOGY.md).
+- **Technology choices** — Nordic nRF9151 SiP (LTE-M/NB-IoT + GNSS), LT8609A buck, ASM330LHHX IMU, MCP2518FD + MAX33041 CAN, TJA1027T K-Line. Rationale and trade-offs in [`TECHNOLOGY.md`](TECHNOLOGY.md).
 
 ## Repository layout
 

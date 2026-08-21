@@ -1,5 +1,7 @@
 # l0destar assembly guide
 
+**Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
+
 This document describes how to assemble a l0destar tracker PCB.
 
 At some point I will probably make a video but this guide will have to do for
