@@ -1,5 +1,7 @@
 # CAN Bus Test
 
+**Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
+
 Verifies CAN TX/RX on v2.6C boards via a PING/PONG exchange between the
 MCP2518FD and a host-side canable2 USB adapter.
 

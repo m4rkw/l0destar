@@ -1,5 +1,7 @@
 # l0destar hardware
 
+**Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
+
 ## Overview
 
 KiCad PCB designs for the l0destar vehicle tracker. All boards are built around

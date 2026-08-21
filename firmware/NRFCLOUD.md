@@ -1,5 +1,7 @@
 # nRF Cloud
 
+**Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
+
 ## How to set up GPS assist
 
 1. Build the firmware in provisioning mode

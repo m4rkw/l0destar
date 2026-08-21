@@ -22,6 +22,16 @@ Features:
  - ASM330LHHXG1TR 6-axis IMU gyro/accelerometer
  - 2200uF bulk cap on the 12V supply to keep it alive during turnover
 
+## Disclaimer
+
+This is a prototype, not a product. Nothing here is validated or certified,
+the parts lists are examples rather than a verified BOM, and any test results
+recorded below are my own unverified bench observations — repeat the testing
+yourself rather than taking them on trust.
+
+**Before building or installing anything from this repository, read the
+[full disclaimer](../../DISCLAIMER.md).**
+
 ## Status
 
 This board has been fully tested on a bench and seems to perform well. It hasn't
@@ -68,7 +78,7 @@ power.
 | 0805 4.7uF | 0805 4.7uF ceramic cap | 1 |
 | 0805 22uF | 0805 22uF ceramic cap | 1 |
 | 220uF | 220uF SMD capacitor | 1 |
-| [EEEFK1E222AM 2200uF SMD 25V capacitor](https://uk.farnell.com/panasonic/eeefk1e222am/cap-2200-f-25v-radial-smd/dp/2326204) 2200uF | 1 |
+| [EEEFK1E222AM 2200uF SMD 25V capacitor](https://uk.farnell.com/panasonic/eeefk1e222am/cap-2200-f-25v-radial-smd/dp/2326204) | 2200uF capacitor | 1 |
 | 0603 LED | 0603 status LED | 5 |
 | 1N4148W | 1N4148W diode | 2 |
 | SMBJ30A | SMBJ30A TVS diode | 2 |

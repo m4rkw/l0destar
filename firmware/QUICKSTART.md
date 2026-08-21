@@ -1,5 +1,7 @@
 # l0destar tracker — quickstart
 
+**Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
+
 ## 1. Patch the IF MCU power firmware
 
 The Makerdiary Connect Kit's nRF52820 IF MCU (USB bridge + CMSIS-DAP) draws
@@ -70,7 +72,7 @@ selection:
 CONFIG_APP_BOARD_L0DESTAR_V2_6_KLINE=y
 
 # Server hostname (DTLS endpoint — server setup documented separately)
-CONFIG_APP_SERVER_HOST="tracker.rkw.io"
+CONFIG_APP_SERVER_HOST="tracker.example.com"
 
 # Device PSK — 32-byte key as 64 hex characters.
 # All-zeros disables sending; generate a real key per device.

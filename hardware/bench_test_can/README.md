@@ -22,6 +22,16 @@ the dev kit:
    board
  - MikroBUS headers wired for the MIKROE-2379 CAN-FD ClickBoard
 
+## Disclaimer
+
+This is a prototype, not a product. Nothing here is validated or certified,
+the parts lists are examples rather than a verified BOM, and any test results
+recorded below are my own unverified bench observations — repeat the testing
+yourself rather than taking them on trust.
+
+**Before building or installing anything from this repository, read the
+[full disclaimer](../../DISCLAIMER.md).**
+
 ## Power supply
 
 The 12V input goes via an initial relay stage which gates power to the rest of

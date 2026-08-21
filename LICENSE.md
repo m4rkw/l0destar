@@ -21,6 +21,22 @@ All four licenses are **permissive**: you may use, modify, fabricate, host, embe
 - `CERN-OHL-P-2.0` is the permissive variant of the CERN Open Hardware Licence — purpose-built for hardware design files. It handles manufacturing rights, documentation, and notice requirements in a way generic software licences do not.
 - `CC-BY-4.0` keeps documentation and enclosure CAD attribution-only, dropping share-alike obligations so the material can be freely incorporated into derivative works and other documentation.
 
+## Warranty and liability
+
+All four licences provide the material "as is", disclaim warranties and limit liability. The operative text is in the licence files:
+
+| Licence | Disclaimer of warranty | Limitation of liability |
+|---|---|---|
+| `Apache-2.0` | Section 7 | Section 8 |
+| `CERN-OHL-P-2.0` | Section 5.1 | Section 5.2 |
+| `CC-BY-4.0` | Section 5(a) | Section 5(b) |
+
+In summary: there is no warranty of any kind, express or implied, including as to merchantability, satisfactory quality, fitness for a particular purpose or non-infringement, and neither the licensor nor any contributor is liable for any damages arising from use of the material. The entire risk as to quality and performance rests with you.
+
+Nothing in these licences, or in the [project disclaimer](DISCLAIMER.md), excludes or limits liability that cannot lawfully be excluded or limited, including liability for death or personal injury caused by negligence.
+
+This project is hardware intended to be wired into vehicles, and radio equipment that must be authorised before it is placed on any market. The permissive licences above grant you the right to manufacture and sell derivatives; they do not discharge the regulatory obligations that come with doing so. See the [project disclaimer](DISCLAIMER.md).
+
 ## SPDX headers
 
 Every source file should declare its license using an SPDX header. Examples:

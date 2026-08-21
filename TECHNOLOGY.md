@@ -10,18 +10,23 @@
 - Small form factor.
 - Hardware-accelerated cryptography.
 
-## Power pre-regulator: ADI LT8609S buck converter
-- 2.5 µA Iq is ~5–10× better than alternatives — contributes essentially zero to the sleep budget, leaving all headroom for the rest of the system.
-- Silent Switcher 2 EMI performance matters when you have an LTE-M modem 20 mm away.
+## Buck converter: ADI LT8609A
+
+The boards fit the LT8609A (`LT8609AIMSE`); the LT8609S was the original
+selection and the rationale below is what carried the LT8609 family.
+
+- Very low Iq — contributes essentially zero to the sleep budget, leaving all headroom for the rest of the system.
 - 42 V Vin gives clean margin over typical ISO 7637-2 suppressed load dump (~35 V).
-- 3A output — modem TX peak + nPM1300 charging at 800 mA + system rails fits comfortably.
+- Output current comfortably covers the modem TX peak plus the system rails.
 - Relatively low cost.
 
-## Power regulator: Nordic Semiconductor nPM1300
-- Designed for nRF91 + cellular — built to handle ~600 mA TX bursts from LTE-M/NB-IoT without rail collapse. The nRF9151 DK uses it as the reference power solution.
-- Battery backup mostly solved: integrated Li-Ion/LiPo charger (up to 800 mA, JEITA-compliant) plus fuel gauge support.
-- ~600 nA ship mode and dual high-efficiency bucks.
-- First-class support in nRF Connect SDK / Zephyr — drivers, fuel gauge library, sample apps.
+## Power regulator: not fitted
+
+The nPM1300 was the original selection but is not used on any current board.
+The Makerdiary nRF9151 Connect Kit carries its own regulation, so the boards
+feed its battery connector from the 4.2 V buck through an LM66100 ideal diode.
+That keeps USB-C connectable at any time for firmware updates without
+disconnecting vehicle power, which powering VBUS directly would not allow.
 
 ## Accelerometer: ST ASM330LHHX-Q1
 - Automotive 6-axis IMU (3-axis accel + 3-axis gyro), AEC-Q100 grade 1.
@@ -29,12 +34,22 @@
 - Built-in finite-state machine and machine-learning core for offloaded event classification (harsh-braking, towing, etc.) — keeps the nRF9151 asleep more.
 - Tuned for automotive sensor fusion and dead-reckoning use cases.
 
-## CAN interface: TI TCAN4550-Q1
-- Integrated controller + transceiver + SPI in one 5×5 QFN — halves BOM line count and layout area for the CAN block.
-- AEC-Q100 grade 1.
-- Built-in ±58 V bus fault protection and ESD.
-- Sleep mode with wake-on-CAN (any dominant pulse) and selective wake on configured frame IDs.
-- Zephyr driver upstream (tcan4x5x).
+## CAN interface: Microchip MCP2518FD + transceiver
 
-## ISO-9141 K-Line: ST L9637D
-- Dedicated K-Line transceiver IC for ISO-9141 / ISO 14230 (KWP2000) vehicle diagnostics interface.
+The TCAN4550-Q1 was the original selection. The boards instead use a separate
+MCP2518FD controller over SPI with a discrete transceiver — a TCAN334GDR on
+v2.5C/v2.6C, changed to a MAX33041EASA+ from v3.0 for more robust transient
+protection, with a pulldown on STBY so the transceiver defaults to normal mode
+instead of floating.
+
+- CAN FD controller with a mature Zephyr driver (mcp251xfd).
+- Controller sleep drives the transceiver standby pin via `IOCON.XSTBYEN`, leaving the block at roughly 10 µA.
+- Splitting controller and transceiver allows the transceiver to be chosen for bus robustness independently of the controller.
+
+## ISO-9141 K-Line: NXP TJA1027T
+
+The L9637D is a dedicated K-Line transceiver for ISO-9141 / ISO 14230
+(KWP2000) diagnostics and is what v2.5K and v2.6K fit. From v3.0 it was
+replaced by a TJA1027T LIN transceiver, which dramatically simplifies the
+circuit — the separate 5 V buck converter and level shifter are no longer
+needed.
