@@ -2910,7 +2910,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0805 22uF 10V 20% X7T"
+		(property "Value" "0805 22uF 10V 20% X7R"
 			(at 158.496 99.06 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4249,7 +4249,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "0402 10pF 10V X7R"
+		(property "Value" "0402 10pF 10V C0G/NP0"
 			(at 141.478 82.55 90)
 			(show_name no)
 			(do_not_autoplace no)

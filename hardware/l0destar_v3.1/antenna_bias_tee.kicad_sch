@@ -829,280 +829,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "PESD5V0X1BL_315:PESD5V0X1BL,315"
-			(pin_names
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(in_pos_files yes)
-			(duplicate_pin_numbers_are_jumpers no)
-			(property "Reference" "D"
-				(at 15.24 8.89 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(property "Value" "PESD5V0X1BL,315"
-				(at 15.24 6.35 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(property "Footprint" "PESD5V0S1BL315"
-				(at 15.24 -93.65 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PESD5V0X1BL.pdf"
-				(at 15.24 -193.65 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(property "Description" "PESD5V0X1BL - Ultra low capacitance bidirectional ESD protection diode"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Height" "0"
-				(at 15.24 -393.65 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(property "Farnell Part Number" ""
-				(at 15.24 -493.65 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(property "Farnell Price/Stock" ""
-				(at 15.24 -593.65 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(property "Manufacturer_Name" "Nexperia"
-				(at 15.24 -693.65 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(property "Manufacturer_Part_Number" "PESD5V0X1BL,315"
-				(at 15.24 -793.65 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left bottom)
-				)
-			)
-			(symbol "PESD5V0X1BL,315_1_1"
-				(polyline
-					(pts
-						(xy 5.08 2.54) (xy 5.08 -2.54)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 5.08 2.54) (xy 10.16 0)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 10.16 0) (xy 5.08 -2.54)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 10.16 0) (xy 15.24 -2.54)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 10.16 -4.572) (xy 9.144 -5.08)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 10.16 -4.572) (xy 10.16 4.572)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 11.176 5.08) (xy 10.16 4.572)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 15.24 2.54) (xy 10.16 0)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 15.24 2.54) (xy 15.24 -2.54)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(pin passive line
-					(at 0 0 0)
-					(length 5.08)
-					(name "K1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 20.32 0 180)
-					(length 5.08)
-					(name "K2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "SMA-J-P-H-RA-TH1:SMA-J-P-H-RA-TH1"
 			(pin_names
 				(offset 1.016)
@@ -1539,6 +1265,207 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "TPD1E05U06DPYR:TPD1E05U06DPYR"
+			(pin_names
+				(offset 1.016)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "D"
+				(at -12.7 6.08 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left bottom)
+				)
+			)
+			(property "Value" "TPD1E05U06DPYR"
+				(at -12.7 -9.08 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left bottom)
+				)
+			)
+			(property "Footprint" "TPD1E05U06DPYR:DIO_TPD1E05U06DPYR"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "0.5-pF, 5.5-V, ±12-kV ESD protection diode in 0402 package for High Speed Interfaces"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "MF" "Texas Instruments"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "Package" "X1SON-2 Texas Instruments"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "Price" "None"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "SnapEDA_Link" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=snap"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "MP" "TPD1E05U06DPYR"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "Availability" "In Stock"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "Check_prices" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=eda"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(symbol "TPD1E05U06DPYR_0_0"
+				(rectangle
+					(start -12.7 -5.08)
+					(end 12.7 5.08)
+					(stroke
+						(width 0.41)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(pin bidirectional line
+					(at -17.78 2.54 0)
+					(length 5.08)
+					(name "I/O"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 17.78 2.54 180)
+					(length 5.08)
+					(name "GND"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "power:GND"
 			(power global)
 			(pin_numbers
@@ -1656,50 +1583,56 @@
 		)
 	)
 	(junction
-		(at 73.025 82.55)
+		(at 72.39 98.425)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "159c3ce4-8904-4ca8-b04a-c9c43ae76d35")
 	)
 	(junction
-		(at 142.24 49.53)
+		(at 141.605 65.405)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "28a9dd87-d22f-4a84-b1bd-074bc9e88c83")
 	)
 	(junction
-		(at 99.06 83.82)
+		(at 98.425 99.695)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "6ff68693-b09a-4724-baa2-4312452295c2")
 	)
 	(junction
-		(at 78.105 91.44)
+		(at 77.47 107.315)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "8b85b609-c7a9-42e5-bd22-f8f21edf3c0b")
 	)
 	(junction
-		(at 103.505 49.53)
+		(at 69.215 25.4)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "9ccfb6c9-a133-4158-b8c5-f80e2e4dfbd0")
+	)
+	(junction
+		(at 102.87 65.405)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "af09265c-3875-4371-99e0-9953190668ce")
 	)
 	(junction
-		(at 73.025 71.12)
+		(at 72.39 86.995)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "c330d4b1-8dc0-495b-9c6e-31f270eb76fc")
 	)
 	(junction
-		(at 73.025 49.53)
+		(at 72.39 65.405)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "d6eb78c2-6a4d-4fbb-87a9-931f443832d9")
 	)
 	(wire
 		(pts
-			(xy 38.735 86.36) (xy 38.735 71.12)
+			(xy 38.1 102.235) (xy 38.1 86.995)
 		)
 		(stroke
 			(width 0)
@@ -1709,7 +1642,7 @@
 	)
 	(wire
 		(pts
-			(xy 179.07 63.5) (xy 179.07 68.58)
+			(xy 178.435 79.375) (xy 178.435 84.455)
 		)
 		(stroke
 			(width 0)
@@ -1719,23 +1652,23 @@
 	)
 	(wire
 		(pts
-			(xy 99.06 83.82) (xy 99.06 86.36)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "0d78a18d-f66b-4fd4-ac7a-a9aad813ade2")
-	)
-	(wire
-		(pts
-			(xy 142.24 49.53) (xy 142.24 55.88)
+			(xy 141.605 65.405) (xy 141.605 71.755)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "0e11fc2e-962c-4ea4-829e-9b7645f843b8")
+	)
+	(wire
+		(pts
+			(xy 60.325 25.4) (xy 69.215 25.4)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "18765485-99cc-47c6-a883-95522a5d8ffe")
 	)
 	(wire
 		(pts
@@ -1749,7 +1682,7 @@
 	)
 	(wire
 		(pts
-			(xy 103.505 49.53) (xy 73.025 49.53)
+			(xy 102.87 65.405) (xy 72.39 65.405)
 		)
 		(stroke
 			(width 0)
@@ -1759,7 +1692,7 @@
 	)
 	(wire
 		(pts
-			(xy 99.06 83.82) (xy 114.3 83.82)
+			(xy 98.425 99.695) (xy 113.665 99.695)
 		)
 		(stroke
 			(width 0)
@@ -1769,7 +1702,17 @@
 	)
 	(wire
 		(pts
-			(xy 73.025 66.04) (xy 73.025 71.12)
+			(xy 104.775 41.91) (xy 106.045 41.91)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2ab27454-5fd3-4dae-8350-7e7bd058e108")
+	)
+	(wire
+		(pts
+			(xy 72.39 81.915) (xy 72.39 86.995)
 		)
 		(stroke
 			(width 0)
@@ -1789,7 +1732,7 @@
 	)
 	(wire
 		(pts
-			(xy 78.105 91.44) (xy 78.105 96.52)
+			(xy 77.47 107.315) (xy 77.47 112.395)
 		)
 		(stroke
 			(width 0)
@@ -1799,7 +1742,7 @@
 	)
 	(wire
 		(pts
-			(xy 86.995 81.28) (xy 86.995 91.44)
+			(xy 86.36 97.155) (xy 86.36 107.315)
 		)
 		(stroke
 			(width 0)
@@ -1809,7 +1752,17 @@
 	)
 	(wire
 		(pts
-			(xy 103.505 55.88) (xy 103.505 49.53)
+			(xy 98.425 99.695) (xy 98.425 117.475)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4d4d596d-530b-4619-91b2-0092ec97e4df")
+	)
+	(wire
+		(pts
+			(xy 102.87 71.755) (xy 102.87 65.405)
 		)
 		(stroke
 			(width 0)
@@ -1819,7 +1772,7 @@
 	)
 	(wire
 		(pts
-			(xy 67.945 22.86) (xy 65.405 22.86)
+			(xy 77.47 22.86) (xy 65.405 22.86)
 		)
 		(stroke
 			(width 0)
@@ -1829,7 +1782,17 @@
 	)
 	(wire
 		(pts
-			(xy 70.485 82.55) (xy 73.025 82.55)
+			(xy 100.965 117.475) (xy 98.425 117.475)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "596a3903-d93f-4694-92b7-cd7a78d06436")
+	)
+	(wire
+		(pts
+			(xy 69.85 98.425) (xy 72.39 98.425)
 		)
 		(stroke
 			(width 0)
@@ -1839,7 +1802,7 @@
 	)
 	(wire
 		(pts
-			(xy 66.675 49.53) (xy 73.025 49.53)
+			(xy 66.04 65.405) (xy 72.39 65.405)
 		)
 		(stroke
 			(width 0)
@@ -1849,7 +1812,7 @@
 	)
 	(wire
 		(pts
-			(xy 142.24 63.5) (xy 142.24 68.58)
+			(xy 141.605 79.375) (xy 141.605 84.455)
 		)
 		(stroke
 			(width 0)
@@ -1859,7 +1822,7 @@
 	)
 	(wire
 		(pts
-			(xy 73.025 83.82) (xy 99.06 83.82)
+			(xy 72.39 99.695) (xy 98.425 99.695)
 		)
 		(stroke
 			(width 0)
@@ -1869,7 +1832,7 @@
 	)
 	(wire
 		(pts
-			(xy 142.24 49.53) (xy 179.07 49.53)
+			(xy 141.605 65.405) (xy 178.435 65.405)
 		)
 		(stroke
 			(width 0)
@@ -1879,7 +1842,7 @@
 	)
 	(wire
 		(pts
-			(xy 78.105 91.44) (xy 86.995 91.44)
+			(xy 77.47 107.315) (xy 86.36 107.315)
 		)
 		(stroke
 			(width 0)
@@ -1899,7 +1862,7 @@
 	)
 	(wire
 		(pts
-			(xy 73.025 83.82) (xy 73.025 82.55)
+			(xy 72.39 99.695) (xy 72.39 98.425)
 		)
 		(stroke
 			(width 0)
@@ -1909,7 +1872,7 @@
 	)
 	(wire
 		(pts
-			(xy 73.025 82.55) (xy 73.025 71.12)
+			(xy 72.39 98.425) (xy 72.39 86.995)
 		)
 		(stroke
 			(width 0)
@@ -1919,7 +1882,7 @@
 	)
 	(wire
 		(pts
-			(xy 103.505 49.53) (xy 142.24 49.53)
+			(xy 102.87 65.405) (xy 141.605 65.405)
 		)
 		(stroke
 			(width 0)
@@ -1929,7 +1892,7 @@
 	)
 	(wire
 		(pts
-			(xy 32.385 49.53) (xy 38.735 49.53)
+			(xy 31.75 65.405) (xy 38.1 65.405)
 		)
 		(stroke
 			(width 0)
@@ -1939,7 +1902,7 @@
 	)
 	(wire
 		(pts
-			(xy 179.07 49.53) (xy 179.07 55.88)
+			(xy 178.435 65.405) (xy 178.435 71.755)
 		)
 		(stroke
 			(width 0)
@@ -1959,7 +1922,7 @@
 	)
 	(wire
 		(pts
-			(xy 38.735 71.12) (xy 46.355 71.12)
+			(xy 38.1 86.995) (xy 45.72 86.995)
 		)
 		(stroke
 			(width 0)
@@ -1969,17 +1932,27 @@
 	)
 	(wire
 		(pts
-			(xy 99.06 106.68) (xy 99.06 109.22)
+			(xy 69.215 25.4) (xy 69.215 41.91)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "bde83543-7773-40fe-89bf-d312ed4c903b")
+		(uuid "b996218f-a493-4982-b1a8-d9e529ca7568")
 	)
 	(wire
 		(pts
-			(xy 53.975 71.12) (xy 73.025 71.12)
+			(xy 136.525 117.475) (xy 139.065 117.475)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c00a28e3-d81d-4250-b4fa-4ab2976a7e04")
+	)
+	(wire
+		(pts
+			(xy 53.34 86.995) (xy 72.39 86.995)
 		)
 		(stroke
 			(width 0)
@@ -1989,7 +1962,7 @@
 	)
 	(wire
 		(pts
-			(xy 114.3 81.28) (xy 86.995 81.28)
+			(xy 113.665 97.155) (xy 86.36 97.155)
 		)
 		(stroke
 			(width 0)
@@ -1999,7 +1972,7 @@
 	)
 	(wire
 		(pts
-			(xy 46.355 49.53) (xy 59.055 49.53)
+			(xy 45.72 65.405) (xy 58.42 65.405)
 		)
 		(stroke
 			(width 0)
@@ -2009,7 +1982,7 @@
 	)
 	(wire
 		(pts
-			(xy 103.505 63.5) (xy 103.505 68.58)
+			(xy 102.87 79.375) (xy 102.87 84.455)
 		)
 		(stroke
 			(width 0)
@@ -2019,7 +1992,7 @@
 	)
 	(wire
 		(pts
-			(xy 73.025 49.53) (xy 73.025 58.42)
+			(xy 72.39 65.405) (xy 72.39 74.295)
 		)
 		(stroke
 			(width 0)
@@ -2029,7 +2002,37 @@
 	)
 	(wire
 		(pts
-			(xy 43.815 91.44) (xy 78.105 91.44)
+			(xy 106.045 41.91) (xy 106.045 46.355)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e5701cd1-ff50-4986-8cd3-76db47e46745")
+	)
+	(wire
+		(pts
+			(xy 69.215 25.4) (xy 77.47 25.4)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e8c7ab4d-bdb7-4000-ba4f-ccdcd209868c")
+	)
+	(wire
+		(pts
+			(xy 139.065 117.475) (xy 139.065 123.825)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ed3c7ad7-320a-440d-86d1-d1b96a3f37ff")
+	)
+	(wire
+		(pts
+			(xy 43.18 107.315) (xy 77.47 107.315)
 		)
 		(stroke
 			(width 0)
@@ -2047,19 +2050,9 @@
 		)
 		(uuid "f81f3cdd-183d-4229-bce2-f1155a92b763")
 	)
-	(wire
-		(pts
-			(xy 60.325 25.4) (xy 67.945 25.4)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "fe34bd69-89ad-46b4-b97f-902a9c3c3e1e")
-	)
 	(global_label "PP3V3_GPS"
 		(shape input)
-		(at 32.385 49.53 180)
+		(at 31.75 65.405 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2069,7 +2062,7 @@
 		)
 		(uuid "414765c5-0461-46e2-9743-b3204b43a894")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 18.6351 49.53 0)
+			(at 18.0001 65.405 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2083,7 +2076,7 @@
 	)
 	(global_label "RF"
 		(shape input)
-		(at 70.485 82.55 180)
+		(at 69.85 98.425 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2093,7 +2086,7 @@
 		)
 		(uuid "ba6c9da7-0935-4a1e-b323-d774453ad72d")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 65.1412 82.55 0)
+			(at 64.5062 98.425 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2106,8 +2099,174 @@
 		)
 	)
 	(symbol
+		(lib_id "TPD1E05U06DPYR:TPD1E05U06DPYR")
+		(at 86.995 44.45 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "0ad56b50-f3a7-4684-9c67-c9963296b795")
+		(property "Reference" "S15D1"
+			(at 86.995 34.29 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "TPD1E05U06DPYR"
+			(at 86.995 36.83 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "libs:DIO_TPD1E05U06DPYR"
+			(at 86.995 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Datasheet" ""
+			(at 86.995 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "0.5-pF, 5.5-V, ±12-kV ESD protection diode in 0402 package for High Speed Interfaces"
+			(at 86.995 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "MF" "Texas Instruments"
+			(at 86.995 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Package" "X1SON-2 Texas Instruments"
+			(at 86.995 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Price" "None"
+			(at 86.995 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "SnapEDA_Link" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=snap"
+			(at 86.995 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "MP" "TPD1E05U06DPYR"
+			(at 86.995 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Availability" "In Stock"
+			(at 86.995 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Check_prices" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=eda"
+			(at 86.995 44.45 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(pin "2"
+			(uuid "fcefc45b-73c5-4494-b8f8-c388d9018d3f")
+		)
+		(pin "1"
+			(uuid "c066dc92-7409-480d-b58e-18da20d3bb7b")
+		)
+		(instances
+			(project "l0destar"
+				(path "/541192ef-b00d-4e78-9ba2-020e6675d607"
+					(reference "S15D1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
-		(at 179.07 68.58 0)
+		(at 178.435 84.455 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2118,7 +2277,7 @@
 		(fields_autoplaced yes)
 		(uuid "0c65b345-44d7-4f5c-bf08-2e482566edec")
 		(property "Reference" "#PWR019"
-			(at 179.07 74.93 0)
+			(at 178.435 90.805 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2129,7 +2288,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 179.07 73.66 0)
+			(at 178.435 89.535 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2139,7 +2298,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 179.07 68.58 0)
+			(at 178.435 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2150,7 +2309,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 179.07 68.58 0)
+			(at 178.435 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2161,7 +2320,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 179.07 68.58 0)
+			(at 178.435 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2185,7 +2344,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 142.24 59.69 0)
+		(at 141.605 75.565 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2196,7 +2355,7 @@
 		(fields_autoplaced yes)
 		(uuid "1051be42-f646-46ea-afd5-b8656113bbf2")
 		(property "Reference" "S15C3"
-			(at 146.05 58.4199 0)
+			(at 145.415 74.2949 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2207,7 +2366,7 @@
 			)
 		)
 		(property "Value" "0402 10nF 10V 5% C0G/NP0"
-			(at 146.05 60.9599 0)
+			(at 145.415 76.8349 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2218,7 +2377,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 143.2052 63.5 0)
+			(at 142.5702 79.375 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2229,7 +2388,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 142.24 59.69 0)
+			(at 141.605 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2240,7 +2399,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 142.24 59.69 0)
+			(at 141.605 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2266,8 +2425,8 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:C")
-		(at 103.505 59.69 0)
+		(lib_id "power:GND")
+		(at 106.045 46.355 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2276,31 +2435,30 @@
 		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "22e069cd-8d24-42c7-b23b-2baf5bade10d")
-		(property "Reference" "S15C2"
-			(at 107.315 58.4199 0)
+		(uuid "1acab339-ca29-4a2a-8011-1a39f8be920d")
+		(property "Reference" "#PWR061"
+			(at 106.045 52.705 0)
+			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
 			)
 		)
-		(property "Value" "0402 100pF 10V 5% C0G/NP0"
-			(at 107.315 60.9599 0)
+		(property "Value" "GND"
+			(at 106.045 51.435 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 104.4702 63.5 0)
+		(property "Footprint" ""
+			(at 106.045 46.355 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2311,7 +2469,86 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 103.505 59.69 0)
+			(at 106.045 46.355 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 106.045 46.355 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "c4111b55-a001-4d5f-9813-8fbb0051bffe")
+		)
+		(instances
+			(project "l0destar"
+				(path "/541192ef-b00d-4e78-9ba2-020e6675d607"
+					(reference "#PWR061")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 102.87 75.565 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "22e069cd-8d24-42c7-b23b-2baf5bade10d")
+		(property "Reference" "S15C2"
+			(at 106.68 74.2949 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0402 100pF 10V 5% C0G/NP0"
+			(at 106.68 76.8349 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 103.8352 79.375 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 102.87 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2322,7 +2559,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 103.505 59.69 0)
+			(at 102.87 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2349,7 +2586,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 78.105 96.52 0)
+		(at 77.47 112.395 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2360,7 +2597,7 @@
 		(fields_autoplaced yes)
 		(uuid "241adecb-df18-4353-b021-e39df8738591")
 		(property "Reference" "#PWR026"
-			(at 78.105 102.87 0)
+			(at 77.47 118.745 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2371,7 +2608,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 78.105 101.6 0)
+			(at 77.47 117.475 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2381,7 +2618,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 78.105 96.52 0)
+			(at 77.47 112.395 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2392,7 +2629,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 78.105 96.52 0)
+			(at 77.47 112.395 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2403,7 +2640,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 78.105 96.52 0)
+			(at 77.47 112.395 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2427,7 +2664,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 103.505 68.58 0)
+		(at 102.87 84.455 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2438,7 +2675,7 @@
 		(fields_autoplaced yes)
 		(uuid "25192f56-11e4-4560-921a-868f3badeee7")
 		(property "Reference" "#PWR05"
-			(at 103.505 74.93 0)
+			(at 102.87 90.805 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2449,7 +2686,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 103.505 73.66 0)
+			(at 102.87 89.535 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2459,7 +2696,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 103.505 68.58 0)
+			(at 102.87 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2470,7 +2707,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 103.505 68.58 0)
+			(at 102.87 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2481,7 +2718,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 103.505 68.58 0)
+			(at 102.87 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2504,8 +2741,8 @@
 		)
 	)
 	(symbol
-		(lib_id "PESD5V0X1BL_315:PESD5V0X1BL,315")
-		(at 99.06 106.68 90)
+		(lib_id "TPD1E05U06DPYR:TPD1E05U06DPYR")
+		(at 118.745 120.015 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2514,31 +2751,29 @@
 		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
-		(uuid "4496fb4b-96f8-490f-aff8-94e851355f88")
-		(property "Reference" "S15D1"
-			(at 105.41 95.2499 90)
+		(uuid "6b69d227-ca67-4bcf-88cc-f76456c809a3")
+		(property "Reference" "S15D2"
+			(at 118.745 109.855 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
 			)
 		)
-		(property "Value" "PESD5V0X1BL,315"
-			(at 105.41 97.7899 90)
+		(property "Value" "TPD1E05U06DPYR"
+			(at 118.745 112.395 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
 			)
 		)
-		(property "Footprint" "libs:PESD5V0S1BL315"
-			(at 192.71 91.44 0)
+		(property "Footprint" "libs:DIO_TPD1E05U06DPYR"
+			(at 118.745 120.015 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2546,23 +2781,11 @@
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left bottom)
+				(justify bottom)
 			)
 		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PESD5V0X1BL.pdf"
-			(at 292.71 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left bottom)
-			)
-		)
-		(property "Description" "PESD5V0X1BL - Ultra low capacitance bidirectional ESD protection diode"
-			(at 99.06 106.68 0)
+		(property "Datasheet" ""
+			(at 118.745 120.015 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2572,8 +2795,8 @@
 				)
 			)
 		)
-		(property "Height" "0"
-			(at 492.71 91.44 0)
+		(property "Description" "0.5-pF, 5.5-V, ±12-kV ESD protection diode in 0402 package for High Speed Interfaces"
+			(at 118.745 120.015 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2581,11 +2804,11 @@
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left bottom)
+				(justify bottom)
 			)
 		)
-		(property "Farnell Part Number" ""
-			(at 592.71 91.44 0)
+		(property "MF" "Texas Instruments"
+			(at 118.745 120.015 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2593,11 +2816,11 @@
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left bottom)
+				(justify bottom)
 			)
 		)
-		(property "Farnell Price/Stock" ""
-			(at 692.71 91.44 0)
+		(property "Package" "X1SON-2 Texas Instruments"
+			(at 118.745 120.015 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2605,11 +2828,11 @@
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left bottom)
+				(justify bottom)
 			)
 		)
-		(property "Manufacturer_Name" "Nexperia"
-			(at 792.71 91.44 0)
+		(property "Price" "None"
+			(at 118.745 120.015 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2617,11 +2840,11 @@
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left bottom)
+				(justify bottom)
 			)
 		)
-		(property "Manufacturer_Part_Number" "PESD5V0X1BL,315"
-			(at 892.71 91.44 0)
+		(property "SnapEDA_Link" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=snap"
+			(at 118.745 120.015 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2629,19 +2852,55 @@
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left bottom)
+				(justify bottom)
+			)
+		)
+		(property "MP" "TPD1E05U06DPYR"
+			(at 118.745 120.015 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Availability" "In Stock"
+			(at 118.745 120.015 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Check_prices" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=eda"
+			(at 118.745 120.015 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
 			)
 		)
 		(pin "2"
-			(uuid "78a5b16e-2c02-49bc-b5d2-e5becd165b0b")
+			(uuid "cb12da9b-b92f-4bb6-8c4f-e376dbde1b90")
 		)
 		(pin "1"
-			(uuid "d1a7899b-ab00-4945-8233-80e091c2fdbe")
+			(uuid "edb42c40-0081-4434-9a99-5ba961887e0c")
 		)
 		(instances
 			(project "l0destar"
 				(path "/541192ef-b00d-4e78-9ba2-020e6675d607"
-					(reference "S15D1")
+					(reference "S15D2")
 					(unit 1)
 				)
 			)
@@ -2649,7 +2908,7 @@
 	)
 	(symbol
 		(lib_id "Device:FerriteBead")
-		(at 62.865 49.53 90)
+		(at 62.23 65.405 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2660,7 +2919,7 @@
 		(fields_autoplaced yes)
 		(uuid "7bd5a42a-c1c5-4e27-9ad9-f57b4edf5f3d")
 		(property "Reference" "S15FB1"
-			(at 62.8142 41.91 90)
+			(at 62.1792 57.785 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2670,7 +2929,7 @@
 			)
 		)
 		(property "Value" "0402 600R 0.5A 25%"
-			(at 62.8142 44.45 90)
+			(at 62.1792 60.325 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2680,7 +2939,7 @@
 			)
 		)
 		(property "Footprint" "Inductor_SMD:L_0402_1005Metric"
-			(at 62.865 51.308 90)
+			(at 62.23 67.183 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2691,7 +2950,7 @@
 			)
 		)
 		(property "Datasheet" "BLM15PX601SZ1D"
-			(at 62.865 49.53 0)
+			(at 62.23 65.405 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2702,7 +2961,7 @@
 			)
 		)
 		(property "Description" "Ferrite bead"
-			(at 62.865 49.53 0)
+			(at 62.23 65.405 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2729,7 +2988,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 179.07 59.69 0)
+		(at 178.435 75.565 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2740,7 +2999,7 @@
 		(fields_autoplaced yes)
 		(uuid "7f9b9e7e-2b6f-4084-92eb-c8e7d99dfa09")
 		(property "Reference" "S15C4"
-			(at 182.88 58.4199 0)
+			(at 182.245 74.2949 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2751,7 +3010,7 @@
 			)
 		)
 		(property "Value" "0402 1uF 10V 10% X7R"
-			(at 182.88 60.9599 0)
+			(at 182.245 76.8349 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2762,7 +3021,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 180.0352 63.5 0)
+			(at 179.4002 79.375 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2773,7 +3032,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 179.07 59.69 0)
+			(at 178.435 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2784,7 +3043,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 179.07 59.69 0)
+			(at 178.435 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2811,7 +3070,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 142.24 68.58 0)
+		(at 141.605 84.455 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2822,7 +3081,7 @@
 		(fields_autoplaced yes)
 		(uuid "87a793d0-0f8c-479e-a09b-172c80336336")
 		(property "Reference" "#PWR011"
-			(at 142.24 74.93 0)
+			(at 141.605 90.805 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2833,7 +3092,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 142.24 73.66 0)
+			(at 141.605 89.535 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2843,7 +3102,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 142.24 68.58 0)
+			(at 141.605 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2854,7 +3113,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 142.24 68.58 0)
+			(at 141.605 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2865,7 +3124,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 142.24 68.58 0)
+			(at 141.605 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2889,7 +3148,7 @@
 	)
 	(symbol
 		(lib_id "Connector:Conn_Coaxial")
-		(at 43.815 86.36 0)
+		(at 43.18 102.235 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2900,7 +3159,7 @@
 		(fields_autoplaced yes)
 		(uuid "8e6bb840-b01b-4942-9949-1f082eed6162")
 		(property "Reference" "S15J1"
-			(at 47.625 85.3831 0)
+			(at 46.99 101.2581 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2911,7 +3170,7 @@
 			)
 		)
 		(property "Value" "GPS_UFL"
-			(at 47.625 87.9231 0)
+			(at 46.99 103.7981 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2922,7 +3181,7 @@
 			)
 		)
 		(property "Footprint" "Connector_Coaxial:U.FL_Hirose_U.FL-R-SMT-1_Vertical"
-			(at 43.815 86.36 0)
+			(at 43.18 102.235 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2933,7 +3192,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 43.815 86.36 0)
+			(at 43.18 102.235 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2944,7 +3203,7 @@
 			)
 		)
 		(property "Description" "coaxial connector (BNC, SMA, SMB, SMC, Cinch/RCA, LEMO, ...)"
-			(at 43.815 86.36 0)
+			(at 43.18 102.235 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2971,7 +3230,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 99.06 109.22 0)
+		(at 139.065 123.825 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2982,7 +3241,7 @@
 		(fields_autoplaced yes)
 		(uuid "a68373d4-669f-4de3-a362-3da6761ff7de")
 		(property "Reference" "#PWR047"
-			(at 99.06 115.57 0)
+			(at 139.065 130.175 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2993,7 +3252,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 99.06 114.3 0)
+			(at 139.065 128.905 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3003,7 +3262,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 99.06 109.22 0)
+			(at 139.065 123.825 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3014,7 +3273,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 99.06 109.22 0)
+			(at 139.065 123.825 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3025,7 +3284,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 99.06 109.22 0)
+			(at 139.065 123.825 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3049,7 +3308,7 @@
 	)
 	(symbol
 		(lib_id "SMA-J-P-H-RA-TH1:SMA-J-P-H-RA-TH1")
-		(at 124.46 83.82 180)
+		(at 123.825 99.695 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3060,7 +3319,7 @@
 		(fields_autoplaced yes)
 		(uuid "adeb6d7a-6c8c-427d-ac4d-0bfcd1474734")
 		(property "Reference" "S15J2"
-			(at 130.81 82.5499 0)
+			(at 130.175 98.4249 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3071,7 +3330,7 @@
 			)
 		)
 		(property "Value" "GPS_SMA"
-			(at 130.81 85.0899 0)
+			(at 130.175 100.9649 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3082,7 +3341,7 @@
 			)
 		)
 		(property "Footprint" "libs:SAMTEC_SMA-J-P-H-RA-TH1"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3094,7 +3353,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3105,7 +3364,7 @@
 			)
 		)
 		(property "Description" "SMA Connector Jack, Female Socket 50 Ohms Through Hole, Right Angle Solder"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3117,7 +3376,7 @@
 			)
 		)
 		(property "MF" "Samtec"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3129,7 +3388,7 @@
 			)
 		)
 		(property "Package" "None"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3141,7 +3400,7 @@
 			)
 		)
 		(property "Price" "None"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3153,7 +3412,7 @@
 			)
 		)
 		(property "Check_prices" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=eda"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3165,7 +3424,7 @@
 			)
 		)
 		(property "STANDARD" "Manufacturer recommendations"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3177,7 +3436,7 @@
 			)
 		)
 		(property "PARTREV" "K"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3189,7 +3448,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=snap"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3201,7 +3460,7 @@
 			)
 		)
 		(property "MP" "SMA-J-P-H-RA-TH1"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3213,7 +3472,7 @@
 			)
 		)
 		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=134498&manufacturer=Samtec&part_name=SMA-J-P-H-RA-TH1&search_term=sma-j-p-h-ra-th1"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3225,7 +3484,7 @@
 			)
 		)
 		(property "Availability" "In Stock"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3237,7 +3496,7 @@
 			)
 		)
 		(property "MANUFACTURER" "Samtec"
-			(at 124.46 83.82 0)
+			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3274,7 +3533,7 @@
 	)
 	(symbol
 		(lib_id "SMA-J-P-H-RA-TH1:SMA-J-P-H-RA-TH1")
-		(at 78.105 25.4 180)
+		(at 87.63 25.4 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3285,7 +3544,7 @@
 		(fields_autoplaced yes)
 		(uuid "c32349aa-af47-444e-bc27-459183b8062b")
 		(property "Reference" "S15J4"
-			(at 84.455 24.1299 0)
+			(at 93.98 24.1299 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3296,7 +3555,7 @@
 			)
 		)
 		(property "Value" "GSM_SMA"
-			(at 84.455 26.6699 0)
+			(at 93.98 26.6699 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3307,7 +3566,7 @@
 			)
 		)
 		(property "Footprint" "libs:SAMTEC_SMA-J-P-H-RA-TH1"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3319,7 +3578,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3330,7 +3589,7 @@
 			)
 		)
 		(property "Description" "SMA Connector Jack, Female Socket 50 Ohms Through Hole, Right Angle Solder"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3342,7 +3601,7 @@
 			)
 		)
 		(property "MF" "Samtec"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3354,7 +3613,7 @@
 			)
 		)
 		(property "Package" "None"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3366,7 +3625,7 @@
 			)
 		)
 		(property "Price" "None"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3378,7 +3637,7 @@
 			)
 		)
 		(property "Check_prices" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=eda"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3390,7 +3649,7 @@
 			)
 		)
 		(property "STANDARD" "Manufacturer recommendations"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3402,7 +3661,7 @@
 			)
 		)
 		(property "PARTREV" "K"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3414,7 +3673,7 @@
 			)
 		)
 		(property "SnapEDA_Link" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=snap"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3426,7 +3685,7 @@
 			)
 		)
 		(property "MP" "SMA-J-P-H-RA-TH1"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3438,7 +3697,7 @@
 			)
 		)
 		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=134498&manufacturer=Samtec&part_name=SMA-J-P-H-RA-TH1&search_term=sma-j-p-h-ra-th1"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3450,7 +3709,7 @@
 			)
 		)
 		(property "Availability" "In Stock"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3462,7 +3721,7 @@
 			)
 		)
 		(property "MANUFACTURER" "Samtec"
-			(at 78.105 25.4 0)
+			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3581,7 +3840,7 @@
 	)
 	(symbol
 		(lib_id "Device:L")
-		(at 73.025 62.23 0)
+		(at 72.39 78.105 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3592,7 +3851,7 @@
 		(fields_autoplaced yes)
 		(uuid "df8c812e-1498-4d07-9b02-6d751ddc5c73")
 		(property "Reference" "S15L1"
-			(at 74.295 60.9599 0)
+			(at 73.66 76.8349 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3602,8 +3861,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "47-100 nH, SRF > 2 GHz"
-			(at 74.295 63.4999 0)
+		(property "Value" "LQW18AN68NJ00D"
+			(at 73.66 79.3749 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3614,7 +3873,7 @@
 			)
 		)
 		(property "Footprint" "Inductor_SMD:L_0603_1608Metric"
-			(at 73.025 62.23 0)
+			(at 72.39 78.105 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3625,7 +3884,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 73.025 62.23 0)
+			(at 72.39 78.105 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3636,7 +3895,7 @@
 			)
 		)
 		(property "Description" "Inductor"
-			(at 73.025 62.23 0)
+			(at 72.39 78.105 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3663,7 +3922,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 50.165 71.12 90)
+		(at 49.53 86.995 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3674,7 +3933,7 @@
 		(fields_autoplaced yes)
 		(uuid "e027ebde-2fe3-4491-b609-50d59630baaf")
 		(property "Reference" "S15C1"
-			(at 50.165 63.5 90)
+			(at 49.53 79.375 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3684,7 +3943,7 @@
 			)
 		)
 		(property "Value" "0402 47pF 10V 5% C0G/NP0"
-			(at 50.165 66.04 90)
+			(at 49.53 81.915 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3694,7 +3953,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 53.975 70.1548 0)
+			(at 53.34 86.0298 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3705,7 +3964,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 50.165 71.12 0)
+			(at 49.53 86.995 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3716,7 +3975,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 50.165 71.12 0)
+			(at 49.53 86.995 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3743,7 +4002,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 42.545 49.53 270)
+		(at 41.91 65.405 270)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3753,7 +4012,7 @@
 		(dnp no)
 		(uuid "ec0960f1-5230-41f9-bd7c-3163aaacbc02")
 		(property "Reference" "S15R1"
-			(at 42.545 44.45 90)
+			(at 41.91 60.325 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3763,7 +4022,7 @@
 			)
 		)
 		(property "Value" "0508 1W 1% 15R"
-			(at 42.545 46.99 90)
+			(at 41.91 62.865 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3773,7 +4032,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0508_1220Metric"
-			(at 42.545 47.752 90)
+			(at 41.91 63.627 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3784,7 +4043,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 42.545 49.53 0)
+			(at 41.91 65.405 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3795,7 +4054,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 42.545 49.53 0)
+			(at 41.91 65.405 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)

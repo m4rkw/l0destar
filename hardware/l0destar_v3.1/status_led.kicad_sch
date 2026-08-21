@@ -539,17 +539,17 @@
 		(at 22.86 43.18)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "0e6e9cef-a756-4710-9c64-6717fe8584f1")
+		(uuid "962395dc-84d7-4814-baf5-3b5f4dcaed90")
 	)
 	(junction
 		(at 22.86 33.02)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "cb4f5f1b-b134-4157-93f5-8fab03b1883b")
+		(uuid "e84d0a24-2b05-47a4-b36a-58618aec326c")
 	)
 	(wire
 		(pts
-			(xy 48.26 43.18) (xy 53.34 43.18)
+			(xy 63.5 43.18) (xy 68.58 43.18)
 		)
 		(stroke
 			(width 0)
@@ -569,7 +569,7 @@
 	)
 	(wire
 		(pts
-			(xy 22.86 33.02) (xy 29.21 33.02)
+			(xy 22.86 33.02) (xy 34.925 33.02)
 		)
 		(stroke
 			(width 0)
@@ -579,7 +579,7 @@
 	)
 	(wire
 		(pts
-			(xy 36.83 33.02) (xy 40.64 33.02)
+			(xy 42.545 33.02) (xy 55.88 33.02)
 		)
 		(stroke
 			(width 0)
@@ -589,7 +589,7 @@
 	)
 	(wire
 		(pts
-			(xy 48.26 33.02) (xy 53.34 33.02)
+			(xy 63.5 33.02) (xy 68.58 33.02)
 		)
 		(stroke
 			(width 0)
@@ -599,7 +599,7 @@
 	)
 	(wire
 		(pts
-			(xy 48.26 22.86) (xy 53.34 22.86)
+			(xy 63.5 22.86) (xy 68.58 22.86)
 		)
 		(stroke
 			(width 0)
@@ -629,7 +629,7 @@
 	)
 	(wire
 		(pts
-			(xy 29.21 22.86) (xy 22.86 22.86)
+			(xy 34.925 22.86) (xy 22.86 22.86)
 		)
 		(stroke
 			(width 0)
@@ -639,7 +639,7 @@
 	)
 	(wire
 		(pts
-			(xy 22.86 43.18) (xy 29.21 43.18)
+			(xy 22.86 43.18) (xy 34.925 43.18)
 		)
 		(stroke
 			(width 0)
@@ -649,7 +649,7 @@
 	)
 	(wire
 		(pts
-			(xy 36.83 22.86) (xy 40.64 22.86)
+			(xy 42.545 22.86) (xy 55.88 22.86)
 		)
 		(stroke
 			(width 0)
@@ -659,7 +659,7 @@
 	)
 	(wire
 		(pts
-			(xy 36.83 43.18) (xy 40.64 43.18)
+			(xy 42.545 43.18) (xy 55.88 43.18)
 		)
 		(stroke
 			(width 0)
@@ -669,7 +669,7 @@
 	)
 	(global_label "LED2"
 		(shape input)
-		(at 53.34 33.02 0)
+		(at 68.58 33.02 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -679,7 +679,7 @@
 		)
 		(uuid "1aae5436-046f-490a-ac4b-b5331d8dfacb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 60.9818 33.02 0)
+			(at 76.2218 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -693,7 +693,7 @@
 	)
 	(global_label "LED3"
 		(shape input)
-		(at 53.34 43.18 0)
+		(at 68.58 43.18 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -703,7 +703,7 @@
 		)
 		(uuid "209732c7-a6af-4745-a7c2-03d857723119")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 60.9818 43.18 0)
+			(at 76.2218 43.18 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -717,7 +717,7 @@
 	)
 	(global_label "LED1"
 		(shape input)
-		(at 53.34 22.86 0)
+		(at 68.58 22.86 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -727,7 +727,7 @@
 		)
 		(uuid "480ea919-658a-4e97-874c-ff3a004a53bd")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 60.9818 22.86 0)
+			(at 76.2218 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -741,7 +741,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 44.45 22.86 90)
+		(at 59.69 22.86 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -751,7 +751,7 @@
 		(dnp no)
 		(uuid "378c1e0a-eebd-4eb2-8556-46809e82e42c")
 		(property "Reference" "S13R1"
-			(at 44.45 25.4 90)
+			(at 59.69 25.4 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -761,7 +761,7 @@
 			)
 		)
 		(property "Value" "0402 1K 5%"
-			(at 44.45 27.686 90)
+			(at 59.69 27.686 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -771,7 +771,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 44.45 24.638 90)
+			(at 59.69 24.638 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -782,7 +782,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 44.45 22.86 0)
+			(at 59.69 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -793,7 +793,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 44.45 22.86 0)
+			(at 59.69 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -898,7 +898,7 @@
 	)
 	(symbol
 		(lib_id "Device:LED")
-		(at 33.02 43.18 0)
+		(at 38.735 43.18 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -908,7 +908,7 @@
 		(dnp no)
 		(uuid "4eceb1bf-2f9d-43b3-9968-735ba0359bb2")
 		(property "Reference" "S13D3"
-			(at 33.02 46.736 0)
+			(at 38.735 46.736 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -917,8 +917,8 @@
 				)
 			)
 		)
-		(property "Value" "LED"
-			(at 33.02 49.276 0)
+		(property "Value" "Wurth 150060RS86000"
+			(at 38.735 49.276 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -928,7 +928,7 @@
 			)
 		)
 		(property "Footprint" "LED_SMD:LED_0603_1608Metric"
-			(at 33.02 43.18 0)
+			(at 38.735 43.18 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -939,7 +939,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 33.02 43.18 0)
+			(at 38.735 43.18 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -950,7 +950,7 @@
 			)
 		)
 		(property "Description" "Light emitting diode"
-			(at 33.02 43.18 0)
+			(at 38.735 43.18 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -961,7 +961,7 @@
 			)
 		)
 		(property "Sim.Pins" "1=K 2=A"
-			(at 33.02 43.18 0)
+			(at 38.735 43.18 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -988,7 +988,7 @@
 	)
 	(symbol
 		(lib_id "Device:LED")
-		(at 33.02 33.02 0)
+		(at 38.735 33.02 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -998,7 +998,7 @@
 		(dnp no)
 		(uuid "b18370a8-d6e7-4756-8f6f-28d77b8b2740")
 		(property "Reference" "S13D2"
-			(at 33.02 36.576 0)
+			(at 38.735 36.576 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1007,8 +1007,8 @@
 				)
 			)
 		)
-		(property "Value" "LED"
-			(at 33.02 39.116 0)
+		(property "Value" "Wurth 150060RS86000"
+			(at 38.735 39.116 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1018,7 +1018,7 @@
 			)
 		)
 		(property "Footprint" "LED_SMD:LED_0603_1608Metric"
-			(at 33.02 33.02 0)
+			(at 38.735 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1029,7 +1029,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 33.02 33.02 0)
+			(at 38.735 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1040,7 +1040,7 @@
 			)
 		)
 		(property "Description" "Light emitting diode"
-			(at 33.02 33.02 0)
+			(at 38.735 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1051,7 +1051,7 @@
 			)
 		)
 		(property "Sim.Pins" "1=K 2=A"
-			(at 33.02 33.02 0)
+			(at 38.735 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1078,7 +1078,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 44.45 33.02 90)
+		(at 59.69 33.02 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1088,7 +1088,7 @@
 		(dnp no)
 		(uuid "c33ee127-4b33-40e4-a904-5492798c9e6e")
 		(property "Reference" "S13R2"
-			(at 44.45 35.56 90)
+			(at 59.69 35.56 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1098,7 +1098,7 @@
 			)
 		)
 		(property "Value" "0402 1K 5%"
-			(at 44.45 37.846 90)
+			(at 59.69 37.846 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1108,7 +1108,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 44.45 34.798 90)
+			(at 59.69 34.798 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1119,7 +1119,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 44.45 33.02 0)
+			(at 59.69 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1130,7 +1130,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 44.45 33.02 0)
+			(at 59.69 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1157,7 +1157,7 @@
 	)
 	(symbol
 		(lib_id "Device:LED")
-		(at 33.02 22.86 0)
+		(at 38.735 22.86 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1167,7 +1167,7 @@
 		(dnp no)
 		(uuid "d4cd98bf-eb4f-4392-8a3d-fb39a9b44f81")
 		(property "Reference" "S13D1"
-			(at 33.02 26.416 0)
+			(at 38.735 26.416 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1176,8 +1176,8 @@
 				)
 			)
 		)
-		(property "Value" "LED"
-			(at 33.02 28.956 0)
+		(property "Value" "Wurth 150060RS86000"
+			(at 38.735 28.956 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1187,7 +1187,7 @@
 			)
 		)
 		(property "Footprint" "LED_SMD:LED_0603_1608Metric"
-			(at 33.02 22.86 0)
+			(at 38.735 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1198,7 +1198,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 33.02 22.86 0)
+			(at 38.735 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1209,7 +1209,7 @@
 			)
 		)
 		(property "Description" "Light emitting diode"
-			(at 33.02 22.86 0)
+			(at 38.735 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1220,7 +1220,7 @@
 			)
 		)
 		(property "Sim.Pins" "1=K 2=A"
-			(at 33.02 22.86 0)
+			(at 38.735 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1247,7 +1247,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 44.45 43.18 90)
+		(at 59.69 43.18 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -1257,7 +1257,7 @@
 		(dnp no)
 		(uuid "d7d530b0-742e-41c5-b24f-4a2b8e4f88f3")
 		(property "Reference" "S13R3"
-			(at 44.45 45.72 90)
+			(at 59.69 45.72 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1267,7 +1267,7 @@
 			)
 		)
 		(property "Value" "0402 1K 5%"
-			(at 44.45 48.006 90)
+			(at 59.69 48.006 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -1277,7 +1277,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 44.45 44.958 90)
+			(at 59.69 44.958 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1288,7 +1288,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 44.45 43.18 0)
+			(at 59.69 43.18 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1299,7 +1299,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 44.45 43.18 0)
+			(at 59.69 43.18 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)

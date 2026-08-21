@@ -229,6 +229,158 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Device:Fuse"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "F"
+				(at 2.032 0 90)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "Fuse"
+				(at -1.905 0 90)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at -1.778 0 90)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Fuse"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "fuse"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "*Fuse*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "Fuse_0_1"
+				(rectangle
+					(start -0.762 -2.54)
+					(end 0.762 2.54)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54) (xy 0 -2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "Fuse_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Device:R"
 			(pin_numbers
 				(hide yes)
@@ -1130,6 +1282,571 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "SQJ457EP-T1_BE3:SQJ457EP-T1_BE3"
+			(pin_names
+				(offset 1.016)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "T"
+				(at -11.43 -1.27 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left bottom)
+				)
+			)
+			(property "Value" "SQJ457EP-T1_BE3"
+				(at -11.43 -3.81 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left bottom)
+				)
+			)
+			(property "Footprint" "SQJ457EP-T1_BE3:POWERPAK-SO-8-4"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "P-Channel 60 V 36A (Tc) 68W (Tc) Surface Mount PowerPAK® SO-8"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "MF" "Vishay"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "Package" "SO-8L SINGLE-5 Vishay"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "Price" "None"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "SnapEDA_Link" "https://www.snapeda.com/parts/SQJ457EP-T1_BE3/Vishay/view-part/?ref=snap"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "MP" "SQJ457EP-T1_BE3"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "Availability" "In Stock"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(property "Check_prices" "https://www.snapeda.com/parts/SQJ457EP-T1_BE3/Vishay/view-part/?ref=eda"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify bottom)
+				)
+			)
+			(symbol "SQJ457EP-T1_BE3_0_0"
+				(polyline
+					(pts
+						(xy 0 -2.54) (xy 0 2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 2.54) (xy 0.762 3.175)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 1.905) (xy 0.762 2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 0) (xy 0.762 0.762)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 0) (xy 2.54 0)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 -0.762) (xy 0.762 0)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 -2.54) (xy 0.762 -1.905)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 -2.54) (xy 3.81 -2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 -3.175) (xy 0.762 -2.54)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 2.54) (xy 0.762 2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 2.54) (xy 3.81 2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 2.54 2.54)
+					(radius 0.3592)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 0) (xy 2.54 2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 0) (xy 1.524 0.762) (xy 1.524 -0.762) (xy 2.54 0)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(circle
+					(center 2.54 -2.54)
+					(radius 0.3592)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.048 0.762) (xy 3.302 0.508)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.302 0.508) (xy 3.81 0.508)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.81 0.508) (xy 3.81 2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.81 0.508) (xy 4.318 0.508)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.81 0.508) (xy 4.318 -0.254) (xy 3.302 -0.254) (xy 3.81 0.508)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.81 -2.54) (xy 3.81 0.508)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 4.318 0.508) (xy 4.572 0.254)
+					)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at 2.54 5.08 270)
+					(length 2.54)
+					(name ""
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 2.54 5.08 270)
+					(length 2.54)
+					(hide yes)
+					(name ""
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 2.54 5.08 270)
+					(length 2.54)
+					(hide yes)
+					(name ""
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -2.54 2.54 0)
+					(length 2.54)
+					(name ""
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 2.54 -5.08 90)
+					(length 2.54)
+					(name ""
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "5_0"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 2.54 -5.08 90)
+					(length 2.54)
+					(hide yes)
+					(name ""
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "5_1"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 2.54 -5.08 90)
+					(length 2.54)
+					(hide yes)
+					(name ""
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "5_2"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 2.54 -5.08 90)
+					(length 2.54)
+					(hide yes)
+					(name ""
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "5_3"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "power:GND"
 			(power global)
 			(pin_numbers
@@ -1359,28 +2076,16 @@
 		(uuid "01cc618b-5430-4ffd-a7f2-79744e60e83a")
 	)
 	(junction
-		(at 78.74 40.64)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "55338a6e-fda1-4fb3-b201-0b5714e77732")
-	)
-	(junction
 		(at 63.5 106.68)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "68a25e44-fe04-4285-b41f-1e72a7aa8561")
 	)
 	(junction
-		(at 38.1 63.5)
+		(at 88.9 40.64)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "73e07359-cfce-4178-9467-61b3c1611740")
-	)
-	(junction
-		(at 38.1 83.82)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "84a4e5b6-51c8-4638-8503-4695af8e4085")
+		(uuid "866efa23-a6fd-41ce-8c85-3484fb7e354e")
 	)
 	(junction
 		(at 142.24 83.82)
@@ -1407,16 +2112,28 @@
 		(uuid "af8e20bf-d481-471a-bea6-fef77cc5f4ff")
 	)
 	(junction
-		(at 63.5 50.8)
+		(at 38.1 83.82)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "b243d408-d525-4fc1-9514-3df0b6c0039e")
+	)
+	(junction
+		(at 73.66 50.8)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "c128a780-97f6-40d2-ac88-4e047bacadc1")
 	)
 	(junction
-		(at 63.5 63.5)
+		(at 38.1 55.245)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "fb71fc9e-ed82-4b87-beb8-51457a5df010")
+		(uuid "c7c064c1-a868-48cf-91e2-476ae8f9a5ab")
+	)
+	(junction
+		(at 73.66 63.5)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "e91b28e6-2c50-4089-8edb-c826488cae51")
 	)
 	(wire
 		(pts
@@ -1430,13 +2147,13 @@
 	)
 	(wire
 		(pts
-			(xy 38.1 40.64) (xy 38.1 63.5)
+			(xy 38.1 81.28) (xy 38.1 83.82)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "117f7460-9031-433a-af2b-c121bd82f167")
+		(uuid "146130a6-b489-496c-bd3f-8944b825eb40")
 	)
 	(wire
 		(pts
@@ -1470,7 +2187,7 @@
 	)
 	(wire
 		(pts
-			(xy 63.5 63.5) (xy 63.5 66.04)
+			(xy 73.66 63.5) (xy 73.66 66.04)
 		)
 		(stroke
 			(width 0)
@@ -1490,7 +2207,17 @@
 	)
 	(wire
 		(pts
-			(xy 38.1 83.82) (xy 53.34 83.82)
+			(xy 38.1 40.64) (xy 38.1 55.245)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "370c4612-decd-484e-bb23-6bf4f41e0d7a")
+	)
+	(wire
+		(pts
+			(xy 38.1 83.82) (xy 55.88 83.82)
 		)
 		(stroke
 			(width 0)
@@ -1520,7 +2247,7 @@
 	)
 	(wire
 		(pts
-			(xy 63.5 48.26) (xy 63.5 50.8)
+			(xy 73.66 48.26) (xy 73.66 50.8)
 		)
 		(stroke
 			(width 0)
@@ -1530,7 +2257,7 @@
 	)
 	(wire
 		(pts
-			(xy 63.5 60.96) (xy 63.5 63.5)
+			(xy 73.66 60.96) (xy 73.66 63.5)
 		)
 		(stroke
 			(width 0)
@@ -1540,13 +2267,23 @@
 	)
 	(wire
 		(pts
-			(xy 78.74 40.64) (xy 78.74 43.18)
+			(xy 88.9 40.64) (xy 88.9 43.18)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "55a5ba4b-e892-4d66-8738-97cae090ca8b")
+	)
+	(wire
+		(pts
+			(xy 46.355 55.245) (xy 46.355 63.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "58c76544-f4e4-4c1f-8405-a72fe3bd24c6")
 	)
 	(wire
 		(pts
@@ -1580,6 +2317,16 @@
 	)
 	(wire
 		(pts
+			(xy 66.04 83.82) (xy 78.74 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6cfa448b-330a-42bd-b1bd-cfa09e5ceae4")
+	)
+	(wire
+		(pts
 			(xy 33.02 71.12) (xy 38.1 71.12)
 		)
 		(stroke
@@ -1600,16 +2347,6 @@
 	)
 	(wire
 		(pts
-			(xy 38.1 63.5) (xy 38.1 68.58)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "88689351-4857-4d92-a5ee-409405601c5c")
-	)
-	(wire
-		(pts
 			(xy 181.61 96.52) (xy 181.61 101.6)
 		)
 		(stroke
@@ -1620,13 +2357,13 @@
 	)
 	(wire
 		(pts
-			(xy 68.58 83.82) (xy 78.74 83.82)
+			(xy 38.1 71.12) (xy 38.1 73.66)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "a3ae87c4-0e65-49cc-84cd-7aabc1c8b28a")
+		(uuid "992dcc09-e147-4859-9a76-ea7d7fa73109")
 	)
 	(wire
 		(pts
@@ -1640,7 +2377,17 @@
 	)
 	(wire
 		(pts
-			(xy 68.58 40.64) (xy 78.74 40.64)
+			(xy 46.355 63.5) (xy 49.53 63.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a6897159-6110-4305-8dcc-75beea9ae827")
+	)
+	(wire
+		(pts
+			(xy 78.74 40.64) (xy 88.9 40.64)
 		)
 		(stroke
 			(width 0)
@@ -1680,13 +2427,13 @@
 	)
 	(wire
 		(pts
-			(xy 58.42 63.5) (xy 63.5 63.5)
+			(xy 38.1 55.245) (xy 38.1 57.785)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "bc8d9c2c-86de-4c24-8b45-07684e8b2b95")
+		(uuid "bed9e36c-6ed9-47d8-ac85-531b27f7ffc1")
 	)
 	(wire
 		(pts
@@ -1700,33 +2447,13 @@
 	)
 	(wire
 		(pts
-			(xy 38.1 63.5) (xy 43.18 63.5)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "cccb9567-af2d-49b9-8c7d-78fd2a424c6d")
-	)
-	(wire
-		(pts
-			(xy 63.5 91.44) (xy 63.5 93.98)
+			(xy 63.5 78.74) (xy 63.5 93.98)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "d09e1852-c3ce-41f8-82b9-a157fbfbc9d1")
-	)
-	(wire
-		(pts
-			(xy 38.1 71.12) (xy 38.1 83.82)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d560dfc1-0fe8-47b4-89f2-76a89593a680")
 	)
 	(wire
 		(pts
@@ -1740,7 +2467,7 @@
 	)
 	(wire
 		(pts
-			(xy 78.74 40.64) (xy 114.3 40.64)
+			(xy 88.9 40.64) (xy 106.045 40.64)
 		)
 		(stroke
 			(width 0)
@@ -1750,7 +2477,7 @@
 	)
 	(wire
 		(pts
-			(xy 63.5 50.8) (xy 78.74 50.8)
+			(xy 73.66 50.8) (xy 88.9 50.8)
 		)
 		(stroke
 			(width 0)
@@ -1760,7 +2487,27 @@
 	)
 	(wire
 		(pts
-			(xy 38.1 40.64) (xy 53.34 40.64)
+			(xy 64.77 63.5) (xy 73.66 63.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "dda46572-5729-437c-a31b-f568a063229d")
+	)
+	(wire
+		(pts
+			(xy 38.1 65.405) (xy 38.1 68.58)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e649ddc8-a0b7-4615-af2e-dfdb0dafea8f")
+	)
+	(wire
+		(pts
+			(xy 38.1 40.64) (xy 63.5 40.64)
 		)
 		(stroke
 			(width 0)
@@ -1770,7 +2517,17 @@
 	)
 	(wire
 		(pts
-			(xy 63.5 50.8) (xy 63.5 53.34)
+			(xy 38.1 55.245) (xy 46.355 55.245)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f672585e-d95c-45a4-b188-279c4db55f1e")
+	)
+	(wire
+		(pts
+			(xy 73.66 50.8) (xy 73.66 53.34)
 		)
 		(stroke
 			(width 0)
@@ -1804,7 +2561,7 @@
 	)
 	(global_label "PP12VIP"
 		(shape input)
-		(at 114.3 40.64 0)
+		(at 106.045 40.64 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -1814,7 +2571,7 @@
 		)
 		(uuid "5fdcf764-0ab6-49c8-ba7d-41dd58ec9660")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 125.2076 40.64 0)
+			(at 116.9526 40.64 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2133,6 +2890,87 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:Fuse")
+		(at 38.1 77.47 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "168ec3ad-bcc5-4e1d-934f-c15b33ab21fb")
+		(property "Reference" "S2F2"
+			(at 23.495 76.2 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0407002.WRA"
+			(at 23.495 78.74 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Fuse:Fuse_1206_3216Metric"
+			(at 36.322 77.47 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 38.1 77.47 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Fuse"
+			(at 38.1 77.47 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "c216b4cb-68d3-441a-9551-756c48bc56a4")
+		)
+		(pin "1"
+			(uuid "e91b7c36-906b-4023-a73e-b2d7170b87c5")
+		)
+		(instances
+			(project "l0destar"
+				(path "/4c869692-bd36-4728-928b-8610efd597cf"
+					(reference "S2F2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "CKG57NX7R1H476M500JH:CKG57NX7R1H476M500JH")
 		(at 181.61 91.44 270)
 		(unit 1)
@@ -2155,7 +2993,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10uF 1210 50V 10% X7S SOFT TERMINATION"
+		(property "Value" "10uF 1210 50V 10% X7R SOFT TERMINATION"
 			(at 185.42 93.9799 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2314,7 +3152,7 @@
 	)
 	(symbol
 		(lib_id "SQ2361ES-T1_GE3:SQ2361ES-T1_GE3")
-		(at 63.5 48.26 90)
+		(at 73.66 48.26 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2325,7 +3163,7 @@
 		(fields_autoplaced yes)
 		(uuid "350a83b1-aefb-4150-bbed-bf76f47ea439")
 		(property "Reference" "S2Q1"
-			(at 60.96 33.02 90)
+			(at 71.12 33.02 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2334,8 +3172,8 @@
 				)
 			)
 		)
-		(property "Value" "SQ2361ES-T1_GE3"
-			(at 60.96 35.56 90)
+		(property "Value" "SQ2361CES-T1_BE3"
+			(at 71.12 35.56 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2345,7 +3183,7 @@
 			)
 		)
 		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-			(at 162.23 36.83 0)
+			(at 172.39 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2357,7 +3195,7 @@
 			)
 		)
 		(property "Datasheet" "https://componentsearchengine.com/Datasheets/2/SQ2361ES-T1_GE3.pdf"
-			(at 262.23 36.83 0)
+			(at 272.39 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2369,7 +3207,7 @@
 			)
 		)
 		(property "Description" "VISHAY - SQ2361ES-T1_GE3 - MOSFET Transistor, P Channel, -2.8 A, -60 V, 0.13 ohm, -10 V, -2.5 V"
-			(at 63.5 48.26 0)
+			(at 73.66 48.26 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2380,7 +3218,7 @@
 			)
 		)
 		(property "Height" "1.12"
-			(at 462.23 36.83 0)
+			(at 472.39 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2392,7 +3230,7 @@
 			)
 		)
 		(property "Farnell Part Number" ""
-			(at 562.23 36.83 0)
+			(at 572.39 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2404,7 +3242,7 @@
 			)
 		)
 		(property "Farnell Price/Stock" ""
-			(at 662.23 36.83 0)
+			(at 672.39 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2416,7 +3254,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Vishay"
-			(at 762.23 36.83 0)
+			(at 772.39 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2428,7 +3266,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "SQ2361ES-T1_GE3"
-			(at 862.23 36.83 0)
+			(at 872.39 36.83 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2459,7 +3297,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 63.5 57.15 0)
+		(at 73.66 57.15 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2470,7 +3308,7 @@
 		(fields_autoplaced yes)
 		(uuid "56e3dfe2-a023-4ad1-9979-3c3f88ea8680")
 		(property "Reference" "S2R1"
-			(at 66.04 55.8799 0)
+			(at 76.2 55.8799 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2481,7 +3319,7 @@
 			)
 		)
 		(property "Value" "0402 1M 5%"
-			(at 66.04 58.4199 0)
+			(at 76.2 58.4199 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2492,7 +3330,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 61.722 57.15 90)
+			(at 71.882 57.15 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2503,7 +3341,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 63.5 57.15 0)
+			(at 73.66 57.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2514,7 +3352,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 63.5 57.15 0)
+			(at 73.66 57.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2625,6 +3463,87 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:Fuse")
+		(at 38.1 61.595 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "639a6627-37cb-42dd-9333-41d4e46dc780")
+		(property "Reference" "S2F1"
+			(at 23.495 60.325 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0407002.WRA"
+			(at 23.495 62.865 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Fuse:Fuse_1206_3216Metric"
+			(at 36.322 61.595 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 38.1 61.595 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Fuse"
+			(at 38.1 61.595 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "377cce87-cbe0-4fc2-a4fd-454e3dc5664d")
+		)
+		(pin "1"
+			(uuid "28f2c6f8-c03f-4a06-ae81-e065478a96e5")
+		)
+		(instances
+			(project "l0destar"
+				(path "/4c869692-bd36-4728-928b-8610efd597cf"
+					(reference "S2F1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 63.5 100.33 0)
 		(unit 1)
@@ -2647,7 +3566,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 1M 5%"
+		(property "Value" "0402 100K 5%"
 			(at 66.04 101.5999 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2779,6 +3698,190 @@
 			(project "l0destar"
 				(path "/4c869692-bd36-4728-928b-8610efd597cf"
 					(reference "#PWR016")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "SQJ457EP-T1_BE3:SQJ457EP-T1_BE3")
+		(at 60.96 81.28 270)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "9a713700-a313-465f-859d-c19c70f41ae0")
+		(property "Reference" "S2Q2"
+			(at 60.96 87.63 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "SQJ457EP-T1_BE3"
+			(at 60.96 90.17 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "libs:POWERPAK-SO-8-4"
+			(at 60.96 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Datasheet" ""
+			(at 60.96 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "P-Channel 60 V 36A (Tc) 68W (Tc) Surface Mount PowerPAK® SO-8"
+			(at 60.96 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "MF" "Vishay"
+			(at 60.96 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Package" "SO-8L SINGLE-5 Vishay"
+			(at 60.96 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Price" "None"
+			(at 60.96 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "SnapEDA_Link" "https://www.snapeda.com/parts/SQJ457EP-T1_BE3/Vishay/view-part/?ref=snap"
+			(at 60.96 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "MP" "SQJ457EP-T1_BE3"
+			(at 60.96 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Availability" "In Stock"
+			(at 60.96 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(property "Check_prices" "https://www.snapeda.com/parts/SQJ457EP-T1_BE3/Vishay/view-part/?ref=eda"
+			(at 60.96 81.28 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify bottom)
+			)
+		)
+		(pin "5_2"
+			(uuid "7bc4c645-ac66-4dc9-a6f4-0cd273a49d50")
+		)
+		(pin "5_3"
+			(uuid "7e8b2d2d-ec2f-44e9-b8bc-574597b993b3")
+		)
+		(pin "5_1"
+			(uuid "864e7d9e-570d-4172-8fd9-40c5b64742c5")
+		)
+		(pin "5_0"
+			(uuid "1c64ab70-467a-43ec-8af8-817ea346d279")
+		)
+		(pin "4"
+			(uuid "4546e294-4d74-4924-bba8-64393ea70dde")
+		)
+		(pin "3"
+			(uuid "97189909-17cf-4011-b631-1bbc6419674d")
+		)
+		(pin "2"
+			(uuid "2c6dbf3b-2237-4a61-83d5-cbe234903ae9")
+		)
+		(pin "1"
+			(uuid "8f73f2ff-b55d-4cfe-8b0f-765f2f8f0519")
+		)
+		(instances
+			(project "l0destar"
+				(path "/4c869692-bd36-4728-928b-8610efd597cf"
+					(reference "S2Q2")
 					(unit 1)
 				)
 			)
@@ -2965,153 +4068,8 @@
 		)
 	)
 	(symbol
-		(lib_id "SQ2361ES-T1_GE3:SQ2361ES-T1_GE3")
-		(at 63.5 91.44 90)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "9e1c43b6-cdf2-458e-99b0-b676f334192a")
-		(property "Reference" "S2Q2"
-			(at 60.96 76.2 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "SQ2361ES-T1_GE3"
-			(at 60.96 78.74 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-			(at 162.23 80.01 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Datasheet" "https://componentsearchengine.com/Datasheets/2/SQ2361ES-T1_GE3.pdf"
-			(at 262.23 80.01 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Description" "VISHAY - SQ2361ES-T1_GE3 - MOSFET Transistor, P Channel, -2.8 A, -60 V, 0.13 ohm, -10 V, -2.5 V"
-			(at 63.5 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Height" "1.12"
-			(at 462.23 80.01 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Farnell Part Number" ""
-			(at 562.23 80.01 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Farnell Price/Stock" ""
-			(at 662.23 80.01 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Manufacturer_Name" "Vishay"
-			(at 762.23 80.01 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(property "Manufacturer_Part_Number" "SQ2361ES-T1_GE3"
-			(at 862.23 80.01 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(pin "2"
-			(uuid "7c2e41a9-364b-4c48-9238-6b7f0dd43213")
-		)
-		(pin "1"
-			(uuid "6d6c52c6-53d9-4c45-a600-89218842699e")
-		)
-		(pin "3"
-			(uuid "72bca4fb-3718-423a-b0a4-9bcf2dc3c093")
-		)
-		(instances
-			(project "l0destar"
-				(path "/4c869692-bd36-4728-928b-8610efd597cf"
-					(reference "S2Q2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "PTVS33VS1UTR_115:PTVS33VS1UTR,115")
-		(at 43.18 63.5 0)
+		(at 49.53 63.5 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3122,7 +4080,7 @@
 		(fields_autoplaced yes)
 		(uuid "9f3192f9-9823-4a50-b04e-3f2340a16a7c")
 		(property "Reference" "S2D2"
-			(at 50.8 55.88 0)
+			(at 57.15 55.88 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3132,7 +4090,7 @@
 			)
 		)
 		(property "Value" "PTVS33VS1UTR,115"
-			(at 50.8 58.42 0)
+			(at 57.15 58.42 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3142,7 +4100,7 @@
 			)
 		)
 		(property "Footprint" "Diode_SMD:Nexperia_CFP3_SOD-123W"
-			(at 53.34 157.15 0)
+			(at 59.69 157.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3154,7 +4112,7 @@
 			)
 		)
 		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVSXS1UTR_SER.pdf"
-			(at 53.34 257.15 0)
+			(at 59.69 257.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3166,7 +4124,7 @@
 			)
 		)
 		(property "Description" "PTVSxS1UTR series - High-temperature 400 W Transient Voltage Suppressor"
-			(at 43.18 63.5 0)
+			(at 49.53 63.5 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3177,7 +4135,7 @@
 			)
 		)
 		(property "Height" ""
-			(at 53.34 457.15 0)
+			(at 59.69 457.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3189,7 +4147,7 @@
 			)
 		)
 		(property "Farnell Part Number" ""
-			(at 53.34 557.15 0)
+			(at 59.69 557.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3201,7 +4159,7 @@
 			)
 		)
 		(property "Farnell Price/Stock" ""
-			(at 53.34 657.15 0)
+			(at 59.69 657.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3213,7 +4171,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Nexperia"
-			(at 53.34 757.15 0)
+			(at 59.69 757.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3225,7 +4183,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "PTVS33VS1UTR,115"
-			(at 53.34 857.15 0)
+			(at 59.69 857.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3253,7 +4211,7 @@
 	)
 	(symbol
 		(lib_id "Diode:BZX84Cxx")
-		(at 78.74 46.99 270)
+		(at 88.9 46.99 270)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3264,7 +4222,7 @@
 		(fields_autoplaced yes)
 		(uuid "a44d7a5a-8151-46f7-937c-d50490ebed01")
 		(property "Reference" "S2D1"
-			(at 81.28 45.7199 90)
+			(at 91.44 45.7199 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3275,7 +4233,7 @@
 			)
 		)
 		(property "Value" "BZX84C15"
-			(at 81.28 48.2599 90)
+			(at 91.44 48.2599 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3286,7 +4244,7 @@
 			)
 		)
 		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-			(at 78.74 46.99 0)
+			(at 88.9 46.99 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3297,7 +4255,7 @@
 			)
 		)
 		(property "Datasheet" "https://diotec.com/tl_files/diotec/files/pdf/datasheets/bzx84c2v4.pdf"
-			(at 78.74 46.99 0)
+			(at 88.9 46.99 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3308,7 +4266,7 @@
 			)
 		)
 		(property "Description" "300mW Zener Diode, SOT-23"
-			(at 78.74 46.99 0)
+			(at 88.9 46.99 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3338,7 +4296,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 63.5 66.04 0)
+		(at 73.66 66.04 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3348,7 +4306,7 @@
 		(dnp no)
 		(uuid "b0352d83-45ae-4fd7-8a1f-0e8a8aeffd94")
 		(property "Reference" "#PWR014"
-			(at 63.5 72.39 0)
+			(at 73.66 72.39 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3359,7 +4317,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 63.754 69.85 0)
+			(at 73.914 69.85 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3369,7 +4327,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 63.5 66.04 0)
+			(at 73.66 66.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3380,7 +4338,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 63.5 66.04 0)
+			(at 73.66 66.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3391,7 +4349,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 63.5 66.04 0)
+			(at 73.66 66.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)

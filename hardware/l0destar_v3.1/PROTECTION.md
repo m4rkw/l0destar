@@ -5,7 +5,7 @@ part was chosen. These decisions have been re-litigated several times and
 always land in the same place, so the reasoning is written down here.
 
 Everything below was checked against the schematic, the PCB netlist and the
-part datasheets on 16 Aug 2026. PCB DRC is clean with zero unconnected
+part datasheets on 21 Aug 2026. PCB DRC is clean with zero unconnected
 items.
 
 ## The protection chain
@@ -15,9 +15,12 @@ Both 12 V inputs (permanent battery and ignition) get the same treatment:
 ```
 harness fuse (external, 2 A, one per input)
     |
+on-board fuse (S2F1 / S2F2, 2 A time-lag, one per input)
+    |
     +---- TVS to ground (PTVS33VS1UTR, 33 V standoff)
     |
-reverse-blocking P-FET (SQ2361ES, gate zener BZX84C15)
+reverse-blocking P-FET (battery: T1 SQJ457EP; ignition: S2Q1 SQ2361ES;
+                        gate zener BZX84C15 on both)
     |
 bulk capacitance (2 x 47 uF + 10 uF, all 50 V, permanent rail only)
     |
@@ -26,8 +29,8 @@ LT8609A buck, then the 4.2 V rail and the rest of the board
 
 Each piece has one job. The TVS clips large spikes. The FET blocks reverse
 voltage. The bulk capacitors absorb the one fast pulse the TVS cannot clip
-low enough on its own. The external fuse covers the one fault the TVS cannot
-survive unaided.
+low enough on its own. The fuses cover the one fault the TVS cannot survive
+unaided.
 
 ## Load dump: why the TVS is 33 V and must not be lowered
 
@@ -75,18 +78,25 @@ The capacitance figures are backed by measured data, not the generic X7R
 heuristic: TDK's characterization sheet for the 47 uF part shows about 14
 percent loss at 14 V bias, so each contributes roughly 40 uF effective.
 
-A third capacitor, S2C3 (10 uF / 50 V 1210, Murata GCJ soft termination),
-was added to close the last soft spot: purchase tolerance. The 47 uF parts
-are rated plus or minus 20 percent, and if both arrived at the bottom of
-that band the peak would have reached about 44 V. With S2C3 fitted, even
-that worst-case stack stays at about 42 V, inside the buck's limit, and the
-typical case drops to about 37 V, right at TVS breakdown, meaning the diode
-barely conducts and everything has margin. S2C3 is X7S rather than X7R;
-that is fine in this role because its contribution is not load-bearing the
-way the main bulk is, and its tighter 10 percent tolerance offsets the
-slightly worse bias derating. It sits well away from board edges and
-mounting holes, and its soft termination covers the flex-crack risk of a
-plain chip capacitor on a battery-fed rail.
+A third capacitor, S2C3 (10 uF / 50 V 1210, Murata GCJ soft termination,
+GCJ32EC71H106KA01L), was added to close the last soft spot: purchase
+tolerance. The 47 uF parts are rated plus or minus 20 percent, and if both
+arrived at the bottom of that band the peak would have reached about 44 V.
+With S2C3 fitted, even that worst-case stack stays at about 42 V, inside the
+buck's limit, and the typical case drops to about 37 V, right at TVS
+breakdown, meaning the diode barely conducts and everything has margin. S2C3
+is X7S rather than X7R; that is fine in this role because its contribution is
+not load-bearing the way the main bulk is, and its tighter 10 percent
+tolerance offsets the slightly worse bias derating. It sits well away from
+board edges and mounting holes, and its soft termination covers the
+flex-crack risk of a plain chip capacitor on a battery-fed rail. Order by
+MPN, not by the schematic value string.
+
+The on-board fuses do not interfere with any of this. A 2 A 407 Series part
+has a nominal melting I2t of 0.870 A2Sec, against roughly 0.03 to 0.1 A2Sec
+for the whole pulse 2a charging event, so there is an order of magnitude of
+margin. Its 0.1 ohm sits in series with the pulse's 2 ohm source, which
+slightly reduces the peak rather than adding to it.
 
 The ignition input carries no bulk capacitance and needs none: it only feeds
 a sense divider, and during a fast pulse the TVS clamp plus the divider's
@@ -106,13 +116,60 @@ reset on a severe transient is accepted behaviour for a tracker. It
 recovers on its own when the input returns.
 
 The TVS diodes sit upstream of the FETs, so under sustained reverse battery
-they conduct forward like ordinary diodes into an unlimited source. The
-external 2 A fuse exists for exactly this: fault current clears it in
-milliseconds, well inside the TVS's forward surge capability. On-board
-fusing was rejected because every circuit in a vehicle is separately fused
-anyway, and a blown on-board fuse would mean a board swap instead of a fuse
-swap. Installation without both harness fuses is not a supported
-configuration.
+they conduct forward like ordinary diodes into an unlimited source. Fusing
+exists for exactly this: fault current clears in milliseconds, well inside
+the TVS's forward surge capability.
+
+## Why there are now two fuses per input
+
+The external harness fuse (2 A, one per input) is still the expected
+installation and is still meant to be the one that clears in ordinary
+service. Every circuit in a vehicle is separately fused anyway, and a blown
+on-board fuse means a board swap instead of a fuse swap.
+
+S2F1 and S2F2 were added on top of that for a different reason: not every
+unit gets installed the way the manual says. An unfused feed that goes
+reverse or shorts is a vehicle fire, and against that a fuse that costs a
+board swap is plainly the better outcome. The on-board fuses are a fire
+backstop for the unsupported install, not a replacement for harness fusing.
+Installation without both harness fuses is still not a supported
+configuration; the on-board parts exist so that an unsupported one fails
+safe rather than dangerously.
+
+The part is a Littelfuse 0407002.WRA, 2 A, 1206, time-lag. Time-lag matters
+here: the 407 Series is a high-I2t design specifically intended to survive
+inrush and surge without nuisance opening, which is what lets it sit in the
+pulse 2a charging path without being consumed by it. A fast-acting fuse of
+the same rating would not be a safe substitute.
+
+## Open items on the on-board fuses
+
+Three things about S2F1 and S2F2 have not been worked through yet. None of
+them block the current build, but all three should be closed before the
+fuses are relied on as a safety claim.
+
+**Interrupting rating versus the unfused install.** The 2 A part is rated to
+interrupt 50 A at 63 VDC. The fault it exists for is limited only by battery
+internal resistance and harness wiring. With 0.1 ohm of fuse and roughly
+0.1 ohm of 20 AWG feed the available current is already around 60 A, and
+shorter or thicker wire pushes it higher. Past its interrupting rating a
+fuse can rupture or arc instead of clearing cleanly, which defeats the
+purpose. Check this against the worst harness the product will realistically
+see.
+
+**Continuous rating at automotive ambient.** Littelfuse recommends no more
+than 80 percent of rating continuously (1.6 A), and the temperature
+re-rating curve takes more off again in a hot vehicle, likely landing near
+1.1 to 1.3 A usable. PP12V_K, the ITS4060 OBD 12 V output, sits downstream
+of S2F2 along with the entire board. Confirm the worst-case sum of board
+load and anything the OBD port sources against that derated figure.
+
+**Selectivity.** The external harness fuse and the on-board fuse are both
+2 A, and nothing guarantees the external one opens first in an ordinary
+overload, so a routine fault may still cost a board swap. If that matters,
+the on-board parts want to be rated above the external ones: high enough to
+let the harness fuse win the normal case, low enough to remain a credible
+fire backstop.
 
 ## The 2N7002 sensing transistors
 
@@ -121,39 +178,42 @@ theirs at plus or minus 18 V, Nexperia and Diotec at plus or minus 30 V.
 Rather than pin the BOM to one manufacturer, the OBD presence divider was
 re-ratioed to 180K over 100K. Its gate now sees about 14 V at the pulse 2a
 peak and about 12.5 V during a load dump, inside every vendor's rating with
-margin. The ignition sense divider was already safe thanks to its 100 nF
-gate filter, and the K-line transistor is driven by 3.3 V logic. Any brand
-of 2N7002 is now acceptable.
+margin. The ignition sense divider is 180K over 56K with a 100 nF gate
+filter, which puts its gate at about 9 V at the same pulse 2a peak. The
+K-line transistor is driven by 3.3 V logic. Any brand of 2N7002 is
+acceptable.
 
 If either divider is ever changed, re-check the gate voltage at 39 V (the
 pulse 2a rail peak) and 35 V (load dump), and keep the 100 nF on the
 ignition divider.
 
-## The blocking FET during pulse 2a: known marginal, accepted
+## The blocking FET during pulse 2a: resolved by the SQJ457EP
 
 The current that charges the bulk capacitors during pulse 2a flows through
 the blocking FET, and at the +112 V level that is a hard event: about 45 A
-peak decaying over the 50 us pulse, roughly 14 mJ dissipated in the FET.
-The SQ2361ES is rated for 11 A pulsed and about 8 mJ of single-pulse
-avalanche energy, with an estimated junction temperature rise near the
-175 degC limit. So at the maximum test level the FET is at or slightly past
-its paper ratings. At the older +50 V level the same event is trivial
-(16 A peak, 2 mJ, about 25 degC of rise).
+peak decaying over the 50 us pulse.
 
-This is accepted: real-world pulse 2a events rarely approach the bench
-maximum, the part is AEC-Q101 qualified and 100 percent avalanche tested,
-and the exposure is a compliance-lab scenario rather than a field one. Even
-in the unlikely worst case the failure is contained: the FET likely fails
-short, the device keeps running, and reverse-battery blocking on that input
-falls back to the external fuse.
+This used to be the board's weakest accepted risk. The original SQ2361ES is
+rated for 11 A pulsed and about 8 mJ of single-pulse avalanche energy, with
+an estimated junction temperature rise near the 175 degC limit, so at the
+maximum test level it was at or slightly past its paper ratings.
 
-If formal ISO 7637-2 testing at maximum severity is ever planned, swap S2Q2
-for a Vishay SQJ457EP (PowerPAK SO-8L, -60 V, 100 A pulsed, 25 mOhm) before
-booking the lab. That takes every number from at-the-limit to 2x margin or
-better with the same gate network, but it is a footprint change and so a
-board revision. S2Q1 carries no bulk charging current and never needs the
-swap. Nothing else on the board changes; the capacitors already protect the
-rail itself.
+That is no longer the case. The battery input now carries T1, a Vishay
+SQJ457EP-T1_BE3 (PowerPAK SO-8L, -60 V, 100 A pulsed, 25 mOhm). Peak current
+sits at well under half the pulsed rating, the roughly 5x lower Rds(on) cuts
+the energy dissipated in the device to a few millijoules, and the package has
+the die area and thermal path to absorb it. It is also AEC-Q101 automotive
+qualified. Every number moved from
+at-the-limit to 2x margin or better, on the same gate network. Formal
+ISO 7637-2 testing at maximum severity no longer needs a board revision
+first.
+
+S2Q1, the ignition-side FET, is still an SQ2361ES in SOT-23. It carries no
+bulk charging current and never needed the swap.
+
+One housekeeping note: the battery FET is designated T1, not S2Q2. It sits
+outside the S<sheet><type><n> convention the rest of the board follows and
+should be renamed at the next convenient revision.
 
 ## Settled. Do not re-open without new information
 
@@ -167,7 +227,13 @@ rail itself.
   a risk. Do not replace it with plain chip capacitors. There is also no
   47 uF plain ceramic at 50 V; anything above 10 uF at 50 V is a stacked
   assembly.
-- External 2 A fusing is deliberate.
+- Fusing is doubled deliberately. External harness fuses remain the
+  supported installation; the on-board 2 A time-lag fuses are a fire
+  backstop for units that arrive without them. Neither replaces the other.
+- The on-board fuses must stay time-lag. A fast-acting 2 A part would be
+  at risk from pulse 2a and from hot-plug inrush.
+- The battery blocking FET is the SQJ457EP in PowerPAK SO-8L. Do not revert
+  it to the SQ2361ES to recover the smaller footprint.
 - No damping electrolytic is needed for hot-plug ringing.
 - 2N7002 gate dividers are in spec for any manufacturer after the 180K
   re-ratio. No zeners.
@@ -183,12 +249,11 @@ rail itself.
   sits just above its functional range during a load dump. It survives, but
   the OBD 12 V output may misbehave for the duration. Accepted.
 - A severe negative transient can reboot the device (see above). Accepted.
-- The blocking FET exceeds its pulsed ratings during pulse 2a at the +112 V
-  maximum level (see above). Accepted unless formal compliance testing at
-  that level is planned.
 - The fitted CKG57N capacitor is the commercial grade part. An AEC-Q200
   version exists as the JJ suffix (CKG57NX7R1H476M500JJ) if automotive
   grading ever matters.
+- The 407 Series fuse is not AEC-Q qualified either, though its -55 to
+  +150 degC range covers the environment.
 
 ## Key numbers
 
@@ -199,20 +264,25 @@ rail itself.
 | TVS breakdown (minimum) | 36.7 V |
 | LT8609A input, absolute max | 42 V |
 | ITS4060 supply, absolute max | 40 V (this is the binding limit) |
-| SQ2361ES drain-source | 60 V |
+| Battery blocking FET (T1) | SQJ457EP, -60 V, 100 A pulsed, 25 mOhm |
+| Ignition blocking FET (S2Q1) | SQ2361ES, -60 V, 11 A pulsed |
 | Rail peak, pulse 2a, all bulk fitted | about 37 V typical, about 42 V worst-case tolerance |
 | CKG57N capacitance retention at 14 V bias (TDK measured) | about 86 percent |
-| FET peak current during pulse 2a at +112 V | about 45 A vs 11 A rating |
+| FET peak current during pulse 2a at +112 V | about 45 A vs 100 A pulsed rating |
+| On-board fuse (S2F1, S2F2) | 0407002.WRA, 2 A time-lag, 63 V, 50 A interrupting, 0.100 ohm |
+| On-board fuse nominal melting I2t | 0.870 A2Sec vs about 0.03 to 0.1 A2Sec for pulse 2a |
 | OBD sense gate, worst case | about 14 V |
 
 ## References
 
 - [PTVS33VS1UTR series datasheet, Nexperia](https://assets.nexperia.com/documents/data-sheet/PTVSXS1UTR_SER.pdf)
 - [SQ2361ES datasheet, Vishay](https://www.mouser.com/datasheet/2/427/VISH_S_A0001811243_1-2567854.pdf)
+- [SQJ457EP datasheet, Vishay](https://www.vishay.com/docs/76628/sqj457ep.pdf)
 - [2N7002 datasheet, Nexperia](https://assets.nexperia.com/documents/data-sheet/2N7002.pdf)
 - [ITS4060S-SJ-N datasheet, Infineon](https://www.infineon.com/assets/row/public/documents/10/49/infineon-its4060s-sj-n-datasheet-en.pdf)
 - [LT8609A datasheet, ADI](https://www.mouser.com/pdfDocs/LT8609-8609A.pdf)
 - [LM66100 datasheet, TI](https://www.ti.com/lit/ds/symlink/lm66100.pdf)
+- [Littelfuse 407 Series, 1206 time-lag fuse datasheet](https://www.farnell.com/datasheets/3157884.pdf)
 - [TI SNOAAA1, load dump protection](https://www.ti.com/lit/pdf/snoaaa1)
 - [onsemi TND6424, automotive transient levels incl. pulse 2a 112 V](https://www.onsemi.com/download/design-notes/pdf/tnd6424-d.pdf)
 - [ADI LTspice models of ISO 7637-2 and ISO 16750-2 transients](https://www.analog.com/en/resources/technical-articles/ltspice-models-of-iso-7637-2-iso-16750-2-transients.html)
