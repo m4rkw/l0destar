@@ -2313,7 +2313,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.vishay.com/docs/85748/1n4148w.pdf"
+		(property "Datasheet" "https://www.vishay.com/docs/86356/1n4148w.pdf"
 			(at 137.16 39.37 0)
 			(hide yes)
 			(show_name no)
@@ -2333,6 +2333,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "1N4148W-E3-08"
+			(at 137.16 39.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 137.16 39.37 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(property "Sim.Device" "D"
@@ -2414,7 +2438,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://ds.yuden.co.jp/TYCOMPAS/or/detail?pn=MCASU105SB7104KFNA01&u=M"
 			(at 165.1 40.64 0)
 			(hide yes)
 			(show_name no)
@@ -2434,6 +2458,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCASU105SB7104KFNA01"
+			(at 165.1 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Taiyo Yuden"
+			(at 165.1 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -2495,7 +2543,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 64.77 40.64 0)
 			(hide yes)
 			(show_name no)
@@ -2515,6 +2563,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW040210K0FKED"
+			(at 64.77 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 64.77 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -2577,7 +2649,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVS26VZ1USK.pdf"
+		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVSXS1UTR_SER.pdf"
 			(at 43.18 120.65 0)
 			(hide yes)
 			(show_name no)
@@ -2597,6 +2669,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "PTVS33VS1UTR,115"
+			(at 43.18 120.65 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Nexperia"
+			(at 43.18 120.65 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -2659,7 +2755,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVS26VZ1USK.pdf"
+		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVSXS1UTR_SER.pdf"
 			(at 124.46 62.23 0)
 			(hide yes)
 			(show_name no)
@@ -2679,6 +2775,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "PTVS33VS1UTR,115"
+			(at 124.46 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Nexperia"
+			(at 124.46 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -2978,7 +3098,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.farnell.com/datasheets/3822554.pdf"
 			(at 137.16 49.53 0)
 			(hide yes)
 			(show_name no)
@@ -2998,6 +3118,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "3430A2F510RTDF"
+			(at 137.16 49.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "CGS / TE Connectivity"
+			(at 137.16 49.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3137,7 +3281,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 52.07 71.12 0)
 			(hide yes)
 			(show_name no)
@@ -3157,6 +3301,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW040210K0FKED"
+			(at 52.07 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 52.07 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3531,7 +3699,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 71.12 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -3551,6 +3719,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 71.12 67.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 71.12 67.31 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3612,7 +3804,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.farnell.com/datasheets/3822554.pdf"
 			(at 58.42 102.87 0)
 			(hide yes)
 			(show_name no)
@@ -3632,6 +3824,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "3430A2F510RTDF"
+			(at 58.42 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "CGS / TE Connectivity"
+			(at 58.42 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3694,7 +3910,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 76.2 123.19 0)
 			(hide yes)
 			(show_name no)
@@ -3714,6 +3930,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW040210K0FKED"
+			(at 76.2 123.19 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 76.2 123.19 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3776,7 +4016,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.vishay.com/docs/85748/1n4148w.pdf"
+		(property "Datasheet" "https://www.vishay.com/docs/86356/1n4148w.pdf"
 			(at 58.42 92.71 0)
 			(hide yes)
 			(show_name no)
@@ -3796,6 +4036,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "1N4148W-E3-08"
+			(at 58.42 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 58.42 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(property "Sim.Device" "D"
@@ -3881,7 +4145,7 @@
 				(justify left)
 			)
 		)
-		(property "Datasheet" "https://www.onsemi.com/pub/Collateral/NDS7002A-D.PDF"
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174"
 			(at 96.52 120.65 0)
 			(hide yes)
 			(show_name no)
@@ -3902,6 +4166,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "2N7002"
+			(at 96.52 120.65 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 96.52 120.65 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"

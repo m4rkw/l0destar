@@ -349,7 +349,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.digikey.com/en/products/detail/hirose-electric-co-ltd/U-FL-R-SMT-01/513010"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -371,6 +371,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "U.FL-R-SMT(01)"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d4148cc5-3df3-4984-b746-c7abda416313")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Hirose"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b3fcf452-b466-44a5-a0c8-920a6f99f8a6")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -831,7 +857,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Name" "ECS"
+		(property "Manufacturer_Name" "ECS Inc"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -1080,7 +1106,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -1099,6 +1125,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "1f2b61f3-3fab-47cc-aeae-3f1ca489674e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "227e1232-cdad-408b-b6a2-7d527e36d438")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -1228,7 +1280,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.vishay.com/docs/85748/1n4148w.pdf"
+		(property "Datasheet" "https://www.vishay.com/docs/86356/1n4148w.pdf"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -1273,6 +1325,32 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "165bf812-d194-4a2e-bd53-2c8d6539a66b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "1N4148W-E3-08"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "bc725b5f-4a0f-470c-a234-3df772613b38")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "4e17642f-67bc-4a4d-926b-7027a3acc0da")
 			(effects
 				(font
 					(size 1 1)
@@ -1568,7 +1646,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -1587,6 +1665,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "ERJ2RKF1004X"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f0ddcaf9-089c-4c32-8fc1-4c674a45781d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Panasonic"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "32ea2a47-2690-4089-b09f-c1ce44a49636")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -1716,7 +1820,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.we-online.com/components/products/datasheet/150060RS86000.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1744,6 +1848,32 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "af5b5e31-bc91-4cd8-b130-83ee88116c28")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "150060RS86000"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b5d48d0b-a80a-4bf1-b4ca-33c18cffcaac")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Wurth Elektronik"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d94e9f29-9f83-45df-8e8e-b30b349a7037")
 			(effects
 				(font
 					(size 1 1)
@@ -1950,7 +2080,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://ds.yuden.co.jp/TYCOMPAS/or/detail?pn=MCJCU32MLB7106KPPDT1&u=M"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -1972,12 +2102,12 @@
 				)
 			)
 		)
-		(property "MF" ""
+		(property "Manufacturer_Name" "Taiyo Yuden"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "8ba29283-d740-4f00-8544-21875154cdcf")
+			(uuid "3ca81560-c6b9-4875-acc8-632409e02336")
 			(effects
 				(font
 					(size 1 1)
@@ -1985,90 +2115,12 @@
 				)
 			)
 		)
-		(property "Package" "6050 TDK"
+		(property "Manufacturer_Part_Number" "MCJCU32MLB7106KPPDT1"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "172af9b5-a77b-442c-bef7-f2270f15a5a5")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Price" "None"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "3147a954-2578-40e2-b9b9-3ee189816046")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=snap"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "5ee78129-cae9-432d-9295-697a0bbb8b72")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "GCJ32EC71H106KA01L"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "243c5a5c-48a3-44f8-b654-dc7de131bc63")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=6102161&manufacturer=TDK Corporation&part_name=CKG57NX7R1H476M500JH&search_term=ckg57nx7r1h476m500jh"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "a4358cdf-77a6-4b8a-8a9d-056d36016a8f")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "2ef73583-1def-47e6-bb6f-194388d6bff8")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=eda"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "3d0480cc-e958-46da-a298-dafe909e5e2a")
+			(uuid "7d07d644-8cd6-473c-953c-fc36666dc4a2")
 			(effects
 				(font
 					(size 1 1)
@@ -2881,7 +2933,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -2900,6 +2952,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "93fcacc7-2df5-4b8d-895d-ca3c8454348e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Kyocera AVX"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a0605029-c580-47b5-b131-630a1a168646")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -3588,7 +3666,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "CKG57NX7R1H476M500JH"
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CKG57NX7R1H476M500JH"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3610,12 +3688,12 @@
 				)
 			)
 		)
-		(property "MF" "TDK Corporation"
+		(property "Manufacturer_Name" "TDK"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "455e601d-cccc-4f97-a473-9de7d0532b4e")
+			(uuid "ad308bb1-e711-4628-920b-711abc7f081b")
 			(effects
 				(font
 					(size 1 1)
@@ -3623,90 +3701,12 @@
 				)
 			)
 		)
-		(property "Package" "6050 TDK"
+		(property "Manufacturer_Part_Number" "CKG57NX7R1H476M500JH"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "9a3ec100-0872-4daf-9f00-24e7aca282f8")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Price" "None"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "0d15dc88-9ede-4e4a-ba7c-493f79f6af92")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=snap"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "316f699d-f6f9-427b-a60c-3594a2a53d78")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "CKG57NX7R1H476M500JH"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "ed21378c-4c8c-4305-8e14-99cce4087226")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=6102161&manufacturer=TDK Corporation&part_name=CKG57NX7R1H476M500JH&search_term=ckg57nx7r1h476m500jh"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "fd97123b-0c58-4583-a260-01005adabc93")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "08c72871-6eb3-4655-9041-b6ae89055903")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=eda"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "14e9af61-b5f5-4c07-b740-760bee10c237")
+			(uuid "90d31624-0bfc-41e8-b494-176e7faa85dd")
 			(effects
 				(font
 					(size 1 1)
@@ -3908,7 +3908,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mp003476/res-4k7-1-0-0625w-0402-thick-film/dp/3392645"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -3927,6 +3927,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MP003476"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "71c85dca-f24a-4d17-8b71-c8dcb72a66e5")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "86f459d0-8785-451c-9b21-999390fff95e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -4078,7 +4104,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -4097,6 +4123,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "37211e5b-ab01-4e2b-927d-48bc10cdf62a")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "22afef98-da49-41cf-9d03-d7933aea2152")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -4226,7 +4278,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://ds.yuden.co.jp/TYCOMPAS/or/detail?pn=MCASU105SB7104KFNA01&u=M"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -4245,6 +4297,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCASU105SB7104KFNA01"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "9002a4b7-8856-4f6d-ab56-720a4c4fce13")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Taiyo Yuden"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "845c5b3f-41fe-4590-9486-45b9a85c4eeb")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -4502,7 +4580,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4521,6 +4599,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ef9331c4-d304-4ef6-8122-b013b6fb30fe")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Kyocera AVX"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f70c39c8-6c9b-4142-8483-3a6d86449cfd")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -4672,7 +4776,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.farnell.com/datasheets/3157884.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -4691,6 +4795,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "0407002.WRA"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "e3e5b5a7-a06b-4e25-86ac-58601929713c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Littelfuse"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "acf5e28e-e0b6-4659-97d5-b5d983b774b8")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -4820,7 +4950,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVS26VZ1USK.pdf"
+		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVSXS1UTR_SER.pdf"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -4842,6 +4972,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "PTVS33VS1UTR,115"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "1c0c558a-0f28-4787-ac38-4b43102d35ed")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Nexperia"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f99b52ff-d90a-423d-b351-35a06e7f8a21")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -5122,7 +5278,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5141,6 +5297,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW04021K00FKED"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "4f28eb73-494d-46ba-a7fa-25dc61e0951f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ca81d2e8-f621-4528-ab17-c0de30bd49c1")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -5610,7 +5792,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1A106M080AT"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5629,6 +5811,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "C1608X7R1A106M080AT"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a5260687-fe79-444e-887c-401902159048")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "TDK"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "c01185f6-8a4d-4293-b0c7-db157638f876")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -6063,7 +6271,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp/mc00625w04021220r/res-220r-1-0-0625w-0402-thick/dp/1358024"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6082,6 +6290,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC00625W04021220R"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ff3bf7bf-8f4c-4efb-af74-51d22eeb6541")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "5dc5bf3d-cc78-4868-a543-63012b31c8b9")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -6211,7 +6445,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=GRM188R71H224KAC4D"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6230,6 +6464,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "GRM188R71H224KAC4D"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f35b7fd4-5aa6-48c5-b11b-c97b6e5b85b5")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "6ff6bbc3-1230-4d58-9775-ba5dc4481ff4")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -6379,7 +6639,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.coilcraft.com/getmedia/50632d43-da1b-4cdb-8ab4-3029cab51df3/xfl4020.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6401,64 +6661,12 @@
 				)
 			)
 		)
-		(property "MF" "Coilcraft"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "1a57d201-09e2-48c6-9699-22f890eded0e")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
 		(property "MAXIMUM_PACKAGE_HEIGHT" "2.1mm"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "25408907-0e70-40ea-bf46-15d138d3d0fc")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Package" "None"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "01cd3fd1-3ccf-4536-9c35-cebb21a481a9")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Price" "None"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "554563f3-eea7-4b8e-9f78-e477ce6e012d")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/XFL4020-222ME/Coilcraft/view-part/?ref=eda"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "1d1795e8-2de4-4822-bd60-a0e1b07ecf06")
 			(effects
 				(font
 					(size 1 1)
@@ -6492,32 +6700,6 @@
 				)
 			)
 		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/XFL4020-222ME/Coilcraft/view-part/?ref=snap"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "f5b4da9f-1e5d-4992-9af7-fc7c1c439179")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "XFL4020-222ME"
-			(at 0 0 90)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "452b0ece-a02b-4e24-a2c8-76fa87accb1a")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
 		(property "MANUFACTURER" "Coilcraft"
 			(at 0 0 90)
 			(unlocked yes)
@@ -6531,12 +6713,25 @@
 				)
 			)
 		)
-		(property "Availability" "In Stock"
+		(property "Manufacturer_Name" "Coilcraft"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "0537f05c-0b2f-4c11-aba4-4ebb1e4b1dce")
+			(uuid "327417bc-6b69-407f-87fd-40ca91293039")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "XFL4020-222MEC"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3d66fee3-fd0f-40c1-99ee-e15138c66f58")
 			(effects
 				(font
 					(size 1 1)
@@ -6780,7 +6975,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=GCM1555C1H270FA16D"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6799,6 +6994,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "GCM1555C1H270FA16D"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "4dce5e44-0af0-464a-a8ef-5fa25cbed146")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ed608209-a6bb-4f43-9bba-2f9f7a66f39e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -6950,7 +7171,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -6969,6 +7190,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "41c7943f-cad4-44c2-a49d-eae66710ea41")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Kyocera AVX"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "4d501f1a-c08f-44af-b275-0ac89f1450fe")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -7120,7 +7367,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -7139,6 +7386,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "492d367f-4c72-4e79-86fc-d5c69ce092e7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "9378d436-8b79-40fe-8c87-bff1c6be68a3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -7268,7 +7541,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://search.kemet.com/component-documentation/download/specsheet/C0402C100K5RACTU"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7287,6 +7560,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "C0402C100K5RACTU"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b88e0728-e78a-45cf-b10e-66262f02146f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Kemet"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a6b1238e-4485-4729-989d-417679e7bbc5")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8290,7 +8589,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://calchip.com/wp-content/uploads/2023/03/gmc_series-3.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8309,6 +8608,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "GMC21X7R226M10NT"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "13c4c60a-4d5f-406c-b99c-3d93561e1a17")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Cal-Chip Electronics"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ace70b64-8d56-4991-8be3-f7613f77d6bc")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8460,7 +8785,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8479,6 +8804,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "59563e68-7e66-4e26-850d-e4780cf0866d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Kyocera AVX"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "2e4912be-c9a0-4466-86eb-797356d57064")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8608,7 +8959,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8627,6 +8978,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b33d2cf2-96e8-49f8-91bd-521fc1a7307b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "147010af-a63d-4957-9f45-22b39bd57e29")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8778,7 +9155,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -8797,6 +9174,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "ERJ2RKF1004X"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b83614fd-6e3e-47ce-af14-b491106c2aa6")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Panasonic"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "bc51d2f9-62ab-479b-94de-4a481c7dc33d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -8926,7 +9329,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "http://www.vishay.com.hk/docs/66597/sip32431.pdf"
+		(property "Datasheet" "https://www.vishay.com/docs/66597/sip32431.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8945,6 +9348,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "SiP32431DR3"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "c476f28b-b6a4-450d-9956-480aae691b45")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "8475ddba-7078-4cdd-8356-76cc55ecc13c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -9344,7 +9773,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/component-documentation/download/specsheet/RC0402FR-0718K2L"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9363,6 +9792,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "RC0402FR-0718K2L"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "612094fe-932f-4293-a828-de8966e07b9b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Yageo"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f3f71bc6-3f13-4dde-a138-2a8588d5eca5")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -9514,7 +9969,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.infineon.com/dgdl/Infineon-ITS4060S-SJ-N-DataSheet-v01_10-EN.pdf?fileId=5546d4626c1f3dc3016c904943b2231b"
+		(property "Datasheet" "https://www.infineon.com/assets/row/public/documents/10/49/infineon-its4060s-sj-n-datasheet-en.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9966,7 +10421,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.farnell.com/datasheets/3822554.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -9985,6 +10440,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "3430A2F15RTDF"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "90aca3cb-68bf-4a53-a79e-acc5a826e901")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "CGS / TE Connectivity"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "04a8cfee-0908-4ca0-8210-00a74d3a590d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -10094,7 +10575,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpas05w2j0121t5e/res-120r-5-0-5w-thick-film-0805/dp/4069078"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10113,6 +10594,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPAS05W2J0121T5E"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d10117d7-2cc1-44ad-ae30-81e547a8bfd7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d536174a-5eea-4bac-9e29-1d325c6989f1")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -10242,7 +10749,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcmr04x5602ftl/res-56k-1-0-0625w-0402-ceramic/dp/2073131"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10261,6 +10768,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCMR04X5602FTL"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "5fb70801-8979-4536-85d7-6a40f976f17f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "e2dcde1a-baaf-4996-9d2d-8d6d5c8c5998")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -10412,7 +10945,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.farnell.com/datasheets/3157884.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10431,6 +10964,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "0407002.WRA"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "6c714d36-b135-4782-9211-53e49075a0fe")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Littelfuse"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "19bc2bcb-39a0-40fd-98ea-f2925db697eb")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -10731,7 +11290,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -10750,6 +11309,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW040210K0FKED"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "573899bc-52f3-41f2-ba60-c0851a3bb007")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "7f56ddd6-955e-487d-86c5-6901cdd4e892")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -11091,6 +11676,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "LM66100"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "aa913d1d-b35d-4477-8527-836622950fdd")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Texas Instruments"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "c85e2563-3b93-433c-9a74-e524bc957776")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -11490,7 +12101,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.we-online.com/components/products/datasheet/150060RS86000.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -11518,6 +12129,32 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "0964ede0-78b5-4b31-b807-b62e9ba0e4c3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "150060RS86000"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "88d33b38-2960-4d7d-b37c-878c2bc6f171")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Wurth Elektronik"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "17ad091a-d05c-45ad-87b5-ad86406d1311")
 			(effects
 				(font
 					(size 1 1)
@@ -11724,7 +12361,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -11743,6 +12380,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "317cae13-1b12-45e6-acd9-5240301c7d71")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "8d8c6810-3518-4471-a281-637f23974720")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -11894,7 +12557,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -11913,6 +12576,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCMR04X2263FTL"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "1a20e97f-093f-479b-addc-ab02efb4f18f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "e2403a28-9c8b-4bec-ae6d-06afcf530901")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -12064,7 +12753,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -12083,6 +12772,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW040210K0FKED"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a23d77c1-422c-48b4-9bcb-ef6472977934")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "c7bbf014-1050-4a08-99da-85d7129f886d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -12234,7 +12949,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C1608X7R1A106M080AT"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -12253,6 +12968,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "C1608X7R1A106M080AT"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "c48143fc-7137-44e3-859a-29ec32172b33")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "TDK"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f4759770-8f89-4a7f-a8d9-ae40fd23f915")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -12404,7 +13145,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -12423,6 +13164,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW040210K0FKED"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "158ad0e4-2133-4ad3-88c0-96f82a1a01da")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "666f94b5-d90d-4652-8a1c-18af14cb510e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -12743,7 +13510,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tpd1e05u06.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -12765,12 +13532,12 @@
 				)
 			)
 		)
-		(property "MF" "Texas Instruments"
+		(property "Manufacturer_Name" "Texas Instruments"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "81937839-ed98-442f-bfc1-a3544c2d618b")
+			(uuid "8c4e7934-2c32-4f85-a26d-cd95e021f5dc")
 			(effects
 				(font
 					(size 1 1)
@@ -12778,77 +13545,12 @@
 				)
 			)
 		)
-		(property "Package" "X1SON-2 Texas Instruments"
+		(property "Manufacturer_Part_Number" "TPD1E05U06DPYR"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "9aedb62d-d3af-447c-b1a0-adf0a9d224fe")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Price" "None"
-			(at 0 0 270)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "f5232e82-e7db-4101-896b-35b3c79fc499")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=snap"
-			(at 0 0 270)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "fbec9293-17f8-4b05-a30b-08c4942520f1")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "TPD1E05U06DPYR"
-			(at 0 0 270)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "96ad7c54-dfd8-4089-a5db-0b470fea8518")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 0 0 270)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "10123b8f-1b26-4001-a648-73c0bfa3c5b6")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=eda"
-			(at 0 0 270)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "3af68f5b-b37d-444f-9ced-d857fecc293b")
+			(uuid "b285338d-d867-4f04-affa-525701142378")
 			(effects
 				(font
 					(size 1 1)
@@ -13032,7 +13734,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -13051,6 +13753,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ff0b47a1-e6a1-4901-b781-0b1b24eebbf5")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "31ebe4d3-4fcb-4079-9fc4-06c9b9e250d6")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -13200,7 +13928,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "CKG57NX7R1H476M500JH"
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CKG57NX7R1H476M500JH"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -13222,12 +13950,12 @@
 				)
 			)
 		)
-		(property "MF" "TDK Corporation"
+		(property "Manufacturer_Name" "TDK"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "e0be101f-40c0-478a-9858-03f54533cfbd")
+			(uuid "8e06a661-b866-45cd-b200-39421b3d5e27")
 			(effects
 				(font
 					(size 1 1)
@@ -13235,90 +13963,12 @@
 				)
 			)
 		)
-		(property "Package" "6050 TDK"
+		(property "Manufacturer_Part_Number" "CKG57NX7R1H476M500JH"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "acb1dfcc-6a9e-4ca0-9c46-4a6b0c472170")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Price" "None"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "19a10e38-15a3-43e3-b183-fe066f0b6d22")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=snap"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "ea605b9b-9a21-4842-a681-5119aaea69ab")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "CKG57NX7R1H476M500JH"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "6fdea3ae-1cef-4a0f-afa1-13da87910efc")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=6102161&manufacturer=TDK Corporation&part_name=CKG57NX7R1H476M500JH&search_term=ckg57nx7r1h476m500jh"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "1206a38a-33b5-46fd-b85d-a2d52af3b414")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "9d8abc3d-7bd8-4532-86c4-285d49e0266c")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=eda"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "4c2d13b3-b5ce-40f8-848c-afe783a20fe7")
+			(uuid "6d24a22c-c56f-4d7a-82e1-aaa8466f97ca")
 			(effects
 				(font
 					(size 1 1)
@@ -13509,7 +14159,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://ds.yuden.co.jp/TYCOMPAS/or/detail?pn=MCASU105SB7104KFNA01&u=M"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -13528,6 +14178,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCASU105SB7104KFNA01"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d3f9b8c1-afce-4c20-8853-6f806b5ecec2")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Taiyo Yuden"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "154c277f-0716-4d62-92de-c9715649078e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -14131,7 +14807,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.farnell.com/datasheets/3822554.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -14150,6 +14826,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "3430A2F510RTDF"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3a437bde-4b91-4057-a56d-78f0be59291f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "CGS / TE Connectivity"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "e4e1cd17-7ae0-42d3-8467-00d591192373")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -14281,7 +14983,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.onsemi.com/pub_link/Collateral/NUP2105L-D.PDF"
+		(property "Datasheet" "https://diotec.com/tl_files/diotec/files/pdf/datasheets/nup2105l.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -14300,6 +15002,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "NUP2105L"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "5beddfd7-9339-4537-a295-9139749ba5ee")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Diotec"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "c570faff-163a-4d91-9f6c-c13fc4504282")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -14686,7 +15414,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.samsungsem.com/mlcc/CL32B476MPJNNNE.do"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -14705,6 +15433,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CL32B476MPJNNNE"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "87a24d6b-4a2d-435c-bacb-4acaf951de9b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Samsung Electro-Mechanics"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "db81afd3-dad6-4b5a-b4b9-ec46102dbfc3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -14856,7 +15610,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=GRM1555CYA103JE01D"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -14875,6 +15629,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "GRM1555CYA103JE01D"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a2c005f1-640b-48e0-a00c-8cea6292b502")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "e33cf71a-575b-449e-92d3-5742e076823f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -15026,7 +15806,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "http://www.vishay.com.hk/docs/66597/sip32431.pdf"
+		(property "Datasheet" "https://www.vishay.com/docs/66597/sip32431.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -15045,6 +15825,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "SiP32431DR3"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "cecb9b5c-0355-4d8c-b716-4093fa29668a")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "727eeaae-ef4e-4fd0-a558-cc3a6569520e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -15424,7 +16230,7 @@
 			(at 0 -1.17 0)
 			(layer "F.SilkS")
 			(hide yes)
-			(uuid "f2ed6deb-e919-4c8d-bb71-77de3a0bb80c")
+			(uuid "fc8861e9-91d3-4a3e-92ff-0d5ba0f60bd9")
 			(effects
 				(font
 					(size 1 1)
@@ -15436,7 +16242,7 @@
 			(at 0 1.17 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "35d35524-b9e4-460f-a09c-dafcdcfc32ba")
+			(uuid "9d62d1f4-2c84-4fda-bc48-7c8edc88eafd")
 			(effects
 				(font
 					(size 1 1)
@@ -15444,11 +16250,11 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "d6fa815c-a013-43ad-ae1a-d2aee842fbe1")
+			(uuid "896e6a91-9637-4f84-9765-9e07d923b648")
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15459,10 +16265,36 @@
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "17bbe1ff-25cb-4fc1-ac6b-b68ff41b815a")
+			(uuid "46cf9a22-554a-4dbe-8918-0f7908816669")
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW040210K0FKED"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b1fa605d-804b-437e-8300-b538f61d39d3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "68982878-1aaa-4851-bb81-50e4ea3e8c51")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -15614,7 +16446,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -15633,6 +16465,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "ERJ2RKF1004X"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "46c32c99-e16f-4fc2-96df-794a654f2350")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Panasonic"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "918273e0-e750-41d5-a126-0d2ce725ffb4")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -15890,7 +16748,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -15909,6 +16767,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b2f2de9c-a1fa-476c-b8ec-0ff48b918eb9")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a54eaf3a-0e33-402b-8e32-6f61c48aa772")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -16058,7 +16942,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.st.com/resource/en/datasheet/asm330lhhx.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -16080,64 +16964,12 @@
 				)
 			)
 		)
-		(property "MF" "STMicroelectronics"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "8299d261-2f09-4638-91d1-3706a9380e13")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
 		(property "MAXIMUM_PACKAGE_HEIGHT" "0.86mm"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "783fca0e-6b79-415f-abd6-a304a3e4e73d")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Package" "VFLGA-14 STMicroelectronics"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "9270f66f-17c8-4420-b8a2-fd0dbb9e12cf")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Price" "None"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "ca014766-cf3a-4bad-99fc-a689479247cf")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/ASM330LHHXTR/STMicroelectronics/view-part/?ref=eda"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "46e1e238-52b9-4846-964d-eb87953a5ec6")
 			(effects
 				(font
 					(size 1 1)
@@ -16171,51 +17003,38 @@
 				)
 			)
 		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/ASM330LHHXTR/STMicroelectronics/view-part/?ref=snap"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "0f88ccaf-e7cc-4f73-9901-85b591446b7c")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "ASM330LHHXTR"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "d594c1fc-9ed6-4cd8-8cad-d3820d91d846")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "4b6d9637-aa2b-40ab-a61a-048e3476d833")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
 		(property "MANUFACTURER" "STMicroelectronics"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "7cf59011-b39d-45e8-8218-c19c3e7efb68")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "STMicroelectronics"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "dcfe9670-d414-49eb-8bcb-ed91e40c7e4d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "ASM330LHHXTR"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "bfb0c5b7-1f45-403c-bb4e-e01a30f11b0d")
 			(effects
 				(font
 					(size 1 1)
@@ -16868,7 +17687,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.digikey.com/en/products/detail/hirose-electric-co-ltd/U-FL-R-SMT-01/513010"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -16890,6 +17709,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "U.FL-R-SMT(01)"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "e5b7c5df-e563-4714-a65c-835ac5cc0516")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Hirose"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3cd94d3f-2d2a-4605-a55d-24ec8bc7948c")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -17289,7 +18134,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -17308,6 +18153,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW040210K0FKED"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "9d1042a6-cff7-4aa6-95de-e90b7a5d6294")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "26d37fd6-240e-4992-b600-90432933a3c7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -17628,7 +18499,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -17647,6 +18518,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW04021K00FKED"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "8d7055c0-18c1-4123-813b-469525b7916d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ed12e0fc-54e4-48d0-a6e8-df9d6755dabc")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -17901,7 +18798,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://suddendocs.samtec.com/catalog_english/sma.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -17920,58 +18817,6 @@
 			(effects
 				(font
 					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" "Samtec"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "c17ea7d5-697a-4f8f-b4c0-274d7fc3d636")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Package" "None"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "600854ec-3f9f-47f1-ba27-3bdd07d21ee6")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Price" "None"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "2cfaca8e-98dd-4edc-8324-464998638eef")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=eda"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "552283a7-7619-498d-b0ef-0024a86c129a")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
 				)
 			)
 		)
@@ -18001,64 +18846,38 @@
 				)
 			)
 		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=snap"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "586f87cb-df3d-4025-b5cb-db51f9239243")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "SMA-J-P-H-RA-TH1"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "daa7b33e-6cd8-4319-8d3b-dc2a266c8859")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=134498&manufacturer=Samtec&part_name=SMA-J-P-H-RA-TH1&search_term=sma-j-p-h-ra-th1"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "b07c539f-0cd2-4031-9dd3-0705175a93e9")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "82468c17-9377-42f9-b8b1-334687be6b6f")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
 		(property "MANUFACTURER" "Samtec"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "792ddb85-274b-426d-a055-187934e8c0ea")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Samtec"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a8da5255-ddf0-429c-88b5-bd3be7bc9538")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "SMA-J-P-H-RA-TH1"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "5600db08-bf7e-42ba-94de-3fce39aeec0d")
 			(effects
 				(font
 					(size 1 1)
@@ -18609,7 +19428,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -18628,6 +19447,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "ERJ2RKF1004X"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a0d6b47c-cc0b-4756-af10-d5f6ead318b7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Panasonic"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d87e7b88-1303-42dd-8098-8148b0e63f64")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -18779,7 +19624,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVS26VZ1USK.pdf"
+		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PTVSXS1UTR_SER.pdf"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -18801,6 +19646,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "PTVS33VS1UTR,115"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "fdf4ee4f-6d43-4425-a676-bad5ac623c9c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Nexperia"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "8d97c1a2-0f06-4596-909c-0ad6a6eb7876")
+			(effects
+				(font
+					(size 1 1)
 					(thickness 0.15)
 				)
 			)
@@ -19081,7 +19952,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.samsungsem.com/mlcc/CL32B476MPJNNNE.do"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -19100,6 +19971,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CL32B476MPJNNNE"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "68fc2f9a-5a62-4669-813c-ce203284f6d9")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Samsung Electro-Mechanics"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "5b9d81f5-bf1c-4ed4-8f14-92fb0f08e18a")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -19270,6 +20167,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCP2518FD"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "64f28c15-b031-4d17-b1c2-ab4faa3cf830")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Microchip"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "87b9110d-867d-48b1-a088-a30a8b3ee92e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -20006,7 +20929,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/component-documentation/download/specsheet/AC0402FRNPO9BN101"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -20025,6 +20948,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "AC0402FRNPO9BN101"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "dbeb41b7-24fa-429d-92b5-b02ddccf19f1")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Yageo"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3bb1dd37-5aa3-450d-b5c7-520c747f1ea2")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -20176,7 +21125,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -20195,6 +21144,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW04021K00FKED"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b7bf913e-4812-45ca-bcec-019e897280a1")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "790768c7-f883-4625-b960-3b82ae9dd36b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -20346,7 +21321,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.vishay.com/docs/85748/1n4148w.pdf"
+		(property "Datasheet" "https://www.vishay.com/docs/86356/1n4148w.pdf"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -20391,6 +21366,32 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "0124db6d-9b4a-40af-8de6-c035661e7de9")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "1N4148W-E3-08"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ba6cc6e9-7fe8-4b4f-94e1-3d750aa543b5")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "c3381e7f-e342-4c44-b4ef-1722b9f5e183")
 			(effects
 				(font
 					(size 1 1)
@@ -20708,6 +21709,32 @@
 				)
 			)
 		)
+		(property "Manufacturer_Part_Number" "INA228"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f652504a-38cf-48e4-9b9e-65e6b73d6624")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Texas Instruments"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "cfb3b872-f3f7-4c8f-ab64-af35922b7501")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "*TSSOP*3x3mm?P0.5mm*")
 		(path "/add40e76-24e2-41f9-a0f1-8b7e6f933625")
 		(sheetname "/")
@@ -20982,7 +22009,7 @@
 			(size 1.45 0.3)
 			(layers "F.Cu" "F.Mask" "F.Paste")
 			(roundrect_rratio 0.25)
-			(net "unconnected-(S3U1-~{Alert}-Pad3)")
+			(net "INA_ALRT")
 			(pinfunction "~{Alert}_3")
 			(pintype "open_collector")
 			(teardrops
@@ -21186,7 +22213,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/76628/sqj457ep.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -21208,12 +22235,12 @@
 				)
 			)
 		)
-		(property "MF" "Vishay"
+		(property "Manufacturer_Name" "Vishay Siliconix"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "5ba99b4b-ea90-40f7-82d3-33c659bd90d8")
+			(uuid "dffdb3d7-399d-49b8-92c7-d5a571e0a4f0")
 			(effects
 				(font
 					(size 1 1)
@@ -21221,77 +22248,12 @@
 				)
 			)
 		)
-		(property "Package" "SO-8L SINGLE-5 Vishay"
+		(property "Manufacturer_Part_Number" "SQJ457EP-T1_BE3"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "bc5721e9-4a20-4f96-b815-82dbb1e510eb")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Price" "None"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "53dcabbb-dde3-4293-92e1-b39708a76ee3")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/SQJ457EP-T1_BE3/Vishay/view-part/?ref=snap"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "e098d057-c8bf-4bb0-9882-1ff9c7a7a081")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "SQJ457EP-T1_BE3"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "2bbfb398-ca8f-490d-b67f-277bef38a73f")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "2eca460b-8df2-4e53-a7be-828c9bcd1b29")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/SQJ457EP-T1_BE3/Vishay/view-part/?ref=eda"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "ca00817f-085d-4dab-b182-df8c570f0098")
+			(uuid "d94b1fed-1279-4573-be0f-62d21e90689e")
 			(effects
 				(font
 					(size 1 1)
@@ -21505,7 +22467,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tpd1e05u06.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -21527,12 +22489,12 @@
 				)
 			)
 		)
-		(property "MF" "Texas Instruments"
+		(property "Manufacturer_Name" "Texas Instruments"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "0b712181-23ac-432a-b088-d2439c20ed30")
+			(uuid "2d19acef-9d16-4901-a653-ca0c16dfd9e8")
 			(effects
 				(font
 					(size 1 1)
@@ -21540,77 +22502,12 @@
 				)
 			)
 		)
-		(property "Package" "X1SON-2 Texas Instruments"
+		(property "Manufacturer_Part_Number" "TPD1E05U06DPYR"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "ea6af931-b1ef-44aa-8b48-0835c59700e3")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Price" "None"
-			(at 0 0 270)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "f6658f8b-87a2-4e67-b77e-21ab4412663e")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=snap"
-			(at 0 0 270)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "80543577-b911-4770-9d52-1921df0c65a5")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "TPD1E05U06DPYR"
-			(at 0 0 270)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "6cd2047a-7a62-4bd1-904e-21034bc3e753")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 0 0 270)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "55a7ed5e-f653-4167-9c20-af3be1e0980e")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=eda"
-			(at 0 0 270)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "b72acc7a-5fea-428f-af0b-e2ee76401bf6")
+			(uuid "e411b3e1-7468-4526-88eb-29e09b53abf6")
 			(effects
 				(font
 					(size 1 1)
@@ -21974,7 +22871,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp/mc00625w04021220r/res-220r-1-0-0625w-0402-thick/dp/1358024"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -21993,6 +22890,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC00625W04021220R"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "8a892687-eda1-419f-9ac3-29403aea16a8")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "afe23d35-5dc7-4fb9-9a37-c20b80513f43")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -22196,7 +23119,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "SQ2361ES-T1_GE3"
+		(property "Manufacturer_Part_Number" "SQ2361CES-T1_BE3"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -22558,7 +23481,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/0402b102k500ct/cap-1000pf-50v-10-x7r-0402/dp/2496767"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -22577,6 +23500,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "0402B102K500CT"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "baf581cc-8a06-47b0-9846-be80e2b9e044")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a2dd17a8-316e-4582-98a1-95cdb667aae6")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -23408,7 +24357,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -23427,6 +24376,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "98e6ee96-82ee-493a-ad62-ebfb233a25fa")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "560295ac-ea05-424e-abac-7631325b684f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -23578,7 +24553,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -23597,6 +24572,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a2e80409-70a5-49b1-b873-9f7f9ee63943")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Kyocera AVX"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "5900a62f-b005-418b-8801-2e3368592c9b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -23748,7 +24749,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mp003476/res-4k7-1-0-0625w-0402-thick-film/dp/3392645"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -23767,6 +24768,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MP003476"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "4a0278a7-8db5-46d6-aea7-90d3b9af1d2d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "68fa515b-75b4-4bf5-a86a-36949e2562c3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -23918,7 +24945,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -23937,6 +24964,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "11eed33f-1024-40c3-a83b-d5057f64d924")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "280a581a-9652-44e5-a33e-d6631b750839")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -24088,7 +25141,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -24107,6 +25160,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW04021K00FKED"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "82131b01-b856-48bd-8ecb-3864020249ef")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a1979d87-814f-4849-9e25-82e59eab5611")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -24258,7 +25337,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcmr04x5602ftl/res-56k-1-0-0625w-0402-ceramic/dp/2073131"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -24277,6 +25356,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCMR04X5602FTL"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b3933886-82ef-4a96-b3e0-1543914ec43c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "56fe4555-d243-4bac-82c9-822fb64c94f0")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -24428,7 +25533,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcwr04x1803ftl/res-180k-1-0-0625w-thick-film/dp/2447116"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -24447,6 +25552,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCWR04X1803FTL"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "91911e35-2925-4061-bd97-57e000d3a236")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d692eb21-ac9d-40f8-a9e1-1f2225bae2af")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -24598,7 +25729,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -24617,6 +25748,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "34de21a6-393d-477c-8faa-c38ae1a5addc")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "baf9ba71-2da5-41b1-a07b-4835ac507f6c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -24746,7 +25903,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.we-online.com/components/products/datasheet/150060RS86000.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -24774,6 +25931,32 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "c15338d1-7f0a-4e20-9f5b-a1e8143bd203")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "150060RS86000"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "529542b3-c275-481e-827d-24e6ec7cc3db")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Wurth Elektronik"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "51f217dc-4f28-4f62-aa34-9f305e884d8a")
 			(effects
 				(font
 					(size 1 1)
@@ -24980,7 +26163,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -24999,6 +26182,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CRCW040210K0FKED"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "96d0a51d-0bda-4ee2-aaaf-424c5f509e67")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "12236635-74a8-4704-b92c-3dd2867bbeab")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -25150,7 +26359,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -25169,6 +26378,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "79da0a7b-44b5-41d8-be93-21f23b976c9b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "1a80c883-ad5d-4ebd-b587-d76a7023d328")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -25339,6 +26574,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "BZX84C15"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d3c570e1-0853-4f87-8628-1ad5b31a2c4b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "84df5911-1877-4911-ad33-f068460b0801")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -25725,7 +26986,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -25744,6 +27005,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "6abbe73e-c642-4803-aef8-5cd17c853e6a")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "87e2ff27-3d15-488c-a7cc-b70c9039b516")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -25873,7 +27160,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -25892,6 +27179,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "0c06c78c-ceed-4c4e-a91b-78f7229917a9")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a3ab6228-255b-462f-8882-674b412588e3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -26021,7 +27334,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://ds.yuden.co.jp/TYCOMPAS/or/detail?pn=MCASU105SB7104KFNA01&u=M"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -26040,6 +27353,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCASU105SB7104KFNA01"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "5a635927-7e8f-4614-bc5e-afa02b02234a")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Taiyo Yuden"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "55ad1bc2-3d50-496d-869f-a50ee3b43bfc")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -26169,7 +27508,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -26188,6 +27527,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f8b36145-2ca0-4620-a761-ea1c559d7de3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3ee60c74-e0ec-48be-9b4f-f546eb38122f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -26339,7 +27704,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=GCM1555C1H270FA16D"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -26358,6 +27723,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "GCM1555C1H270FA16D"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "c5d36e25-b81c-4a72-8243-6efd1a072908")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "103ab172-f578-49c2-bc46-ce7543dac82a")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -26615,7 +28006,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=GRM21BZ71H475KE15K"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -26634,6 +28025,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "GRM21BZ71H475KE15K"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3d104b79-c933-42d9-b8a3-6cf361af6444")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "05818bf9-f721-44c3-ad9f-83035d41da78")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -26785,7 +28202,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/0402b102k500ct/cap-1000pf-50v-10-x7r-0402/dp/2496767"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -26804,6 +28221,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "0402B102K500CT"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ebf266b5-b133-4670-89ba-14f9a3474826")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "927a9706-8bbb-4e84-887f-f3372c65d2c0")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -26933,7 +28376,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.onsemi.com/pub/Collateral/NDS7002A-D.PDF"
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -26952,6 +28395,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "2N7002"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "da7b4f66-08d7-47ea-a761-32215b9ba7fa")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "5fb42bff-d2bd-47dd-a50f-e09b168360bb")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -27305,7 +28774,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -27324,6 +28793,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ba041dea-6a55-4bea-9d1b-0afeb3ef849d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "5e3ff4aa-f677-406f-ad07-687d539f9bc6")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -27475,7 +28970,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.onsemi.com/pub/Collateral/NDS7002A-D.PDF"
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -27494,6 +28989,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "2N7002"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "1b4b76eb-5037-425c-aad5-9eab26c706bd")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "08221ea9-0803-442e-b87d-2b8014aaf661")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -27880,7 +29401,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/0402n470f500ct/cap-47pf-50v-mlcc-0402/dp/3764092"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -27899,6 +29420,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "0402N470F500CT"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "efe9b60d-a671-4e37-b88d-a1beb27aaf7a")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a4d2dfbd-45bb-4bee-a9d1-25373bb8c7f5")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -28394,7 +29941,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -28413,6 +29960,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f43cb280-1a0e-4403-8a92-d27c30a91e29")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "e2295f0e-e85b-4bcf-81a3-db91bea6a8d9")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -28542,7 +30115,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "http://www.vishay.com.hk/docs/66597/sip32431.pdf"
+		(property "Datasheet" "https://www.vishay.com/docs/66597/sip32431.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -28561,6 +30134,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "SiP32431DR3"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "97f444e4-b33b-4247-96fe-e03be5caa608")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Vishay"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f8e9809b-a06a-4909-a034-d1d4ffc1681b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -28894,7 +30493,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/productspecificationpdf/430/43045/PS-43045-001.pdf"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -28913,6 +30512,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "43045-0600"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "1f1398e1-4992-4d8b-9014-39f845f0e1c8")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Molex"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ad637100-21f7-4bdf-8ea3-696ef8e9448c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -29342,7 +30967,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -29361,6 +30986,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "8975058d-0b10-44ee-b043-e5e3ca335636")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Kyocera AVX"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "55b06a1e-3378-47af-a231-d5389bcd0c10")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -29512,7 +31163,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "BLM15PX601SZ1D"
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=BLM15PX601SZ1D"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -29531,6 +31182,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "BLM15PX601SZ1D"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "0473b1c9-c827-4fc6-bb5b-8f28f1eec73e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "4a08e1af-8b89-4d47-a592-55c746da979d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -29662,7 +31339,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcwr04x1803ftl/res-180k-1-0-0625w-thick-film/dp/2447116"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -29681,6 +31358,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCWR04X1803FTL"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "9c11807b-f107-47c7-a104-aa75a0f646ae")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "e663ae02-bdb1-4738-8192-29470d553a3e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -29810,7 +31513,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.onsemi.com/pub/Collateral/NDS7002A-D.PDF"
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -29829,6 +31532,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "2N7002"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "8cec8c11-0746-44eb-9157-3ce78380ce0d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a82e3e43-4e4b-4dcd-ad8f-624fe53a47a8")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -30237,6 +31966,32 @@
 				)
 			)
 		)
+		(property "Manufacturer_Part_Number" "BZX84C15"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "7e72e871-645d-46ab-b627-b3de866c2e93")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "58f273d8-9805-4c08-a35f-0ce787fbafbc")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "SOT?23*")
 		(path "/5d2265ef-f12c-43dd-98a3-cc1a677db7dc")
 		(sheetname "/")
@@ -30620,7 +32375,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -30639,6 +32394,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "0e87f19f-75ff-4321-a024-65cb93e95872")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f2215cf4-9c36-44d7-8917-fce3ebadc17f")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -30768,7 +32549,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=LQW18AN68NJ00D"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -30787,6 +32568,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "LQW18AN68NJ00D"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "962d58d3-e63b-49d4-a990-9fc2b1951a2b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "472393bd-72a1-40d1-b1bd-f0072c5ab1fc")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -30940,7 +32747,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.farnell.com/datasheets/3822554.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -30959,6 +32766,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "3430A2F510RTDF"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3a48d29c-eb8c-4f90-9e1a-c93ce5b3aa27")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "CGS / TE Connectivity"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3743068a-e494-434f-9b78-974f41dc7c24")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -31603,7 +33436,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -31622,6 +33455,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "e473b3d4-2802-450e-b8c0-237004c8d68e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "1397e0f9-d85d-4842-9235-aaf8f9d39b21")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -31771,7 +33630,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.analog.com/media/en/technical-documentation/data-sheets/LT8609-8609A-8609B.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -31793,19 +33652,6 @@
 				)
 			)
 		)
-		(property "MF" "Analog Devices"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "44731197-1055-42f1-8b0c-2e79185f8689")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
 		(property "VENDOR" "Linear Technology"
 			(at 0 0 0)
 			(unlocked yes)
@@ -31819,12 +33665,12 @@
 				)
 			)
 		)
-		(property "Package" "MSOP-10 Linear Technology"
+		(property "Manufacturer_Name" "Analog Devices"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "68d9f616-9b76-444f-a7a4-14e9a9c42f00")
+			(uuid "249fff2b-c081-4981-8148-5b13ab4ec654")
 			(effects
 				(font
 					(size 1 1)
@@ -31832,77 +33678,12 @@
 				)
 			)
 		)
-		(property "Price" "None"
+		(property "Manufacturer_Part_Number" "LT8609AIMSE#PBF"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "f83cfd99-0d50-44c6-bd40-8c03c1c7df80")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/LT8609AIMSE%23PBF/Analog+Devices/view-part/?ref=eda"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "fbef8455-d743-4849-bc9d-49e4873422d3")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/LT8609AIMSE%23PBF/Analog+Devices/view-part/?ref=snap"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "73ecf118-ba63-4973-8ed9-ea74afef5eb9")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "LT8609AIMSE#PBF"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "c88492c3-4bdd-4e8a-a073-9b2bbbc49c06")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "2ca45a22-930e-4321-a806-d9de436dac34")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" "lt8609hmse#trpbf"
-			(at 0 0 0)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "9107295b-5c27-4737-bc0c-cb0cc1168cd8")
+			(uuid "f8146035-1994-4294-8214-e0ecb34f19ca")
 			(effects
 				(font
 					(size 1 1)
@@ -32936,7 +34717,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -32955,6 +34736,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "2e2fa2d6-35a2-42e4-8540-72963ea06d8d")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 270)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "ba3e69ff-4c16-409b-bf71-76e75de8099c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -33084,7 +34891,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -33103,6 +34910,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "01266a38-d212-4ce2-9120-60778312e172")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "817bc887-9997-4f7a-99e9-7b91e2355dd2")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -33254,7 +35087,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -33273,6 +35106,32 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "ERJ2RKF1004X"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3b400ae0-39de-4976-908a-44f0580aadce")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Panasonic"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f2f25795-5460-4aa1-a55a-dfd98133c63e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
@@ -33399,7 +35258,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://suddendocs.samtec.com/catalog_english/sma.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -33418,58 +35277,6 @@
 			(effects
 				(font
 					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MF" "Samtec"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "43d1739c-1c6a-418c-90e6-5f75bf9379c0")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Package" "None"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "31647b5d-8bf0-4577-a942-fcd863fb4637")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Price" "None"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "06c7d77a-d4dd-4d75-94e4-25b02c84b87f")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=eda"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "d41eda57-03f8-48b2-9d79-3905a7be1684")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
 				)
 			)
 		)
@@ -33499,64 +35306,38 @@
 				)
 			)
 		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=snap"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "f06cf94d-71be-4f61-8872-ce3ea1d101ee")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "MP" "SMA-J-P-H-RA-TH1"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "28e021d9-b797-43b8-9f23-f7168681238d")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=134498&manufacturer=Samtec&part_name=SMA-J-P-H-RA-TH1&search_term=sma-j-p-h-ra-th1"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "5bf85026-953a-4cbe-83ca-8e135f14fc20")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 0 0 180)
-			(unlocked yes)
-			(layer "F.Fab")
-			(hide yes)
-			(uuid "872e327c-735c-4b20-8056-7ec903efeef0")
-			(effects
-				(font
-					(size 1 1)
-					(thickness 0.15)
-				)
-			)
-		)
 		(property "MANUFACTURER" "Samtec"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "39607ac9-ec5a-49d8-9e73-fcd927b8d703")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Name" "Samtec"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f2dc6e70-78d6-4eb8-9097-e942551129cc")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "SMA-J-P-H-RA-TH1"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b2fc22eb-4e0d-4627-8245-022f3ccbd47c")
 			(effects
 				(font
 					(size 1 1)
@@ -48493,14 +50274,6 @@
 		(uuid "f65abc7c-2c1e-4a8b-a0de-28336799819a")
 	)
 	(segment
-		(start 48.3875 105.9225)
-		(end 48.16 106.15)
-		(width 0.4)
-		(layer "F.Cu")
-		(net "unconnected-(S1J2-Pin_9-Pad9)")
-		(uuid "ef86d4f6-594c-4c0b-9aee-4103fc94b595")
-	)
-	(segment
 		(start 73.76 106.15)
 		(end 73.56 106.15)
 		(width 0.3)
@@ -48556,11 +50329,19 @@
 		(net "Net-(S6U1-BST)")
 		(uuid "66c0b84a-e382-412a-9a91-c6af35a504a4")
 	)
+	(segment
+		(start 48.3875 105.9225)
+		(end 48.16 106.15)
+		(width 0.4)
+		(layer "F.Cu")
+		(net "unconnected-(S1J2-Pin_9-Pad9)")
+		(uuid "ef86d4f6-594c-4c0b-9aee-4103fc94b595")
+	)
 	(zone
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30191)
+		(priority 30190)
 		(attr
 			(teardrop
 				(type padvia)
@@ -48704,7 +50485,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30344)
+		(priority 30342)
 		(attr
 			(teardrop
 				(type padvia)
@@ -48787,7 +50568,7 @@
 		(net "PP3V3_GPS")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30200)
+		(priority 30198)
 		(attr
 			(teardrop
 				(type padvia)
@@ -48883,7 +50664,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30010)
+		(priority 30011)
 		(attr
 			(teardrop
 				(type padvia)
@@ -48974,7 +50755,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30174)
+		(priority 30173)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49016,7 +50797,7 @@
 		(net "Net-(S15C2-Pad1)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30235)
+		(priority 30233)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49053,7 +50834,7 @@
 		(net "Net-(S15C2-Pad1)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30231)
+		(priority 30229)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49132,7 +50913,7 @@
 		(net "LED3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30361)
+		(priority 30359)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49174,7 +50955,7 @@
 		(net "CAN_L")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30123)
+		(priority 30124)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49216,7 +50997,7 @@
 		(net "CAN_H")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30357)
+		(priority 30355)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49253,7 +51034,7 @@
 		(net "K_TX")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30208)
+		(priority 30207)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49301,7 +51082,7 @@
 		(net "GPS_ENABLE")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30364)
+		(priority 30362)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49343,7 +51124,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30223)
+		(priority 30220)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49390,7 +51171,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30255)
+		(priority 30250)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49478,7 +51259,7 @@
 		(net "CAN_L_ISO9141_L")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30199)
+		(priority 30196)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49564,7 +51345,7 @@
 		(net "Net-(S9U2-OSC2)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30152)
+		(priority 30150)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49607,7 +51388,7 @@
 		(net "Net-(S15C2-Pad1)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30166)
+		(priority 30164)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49738,7 +51519,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30266)
+		(priority 30279)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49773,7 +51554,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30269)
+		(priority 30273)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49806,7 +51587,7 @@
 		(net "PP3V3_CAN")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30186)
+		(priority 30182)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49855,7 +51636,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30307)
+		(priority 30304)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49888,7 +51669,7 @@
 		(net "Net-(S9U2-SDI)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30161)
+		(priority 30158)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49929,7 +51710,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30224)
+		(priority 30219)
 		(attr
 			(teardrop
 				(type padvia)
@@ -49967,7 +51748,7 @@
 		(net "Net-(S6U1-SW)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30196)
+		(priority 30194)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50016,7 +51797,7 @@
 		(net "Net-(S6U1-SW)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30232)
+		(priority 30231)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50145,7 +51926,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30352)
+		(priority 30350)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50188,7 +51969,7 @@
 		(net "K_ENABLE")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30098)
+		(priority 30099)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50237,7 +52018,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30271)
+		(priority 30274)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50268,7 +52049,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30294)
+		(priority 30295)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50388,7 +52169,7 @@
 		(net "I2C_SDA")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30328)
+		(priority 30326)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50429,7 +52210,7 @@
 		(net "PP3V3_CAN")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30113)
+		(priority 30114)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50560,7 +52341,7 @@
 		(net "PP3V3_CAN")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30163)
+		(priority 30160)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50601,7 +52382,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30147)
+		(priority 30145)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50687,7 +52468,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30293)
+		(priority 30296)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50831,7 +52612,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30245)
+		(priority 30244)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50871,7 +52652,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30171)
+		(priority 30169)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50910,7 +52691,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30256)
+		(priority 30266)
 		(attr
 			(teardrop
 				(type padvia)
@@ -50990,7 +52771,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30004)
+		(priority 30003)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51015,14 +52796,11 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 87.697493 78.063364) (xy 88.350406 79.047281) (xy 88.352125 79.056069) (xy 88.350406 79.060219)
-				(xy 87.697409 80.044262) (xy 87.689979 80.049261) (xy 87.681459 80.047715) (xy 87.385532 79.862763)
-				(xy 87.147718 79.745936) (xy 87.147706 79.745931) (xy 87.028541 79.702248) (xy 86.900712 79.665973)
-				(xy 86.755323 79.636125) (xy 86.755319 79.636124) (xy 86.755317 79.636124) (xy 86.593622 79.614266)
-				(xy 86.388622 79.599251) (xy 86.16515 79.594493) (xy 86.156952 79.590891) (xy 86.153699 79.582796)
-				(xy 86.153699 78.524788) (xy 86.157126 78.516515) (xy 86.165234 78.51309) (xy 86.313784 78.51103)
+				(xy 88.354699 79.05375) (xy 87.691114 80.05375) (xy 87.385538 79.862767) (xy 87.147713 79.745934)
+				(xy 87.028534 79.702246) (xy 86.900707 79.665972) (xy 86.755317 79.636124) (xy 86.593622 79.614266)
+				(xy 86.38863 79.599252) (xy 86.153699 79.59425) (xy 86.153699 78.51325) (xy 86.313784 78.51103)
 				(xy 86.672482 78.483874) (xy 86.820908 78.459263) (xy 86.955601 78.427209) (xy 87.147551 78.361632)
-				(xy 87.325817 78.27755) (xy 87.502853 78.174933) (xy 87.681412 78.059994) (xy 87.690223 78.058399)
+				(xy 87.325817 78.27755) (xy 87.502853 78.174933) (xy 87.691114 78.05375)
 			)
 		)
 	)
@@ -51030,7 +52808,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30282)
+		(priority 30280)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51066,7 +52844,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30305)
+		(priority 30282)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51148,7 +52926,7 @@
 		(net "PP3V3_CAN")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30157)
+		(priority 30155)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51193,7 +52971,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30330)
+		(priority 30328)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51240,7 +53018,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30193)
+		(priority 30189)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51285,7 +53063,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30222)
+		(priority 30221)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51323,7 +53101,7 @@
 		(net "CAN_ENABLE")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30164)
+		(priority 30162)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51371,7 +53149,7 @@
 		(net "Net-(S13D3-A)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30350)
+		(priority 30348)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51408,7 +53186,7 @@
 		(net "PP12VI")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30376)
+		(priority 30009)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51436,60 +53214,14 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 33.225311 79.914487) (xy 33.227031 79.919589) (xy 33.253793 80.206309) (xy 33.253602 80.206925)
-				(xy 33.253843 80.207525) (xy 33.252305 80.211124) (xy 33.25115 80.214864) (xy 33.250578 80.215165)
-				(xy 33.250325 80.21576) (xy 33.246689 80.217219) (xy 33.243231 80.219045) (xy 33.242015 80.219095)
-				(xy 33.228525 80.218946) (xy 33.227266 80.218864) (xy 33.213507 80.217219) (xy 33.091161 80.202591)
-				(xy 33.087332 80.201446) (xy 33.028986 80.172372) (xy 33.024624 80.168616) (xy 33.013074 80.152141)
-				(xy 33.011117 80.147373) (xy 33.007915 80.128413) (xy 33.008198 80.123263) (xy 33.017631 80.090138)
-				(xy 33.019166 80.086827) (xy 33.045582 80.047471) (xy 33.047063 80.045682) (xy 33.107763 79.985745)
-				(xy 33.108909 79.984753) (xy 33.194985 79.919659) (xy 33.195842 79.919069) (xy 33.209194 79.910746)
-				(xy 33.218026 79.909279)
-			)
-		)
-		(filled_polygon
-			(layer "F.Cu")
-			(pts
-				(xy 34.705236 79.422997) (xy 34.709297 79.430979) (xy 34.709332 79.431889) (xy 34.709332 80.005724)
-				(xy 34.705905 80.013997) (xy 34.697632 80.017424) (xy 34.695955 80.017303) (xy 34.610659 80.004952)
-				(xy 34.608116 80.004286) (xy 34.540363 79.978088) (xy 34.538725 79.977303) (xy 34.472926 79.939241)
-				(xy 34.471572 79.938326) (xy 34.392485 79.876412) (xy 34.39143 79.875479) (xy 34.316812 79.80098)
-				(xy 34.315981 79.800056) (xy 34.222062 79.683901) (xy 34.221433 79.683047) (xy 34.13808 79.558362)
-				(xy 34.137537 79.557465) (xy 34.122241 79.529441) (xy 34.121285 79.520538) (xy 34.126906 79.513566)
-				(xy 34.128958 79.512688) (xy 34.167663 79.50037) (xy 34.168831 79.500065) (xy 34.467937 79.43817)
-				(xy 34.469367 79.437967) (xy 34.696722 79.420224)
-			)
-		)
-	)
-	(zone
-		(net "PP12VP")
-		(layer "F.Cu")
-		(hatch none 0.1)
-		(priority 30140)
-		(attr
-			(teardrop
-				(type track_end)
-			)
-		)
-		(connect_pads yes
-			(clearance 0)
-		)
-		(min_thickness 0.0254)
-		(fill yes
-			(island_removal_mode 1)
-		)
-		(polygon
-			(pts
-				(xy 47.1 89.182567) (xy 46.7 89.182567) (xy 46.602567 89.740842) (xy 46.9 89.783567) (xy 47.197433 89.740842)
-			)
-		)
-		(filled_polygon
-			(layer "F.Cu")
-			(pts
-				(xy 47.098438 89.185994) (xy 47.101691 89.192255) (xy 47.195359 89.728963) (xy 47.193405 89.737703)
-				(xy 47.185845 89.742501) (xy 47.185497 89.742556) (xy 46.901664 89.783327) (xy 46.898336 89.783327)
-				(xy 46.614502 89.742556) (xy 46.606801 89.737988) (xy 46.604585 89.729311) (xy 46.60464 89.728963)
-				(xy 46.698309 89.192255) (xy 46.703107 89.184695) (xy 46.709835 89.182567) (xy 47.090165 89.182567)
+				(xy 34.709332 79.41924) (xy 34.468651 79.438023) (xy 34.168238 79.500188) (xy 33.821704 79.610482)
+				(xy 33.472613 79.760451) (xy 33.322256 79.840272) (xy 33.195401 79.919345) (xy 33.108303 79.985212)
+				(xy 33.046233 80.046502) (xy 33.018137 80.088362) (xy 33.007475 80.125806) (xy 33.011557 80.149979)
+				(xy 33.026329 80.171048) (xy 33.089147 80.202351) (xy 33.227893 80.218939) (xy 33.255 80.21924)
+				(xy 33.208332 79.71924) (xy 33.962107 79.21924) (xy 33.917069 79.100578) (xy 33.936775 79.157392)
+				(xy 34.0128 79.328941) (xy 34.137787 79.557923) (xy 34.221727 79.683487) (xy 34.316377 79.800546)
+				(xy 34.391927 79.875976) (xy 34.472217 79.938831) (xy 34.539516 79.977761) (xy 34.609348 80.004763)
+				(xy 34.709332 80.01924)
 			)
 		)
 	)
@@ -51497,7 +53229,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30153)
+		(priority 30151)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51539,7 +53271,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30253)
+		(priority 30246)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51614,7 +53346,7 @@
 		(net "PP12V_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30099)
+		(priority 30098)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51663,7 +53395,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30261)
+		(priority 30268)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51746,7 +53478,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30124)
+		(priority 30120)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51788,7 +53520,7 @@
 		(net "Net-(S6U1-INTVCC)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30324)
+		(priority 30322)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51874,7 +53606,7 @@
 		(net "Net-(S13D2-A)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30082)
+		(priority 30081)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51920,7 +53652,7 @@
 		(net "CAN_L_ISO9141_L")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30165)
+		(priority 30163)
 		(attr
 			(teardrop
 				(type padvia)
@@ -51962,7 +53694,7 @@
 		(net "CAN_L_ISO9141_L")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30168)
+		(priority 30166)
 		(attr
 			(teardrop
 				(type padvia)
@@ -52172,7 +53904,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30268)
+		(priority 30260)
 		(attr
 			(teardrop
 				(type padvia)
@@ -52210,7 +53942,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30175)
+		(priority 30172)
 		(attr
 			(teardrop
 				(type padvia)
@@ -52253,7 +53985,7 @@
 		(net "PP3V3_CAN")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30323)
+		(priority 30321)
 		(attr
 			(teardrop
 				(type padvia)
@@ -52292,7 +54024,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30306)
+		(priority 30293)
 		(attr
 			(teardrop
 				(type padvia)
@@ -52327,7 +54059,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30281)
+		(priority 30272)
 		(attr
 			(teardrop
 				(type padvia)
@@ -52575,7 +54307,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30218)
+		(priority 30216)
 		(attr
 			(teardrop
 				(type padvia)
@@ -52620,7 +54352,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30273)
+		(priority 30278)
 		(attr
 			(teardrop
 				(type padvia)
@@ -52656,7 +54388,7 @@
 		(net "Net-(S9U2-OSC2)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30143)
+		(priority 30141)
 		(attr
 			(teardrop
 				(type padvia)
@@ -52742,7 +54474,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30369)
+		(priority 30367)
 		(attr
 			(teardrop
 				(type padvia)
@@ -52834,7 +54566,7 @@
 		(net "PP3V3_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30287)
+		(priority 30298)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53054,7 +54786,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30332)
+		(priority 30330)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53092,7 +54824,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30247)
+		(priority 30245)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53132,7 +54864,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30198)
+		(priority 30197)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53177,7 +54909,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30301)
+		(priority 30290)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53216,7 +54948,7 @@
 		(net "Net-(S13D3-A)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30081)
+		(priority 30082)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53240,21 +54972,17 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 83.644489 104.552717) (xy 83.648111 104.554921) (xy 83.702509 104.603479) (xy 83.702509 104.60348)
-				(xy 83.741755 104.638514) (xy 83.741761 104.638518) (xy 83.741953 104.63869) (xy 83.741958 104.638694)
-				(xy 83.741967 104.638702) (xy 83.741973 104.638706) (xy 83.900087 104.748846) (xy 83.913335 104.758075)
-				(xy 83.930904 104.770313) (xy 83.930911 104.770317) (xy 84.112895 104.860109) (xy 84.112906 104.860113)
-				(xy 84.177936 104.878606) (xy 84.273411 104.905757) (xy 84.273415 104.905758) (xy 84.39233 104.911575)
-				(xy 84.396755 104.912682) (xy 84.398366 104.913443) (xy 84.404383 104.920075) (xy 84.404387 104.920084)
-				(xy 84.404595 104.920666) (xy 84.404395 104.92906) (xy 84.233713 105.343408) (xy 84.231184 105.34721)
-				(xy 84.228503 105.349901) (xy 84.223582 105.352848) (xy 83.773503 105.488155) (xy 83.768959 105.488591)
-				(xy 83.767187 105.488412) (xy 83.759301 105.484171) (xy 83.758933 105.48372) (xy 83.756332 105.475476)
+				(xy 83.646502 104.553485) (xy 83.70251 104.60348) (xy 83.741953 104.63869) (xy 83.741958 104.638694)
+				(xy 83.741967 104.638702) (xy 83.741973 104.638706) (xy 83.930904 104.770313) (xy 83.930911 104.770317)
+				(xy 84.112895 104.860109) (xy 84.112906 104.860113) (xy 84.177936 104.878606) (xy 84.273411 104.905757)
+				(xy 84.273415 104.905758) (xy 84.394657 104.911689) (xy 84.402752 104.915516) (xy 84.40577 104.923947)
+				(xy 84.404902 104.927831) (xy 84.232827 105.34556) (xy 84.226507 105.351905) (xy 84.225377 105.352309)
+				(xy 83.771275 105.488825) (xy 83.762366 105.487925) (xy 83.756702 105.480988) (xy 83.756238 105.476771)
 				(xy 83.760317 105.420962) (xy 83.754055 105.346336) (xy 83.732226 105.251756) (xy 83.732224 105.25175)
 				(xy 83.732222 105.251743) (xy 83.697695 105.15798) (xy 83.640339 105.043319) (xy 83.627255 105.02256)
 				(xy 83.573692 104.937578) (xy 83.573684 104.937567) (xy 83.497644 104.837282) (xy 83.497636 104.837273)
-				(xy 83.435154 104.768233) (xy 83.432811 104.764316) (xy 83.432155 104.762478) (xy 83.432479 104.753801)
-				(xy 83.433115 104.752368) (xy 83.435531 104.748849) (xy 83.628797 104.555583) (xy 83.632592 104.553049)
-				(xy 83.634416 104.552294) (xy 83.64306 104.552172)
+				(xy 83.433594 104.766509) (xy 83.430584 104.758075) (xy 83.433995 104.750386) (xy 83.630441 104.55394)
+				(xy 83.638713 104.550514)
 			)
 		)
 	)
@@ -53262,7 +54990,7 @@
 		(net "CAN_CS")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30333)
+		(priority 30331)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53336,7 +55064,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30297)
+		(priority 30303)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53371,7 +55099,7 @@
 		(net "Net-(S15C2-Pad1)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30234)
+		(priority 30232)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53407,7 +55135,7 @@
 		(net "Net-(S15C2-Pad1)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30230)
+		(priority 30228)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53572,7 +55300,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30228)
+		(priority 30226)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53612,7 +55340,7 @@
 		(net "ISO9141_L")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30211)
+		(priority 30205)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53650,7 +55378,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30250)
+		(priority 30248)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53693,7 +55421,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30167)
+		(priority 30165)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53781,7 +55509,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30275)
+		(priority 30263)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53855,7 +55583,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30236)
+		(priority 30234)
 		(attr
 			(teardrop
 				(type padvia)
@@ -53982,7 +55710,7 @@
 		(net "K_SLEEP")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30023)
+		(priority 30003)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54007,24 +55735,11 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 56.842226 104.815882) (xy 56.843746 104.816538) (xy 56.847383 104.819008) (xy 57.11092 105.082545)
-				(xy 57.113457 105.086342) (xy 57.114175 105.088076) (xy 57.114239 105.09687) (xy 57.113627 105.098411)
-				(xy 57.111257 105.102129) (xy 57.007851 105.21156) (xy 56.920295 105.318453) (xy 56.920273 105.318483)
-				(xy 56.920272 105.318483) (xy 56.854029 105.416293) (xy 56.805238 105.50836) (xy 56.805233 105.508372)
-				(xy 56.770077 105.59793) (xy 56.770073 105.597942) (xy 56.770059 105.597989) (xy 56.744685 105.688343)
-				(xy 56.744672 105.688396) (xy 56.707814 105.884919) (xy 56.707804 105.88498) (xy 56.687915 105.996616)
-				(xy 56.673097 106.079789) (xy 56.673011 106.080224) (xy 56.672919 106.080647) (xy 56.672832 106.081015)
-				(xy 56.596946 106.382641) (xy 56.594987 106.38677) (xy 56.593923 106.3882) (xy 56.58624 106.392791)
-				(xy 56.584712 106.393016) (xy 56.579671 106.392655) (xy 55.784698 106.15607) (xy 55.780661 106.153939)
-				(xy 55.777982 106.151764) (xy 55.774142 106.146018) (xy 55.754733 106.080801) (xy 55.637951 105.68839)
-				(xy 55.537387 105.350477) (xy 55.536965 105.345935) (xy 55.537149 105.34416) (xy 55.54141 105.336291)
-				(xy 55.542634 105.335297) (xy 55.547094 105.333051) (xy 55.819105 105.263291) (xy 55.81944 105.263211)
-				(xy 55.819914 105.263107) (xy 55.820222 105.263046) (xy 56.04502 105.222195) (xy 56.218108 105.188806)
-				(xy 56.261589 105.18042) (xy 56.261593 105.180418) (xy 56.261598 105.180418) (xy 56.262045 105.180259)
-				(xy 56.262109 105.180243) (xy 56.262177 105.18022) (xy 56.262267 105.180182) (xy 56.429463 105.121131)
-				(xy 56.429468 105.121129) (xy 56.429467 105.121129) (xy 56.429474 105.121127) (xy 56.514902 105.075247)
-				(xy 56.605321 105.014341) (xy 56.715014 104.92517) (xy 56.827808 104.818782) (xy 56.831673 104.81636)
-				(xy 56.832742 104.815952) (xy 56.833431 104.815691)
+				(xy 56.837766 104.809391) (xy 56.715014 104.92517) (xy 56.605321 105.014341) (xy 56.514902 105.075247)
+				(xy 56.429474 105.121127) (xy 56.261598 105.180418) (xy 56.04502 105.222195) (xy 55.819662 105.263149)
+				(xy 55.533258 105.336601) (xy 55.776399 106.153601) (xy 56.593399 106.396742) (xy 56.67299 106.080394)
+				(xy 56.707804 105.88498) (xy 56.744679 105.688372) (xy 56.770073 105.597945) (xy 56.805239 105.508359)
+				(xy 56.854025 105.416303) (xy 56.920283 105.31847) (xy 57.007861 105.21155) (xy 57.120609 105.092234)
 			)
 		)
 	)
@@ -54032,7 +55747,7 @@
 		(net "L_SEND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30024)
+		(priority 30002)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54057,17 +55772,11 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 51.7658 104.817425) (xy 52.032566 105.084191) (xy 52.035993 105.092464) (xy 52.032797 105.1005)
-				(xy 51.927856 105.211555) (xy 51.840287 105.318464) (xy 51.840281 105.318472) (xy 51.774027 105.416298)
-				(xy 51.725239 105.508359) (xy 51.725235 105.508367) (xy 51.690075 105.597938) (xy 51.690067 105.597962)
-				(xy 51.66468 105.688365) (xy 51.664674 105.68839) (xy 51.627813 105.884927) (xy 51.627804 105.88498)
-				(xy 51.607915 105.996616) (xy 51.59306 106.079998) (xy 51.592887 106.080801) (xy 51.516378 106.384899)
-				(xy 51.511037 106.392086) (xy 51.502177 106.39339) (xy 51.501695 106.393258) (xy 50.702469 106.155407)
-				(xy 50.695517 106.149763) (xy 50.694592 106.14753) (xy 50.674733 106.080801) (xy 50.456725 105.34825)
-				(xy 50.45765 105.339344) (xy 50.464602 105.3337) (xy 50.465011 105.333586) (xy 50.739277 105.263247)
-				(xy 50.740061 105.263076) (xy 50.96502 105.222195) (xy 51.138108 105.188806) (xy 51.181589 105.18042)
-				(xy 51.181593 105.180418) (xy 51.181598 105.180418) (xy 51.349474 105.121127) (xy 51.434902 105.075247)
-				(xy 51.525321 105.014341) (xy 51.635014 104.92517) (xy 51.749501 104.817186) (xy 51.757869 104.814003)
+				(xy 51.757766 104.809391) (xy 51.635014 104.92517) (xy 51.525321 105.014341) (xy 51.434902 105.075247)
+				(xy 51.349474 105.121127) (xy 51.181598 105.180418) (xy 50.96502 105.222195) (xy 50.739662 105.263149)
+				(xy 50.453258 105.336601) (xy 50.696399 106.153601) (xy 51.513399 106.396742) (xy 51.59299 106.080394)
+				(xy 51.627804 105.88498) (xy 51.664679 105.688372) (xy 51.690073 105.597945) (xy 51.725239 105.508359)
+				(xy 51.774025 105.416303) (xy 51.840283 105.31847) (xy 51.927861 105.21155) (xy 52.040609 105.092234)
 			)
 		)
 	)
@@ -54075,7 +55784,7 @@
 		(net "CAN_H_ISO9141_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30031)
+		(priority 30007)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54101,18 +55810,12 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 31.179674 75.277701) (xy 31.446535 75.544562) (xy 31.449962 75.552835) (xy 31.446816 75.560818)
-				(xy 31.397685 75.613463) (xy 31.377188 75.635426) (xy 31.360891 75.652888) (xy 31.360876 75.652905)
-				(xy 31.28775 75.745209) (xy 31.287738 75.745226) (xy 31.232103 75.831163) (xy 31.232094 75.831177)
-				(xy 31.190933 75.912402) (xy 31.190928 75.912414) (xy 31.190927 75.912418) (xy 31.165193 75.990681)
-				(xy 31.139967 76.067398) (xy 31.139965 76.067407) (xy 31.110769 76.223406) (xy 31.084192 76.370761)
-				(xy 31.083934 76.371875) (xy 31.02353 76.584925) (xy 31.02294 76.586542) (xy 30.921554 76.811444)
-				(xy 30.91503 76.817578) (xy 30.90608 76.817302) (xy 30.905433 76.816987) (xy 30.254946 76.474189)
-				(xy 30.25005 76.469293) (xy 30.120451 76.223369) (xy 29.907153 75.818618) (xy 29.906329 75.809703)
-				(xy 29.91205 75.802814) (xy 29.912496 75.802591) (xy 30.08157 75.722868) (xy 30.08272 75.7224) (xy 30.238106 75.668605)
-				(xy 30.239165 75.668295) (xy 30.376086 75.63542) (xy 30.376739 75.635285) (xy 30.500871 75.613463)
-				(xy 30.653114 75.585142) (xy 30.813849 75.532417) (xy 30.893243 75.49204) (xy 30.977133 75.43785)
-				(xy 31.070324 75.364235) (xy 31.163423 75.277415) (xy 31.171809 75.274281)
+				(xy 31.171685 75.269712) (xy 31.070324 75.364235) (xy 30.977133 75.43785) (xy 30.893243 75.49204)
+				(xy 30.813849 75.532417) (xy 30.653114 75.585142) (xy 30.500871 75.613463) (xy 30.376401 75.635345)
+				(xy 30.238633 75.668423) (xy 30.082129 75.722605) (xy 29.901452 75.807799) (xy 30.25174 76.4725)
+				(xy 30.916441 76.822788) (xy 31.023295 76.585756) (xy 31.084091 76.371322) (xy 31.110776 76.223369)
+				(xy 31.139968 76.067397) (xy 31.190927 75.912418) (xy 31.232099 75.83117) (xy 31.287749 75.745212)
+				(xy 31.360888 75.652891) (xy 31.454528 75.552555)
 			)
 		)
 	)
@@ -54205,7 +55908,7 @@
 		(net "I2C_SCL")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30355)
+		(priority 30353)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54245,7 +55948,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30313)
+		(priority 30311)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54323,7 +56026,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30272)
+		(priority 30261)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54362,7 +56065,7 @@
 		(net "PP12VP")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30300)
+		(priority 30292)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54401,7 +56104,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30241)
+		(priority 30239)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54437,7 +56140,7 @@
 		(net "PP3V3_GPS")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30185)
+		(priority 30181)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54486,7 +56189,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30233)
+		(priority 30230)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54527,7 +56230,7 @@
 		(net "CAN_INT")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30226)
+		(priority 30224)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54567,7 +56270,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30331)
+		(priority 30329)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54608,7 +56311,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30320)
+		(priority 30318)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54645,7 +56348,7 @@
 		(net "CAN_H")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30120)
+		(priority 30123)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54809,7 +56512,7 @@
 		(net "Net-(S15J1-In)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30237)
+		(priority 30235)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54898,7 +56601,7 @@
 		(net "CAN_SDO")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30159)
+		(priority 30157)
 		(attr
 			(teardrop
 				(type padvia)
@@ -54934,7 +56637,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30220)
+		(priority 30218)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55051,7 +56754,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30321)
+		(priority 30319)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55166,7 +56869,7 @@
 		(net "K_RX")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30356)
+		(priority 30354)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55239,7 +56942,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30377)
+		(priority 30375)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55282,7 +56985,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30263)
+		(priority 30259)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55321,7 +57024,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30298)
+		(priority 30285)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55361,7 +57064,7 @@
 		(net "I2C_SCL")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30342)
+		(priority 30340)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55448,7 +57151,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30326)
+		(priority 30324)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55527,7 +57230,7 @@
 		(net "PP3V3_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30214)
+		(priority 30211)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55571,7 +57274,7 @@
 		(net "PP3V3_CAN")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30155)
+		(priority 30153)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55616,7 +57319,7 @@
 		(net "K_TX")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30025)
+		(priority 30001)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55641,24 +57344,11 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 59.382226 104.815882) (xy 59.383746 104.816538) (xy 59.387383 104.819008) (xy 59.65092 105.082545)
-				(xy 59.653457 105.086342) (xy 59.654175 105.088076) (xy 59.654239 105.09687) (xy 59.653627 105.098411)
-				(xy 59.651257 105.102129) (xy 59.547851 105.21156) (xy 59.460295 105.318453) (xy 59.460273 105.318483)
-				(xy 59.460272 105.318483) (xy 59.394029 105.416293) (xy 59.345238 105.50836) (xy 59.345233 105.508372)
-				(xy 59.310077 105.59793) (xy 59.310073 105.597942) (xy 59.310059 105.597989) (xy 59.284685 105.688343)
-				(xy 59.284672 105.688396) (xy 59.247814 105.884919) (xy 59.247804 105.88498) (xy 59.227915 105.996616)
-				(xy 59.213097 106.079789) (xy 59.213011 106.080224) (xy 59.212919 106.080647) (xy 59.212832 106.081015)
-				(xy 59.136946 106.382641) (xy 59.134987 106.38677) (xy 59.133923 106.3882) (xy 59.12624 106.392791)
-				(xy 59.124712 106.393016) (xy 59.119671 106.392655) (xy 58.324698 106.15607) (xy 58.320661 106.153939)
-				(xy 58.317982 106.151764) (xy 58.314142 106.146018) (xy 58.294733 106.080801) (xy 58.177951 105.68839)
-				(xy 58.077387 105.350477) (xy 58.076965 105.345935) (xy 58.077149 105.34416) (xy 58.08141 105.336291)
-				(xy 58.082634 105.335297) (xy 58.087094 105.333051) (xy 58.359105 105.263291) (xy 58.35944 105.263211)
-				(xy 58.359914 105.263107) (xy 58.360222 105.263046) (xy 58.58502 105.222195) (xy 58.758108 105.188806)
-				(xy 58.801589 105.18042) (xy 58.801593 105.180418) (xy 58.801598 105.180418) (xy 58.802045 105.180259)
-				(xy 58.802109 105.180243) (xy 58.802177 105.18022) (xy 58.802267 105.180182) (xy 58.969463 105.121131)
-				(xy 58.969468 105.121129) (xy 58.969467 105.121129) (xy 58.969474 105.121127) (xy 59.054902 105.075247)
-				(xy 59.145321 105.014341) (xy 59.255014 104.92517) (xy 59.367808 104.818782) (xy 59.371673 104.81636)
-				(xy 59.372742 104.815952) (xy 59.373431 104.815691)
+				(xy 59.377766 104.809391) (xy 59.255014 104.92517) (xy 59.145321 105.014341) (xy 59.054902 105.075247)
+				(xy 58.969474 105.121127) (xy 58.801598 105.180418) (xy 58.58502 105.222195) (xy 58.359662 105.263149)
+				(xy 58.073258 105.336601) (xy 58.316399 106.153601) (xy 59.133399 106.396742) (xy 59.21299 106.080394)
+				(xy 59.247804 105.88498) (xy 59.284679 105.688372) (xy 59.310073 105.597945) (xy 59.345239 105.508359)
+				(xy 59.394025 105.416303) (xy 59.460283 105.31847) (xy 59.547861 105.21155) (xy 59.660609 105.092234)
 			)
 		)
 	)
@@ -55666,7 +57356,7 @@
 		(net "PP3V3_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30336)
+		(priority 30334)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55756,7 +57446,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30195)
+		(priority 30193)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55793,7 +57483,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30003)
+		(priority 30005)
 		(attr
 			(teardrop
 				(type padvia)
@@ -55838,7 +57528,7 @@
 		(net "CAN_H_ISO9141_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30335)
+		(priority 30336)
 		(attr
 			(teardrop
 				(type padvia)
@@ -56424,7 +58114,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30197)
+		(priority 30195)
 		(attr
 			(teardrop
 				(type padvia)
@@ -56467,7 +58157,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30338)
+		(priority 30335)
 		(attr
 			(teardrop
 				(type padvia)
@@ -56543,7 +58233,7 @@
 		(net "Net-(S2D1-A)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30353)
+		(priority 30351)
 		(attr
 			(teardrop
 				(type padvia)
@@ -56581,7 +58271,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30007)
+		(priority 30006)
 		(attr
 			(teardrop
 				(type padvia)
@@ -56618,7 +58308,7 @@
 		(net "ISO9141_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30239)
+		(priority 30237)
 		(attr
 			(teardrop
 				(type padvia)
@@ -56662,7 +58352,7 @@
 		(net "PP12V")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30021)
+		(priority 30000)
 		(attr
 			(teardrop
 				(type padvia)
@@ -56687,16 +58377,11 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 33.961224 82.683397) (xy 33.968113 82.689118) (xy 33.968938 82.698035) (xy 33.968841 82.698334)
-				(xy 33.914273 82.859093) (xy 33.91399 82.859842) (xy 33.855613 82.999597) (xy 33.855219 83.000443)
-				(xy 33.743465 83.217502) (xy 33.743346 83.217728) (xy 33.698482 83.300372) (xy 33.621478 83.473644)
-				(xy 33.594369 83.566091) (xy 33.573705 83.67295) (xy 33.573704 83.672956) (xy 33.559838 83.806034)
-				(xy 33.555344 83.954284) (xy 33.551668 83.962449) (xy 33.543649 83.965629) (xy 32.966074 83.965629)
-				(xy 32.957801 83.962202) (xy 32.954392 83.954572) (xy 32.940649 83.70478) (xy 32.940649 83.704779)
-				(xy 32.901027 83.512305) (xy 32.841296 83.359506) (xy 32.841294 83.3595) (xy 32.772142 83.228158)
-				(xy 32.76664 83.217706) (xy 32.766553 83.217537) (xy 32.63985 82.967114) (xy 32.639302 82.965851)
-				(xy 32.541521 82.698508) (xy 32.541897 82.689561) (xy 32.54849 82.683501) (xy 32.549026 82.683319)
-				(xy 33.251539 82.465701) (xy 33.258461 82.465701)
+				(xy 33.555 83.965629) (xy 33.559838 83.806039) (xy 33.573705 83.672956) (xy 33.59437 83.566093)
+				(xy 33.621481 83.473639) (xy 33.698482 83.300373) (xy 33.743398 83.217634) (xy 33.855435 83.000025)
+				(xy 33.914144 82.859475) (xy 33.972705 82.686954) (xy 33.255 82.464629) (xy 32.537295 82.686954)
+				(xy 32.63954 82.966501) (xy 32.766602 83.217634) (xy 32.841294 83.3595) (xy 32.901027 83.512305)
+				(xy 32.940648 83.704773) (xy 32.955 83.965629)
 			)
 		)
 	)
@@ -56704,7 +58389,7 @@
 		(net "Net-(S15C2-Pad1)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30329)
+		(priority 30327)
 		(attr
 			(teardrop
 				(type padvia)
@@ -56742,7 +58427,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30254)
+		(priority 30247)
 		(attr
 			(teardrop
 				(type padvia)
@@ -56783,7 +58468,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30005)
+		(priority 30002)
 		(attr
 			(teardrop
 				(type padvia)
@@ -56808,14 +58493,19 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 87.757493 99.789614) (xy 88.410406 100.773531) (xy 88.412125 100.782319) (xy 88.410406 100.786469)
-				(xy 87.757409 101.770512) (xy 87.749979 101.775511) (xy 87.741459 101.773965) (xy 87.445532 101.589013)
-				(xy 87.207718 101.472186) (xy 87.207706 101.472181) (xy 87.088541 101.428498) (xy 86.960712 101.392223)
-				(xy 86.815323 101.362375) (xy 86.815319 101.362374) (xy 86.815317 101.362374) (xy 86.653622 101.340516)
-				(xy 86.448622 101.325501) (xy 86.22515 101.320743) (xy 86.216952 101.317141) (xy 86.213699 101.309046)
-				(xy 86.213699 100.251038) (xy 86.217126 100.242765) (xy 86.225234 100.23934) (xy 86.373784 100.23728)
-				(xy 86.732482 100.210124) (xy 86.880908 100.185513) (xy 87.015601 100.153459) (xy 87.207551 100.087882)
-				(xy 87.385817 100.0038) (xy 87.562853 99.901183) (xy 87.741412 99.786244) (xy 87.750223 99.784649)
+				(xy 87.754182 99.787353) (xy 87.755603 99.788323) (xy 87.758756 99.791517) (xy 88.409119 100.771592)
+				(xy 88.410852 100.775814) (xy 88.411438 100.778808) (xy 88.409705 100.787524) (xy 87.758695 101.768573)
+				(xy 87.755476 101.771812) (xy 87.753921 101.772858) (xy 87.745299 101.774661) (xy 87.743665 101.774364)
+				(xy 87.739556 101.772775) (xy 87.445526 101.589009) (xy 87.207728 101.472191) (xy 87.207718 101.472186)
+				(xy 87.207706 101.472181) (xy 87.207707 101.472181) (xy 87.207702 101.472179) (xy 87.088548 101.4285)
+				(xy 86.960717 101.392224) (xy 86.815743 101.36246) (xy 86.815702 101.362452) (xy 86.815323 101.362375)
+				(xy 86.815319 101.362374) (xy 86.815317 101.362374) (xy 86.815032 101.362335) (xy 86.815018 101.362333)
+				(xy 86.653622 101.340516) (xy 86.448614 101.3255) (xy 86.227477 101.320792) (xy 86.22302 101.319807)
+				(xy 86.221322 101.319061) (xy 86.215171 101.31271) (xy 86.214542 101.311144) (xy 86.213699 101.306783)
+				(xy 86.213699 100.253365) (xy 86.214588 100.248891) (xy 86.215288 100.2472) (xy 86.221543 100.240899)
+				(xy 86.223128 100.240229) (xy 86.227517 100.239308) (xy 86.373784 100.23728) (xy 86.732482 100.210124)
+				(xy 86.880908 100.185513) (xy 87.015601 100.153459) (xy 87.207551 100.087882) (xy 87.385817 100.0038)
+				(xy 87.562853 99.901183) (xy 87.739455 99.787503) (xy 87.743698 99.78583) (xy 87.745502 99.785503)
 			)
 		)
 	)
@@ -56868,7 +58558,7 @@
 		(net "Net-(S13D2-A)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30349)
+		(priority 30347)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57038,7 +58728,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30176)
+		(priority 30174)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57079,7 +58769,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30322)
+		(priority 30320)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57124,7 +58814,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30303)
+		(priority 30283)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57237,7 +58927,7 @@
 		(net "Net-(S6U1-BST)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30325)
+		(priority 30323)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57278,7 +58968,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30359)
+		(priority 30357)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57319,7 +59009,7 @@
 		(net "CAN_INT")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30160)
+		(priority 30161)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57405,7 +59095,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30154)
+		(priority 30152)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57445,7 +59135,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30290)
+		(priority 30297)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57609,7 +59299,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30274)
+		(priority 30275)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57690,7 +59380,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30219)
+		(priority 30217)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57727,7 +59417,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30012)
+		(priority 30010)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57769,7 +59459,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30189)
+		(priority 30180)
 		(attr
 			(teardrop
 				(type padvia)
@@ -57801,38 +59491,6 @@
 				(xy 57.5417 83.250042) (xy 57.542468 83.250067) (xy 57.610304 83.254571) (xy 57.610342 83.25459)
 				(xy 57.610344 83.254574) (xy 57.712009 83.261677) (xy 57.826849 83.25374) (xy 57.902529 83.223422)
 				(xy 57.939513 83.181209) (xy 57.947539 83.177246)
-			)
-		)
-	)
-	(zone
-		(net "PP12VP")
-		(layer "F.Cu")
-		(hatch none 0.1)
-		(priority 30141)
-		(attr
-			(teardrop
-				(type track_end)
-			)
-		)
-		(connect_pads yes
-			(clearance 0)
-		)
-		(min_thickness 0.0254)
-		(fill yes
-			(island_removal_mode 1)
-		)
-		(polygon
-			(pts
-				(xy 46.7 88.157433) (xy 47.1 88.157433) (xy 47.197433 87.599158) (xy 46.9 87.556433) (xy 46.602567 87.599158)
-			)
-		)
-		(filled_polygon
-			(layer "F.Cu")
-			(pts
-				(xy 47.185497 87.597443) (xy 47.193198 87.602011) (xy 47.195414 87.610688) (xy 47.195359 87.611036)
-				(xy 47.101691 88.147745) (xy 47.096893 88.155305) (xy 47.090165 88.157433) (xy 46.709835 88.157433)
-				(xy 46.701562 88.154006) (xy 46.698309 88.147745) (xy 46.60464 87.611036) (xy 46.606594 87.602296)
-				(xy 46.614154 87.597498) (xy 46.614461 87.597449) (xy 46.898336 87.556672) (xy 46.901664 87.556672)
 			)
 		)
 	)
@@ -58047,7 +59705,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30243)
+		(priority 30241)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58083,7 +59741,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30246)
+		(priority 30243)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58116,7 +59774,7 @@
 		(net "LED2")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30362)
+		(priority 30360)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58155,7 +59813,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30295)
+		(priority 30305)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58236,7 +59894,7 @@
 		(net "CAN_CS")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30213)
+		(priority 30212)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58405,7 +60063,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30177)
+		(priority 30175)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58519,7 +60177,7 @@
 		(net "Net-(S6U1-RT)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30227)
+		(priority 30225)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58606,7 +60264,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30334)
+		(priority 30332)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58643,7 +60301,7 @@
 		(net "LED1")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30360)
+		(priority 30358)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58777,7 +60435,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30299)
+		(priority 30302)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58855,7 +60513,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30365)
+		(priority 30363)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58894,7 +60552,7 @@
 		(net "Net-(S4Q1-G)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30169)
+		(priority 30167)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58935,7 +60593,7 @@
 		(net "Net-(S4Q1-G)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30170)
+		(priority 30168)
 		(attr
 			(teardrop
 				(type padvia)
@@ -58977,7 +60635,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30358)
+		(priority 30356)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59014,7 +60672,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30202)
+		(priority 30200)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59050,7 +60708,7 @@
 		(net "PP12VIP")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30178)
+		(priority 30177)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59093,7 +60751,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30148)
+		(priority 30146)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59138,7 +60796,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30244)
+		(priority 30242)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59171,7 +60829,7 @@
 		(net "PP12V_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30150)
+		(priority 30148)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59214,7 +60872,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30079)
+		(priority 30078)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59250,7 +60908,7 @@
 		(net "GPS_ENABLE")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30345)
+		(priority 30343)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59287,7 +60945,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30283)
+		(priority 30294)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59362,7 +61020,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30378)
+		(priority 30376)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59432,7 +61090,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30311)
+		(priority 30309)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59468,7 +61126,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30310)
+		(priority 30308)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59504,7 +61162,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30296)
+		(priority 30301)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59580,7 +61238,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30363)
+		(priority 30361)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59619,7 +61277,7 @@
 		(net "PP12VP")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30142)
+		(priority 30140)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59661,7 +61319,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30289)
+		(priority 30287)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59694,7 +61352,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30251)
+		(priority 30249)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59729,7 +61387,7 @@
 		(net "I2C_SCL")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30371)
+		(priority 30368)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59767,7 +61425,7 @@
 		(net "LED2")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30029)
+		(priority 30006)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59793,26 +61451,12 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 74.657949 104.8518) (xy 74.659037 104.85225) (xy 74.659586 104.852478) (xy 74.659594 104.852481)
-				(xy 74.663392 104.855018) (xy 74.855595 105.047221) (xy 74.858132 105.051018) (xy 74.858855 105.052764)
-				(xy 74.858926 105.061541) (xy 74.858322 105.063069) (xy 74.855975 105.066771) (xy 74.755837 105.173554)
-				(xy 74.755758 105.173635) (xy 74.755694 105.173707) (xy 74.671281 105.279349) (xy 74.671268 105.279365)
-				(xy 74.671266 105.279366) (xy 74.608396 105.376466) (xy 74.608264 105.376659) (xy 74.562858 105.468619)
-				(xy 74.56285 105.468642) (xy 74.531395 105.557933) (xy 74.531391 105.557947) (xy 74.531385 105.557967)
-				(xy 74.510092 105.647583) (xy 74.510083 105.647635) (xy 74.48305 105.839261) (xy 74.483047 105.839284)
-				(xy 74.44541 106.102337) (xy 74.445316 106.102895) (xy 74.445204 106.103476) (xy 74.44508 106.104044)
-				(xy 74.376875 106.382544) (xy 74.374945 106.386681) (xy 74.373891 106.388118) (xy 74.366235 106.392762)
-				(xy 74.364739 106.392991) (xy 74.359625 106.392642) (xy 74.344423 106.388118) (xy 74.325694 106.382544)
-				(xy 73.564698 106.15607) (xy 73.560661 106.153939) (xy 73.557982 106.151764) (xy 73.554142 106.146018)
-				(xy 73.54123 106.10263) (xy 73.405807 105.647583) (xy 73.317341 105.350323) (xy 73.316919 105.345781)
-				(xy 73.317103 105.344007) (xy 73.321364 105.336138) (xy 73.322641 105.335101) (xy 73.32695 105.332895)
-				(xy 73.479622 105.291583) (xy 73.479904 105.291511) (xy 73.480252 105.291428) (xy 73.480519 105.291369)
-				(xy 73.625749 105.261282) (xy 73.626116 105.261213) (xy 73.626465 105.261153) (xy 73.626816 105.261098)
-				(xy 73.870727 105.226949) (xy 73.870823 105.226937) (xy 73.870904 105.226925) (xy 73.881091 105.225498)
-				(xy 73.881426 105.225314) (xy 74.031225 105.202395) (xy 74.10198 105.19157) (xy 74.264314 105.137104)
-				(xy 74.3475 105.093507) (xy 74.435406 105.03526) (xy 74.538906 104.952026) (xy 74.585458 104.908298)
-				(xy 74.586479 104.907445) (xy 74.58754 104.906657) (xy 74.588652 104.905926) (xy 74.598106 104.90047)
-				(xy 74.64356 104.855014) (xy 74.647354 104.85248) (xy 74.649002 104.851798)
+				(xy 74.653121 104.844747) (xy 74.538906 104.952026) (xy 74.435406 105.03526) (xy 74.3475 105.093507)
+				(xy 74.264314 105.137104) (xy 74.10198 105.19157) (xy 73.870776 105.226943) (xy 73.626271 105.261175)
+				(xy 73.480073 105.291462) (xy 73.313258 105.336601) (xy 73.556399 106.153601) (xy 74.373399 106.396742)
+				(xy 74.445288 106.103198) (xy 74.483056 105.839224) (xy 74.510091 105.647595) (xy 74.531389 105.557957)
+				(xy 74.562861 105.468615) (xy 74.608244 105.376703) (xy 74.671277 105.279354) (xy 74.755701 105.173701)
+				(xy 74.865253 105.056879)
 			)
 		)
 	)
@@ -59820,7 +61464,7 @@
 		(net "Net-(S4Q1-G)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30217)
+		(priority 30214)
 		(attr
 			(teardrop
 				(type padvia)
@@ -59954,7 +61598,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30366)
+		(priority 30364)
 		(attr
 			(teardrop
 				(type padvia)
@@ -60013,7 +61657,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30318)
+		(priority 30316)
 		(attr
 			(teardrop
 				(type padvia)
@@ -60556,7 +62200,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30194)
+		(priority 30192)
 		(attr
 			(teardrop
 				(type padvia)
@@ -60595,7 +62239,7 @@
 		(net "Net-(S9U2-SCK)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30162)
+		(priority 30159)
 		(attr
 			(teardrop
 				(type padvia)
@@ -60632,7 +62276,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30278)
+		(priority 30258)
 		(attr
 			(teardrop
 				(type padvia)
@@ -60667,7 +62311,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30252)
+		(priority 30253)
 		(attr
 			(teardrop
 				(type padvia)
@@ -60710,7 +62354,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30210)
+		(priority 30208)
 		(attr
 			(teardrop
 				(type padvia)
@@ -60839,7 +62483,7 @@
 		(net "I2C_SCL")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30346)
+		(priority 30344)
 		(attr
 			(teardrop
 				(type padvia)
@@ -60934,7 +62578,7 @@
 		(net "PP3V3_CAN")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30149)
+		(priority 30147)
 		(attr
 			(teardrop
 				(type padvia)
@@ -60978,7 +62622,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30319)
+		(priority 30317)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61071,7 +62715,7 @@
 		(net "GPS_ENABLE")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30337)
+		(priority 30333)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61108,7 +62752,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30151)
+		(priority 30149)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61152,7 +62796,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30006)
+		(priority 30007)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61193,7 +62837,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30348)
+		(priority 30346)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61229,7 +62873,7 @@
 		(net "Net-(S9U2-OSC1)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30182)
+		(priority 30185)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61279,7 +62923,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30291)
+		(priority 30284)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61314,7 +62958,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30258)
+		(priority 30270)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61478,7 +63122,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30374)
+		(priority 30372)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61536,7 +63180,7 @@
 		(net "L_SEND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30327)
+		(priority 30325)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61575,7 +63219,7 @@
 		(net "ACCELL_INT1")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30372)
+		(priority 30370)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61612,7 +63256,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30179)
+		(priority 30176)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61652,7 +63296,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30375)
+		(priority 30373)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61687,7 +63331,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30308)
+		(priority 30306)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61720,7 +63364,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30309)
+		(priority 30307)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61799,7 +63443,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30370)
+		(priority 30369)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61844,7 +63488,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30285)
+		(priority 30299)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61880,7 +63524,7 @@
 		(net "Net-(S13D1-A)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30351)
+		(priority 30349)
 		(attr
 			(teardrop
 				(type padvia)
@@ -61920,7 +63564,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30190)
+		(priority 30186)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62011,7 +63655,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30205)
+		(priority 30203)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62063,7 +63707,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30002)
+		(priority 30004)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62103,7 +63747,7 @@
 		(net "RF")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30238)
+		(priority 30236)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62139,7 +63783,7 @@
 		(net "PP12V_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30188)
+		(priority 30191)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62183,7 +63827,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30315)
+		(priority 30313)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62257,7 +63901,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30221)
+		(priority 30222)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62304,7 +63948,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30304)
+		(priority 30281)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62382,7 +64026,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30264)
+		(priority 30267)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62452,7 +64096,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30249)
+		(priority 30252)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62485,7 +64129,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30145)
+		(priority 30143)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62530,7 +64174,7 @@
 		(net "Net-(S2D3-A)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30201)
+		(priority 30199)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62576,7 +64220,7 @@
 		(net "ACCELL_INT2")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30367)
+		(priority 30365)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62626,7 +64270,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30343)
+		(priority 30341)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62667,7 +64311,7 @@
 		(net "LED3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30028)
+		(priority 30005)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62693,18 +64337,12 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 72.121139 104.852765) (xy 72.317241 105.048867) (xy 72.320668 105.05714) (xy 72.317502 105.065143)
-				(xy 72.215702 105.173699) (xy 72.215697 105.173704) (xy 72.131277 105.279354) (xy 72.131269 105.279364)
-				(xy 72.068242 105.376706) (xy 72.068241 105.376707) (xy 72.022859 105.468619) (xy 72.022856 105.468627)
-				(xy 71.991391 105.557947) (xy 71.991387 105.557962) (xy 71.970093 105.647582) (xy 71.970088 105.647608)
-				(xy 71.943059 105.839201) (xy 71.943056 105.839224) (xy 71.905369 106.10263) (xy 71.905151 106.103756)
-				(xy 71.836322 106.384805) (xy 71.831026 106.392026) (xy 71.822175 106.393386) (xy 71.821621 106.393236)
-				(xy 71.022469 106.155407) (xy 71.015517 106.149763) (xy 71.014592 106.14753) (xy 71.00123 106.10263)
-				(xy 70.776679 105.348096) (xy 70.777604 105.339191) (xy 70.784556 105.333547) (xy 70.78478 105.333483)
-				(xy 70.939764 105.291545) (xy 70.940386 105.291397) (xy 71.085925 105.261246) (xy 71.086626 105.261125)
-				(xy 71.330776 105.226943) (xy 71.330772 105.226943) (xy 71.330812 105.226938) (xy 71.491225 105.202395)
-				(xy 71.56198 105.19157) (xy 71.724314 105.137104) (xy 71.8075 105.093507) (xy 71.895406 105.03526)
-				(xy 71.998906 104.952026) (xy 72.104856 104.852509) (xy 72.113232 104.849344)
+				(xy 72.113121 104.844747) (xy 71.998906 104.952026) (xy 71.895406 105.03526) (xy 71.8075 105.093507)
+				(xy 71.724314 105.137104) (xy 71.56198 105.19157) (xy 71.330776 105.226943) (xy 71.086271 105.261175)
+				(xy 70.940073 105.291462) (xy 70.773258 105.336601) (xy 71.016399 106.153601) (xy 71.833399 106.396742)
+				(xy 71.905288 106.103198) (xy 71.943056 105.839224) (xy 71.970091 105.647595) (xy 71.991389 105.557957)
+				(xy 72.022861 105.468615) (xy 72.068244 105.376703) (xy 72.131277 105.279354) (xy 72.215701 105.173701)
+				(xy 72.325253 105.056879)
 			)
 		)
 	)
@@ -62712,7 +64350,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30379)
+		(priority 30377)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62784,7 +64422,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30292)
+		(priority 30289)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62854,7 +64492,7 @@
 		(net "LED1")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30139)
+		(priority 30008)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62881,15 +64519,13 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 76.770756 105.149595) (xy 76.772996 105.155656) (xy 76.779448 105.242382) (xy 76.779449 105.242387)
-				(xy 76.830273 105.502433) (xy 76.852069 105.591611) (xy 76.852079 105.591695) (xy 76.852089 105.591693)
-				(xy 76.876111 105.693115) (xy 76.876374 105.694706) (xy 76.879967 105.732532) (xy 76.878728 105.736562)
-				(xy 76.877696 105.740635) (xy 76.877428 105.740794) (xy 76.877337 105.741092) (xy 76.873612 105.743066)
-				(xy 76.870002 105.745216) (xy 76.869701 105.745139) (xy 76.869425 105.745286) (xy 76.861322 105.743015)
-				(xy 76.858446 105.740869) (xy 76.856228 105.738701) (xy 76.793528 105.658554) (xy 75.800124 105.955481)
-				(xy 75.791216 105.954567) (xy 75.787264 105.951088) (xy 75.64725 105.755796) (xy 75.645215 105.747076)
-				(xy 75.649942 105.73947) (xy 75.652415 105.738115) (xy 75.91354 105.633773) (xy 76.306001 105.432836)
-				(xy 76.51068 105.31114) (xy 76.708956 105.180495) (xy 76.7544 105.147095) (xy 76.763095 105.144958)
+				(xy 76.88885 104.649018) (xy 76.822006 104.742395) (xy 76.779635 104.867165) (xy 76.763741 105.031244)
+				(xy 76.779449 105.242389) (xy 76.830272 105.502427) (xy 76.852089 105.591693) (xy 76.876298 105.693905)
+				(xy 76.881392 105.747519) (xy 76.87359 105.752165) (xy 76.857194 105.739936) (xy 76.793528 105.658554)
+				(xy 75.792128 105.957872) (xy 75.498959 105.548959) (xy 75.421804 105.632946) (xy 75.376449 105.697838)
+				(xy 75.361662 105.735232) (xy 75.362856 105.762585) (xy 75.392745 105.786015) (xy 75.468168 105.787404)
+				(xy 75.62949 105.747277) (xy 75.91354 105.633773) (xy 76.306001 105.432836) (xy 76.51068 105.31114)
+				(xy 76.708956 105.180495) (xy 76.872898 105.060008) (xy 77.020072 104.937539) (xy 77.100982 104.86115)
 			)
 		)
 	)
@@ -62897,7 +64533,7 @@
 		(net "PP3V3_CAN")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30341)
+		(priority 30339)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62932,7 +64568,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30280)
+		(priority 30271)
 		(attr
 			(teardrop
 				(type padvia)
@@ -62968,7 +64604,7 @@
 		(net "IGN_SENSE")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30206)
+		(priority 30204)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63017,7 +64653,7 @@
 		(net "K_ENABLE")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30312)
+		(priority 30310)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63053,7 +64689,7 @@
 		(net "Net-(S2D1-A)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30144)
+		(priority 30142)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63089,7 +64725,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30270)
+		(priority 30277)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63210,7 +64846,7 @@
 		(net "IGN_SENSE")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30146)
+		(priority 30144)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63249,7 +64885,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30173)
+		(priority 30171)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63287,7 +64923,7 @@
 		(net "Net-(S9U1-STBY)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30114)
+		(priority 30113)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63361,7 +64997,7 @@
 		(net "CAN_H_ISO9141_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30207)
+		(priority 30209)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63403,7 +65039,7 @@
 		(net "Net-(S15C2-Pad1)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30229)
+		(priority 30227)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63478,7 +65114,7 @@
 		(net "I2C_SCL")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30354)
+		(priority 30352)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63515,7 +65151,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30284)
+		(priority 30300)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63589,7 +65225,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30240)
+		(priority 30238)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63629,7 +65265,7 @@
 		(net "PP3V3_GPS")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30187)
+		(priority 30188)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63673,7 +65309,7 @@
 		(net "Net-(S4Q1-G)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30212)
+		(priority 30206)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63716,7 +65352,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30373)
+		(priority 30371)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63818,7 +65454,7 @@
 		(net "CAN_H_ISO9141_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30209)
+		(priority 30210)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63861,7 +65497,7 @@
 		(net "PP3V3_CAN")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30339)
+		(priority 30337)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63939,7 +65575,7 @@
 		(net "ACCELL_INT2")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30347)
+		(priority 30345)
 		(attr
 			(teardrop
 				(type padvia)
@@ -63978,7 +65614,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30172)
+		(priority 30170)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64015,7 +65651,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30181)
+		(priority 30179)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64058,7 +65694,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30260)
+		(priority 30256)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64141,7 +65777,7 @@
 		(net "Net-(S9U2-OSC1)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30216)
+		(priority 30215)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64189,7 +65825,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30316)
+		(priority 30314)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64224,7 +65860,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30257)
+		(priority 30255)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64301,7 +65937,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30279)
+		(priority 30254)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64334,7 +65970,7 @@
 		(net "K_SLEEP")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30026)
+		(priority 30004)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64359,19 +65995,11 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 56.590655 105.90765) (xy 56.596299 105.914602) (xy 56.596418 105.915032) (xy 56.666748 106.189261)
-				(xy 56.666926 106.190076) (xy 56.707792 106.414957) (xy 56.749578 106.631589) (xy 56.74958 106.631597)
-				(xy 56.808868 106.799463) (xy 56.80887 106.799468) (xy 56.854757 106.884909) (xy 56.915655 106.975316)
-				(xy 56.915658 106.97532) (xy 56.915659 106.975321) (xy 57.00483 107.085014) (xy 57.056761 107.140073)
-				(xy 57.112812 107.199499) (xy 57.115996 107.207869) (xy 57.112574 107.2158) (xy 56.845808 107.482566)
-				(xy 56.837535 107.485993) (xy 56.829499 107.482797) (xy 56.818396 107.472305) (xy 56.71845 107.377861)
-				(xy 56.61153 107.290283) (xy 56.607334 107.287441) (xy 56.5137 107.224027) (xy 56.483211 107.207869)
-				(xy 56.421641 107.175239) (xy 56.421636 107.175237) (xy 56.421632 107.175235) (xy 56.33206 107.140075)
-				(xy 56.332036 107.140067) (xy 56.241634 107.11468) (xy 56.241609 107.114674) (xy 56.045071 107.077813)
-				(xy 56.045019 107.077804) (xy 55.915456 107.054721) (xy 55.850001 107.04306) (xy 55.849198 107.042887)
-				(xy 55.5451 106.966378) (xy 55.537913 106.961037) (xy 55.536609 106.952177) (xy 55.536741 106.951695)
-				(xy 55.582044 106.799468) (xy 55.774592 106.152467) (xy 55.780236 106.145517) (xy 55.782464 106.144593)
-				(xy 56.581748 105.906725)
+				(xy 57.120609 107.207766) (xy 57.00483 107.085014) (xy 56.915659 106.975321) (xy 56.854753 106.884902)
+				(xy 56.808873 106.799474) (xy 56.749581 106.631598) (xy 56.707804 106.415019) (xy 56.666851 106.189661)
+				(xy 56.593399 105.903258) (xy 55.776399 106.146399) (xy 55.533258 106.963399) (xy 55.849606 107.04299)
+				(xy 56.045019 107.077804) (xy 56.241628 107.114679) (xy 56.332054 107.140073) (xy 56.421641 107.175239)
+				(xy 56.513696 107.224025) (xy 56.61153 107.290283) (xy 56.71845 107.377861) (xy 56.837766 107.490609)
 			)
 		)
 	)
@@ -64379,7 +66007,7 @@
 		(net "ISO9141_L")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30203)
+		(priority 30201)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64459,7 +66087,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30267)
+		(priority 30257)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64490,7 +66118,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30277)
+		(priority 30264)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64523,7 +66151,7 @@
 		(net "Net-(S15FB1-Pad1)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30225)
+		(priority 30223)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64570,7 +66198,7 @@
 		(net "Net-(S4Q1-G)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30340)
+		(priority 30338)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64668,7 +66296,7 @@
 		(net "PP3V3_K")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30248)
+		(priority 30251)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64711,7 +66339,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30011)
+		(priority 30012)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64757,7 +66385,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30314)
+		(priority 30312)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64797,7 +66425,7 @@
 		(net "Net-(S9U1-STBY)")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30158)
+		(priority 30156)
 		(attr
 			(teardrop
 				(type padvia)
@@ -64863,24 +66491,18 @@
 		(filled_polygon
 			(layer "F.Cu")
 			(pts
-				(xy 49.257579 87.351224) (xy 49.259094 87.35188) (xy 49.262717 87.354343) (xy 49.455595 87.547221)
-				(xy 49.458132 87.551018) (xy 49.458855 87.552764) (xy 49.458926 87.561541) (xy 49.458322 87.563069)
-				(xy 49.455975 87.566771) (xy 49.355837 87.673554) (xy 49.355758 87.673635) (xy 49.355694 87.673707)
-				(xy 49.271281 87.779349) (xy 49.271268 87.779365) (xy 49.271266 87.779366) (xy 49.208396 87.876466)
-				(xy 49.208264 87.876659) (xy 49.162858 87.968619) (xy 49.16285 87.968642) (xy 49.131395 88.057933)
-				(xy 49.131391 88.057947) (xy 49.131385 88.057967) (xy 49.110092 88.147583) (xy 49.110083 88.147635)
-				(xy 49.08305 88.339261) (xy 49.083047 88.339284) (xy 49.04541 88.602337) (xy 49.045316 88.602895)
-				(xy 49.045204 88.603476) (xy 49.04508 88.604044) (xy 48.976875 88.882544) (xy 48.974945 88.886681)
-				(xy 48.973891 88.888118) (xy 48.966235 88.892762) (xy 48.964739 88.892991) (xy 48.959625 88.892642)
-				(xy 48.944423 88.888118) (xy 48.925694 88.882544) (xy 48.164698 88.65607) (xy 48.160661 88.653939)
-				(xy 48.157982 88.651764) (xy 48.154142 88.646018) (xy 48.14123 88.60263) (xy 48.005807 88.147583)
-				(xy 47.917341 87.850323) (xy 47.916919 87.845781) (xy 47.917103 87.844007) (xy 47.921364 87.836138)
-				(xy 47.922641 87.835101) (xy 47.92695 87.832895) (xy 48.079622 87.791583) (xy 48.079904 87.791511)
-				(xy 48.080252 87.791428) (xy 48.080519 87.791369) (xy 48.225749 87.761282) (xy 48.226116 87.761213)
-				(xy 48.226465 87.761153) (xy 48.226816 87.761098) (xy 48.470727 87.726949) (xy 48.470823 87.726937)
-				(xy 48.470904 87.726925) (xy 48.481091 87.725498) (xy 48.481426 87.725314) (xy 48.631225 87.702395)
+				(xy 49.261139 87.352765) (xy 49.457241 87.548867) (xy 49.460668 87.55714) (xy 49.457502 87.565143)
+				(xy 49.355702 87.673699) (xy 49.355697 87.673704) (xy 49.271277 87.779354) (xy 49.271269 87.779364)
+				(xy 49.208242 87.876706) (xy 49.208241 87.876707) (xy 49.162859 87.968619) (xy 49.162856 87.968627)
+				(xy 49.131391 88.057947) (xy 49.131387 88.057962) (xy 49.110093 88.147582) (xy 49.110088 88.147608)
+				(xy 49.083059 88.339201) (xy 49.083056 88.339224) (xy 49.045369 88.60263) (xy 49.045151 88.603756)
+				(xy 48.976322 88.884805) (xy 48.971026 88.892026) (xy 48.962175 88.893386) (xy 48.961621 88.893236)
+				(xy 48.162469 88.655407) (xy 48.155517 88.649763) (xy 48.154592 88.64753) (xy 48.14123 88.60263)
+				(xy 47.916679 87.848096) (xy 47.917604 87.839191) (xy 47.924556 87.833547) (xy 47.92478 87.833483)
+				(xy 48.079764 87.791545) (xy 48.080386 87.791397) (xy 48.225925 87.761246) (xy 48.226626 87.761125)
+				(xy 48.470776 87.726943) (xy 48.470772 87.726943) (xy 48.470812 87.726938) (xy 48.631225 87.702395)
 				(xy 48.70198 87.69157) (xy 48.864314 87.637104) (xy 48.9475 87.593507) (xy 49.035406 87.53526) (xy 49.138906 87.452026)
-				(xy 49.24316 87.354101) (xy 49.247031 87.351687) (xy 49.248799 87.351019)
+				(xy 49.244856 87.352509) (xy 49.253232 87.349344)
 			)
 		)
 	)
@@ -64888,7 +66510,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30078)
+		(priority 30079)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65019,7 +66641,7 @@
 		(net "PP3V3")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30368)
+		(priority 30366)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65065,7 +66687,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30180)
+		(priority 30178)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65106,7 +66728,7 @@
 		(net "PP12VIP")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30204)
+		(priority 30202)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65149,7 +66771,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30215)
+		(priority 30213)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65191,7 +66813,7 @@
 		(net "CAN_L")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30156)
+		(priority 30154)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65246,7 +66868,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30302)
+		(priority 30291)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65286,7 +66908,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30259)
+		(priority 30269)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65319,7 +66941,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30317)
+		(priority 30315)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65356,7 +66978,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30192)
+		(priority 30187)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65434,7 +67056,7 @@
 		(net "GND")
 		(layer "F.Cu")
 		(hatch none 0.1)
-		(priority 30242)
+		(priority 30240)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65724,7 +67346,7 @@
 		(net "CAN_L_ISO9141_L")
 		(layer "B.Cu")
 		(hatch none 0.1)
-		(priority 30006)
+		(priority 30002)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65750,19 +67372,12 @@
 		(filled_polygon
 			(layer "B.Cu")
 			(pts
-				(xy 33.969693 76.255996) (xy 33.975336 76.262949) (xy 33.975518 76.263637) (xy 33.99973 76.367854)
-				(xy 33.999984 76.36942) (xy 34.009309 76.469844) (xy 34.00934 76.471591) (xy 33.999654 76.64175)
-				(xy 33.999626 76.642138) (xy 33.992299 76.723227) (xy 33.992299 76.723233) (xy 33.998909 76.837112)
-				(xy 33.998909 76.837116) (xy 34.01462 76.890681) (xy 34.02857 76.919599) (xy 34.041574 76.946553)
-				(xy 34.071491 76.989965) (xy 34.084986 77.009546) (xy 34.084988 77.009549) (xy 34.14642 77.077818)
-				(xy 34.146421 77.077819) (xy 34.426745 77.022023) (xy 34.435528 77.023769) (xy 34.440504 77.031214)
-				(xy 34.440729 77.033498) (xy 34.440729 77.40754) (xy 34.437302 77.415813) (xy 34.429029 77.41924)
-				(xy 34.007326 77.41924) (xy 34.002849 77.418349) (xy 33.865165 77.361318) (xy 33.862249 77.359577)
-				(xy 33.742323 77.261805) (xy 33.742321 77.261803) (xy 33.634963 77.215868) (xy 33.532945 77.205633)
-				(xy 33.427749 77.213879) (xy 33.367205 77.219894) (xy 33.366111 77.219951) (xy 33.209169 77.220795)
-				(xy 33.20683 77.220571) (xy 33.049886 77.189444) (xy 33.042437 77.184474) (xy 33.040686 77.175692)
-				(xy 33.040945 77.174642) (xy 33.249934 76.472048) (xy 33.255576 76.465098) (xy 33.257801 76.464177)
-				(xy 33.960786 76.255071)
+				(xy 34.440729 77.01924) (xy 34.146421 77.077819) (xy 34.084987 77.009547) (xy 34.041574 76.946553)
+				(xy 34.014621 76.890682) (xy 33.99891 76.837119) (xy 33.992299 76.723231) (xy 33.999642 76.641962)
+				(xy 34.00939 76.470715) (xy 33.999911 76.368633) (xy 33.972705 76.251526) (xy 33.25174 76.46598)
+				(xy 33.037286 77.186945) (xy 33.207992 77.220802) (xy 33.366662 77.219949) (xy 33.427722 77.213882)
+				(xy 33.532948 77.205634) (xy 33.634963 77.215868) (xy 33.742321 77.261803) (xy 33.863579 77.360661)
+				(xy 34.005 77.41924) (xy 34.440729 77.41924)
 			)
 		)
 	)
@@ -65930,17 +67545,11 @@
 		(filled_polygon
 			(layer "B.Cu")
 			(pts
-				(xy 54.3058 104.817425) (xy 54.572566 105.084191) (xy 54.575993 105.092464) (xy 54.572797 105.1005)
-				(xy 54.467856 105.211555) (xy 54.380287 105.318464) (xy 54.380281 105.318472) (xy 54.314027 105.416298)
-				(xy 54.265239 105.508359) (xy 54.265235 105.508367) (xy 54.230075 105.597938) (xy 54.230067 105.597962)
-				(xy 54.20468 105.688365) (xy 54.204674 105.68839) (xy 54.167813 105.884927) (xy 54.167804 105.88498)
-				(xy 54.147915 105.996616) (xy 54.13306 106.079998) (xy 54.132887 106.080801) (xy 54.056378 106.384899)
-				(xy 54.051037 106.392086) (xy 54.042177 106.39339) (xy 54.041695 106.393258) (xy 53.242469 106.155407)
-				(xy 53.235517 106.149763) (xy 53.234592 106.14753) (xy 53.214733 106.080801) (xy 52.996725 105.34825)
-				(xy 52.99765 105.339344) (xy 53.004602 105.3337) (xy 53.005011 105.333586) (xy 53.279277 105.263247)
-				(xy 53.280061 105.263076) (xy 53.50502 105.222195) (xy 53.678108 105.188806) (xy 53.721589 105.18042)
-				(xy 53.721593 105.180418) (xy 53.721598 105.180418) (xy 53.889474 105.121127) (xy 53.974902 105.075247)
-				(xy 54.065321 105.014341) (xy 54.175014 104.92517) (xy 54.289501 104.817186) (xy 54.297869 104.814003)
+				(xy 54.297766 104.809391) (xy 54.175014 104.92517) (xy 54.065321 105.014341) (xy 53.974902 105.075247)
+				(xy 53.889474 105.121127) (xy 53.721598 105.180418) (xy 53.50502 105.222195) (xy 53.279662 105.263149)
+				(xy 52.993258 105.336601) (xy 53.236399 106.153601) (xy 54.053399 106.396742) (xy 54.13299 106.080394)
+				(xy 54.167804 105.88498) (xy 54.204679 105.688372) (xy 54.230073 105.597945) (xy 54.265239 105.508359)
+				(xy 54.314025 105.416303) (xy 54.380283 105.31847) (xy 54.467861 105.21155) (xy 54.580609 105.092234)
 			)
 		)
 	)
@@ -65948,7 +67557,7 @@
 		(net "PP3V3_K_ST")
 		(layer "B.Cu")
 		(hatch none 0.1)
-		(priority 30004)
+		(priority 30001)
 		(attr
 			(teardrop
 				(type padvia)
@@ -65974,18 +67583,12 @@
 		(filled_polygon
 			(layer "B.Cu")
 			(pts
-				(xy 61.961139 104.852765) (xy 62.157241 105.048867) (xy 62.160668 105.05714) (xy 62.157502 105.065143)
-				(xy 62.055702 105.173699) (xy 62.055697 105.173704) (xy 61.971277 105.279354) (xy 61.971269 105.279364)
-				(xy 61.908242 105.376706) (xy 61.908241 105.376707) (xy 61.862859 105.468619) (xy 61.862856 105.468627)
-				(xy 61.831391 105.557947) (xy 61.831387 105.557962) (xy 61.810093 105.647582) (xy 61.810088 105.647608)
-				(xy 61.783059 105.839201) (xy 61.783056 105.839224) (xy 61.745369 106.10263) (xy 61.745151 106.103756)
-				(xy 61.676322 106.384805) (xy 61.671026 106.392026) (xy 61.662175 106.393386) (xy 61.661621 106.393236)
-				(xy 60.862469 106.155407) (xy 60.855517 106.149763) (xy 60.854592 106.14753) (xy 60.84123 106.10263)
-				(xy 60.616679 105.348096) (xy 60.617604 105.339191) (xy 60.624556 105.333547) (xy 60.62478 105.333483)
-				(xy 60.779764 105.291545) (xy 60.780386 105.291397) (xy 60.925925 105.261246) (xy 60.926626 105.261125)
-				(xy 61.170776 105.226943) (xy 61.170772 105.226943) (xy 61.170812 105.226938) (xy 61.331225 105.202395)
-				(xy 61.40198 105.19157) (xy 61.564314 105.137104) (xy 61.6475 105.093507) (xy 61.735406 105.03526)
-				(xy 61.838906 104.952026) (xy 61.944856 104.852509) (xy 61.953232 104.849344)
+				(xy 61.953121 104.844747) (xy 61.838906 104.952026) (xy 61.735406 105.03526) (xy 61.6475 105.093507)
+				(xy 61.564314 105.137104) (xy 61.40198 105.19157) (xy 61.170776 105.226943) (xy 60.926271 105.261175)
+				(xy 60.780073 105.291462) (xy 60.613258 105.336601) (xy 60.856399 106.153601) (xy 61.673399 106.396742)
+				(xy 61.745288 106.103198) (xy 61.783056 105.839224) (xy 61.810091 105.647595) (xy 61.831389 105.557957)
+				(xy 61.862861 105.468615) (xy 61.908244 105.376703) (xy 61.971277 105.279354) (xy 62.055701 105.173701)
+				(xy 62.165253 105.056879)
 			)
 		)
 	)
@@ -67631,7 +69234,7 @@
 		(net "ACCELL_INT1")
 		(layer "In2.Cu")
 		(hatch none 0.1)
-		(priority 30002)
+		(priority 30001)
 		(attr
 			(teardrop
 				(type padvia)
@@ -67657,18 +69260,12 @@
 		(filled_polygon
 			(layer "In2.Cu")
 			(pts
-				(xy 66.926573 104.805459) (xy 66.93 104.813732) (xy 66.93 105.307674) (xy 66.929109 105.312151)
-				(xy 66.88684 105.414195) (xy 66.884709 105.417566) (xy 66.826818 105.481576) (xy 66.784563 105.541985)
-				(xy 66.784562 105.541987) (xy 66.756992 105.598663) (xy 66.741809 105.652964) (xy 66.739413 105.759813)
-				(xy 66.739414 105.759827) (xy 66.758947 105.873259) (xy 66.758973 105.873412) (xy 66.787017 106.050324)
-				(xy 66.787161 106.052237) (xy 66.785995 106.220554) (xy 66.782511 106.228803) (xy 66.774214 106.232173)
-				(xy 66.773202 106.232122) (xy 65.946049 106.154506) (xy 65.938132 106.150321) (xy 65.935493 106.14395)
-				(xy 65.899447 105.759813) (xy 65.857832 105.316318) (xy 65.860471 105.307762) (xy 65.868388 105.303577)
-				(xy 65.868943 105.303538) (xy 65.963277 105.299272) (xy 65.964464 105.299278) (xy 66.057471 105.304646)
-				(xy 66.058681 105.304782) (xy 66.216588 105.331026) (xy 66.327107 105.350247) (xy 66.327114 105.350246)
-				(xy 66.327116 105.350247) (xy 66.408509 105.348891) (xy 66.435643 105.34844) (xy 66.487881 105.334297)
-				(xy 66.542254 105.308786) (xy 66.605326 105.265653) (xy 66.673934 105.203934) (xy 66.631418 104.815003)
-				(xy 66.633926 104.806407) (xy 66.641778 104.802101) (xy 66.643049 104.802032) (xy 66.9183 104.802032)
+				(xy 66.63 104.802032) (xy 66.673934 105.203934) (xy 66.605326 105.265653) (xy 66.542254 105.308786)
+				(xy 66.487881 105.334297) (xy 66.435643 105.34844) (xy 66.327107 105.350247) (xy 66.216588 105.331026)
+				(xy 66.058079 105.304682) (xy 65.963876 105.299245) (xy 65.856685 105.304093) (xy 65.936399 106.153601)
+				(xy 66.785907 106.233315) (xy 66.787168 106.051275) (xy 66.758973 105.873412) (xy 66.739414 105.759821)
+				(xy 66.74181 105.652961) (xy 66.756991 105.598667) (xy 66.784561 105.54199) (xy 66.826819 105.481575)
+				(xy 66.886066 105.416066) (xy 66.93 105.31) (xy 66.93 104.802032)
 			)
 		)
 	)
@@ -67714,7 +69311,7 @@
 		(net "ACCELL_INT2")
 		(layer "In2.Cu")
 		(hatch none 0.1)
-		(priority 30001)
+		(priority 30000)
 		(attr
 			(teardrop
 				(type padvia)
@@ -67740,18 +69337,12 @@
 		(filled_polygon
 			(layer "In2.Cu")
 			(pts
-				(xy 69.581139 104.852765) (xy 69.777241 105.048867) (xy 69.780668 105.05714) (xy 69.777502 105.065143)
-				(xy 69.675702 105.173699) (xy 69.675697 105.173704) (xy 69.591277 105.279354) (xy 69.591269 105.279364)
-				(xy 69.528242 105.376706) (xy 69.528241 105.376707) (xy 69.482859 105.468619) (xy 69.482856 105.468627)
-				(xy 69.451391 105.557947) (xy 69.451387 105.557962) (xy 69.430093 105.647582) (xy 69.430088 105.647608)
-				(xy 69.403059 105.839201) (xy 69.403056 105.839224) (xy 69.365369 106.10263) (xy 69.365151 106.103756)
-				(xy 69.296322 106.384805) (xy 69.291026 106.392026) (xy 69.282175 106.393386) (xy 69.281621 106.393236)
-				(xy 68.482469 106.155407) (xy 68.475517 106.149763) (xy 68.474592 106.14753) (xy 68.46123 106.10263)
-				(xy 68.236679 105.348096) (xy 68.237604 105.339191) (xy 68.244556 105.333547) (xy 68.24478 105.333483)
-				(xy 68.399764 105.291545) (xy 68.400386 105.291397) (xy 68.545925 105.261246) (xy 68.546626 105.261125)
-				(xy 68.790776 105.226943) (xy 68.790772 105.226943) (xy 68.790812 105.226938) (xy 68.951225 105.202395)
-				(xy 69.02198 105.19157) (xy 69.184314 105.137104) (xy 69.2675 105.093507) (xy 69.355406 105.03526)
-				(xy 69.458906 104.952026) (xy 69.564856 104.852509) (xy 69.573232 104.849344)
+				(xy 69.573121 104.844747) (xy 69.458906 104.952026) (xy 69.355406 105.03526) (xy 69.2675 105.093507)
+				(xy 69.184314 105.137104) (xy 69.02198 105.19157) (xy 68.790776 105.226943) (xy 68.546271 105.261175)
+				(xy 68.400073 105.291462) (xy 68.233258 105.336601) (xy 68.476399 106.153601) (xy 69.293399 106.396742)
+				(xy 69.365288 106.103198) (xy 69.403056 105.839224) (xy 69.430091 105.647595) (xy 69.451389 105.557957)
+				(xy 69.482861 105.468615) (xy 69.528244 105.376703) (xy 69.591277 105.279354) (xy 69.675701 105.173701)
+				(xy 69.785253 105.056879)
 			)
 		)
 	)
@@ -67759,7 +69350,7 @@
 		(net "PP12V_K_ST")
 		(layer "In2.Cu")
 		(hatch none 0.1)
-		(priority 30003)
+		(priority 30002)
 		(attr
 			(teardrop
 				(type padvia)
@@ -67786,14 +69377,13 @@
 		(filled_polygon
 			(layer "In2.Cu")
 			(pts
-				(xy 64.016743 105.111538) (xy 64.018949 105.117151) (xy 64.027172 105.189117) (xy 64.027176 105.189137)
-				(xy 64.077863 105.417476) (xy 64.104863 105.534046) (xy 64.105129 105.535766) (xy 64.11032 105.601577)
-				(xy 64.108187 105.609284) (xy 64.105355 105.613261) (xy 64.097764 105.618012) (xy 64.093766 105.617992)
-				(xy 64.083957 105.616239) (xy 64.078526 105.61371) (xy 64.002081 105.550001) (xy 64.00208 105.550001)
-				(xy 64.00208 105.55) (xy 63.026599 105.929156) (xy 63.017646 105.928959) (xy 63.012189 105.924033)
-				(xy 62.921485 105.764484) (xy 62.906882 105.738797) (xy 62.905773 105.729913) (xy 62.911272 105.722845)
-				(xy 62.913385 105.721905) (xy 62.96736 105.704094) (xy 63.28459 105.555806) (xy 63.488797 105.44379)
-				(xy 63.698242 105.317279) (xy 63.896687 105.185485) (xy 64.000385 105.10906) (xy 64.009077 105.106911)
+				(xy 64.113905 104.623963) (xy 64.050707 104.713599) (xy 64.013609 104.832057) (xy 64.004136 104.98752)
+				(xy 64.027176 105.189137) (xy 64.077859 105.417457) (xy 64.105061 105.5349) (xy 64.110655 105.60582)
+				(xy 64.101057 105.619295) (xy 64.080907 105.615694) (xy 64.002081 105.550001) (xy 63.017183 105.932817)
+				(xy 62.798959 105.548959) (xy 62.720745 105.63399) (xy 62.676551 105.697622) (xy 62.664064 105.731756)
+				(xy 62.667528 105.755415) (xy 62.700077 105.772443) (xy 62.784366 105.764484) (xy 62.96736 105.704094)
+				(xy 63.28459 105.555806) (xy 63.488797 105.44379) (xy 63.698242 105.317279) (xy 63.896687 105.185485)
+				(xy 64.083156 105.048061) (xy 64.212343 104.941733) (xy 64.326037 104.836095)
 			)
 		)
 	)

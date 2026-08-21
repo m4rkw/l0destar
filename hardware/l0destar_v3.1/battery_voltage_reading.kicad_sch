@@ -807,6 +807,16 @@
 	)
 	(wire
 		(pts
+			(xy 73.66 66.04) (xy 81.28 66.04)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "76dded0a-1d85-4e27-ab93-67c088474475")
+	)
+	(wire
+		(pts
 			(xy 63.5 34.29) (xy 128.905 34.29)
 		)
 		(stroke
@@ -993,6 +1003,30 @@
 			)
 		)
 	)
+	(global_label "INA_ALRT"
+		(shape input)
+		(at 81.28 66.04 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "6c6e43f9-86d6-45b4-b068-ff058358f4aa")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 92.611 66.04 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+	)
 	(global_label "PP3V3"
 		(shape input)
 		(at 33.02 34.29 180)
@@ -1083,7 +1117,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
 			(at 115.57 60.96 0)
 			(hide yes)
 			(show_name no)
@@ -1103,6 +1137,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
+			(at 115.57 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Kyocera AVX"
+			(at 115.57 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -1240,7 +1298,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 144.145 60.96 0)
 			(hide yes)
 			(show_name no)
@@ -1260,6 +1318,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 144.145 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 144.145 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -1342,6 +1424,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "INA228"
+			(at 72.39 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Texas Instruments"
+			(at 72.39 60.96 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "3"

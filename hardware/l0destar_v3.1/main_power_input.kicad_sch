@@ -83,79 +83,7 @@
 					(justify bottom)
 				)
 			)
-			(property "Package" "6050 TDK"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Price" "None"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "SnapEDA_Link" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=snap"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
 			(property "MP" "CKG57NX7R1H476M500JH"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=6102161&manufacturer=TDK Corporation&part_name=CKG57NX7R1H476M500JH&search_term=ckg57nx7r1h476m500jh"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Availability" "In Stock"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Check_prices" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=eda"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -1360,67 +1288,7 @@
 					(justify bottom)
 				)
 			)
-			(property "Package" "SO-8L SINGLE-5 Vishay"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Price" "None"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "SnapEDA_Link" "https://www.snapeda.com/parts/SQJ457EP-T1_BE3/Vishay/view-part/?ref=snap"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
 			(property "MP" "SQJ457EP-T1_BE3"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Availability" "In Stock"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Check_prices" "https://www.snapeda.com/parts/SQJ457EP-T1_BE3/Vishay/view-part/?ref=eda"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -2755,7 +2623,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" "CKG57NX7R1H476M500JH"
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CKG57NX7R1H476M500JH"
 			(at 104.14 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -2778,7 +2646,7 @@
 				(justify bottom)
 			)
 		)
-		(property "MF" "TDK Corporation"
+		(property "Manufacturer_Name" "TDK"
 			(at 104.14 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -2790,79 +2658,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Package" "6050 TDK"
-			(at 104.14 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Price" "None"
-			(at 104.14 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=snap"
-			(at 104.14 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MP" "CKG57NX7R1H476M500JH"
-			(at 104.14 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=6102161&manufacturer=TDK Corporation&part_name=CKG57NX7R1H476M500JH&search_term=ckg57nx7r1h476m500jh"
-			(at 104.14 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 104.14 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=eda"
+		(property "Manufacturer_Part_Number" "CKG57NX7R1H476M500JH"
 			(at 104.14 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -2933,7 +2729,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.farnell.com/datasheets/3157884.pdf"
 			(at 38.1 77.47 0)
 			(hide yes)
 			(show_name no)
@@ -2953,6 +2749,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "0407002.WRA"
+			(at 38.1 77.47 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Littelfuse"
+			(at 38.1 77.47 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -3016,7 +2836,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://ds.yuden.co.jp/TYCOMPAS/or/detail?pn=MCJCU32MLB7106KPPDT1&u=M"
 			(at 181.61 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -3039,7 +2859,7 @@
 				(justify bottom)
 			)
 		)
-		(property "MF" ""
+		(property "Manufacturer_Name" "Taiyo Yuden"
 			(at 181.61 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -3051,79 +2871,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Package" "6050 TDK"
-			(at 181.61 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Price" "None"
-			(at 181.61 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=snap"
-			(at 181.61 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MP" "GCJ32EC71H106KA01L"
-			(at 181.61 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=6102161&manufacturer=TDK Corporation&part_name=CKG57NX7R1H476M500JH&search_term=ckg57nx7r1h476m500jh"
-			(at 181.61 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 181.61 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=eda"
+		(property "Manufacturer_Part_Number" "MCJCU32MLB7106KPPDT1"
 			(at 181.61 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -3265,7 +3013,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Part_Number" "SQ2361ES-T1_GE3"
+		(property "Manufacturer_Part_Number" "SQ2361CES-T1_BE3"
 			(at 872.39 36.83 0)
 			(hide yes)
 			(show_name no)
@@ -3340,7 +3088,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
 			(at 73.66 57.15 0)
 			(hide yes)
 			(show_name no)
@@ -3360,6 +3108,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "ERJ2RKF1004X"
+			(at 73.66 57.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Panasonic"
+			(at 73.66 57.15 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3444,6 +3216,30 @@
 				)
 			)
 		)
+		(property "Manufacturer_Part_Number" "BZX84C15"
+			(at 78.74 90.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 78.74 90.17 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
 		(pin "1"
 			(uuid "a6d384be-8b59-43d2-aa3d-411bfb1752cc")
 		)
@@ -3506,7 +3302,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.farnell.com/datasheets/3157884.pdf"
 			(at 38.1 61.595 0)
 			(hide yes)
 			(show_name no)
@@ -3526,6 +3322,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "0407002.WRA"
+			(at 38.1 61.595 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Littelfuse"
+			(at 38.1 61.595 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -3588,7 +3408,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
 			(at 63.5 100.33 0)
 			(hide yes)
 			(show_name no)
@@ -3608,6 +3428,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 63.5 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 63.5 100.33 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3747,7 +3591,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.vishay.com/docs/76628/sqj457ep.pdf"
 			(at 60.96 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -3770,7 +3614,7 @@
 				(justify bottom)
 			)
 		)
-		(property "MF" "Vishay"
+		(property "Manufacturer_Name" "Vishay Siliconix"
 			(at 60.96 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -3782,67 +3626,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Package" "SO-8L SINGLE-5 Vishay"
-			(at 60.96 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Price" "None"
-			(at 60.96 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/SQJ457EP-T1_BE3/Vishay/view-part/?ref=snap"
-			(at 60.96 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MP" "SQJ457EP-T1_BE3"
-			(at 60.96 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 60.96 81.28 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/SQJ457EP-T1_BE3/Vishay/view-part/?ref=eda"
+		(property "Manufacturer_Part_Number" "SQJ457EP-T1_BE3"
 			(at 60.96 81.28 0)
 			(hide yes)
 			(show_name no)
@@ -3933,7 +3717,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" "CKG57NX7R1H476M500JH"
+		(property "Datasheet" "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CKG57NX7R1H476M500JH"
 			(at 142.24 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -3956,7 +3740,7 @@
 				(justify bottom)
 			)
 		)
-		(property "MF" "TDK Corporation"
+		(property "Manufacturer_Name" "TDK"
 			(at 142.24 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -3968,79 +3752,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Package" "6050 TDK"
-			(at 142.24 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Price" "None"
-			(at 142.24 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=snap"
-			(at 142.24 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MP" "CKG57NX7R1H476M500JH"
-			(at 142.24 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=6102161&manufacturer=TDK Corporation&part_name=CKG57NX7R1H476M500JH&search_term=ckg57nx7r1h476m500jh"
-			(at 142.24 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 142.24 91.44 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/CKG57NX7R1H476M500JH/TDK/view-part/?ref=eda"
+		(property "Manufacturer_Part_Number" "CKG57NX7R1H476M500JH"
 			(at 142.24 91.44 0)
 			(hide yes)
 			(show_name no)
@@ -4274,6 +3986,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "BZX84C15"
+			(at 88.9 46.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 88.9 46.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"

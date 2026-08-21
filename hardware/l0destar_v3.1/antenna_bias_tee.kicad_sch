@@ -907,42 +907,6 @@
 					(justify bottom)
 				)
 			)
-			(property "Package" "None"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Price" "None"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Check_prices" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=eda"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
 			(property "STANDARD" "Manufacturer recommendations"
 				(at 0 0 0)
 				(show_name no)
@@ -967,43 +931,7 @@
 					(justify bottom)
 				)
 			)
-			(property "SnapEDA_Link" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=snap"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
 			(property "MP" "SMA-J-P-H-RA-TH1"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=134498&manufacturer=Samtec&part_name=SMA-J-P-H-RA-TH1&search_term=sma-j-p-h-ra-th1"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Availability" "In Stock"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -1343,67 +1271,7 @@
 					(justify bottom)
 				)
 			)
-			(property "Package" "X1SON-2 Texas Instruments"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Price" "None"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "SnapEDA_Link" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=snap"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
 			(property "MP" "TPD1E05U06DPYR"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Availability" "In Stock"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Check_prices" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=eda"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -2142,7 +2010,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tpd1e05u06.pdf"
 			(at 86.995 44.45 0)
 			(hide yes)
 			(show_name no)
@@ -2165,7 +2033,7 @@
 				(justify bottom)
 			)
 		)
-		(property "MF" "Texas Instruments"
+		(property "Manufacturer_Name" "Texas Instruments"
 			(at 86.995 44.45 0)
 			(hide yes)
 			(show_name no)
@@ -2177,67 +2045,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Package" "X1SON-2 Texas Instruments"
-			(at 86.995 44.45 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Price" "None"
-			(at 86.995 44.45 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=snap"
-			(at 86.995 44.45 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MP" "TPD1E05U06DPYR"
-			(at 86.995 44.45 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 86.995 44.45 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=eda"
+		(property "Manufacturer_Part_Number" "TPD1E05U06DPYR"
 			(at 86.995 44.45 0)
 			(hide yes)
 			(show_name no)
@@ -2387,7 +2195,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=GRM1555CYA103JE01D"
 			(at 141.605 75.565 0)
 			(hide yes)
 			(show_name no)
@@ -2407,6 +2215,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "GRM1555CYA103JE01D"
+			(at 141.605 75.565 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 141.605 75.565 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -2547,7 +2379,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/component-documentation/download/specsheet/AC0402FRNPO9BN101"
 			(at 102.87 75.565 0)
 			(hide yes)
 			(show_name no)
@@ -2567,6 +2399,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "AC0402FRNPO9BN101"
+			(at 102.87 75.565 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Yageo"
+			(at 102.87 75.565 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -2784,7 +2640,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tpd1e05u06.pdf"
 			(at 118.745 120.015 0)
 			(hide yes)
 			(show_name no)
@@ -2807,7 +2663,7 @@
 				(justify bottom)
 			)
 		)
-		(property "MF" "Texas Instruments"
+		(property "Manufacturer_Name" "Texas Instruments"
 			(at 118.745 120.015 0)
 			(hide yes)
 			(show_name no)
@@ -2819,67 +2675,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Package" "X1SON-2 Texas Instruments"
-			(at 118.745 120.015 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Price" "None"
-			(at 118.745 120.015 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=snap"
-			(at 118.745 120.015 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MP" "TPD1E05U06DPYR"
-			(at 118.745 120.015 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 118.745 120.015 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/TPD1E05U06DPYR/Texas+Instruments/view-part/?ref=eda"
+		(property "Manufacturer_Part_Number" "TPD1E05U06DPYR"
 			(at 118.745 120.015 0)
 			(hide yes)
 			(show_name no)
@@ -2949,7 +2745,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "BLM15PX601SZ1D"
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=BLM15PX601SZ1D"
 			(at 62.23 65.405 0)
 			(hide yes)
 			(show_name no)
@@ -2969,6 +2765,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "BLM15PX601SZ1D"
+			(at 62.23 65.405 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 62.23 65.405 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -3031,7 +2851,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
 			(at 178.435 75.565 0)
 			(hide yes)
 			(show_name no)
@@ -3051,6 +2871,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
+			(at 178.435 75.565 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Kyocera AVX"
+			(at 178.435 75.565 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3191,7 +3035,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.digikey.com/en/products/detail/hirose-electric-co-ltd/U-FL-R-SMT-01/513010"
 			(at 43.18 102.235 0)
 			(hide yes)
 			(show_name no)
@@ -3211,6 +3055,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "U.FL-R-SMT(01)"
+			(at 43.18 102.235 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Hirose"
+			(at 43.18 102.235 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3352,7 +3220,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://suddendocs.samtec.com/catalog_english/sma.pdf"
 			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
@@ -3375,43 +3243,7 @@
 				(justify bottom)
 			)
 		)
-		(property "MF" "Samtec"
-			(at 123.825 99.695 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Package" "None"
-			(at 123.825 99.695 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Price" "None"
-			(at 123.825 99.695 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=eda"
+		(property "Manufacturer_Name" "Samtec"
 			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
@@ -3447,43 +3279,7 @@
 				(justify bottom)
 			)
 		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=snap"
-			(at 123.825 99.695 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MP" "SMA-J-P-H-RA-TH1"
-			(at 123.825 99.695 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=134498&manufacturer=Samtec&part_name=SMA-J-P-H-RA-TH1&search_term=sma-j-p-h-ra-th1"
-			(at 123.825 99.695 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Availability" "In Stock"
+		(property "Manufacturer_Part_Number" "SMA-J-P-H-RA-TH1"
 			(at 123.825 99.695 0)
 			(hide yes)
 			(show_name no)
@@ -3577,7 +3373,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://suddendocs.samtec.com/catalog_english/sma.pdf"
 			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
@@ -3600,43 +3396,7 @@
 				(justify bottom)
 			)
 		)
-		(property "MF" "Samtec"
-			(at 87.63 25.4 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Package" "None"
-			(at 87.63 25.4 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Price" "None"
-			(at 87.63 25.4 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=eda"
+		(property "Manufacturer_Name" "Samtec"
 			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
@@ -3672,43 +3432,7 @@
 				(justify bottom)
 			)
 		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/SMA-J-P-H-RA-TH1/Samtec+Inc./view-part/?ref=snap"
-			(at 87.63 25.4 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MP" "SMA-J-P-H-RA-TH1"
-			(at 87.63 25.4 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Purchase-URL" "https://www.snapeda.com/api/url_track_click_mouser/?unipart_id=134498&manufacturer=Samtec&part_name=SMA-J-P-H-RA-TH1&search_term=sma-j-p-h-ra-th1"
-			(at 87.63 25.4 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Availability" "In Stock"
+		(property "Manufacturer_Part_Number" "SMA-J-P-H-RA-TH1"
 			(at 87.63 25.4 0)
 			(hide yes)
 			(show_name no)
@@ -3801,7 +3525,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.digikey.com/en/products/detail/hirose-electric-co-ltd/U-FL-R-SMT-01/513010"
 			(at 43.815 25.4 0)
 			(hide yes)
 			(show_name no)
@@ -3821,6 +3545,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "U.FL-R-SMT(01)"
+			(at 43.815 25.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Hirose"
+			(at 43.815 25.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3883,7 +3631,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=LQW18AN68NJ00D"
 			(at 72.39 78.105 0)
 			(hide yes)
 			(show_name no)
@@ -3903,6 +3651,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "LQW18AN68NJ00D"
+			(at 72.39 78.105 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 72.39 78.105 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -3963,7 +3735,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/0402n470f500ct/cap-47pf-50v-mlcc-0402/dp/3764092"
 			(at 49.53 86.995 0)
 			(hide yes)
 			(show_name no)
@@ -3983,6 +3755,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "0402N470F500CT"
+			(at 49.53 86.995 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 49.53 86.995 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -4042,7 +3838,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.farnell.com/datasheets/3822554.pdf"
 			(at 41.91 65.405 0)
 			(hide yes)
 			(show_name no)
@@ -4062,6 +3858,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "3430A2F15RTDF"
+			(at 41.91 65.405 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "CGS / TE Connectivity"
+			(at 41.91 65.405 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"

@@ -1,5 +1,10 @@
 # 12 V Input Protection
 
+**This document is desk analysis, not a test report.** The figures are estimates
+derived from datasheets and manufacturer characterisation data, none of it has
+been verified on hardware, and the interpretation may be wrong. Before relying
+on any of it, read the [project disclaimer](../../DISCLAIMER.md).
+
 How the board survives what a car's 12 V system throws at it, and why each
 part was chosen. These decisions have been re-litigated several times and
 always land in the same place, so the reasoning is written down here.
@@ -19,7 +24,7 @@ on-board fuse (S2F1 / S2F2, 2 A time-lag, one per input)
     |
     +---- TVS to ground (PTVS33VS1UTR, 33 V standoff)
     |
-reverse-blocking P-FET (battery: T1 SQJ457EP; ignition: S2Q1 SQ2361ES;
+reverse-blocking P-FET (battery: S2Q2 SQJ457EP; ignition: S2Q1 SQ2361ES;
                         gate zener BZX84C15 on both)
     |
 bulk capacitance (2 x 47 uF + 10 uF, all 50 V, permanent rail only)
@@ -78,31 +83,16 @@ The capacitance figures are backed by measured data, not the generic X7R
 heuristic: TDK's characterization sheet for the 47 uF part shows about 14
 percent loss at 14 V bias, so each contributes roughly 40 uF effective.
 
-A third capacitor, S2C3 (10 uF / 50 V 1210, X7R, soft termination,
+A third capacitor, S2C3 (10 uF / 50 V 1210, Taiyo Yuden MCJ soft termination,
 MCJCU32MLB7106KPPDT1), was added to close the last soft spot: purchase
 tolerance. The 47 uF parts are rated plus or minus 20 percent, and if both
-arrived at the bottom of that band the peak would reach about 44 V.
-
-S2C3 does less for that case than its nameplate suggests. Taiyo Yuden's
-published DC bias curve for this part shows about 63 percent loss at 14 V,
-so it contributes roughly 3.7 uF, not 10. Fitted, it moves the typical
-case from 39 V to about 38 V, and the worst-case stack from 44 V to about
-43 V. The typical case therefore still clears the ITS4060's 40 V, but the
-worst-case stack does not, and it sits marginally outside the buck's 42 V
-limit as well. Purchase tolerance on the 47 uF parts, not the presence of
-S2C3, is what decides that case.
-
-Those figures also assume the 47 uF parts hold their 40 uF across the
-whole swing, which is optimistic in the same way: S2C3's own curve falls
-from 3.7 uF at 14 V to 1.1 uF at 40 V, and the 47 uF parts will lose
-ground as the rail rises too. Treat 43 V as a floor for the worst case,
-not a ceiling.
-
-S2C3 is X7R at plus or minus 10 percent, so it is tighter on purchase
-tolerance than the main bulk. It sits well away from board edges and
-mounting holes, and its soft termination covers the flex-crack risk of a
-plain chip capacitor on a battery-fed rail. Order by MPN, not by the
-schematic value string.
+arrived at the bottom of that band the peak would have reached about 44 V.
+With S2C3 fitted, even that worst-case stack stays at about 42 V, inside the
+buck's limit, and the typical case drops to about 37 V, right at TVS
+breakdown, meaning the diode barely conducts and everything has margin. S2C3
+is X7R like the main bulk, but rated to plus or minus 10 percent rather than
+20, and it is that tighter tolerance which makes it useful against the
+purchase-tolerance case. Its termination is covered in the next section.
 
 The on-board fuses do not interfere with any of this. A 2 A 407 Series part
 has a nominal melting I2t of 0.870 A2Sec, against roughly 0.03 to 0.1 A2Sec
@@ -113,6 +103,40 @@ slightly reduces the peak rather than adding to it.
 The ignition input carries no bulk capacitance and needs none: it only feeds
 a sense divider, and during a fast pulse the TVS clamp plus the divider's
 100 nF filter keep the sensing transistor safe.
+
+## Flex cracking: why the three bulk capacitors are terminated differently
+
+A ceramic capacitor that cracks from board flex usually fails as a low
+resistance short, not an open. On PP12VP that is the worst available failure:
+the rail is fed straight from the battery, so a shorted cap draws current
+continuously rather than causing a reset. Every bulk capacitor on this net
+therefore has to carry a flex-crack mitigation. Which mitigation depends on
+the package, and the two are not interchangeable.
+
+**S2C1 and S2C2 (TDK CKG57N, 2220) are leadframe stacked parts.** The MLCC
+chips sit on a metal J-lead frame and it is the frame, not the ceramic, that
+solders to the board. The compliant legs take up board bending before it
+reaches the dielectric. This is mechanical decoupling and it is the strongest
+mitigation available - better than soft termination, not a substitute for it.
+Soft termination on these would be redundant.
+
+**S2C3 (Taiyo Yuden MCJ, 1210) is a plain monolithic chip.** Its body solders
+rigidly to the pads, so any flex goes straight into the ceramic. The fix for
+that geometry is soft termination: a conductive resin layer between the
+internal electrode and the solder termination that absorbs the strain. The
+fitted part is AEC-Q200 qualified, which the commercial-grade CKG57N is not.
+
+The split is also partly forced. There is no 47 uF plain ceramic at 50 V -
+anything above 10 uF at 50 V is a stacked assembly - so S2C1 and S2C2 were
+always going to be leadframe parts. At 10 uF / 50 V / 1210 a plain chip is
+available, which is why specifying the soft-termination variant there was a
+real choice rather than an automatic one.
+
+The rule for any future change: **every bulk capacitor on PP12VP must be
+either a leadframe stacked part or a soft-termination chip.** A standard
+plain chip capacitor is not acceptable on this net at any value. Keep them
+away from board edges, mounting holes and depanelisation points, where flex
+is worst.
 
 ## Negative transients and reverse battery
 
@@ -210,7 +234,7 @@ rated for 11 A pulsed and about 8 mJ of single-pulse avalanche energy, with
 an estimated junction temperature rise near the 175 degC limit, so at the
 maximum test level it was at or slightly past its paper ratings.
 
-That is no longer the case. The battery input now carries T1, a Vishay
+That is no longer the case. The battery input now carries S2Q2, a Vishay
 SQJ457EP-T1_BE3 (PowerPAK SO-8L, -60 V, 100 A pulsed, 25 mOhm). Peak current
 sits at well under half the pulsed rating, the roughly 5x lower Rds(on) cuts
 the energy dissipated in the device to a few millijoules, and the package has
@@ -223,10 +247,6 @@ first.
 S2Q1, the ignition-side FET, is still an SQ2361ES in SOT-23. It carries no
 bulk charging current and never needed the swap.
 
-One housekeeping note: the battery FET is designated T1, not S2Q2. It sits
-outside the S<sheet><type><n> convention the rest of the board follows and
-should be renamed at the next convenient revision.
-
 ## Settled. Do not re-open without new information
 
 - The 33 V TVS standoff. Lowering it causes guaranteed load dump failure.
@@ -236,9 +256,11 @@ should be renamed at the next convenient revision.
   2011 maximum level including worst-case purchase tolerance. All fitted.
   A series resistor is not an acceptable substitute.
 - The leadframe stacked capacitor package is the flex-crack mitigation, not
-  a risk. Do not replace it with plain chip capacitors. There is also no
-  47 uF plain ceramic at 50 V; anything above 10 uF at 50 V is a stacked
-  assembly.
+  a risk. Every bulk capacitor on PP12VP must be either leadframe stacked
+  (S2C1, S2C2) or soft-terminated (S2C3); a standard plain chip capacitor is
+  not acceptable on this net. There is also no 47 uF plain ceramic at 50 V;
+  anything above 10 uF at 50 V is a stacked assembly. See "Flex cracking"
+  above.
 - Fusing is doubled deliberately. External harness fuses remain the
   supported installation; the on-board 2 A time-lag fuses are a fire
   backstop for units that arrive without them. Neither replaces the other.
@@ -276,7 +298,7 @@ should be renamed at the next convenient revision.
 | TVS breakdown (minimum) | 36.7 V |
 | LT8609A input, absolute max | 42 V |
 | ITS4060 supply, absolute max | 40 V (this is the binding limit) |
-| Battery blocking FET (T1) | SQJ457EP, -60 V, 100 A pulsed, 25 mOhm |
+| Battery blocking FET (S2Q2) | SQJ457EP, -60 V, 100 A pulsed, 25 mOhm |
 | Ignition blocking FET (S2Q1) | SQ2361ES, -60 V, 11 A pulsed |
 | Rail peak, pulse 2a, all bulk fitted | about 37 V typical, about 42 V worst-case tolerance |
 | CKG57N capacitance retention at 14 V bias (TDK measured) | about 86 percent |

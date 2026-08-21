@@ -390,67 +390,7 @@
 					(justify bottom)
 				)
 			)
-			(property "Package" "MSOP-10 Linear Technology"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Price" "None"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Check_prices" "https://www.snapeda.com/parts/LT8609AIMSE%23PBF/Analog+Devices/view-part/?ref=eda"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "SnapEDA_Link" "https://www.snapeda.com/parts/LT8609AIMSE%23PBF/Analog+Devices/view-part/?ref=snap"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
 			(property "MP" "LT8609AIMSE#PBF"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Availability" "In Stock"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -1023,42 +963,6 @@
 					(justify bottom)
 				)
 			)
-			(property "Package" "None"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Price" "None"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Check_prices" "https://www.snapeda.com/parts/XFL4020-222ME/Coilcraft/view-part/?ref=eda"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
 			(property "STANDARD" "Manufacturer Recommendations"
 				(at 0 0 0)
 				(show_name no)
@@ -1083,18 +987,6 @@
 					(justify bottom)
 				)
 			)
-			(property "SnapEDA_Link" "https://www.snapeda.com/parts/XFL4020-222ME/Coilcraft/view-part/?ref=snap"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
 			(property "MP" "XFL4020-222ME"
 				(at 0 0 0)
 				(show_name no)
@@ -1108,18 +1000,6 @@
 				)
 			)
 			(property "MANUFACTURER" "Coilcraft"
-				(at 0 0 0)
-				(show_name no)
-				(do_not_autoplace no)
-				(hide yes)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-				)
-			)
-			(property "Availability" "In Stock"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -2317,7 +2197,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.coilcraft.com/getmedia/50632d43-da1b-4cdb-8ab4-3029cab51df3/xfl4020.pdf"
 			(at 124.46 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -2340,7 +2220,7 @@
 				(justify bottom)
 			)
 		)
-		(property "MF" "Coilcraft"
+		(property "Manufacturer_Name" "Coilcraft"
 			(at 124.46 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -2353,42 +2233,6 @@
 			)
 		)
 		(property "MAXIMUM_PACKAGE_HEIGHT" "2.1mm"
-			(at 124.46 27.94 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Package" "None"
-			(at 124.46 27.94 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Price" "None"
-			(at 124.46 27.94 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/XFL4020-222ME/Coilcraft/view-part/?ref=eda"
 			(at 124.46 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -2424,19 +2268,7 @@
 				(justify bottom)
 			)
 		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/XFL4020-222ME/Coilcraft/view-part/?ref=snap"
-			(at 124.46 27.94 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MP" "XFL4020-222ME"
+		(property "Manufacturer_Part_Number" "XFL4020-222MEC"
 			(at 124.46 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -2449,18 +2281,6 @@
 			)
 		)
 		(property "MANUFACTURER" "Coilcraft"
-			(at 124.46 27.94 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Availability" "In Stock"
 			(at 124.46 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -2531,7 +2351,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=GRM21BZ71H475KE15K"
 			(at 129.54 54.61 0)
 			(hide yes)
 			(show_name no)
@@ -2551,6 +2371,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "GRM21BZ71H475KE15K"
+			(at 129.54 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Murata"
+			(at 129.54 54.61 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -2690,7 +2534,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
 			(at 25.4 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -2710,6 +2554,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+			(at 25.4 41.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 25.4 41.91 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -2769,7 +2637,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796"
 			(at 114.3 80.01 0)
 			(hide yes)
 			(show_name no)
@@ -2789,6 +2657,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCMR04X2263FTL"
+			(at 114.3 80.01 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 114.3 80.01 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -2851,7 +2743,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.samsungsem.com/mlcc/CL32B476MPJNNNE.do"
 			(at 215.9 46.99 0)
 			(hide yes)
 			(show_name no)
@@ -2871,6 +2763,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CL32B476MPJNNNE"
+			(at 215.9 46.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Samsung Electro-Mechanics"
+			(at 215.9 46.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -2932,7 +2848,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://calchip.com/wp-content/uploads/2023/03/gmc_series-3.pdf"
 			(at 157.48 92.71 0)
 			(hide yes)
 			(show_name no)
@@ -2952,6 +2868,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "GMC21X7R226M10NT"
+			(at 157.48 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Cal-Chip Electronics"
+			(at 157.48 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -3014,7 +2954,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://product.samsungsem.com/mlcc/CL32B476MPJNNNE.do"
 			(at 248.92 46.99 0)
 			(hide yes)
 			(show_name no)
@@ -3034,6 +2974,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "CL32B476MPJNNNE"
+			(at 248.92 46.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Samsung Electro-Mechanics"
+			(at 248.92 46.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -3251,7 +3215,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://ds.yuden.co.jp/TYCOMPAS/or/detail?pn=MCASU105SB7104KFNA01&u=M"
 			(at 167.64 63.5 0)
 			(hide yes)
 			(show_name no)
@@ -3271,6 +3235,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCASU105SB7104KFNA01"
+			(at 167.64 63.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Taiyo Yuden"
+			(at 167.64 63.5 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -3645,7 +3633,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://www.analog.com/media/en/technical-documentation/data-sheets/LT8609-8609A-8609B.pdf"
 			(at 55.88 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -3668,7 +3656,7 @@
 				(justify bottom)
 			)
 		)
-		(property "MF" "Analog Devices"
+		(property "Manufacturer_Name" "Analog Devices"
 			(at 55.88 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -3692,79 +3680,7 @@
 				(justify bottom)
 			)
 		)
-		(property "Package" "MSOP-10 Linear Technology"
-			(at 55.88 43.18 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Price" "None"
-			(at 55.88 43.18 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Check_prices" "https://www.snapeda.com/parts/LT8609AIMSE%23PBF/Analog+Devices/view-part/?ref=eda"
-			(at 55.88 43.18 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "SnapEDA_Link" "https://www.snapeda.com/parts/LT8609AIMSE%23PBF/Analog+Devices/view-part/?ref=snap"
-			(at 55.88 43.18 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MP" "LT8609AIMSE#PBF"
-			(at 55.88 43.18 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "Availability" "In Stock"
-			(at 55.88 43.18 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify bottom)
-			)
-		)
-		(property "MANUFACTURER_PART_NUMBER" "lt8609hmse#trpbf"
+		(property "Manufacturer_Part_Number" "LT8609AIMSE#PBF"
 			(at 55.88 43.18 0)
 			(hide yes)
 			(show_name no)
@@ -3962,6 +3878,30 @@
 				)
 			)
 		)
+		(property "Manufacturer_Part_Number" "LM66100"
+			(at 195.58 41.656 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Texas Instruments"
+			(at 195.58 41.656 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
 		(pin "6"
 			(uuid "6d43250c-2433-47ee-8d21-e135a08d64c8")
 		)
@@ -4031,7 +3971,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
 			(at 143.51 96.52 0)
 			(hide yes)
 			(show_name no)
@@ -4051,6 +3991,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "ERJ2RKF1004X"
+			(at 143.51 96.52 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Panasonic"
+			(at 143.51 96.52 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
@@ -4112,7 +4076,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
 			(at 38.1 69.85 0)
 			(hide yes)
 			(show_name no)
@@ -4132,6 +4096,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
+			(at 38.1 69.85 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Kyocera AVX"
+			(at 38.1 69.85 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -4271,7 +4259,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://search.kemet.com/component-documentation/download/specsheet/C0402C100K5RACTU"
 			(at 143.51 86.36 0)
 			(hide yes)
 			(show_name no)
@@ -4291,6 +4279,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "C0402C100K5RACTU"
+			(at 143.51 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Kemet"
+			(at 143.51 86.36 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "2"
@@ -4353,7 +4365,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "https://yageogroup.com/component-documentation/download/specsheet/RC0402FR-0718K2L"
 			(at 50.8 69.85 0)
 			(hide yes)
 			(show_name no)
@@ -4373,6 +4385,30 @@
 				(font
 					(size 1.27 1.27)
 				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "RC0402FR-0718K2L"
+			(at 50.8 69.85 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Yageo"
+			(at 50.8 69.85 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
 			)
 		)
 		(pin "1"
