@@ -83,6 +83,9 @@ static bool can_fitted(void)
 
 static enum hw_domain can_domain(void)
 {
+	if (IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN)) {
+		return HW_DOMAIN_CAN;   /* v3.1: CAN_EN gates PP3V3_CAN */
+	}
 	return IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN) ? HW_DOMAIN_OBD
 						       : HW_DOMAIN_AUX;
 }

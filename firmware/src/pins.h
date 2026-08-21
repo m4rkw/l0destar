@@ -16,6 +16,7 @@
 #define PIN_K_SLEEP    CONFIG_APP_PIN_K_SLEEP
 #define PIN_AUX_SW     CONFIG_APP_PIN_AUX_SW
 #define PIN_OBD_EN     CONFIG_APP_PIN_OBD_EN
+#define PIN_CAN_EN     CONFIG_APP_PIN_CAN_EN
 #define PIN_TWI_SDA    CONFIG_APP_PIN_TWI_SDA
 #define PIN_TWI_SCL    CONFIG_APP_PIN_TWI_SCL
 #define PIN_INA_ALRT   CONFIG_APP_PIN_INA_ALRT
@@ -43,10 +44,13 @@
 #define PIN_LED4       CONFIG_APP_PIN_LED4
 #define PIN_LED5       CONFIG_APP_PIN_LED5
 
-/* Switched-rail status sense inputs (v3.1+) */
+/* Switched-rail status sense inputs (v3.1+).  The 3.3V senses read high
+ * while their rail is up; the 12V sense is inverted by a 2N7002 and reads
+ * low while PP12V_K is up (CONFIG_APP_BOARD_RAIL_ST_12V_ACTIVE_LOW). */
 #define PIN_GPS_RAIL_ST    CONFIG_APP_PIN_GPS_RAIL_ST
-#define PIN_OBD3V3_RAIL_ST CONFIG_APP_PIN_OBD3V3_RAIL_ST
-#define PIN_OBD12V_RAIL_ST CONFIG_APP_PIN_OBD12V_RAIL_ST
+#define PIN_CAN_RAIL_ST    CONFIG_APP_PIN_CAN_RAIL_ST
+#define PIN_K3V3_RAIL_ST   CONFIG_APP_PIN_K3V3_RAIL_ST
+#define PIN_K12V_RAIL_ST   CONFIG_APP_PIN_K12V_RAIL_ST
 
 /* 0-30V AIO inputs (v2.1 only) */
 #define PIN_AIO1       CONFIG_APP_PIN_AIO1

@@ -11,21 +11,32 @@ LOG_MODULE_REGISTER(hw_kline, CONFIG_APP_LOG_LEVEL);
 
 #define KLINE_BIT_US 96
 
+/* Which switched domain the K-line transceiver sits on: v3.0 shares OBD_EN
+ * with CAN, v3.1 has its own K_EN gating PP3V3_K + PP12V_K. */
+static enum hw_domain kline_domain(void)
+{
+	return IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN) ? HW_DOMAIN_K
+							     : HW_DOMAIN_OBD;
+}
+
 /* Bring up the rails the K-line circuit needs on this board, releasing the
  * K pins from their parked state.  Domain wiring per board:
  *   bench / v2.1        everything on the AUX domain
  *   v2.5K / v2.6K       shifter A-side on AUX, L9637D 5V/12V rails on K_EN —
  *                       both must be up before the pins are released
- *   v3.0                TJA1027T on the OBD domain; SLP_N (K_SLEEP) must then
- *                       be raised to wake the transceiver
+ *   v3.0                TJA1027T on the shared OBD domain; SLP_N (K_SLEEP)
+ *                       must then be raised to wake the transceiver
+ *   v3.1                TJA1027T on its own K_EN domain (PP3V3_K + PP12V_K);
+ *                       same SLP_N handling
  */
 void kline_power_on(void)
 {
 	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
 		return;
 	}
-	if (IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN)) {
-		hw_domain_request(HW_DOMAIN_OBD, HW_DOMAIN_USER_KLINE);
+	if (IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN) ||
+	    IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN)) {
+		hw_domain_request(kline_domain(), HW_DOMAIN_USER_KLINE);
 		if (PIN_K_SLEEP >= 0) {
 			gpio_pin_configure(hw_gpio0, PIN_K_SLEEP,
 					   GPIO_OUTPUT_HIGH);
@@ -47,12 +58,13 @@ void kline_power_off(void)
 		return;
 	}
 	LOG_INF("K-line power off");
-	if (IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN)) {
+	if (IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN) ||
+	    IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN)) {
 		if (PIN_K_SLEEP >= 0) {
 			gpio_pin_configure(hw_gpio0, PIN_K_SLEEP,
 					   GPIO_OUTPUT_LOW);
 		}
-		hw_domain_release(HW_DOMAIN_OBD, HW_DOMAIN_USER_KLINE);
+		hw_domain_release(kline_domain(), HW_DOMAIN_USER_KLINE);
 	} else {
 		if (IS_ENABLED(CONFIG_APP_BOARD_KLINE_SHIFT_ON_AUX)) {
 			hw_domain_release(HW_DOMAIN_K, HW_DOMAIN_USER_KLINE);

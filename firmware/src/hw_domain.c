@@ -7,8 +7,8 @@
  * peripheral's ESD clamps sit at VDD + 0.3 V (MCP2518FD) or VCCA + 0.5 V
  * (TXS0104E), so a high pin backfeeds the dead rail through the clamp
  * diodes.  Pull-ups that live on a switched rail (CAN_INT/CAN_CS 10K,
- * v3.0 K_TX/K_RX 10K) float when it is down, so inputs get the nRF internal
- * pulldown while parked.
+ * v3.0/v3.1 K_TX/K_RX 10K) float when it is down, so inputs get the nRF
+ * internal pulldown while parked.
  *
  * Rules implemented here:
  *   - park  (domain off): every domain pin -> INPUT | PULL_DOWN.  The nRF
@@ -23,7 +23,8 @@
  *
  * Domains are reference-counted so shared rails (v3.0 OBD feeds both CAN
  * and K-line; AUX feeds GPS bias plus, on v2.x, the OBD circuits) only drop
- * when the last user lets go.
+ * when the last user lets go.  v3.1 splits OBD into independent CAN_EN and
+ * K_EN domains, so the unused interface never has to be powered.
  */
 
 #include <zephyr/kernel.h>
@@ -108,15 +109,19 @@ int hw_domain_init(void)
 {
 	struct domain *aux = &s_dom[HW_DOMAIN_AUX];
 	struct domain *obd = &s_dom[HW_DOMAIN_OBD];
+	struct domain *can = &s_dom[HW_DOMAIN_CAN];
 	struct domain *k   = &s_dom[HW_DOMAIN_K];
 
 	aux->enable_pin = PIN_AUX_SW;
 	obd->enable_pin = PIN_OBD_EN;
+	can->enable_pin = PIN_CAN_EN;
 	k->enable_pin   = PIN_K_EN;
 
 	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_CAN)) {
 		if (IS_ENABLED(CONFIG_APP_BOARD_CAN_ON_AUX)) {
 			dom_add_can_pins(aux);
+		} else if (IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN)) {
+			dom_add_can_pins(can);
 		} else if (IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN)) {
 			dom_add_can_pins(obd);
 		}
@@ -127,6 +132,8 @@ int hw_domain_init(void)
 		} else if (IS_ENABLED(CONFIG_APP_BOARD_KLINE_SHIFT_ON_AUX)) {
 			/* Shifter A-side rail is AUX but the pins are only
 			 * usable with the K rails up too: gate them on K. */
+			dom_add_kline_pins(k);
+		} else if (IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN)) {
 			dom_add_kline_pins(k);
 		} else if (IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN)) {
 			dom_add_kline_pins(obd);
@@ -148,11 +155,13 @@ int hw_domain_init(void)
 		}
 	}
 
-	/* Rail-sense inputs (v3.1+): always-on status from the load switches. */
+	/* Rail-sense inputs (v3.1+): always-on status from the load switches.
+	 * The external divider / pull-up defines both levels, so no internal
+	 * pull (an internal pulldown would fight the 100K/1M dividers). */
 	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_RAIL_SENSE)) {
 		static const int8_t rail_st[] = {
-			PIN_GPS_RAIL_ST, PIN_OBD3V3_RAIL_ST,
-			PIN_OBD12V_RAIL_ST
+			PIN_GPS_RAIL_ST, PIN_CAN_RAIL_ST,
+			PIN_K3V3_RAIL_ST, PIN_K12V_RAIL_ST
 		};
 		for (int i = 0; i < (int)ARRAY_SIZE(rail_st); i++) {
 			if (rail_st[i] >= 0) {
@@ -179,6 +188,7 @@ static const char *dom_name(enum hw_domain d)
 	switch (d) {
 	case HW_DOMAIN_AUX: return "AUX";
 	case HW_DOMAIN_OBD: return "OBD";
+	case HW_DOMAIN_CAN: return "CAN";
 	case HW_DOMAIN_K:   return "K";
 	default:            return "?";
 	}

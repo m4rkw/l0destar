@@ -74,9 +74,9 @@ config APP_OBD_MODE
 	  Which OBD interface is populated on a v3.1 board.  The jumper pads
 	  select the electrical path; this tells firmware which rails to test
 	  and which protocol driver to start.
-	    0 = no OBD interface (S5R1-S5R7 all open)
-	    1 = CAN bus (3.3V OBD only)
-	    2 = K-line / ISO-9141 (3.3V + 12V OBD)
+	    0 = no OBD interface (S5R1-S5R4 all open)
+	    1 = CAN bus (S5R1 + S5R3; PP3V3_CAN via CAN_EN)
+	    2 = K-line / ISO-9141 (S5R2 + S5R4; PP3V3_K + PP12V_K via K_EN)
 	  Ignored on boards other than v3.1.
 
 config APP_CAN_TEST

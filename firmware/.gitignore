@@ -20,3 +20,4 @@ ifmcu/.makerdiary-repo/
 CLAUDE_LOCAL.md
 .claude
 screenlog.0
+release.sh

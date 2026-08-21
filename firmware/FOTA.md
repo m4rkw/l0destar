@@ -110,8 +110,10 @@ never a manifest naming a half-uploaded file), and then verifies the endpoint
 the way a device will: CA-verified TLS, correct manifest, `206` to a ranged
 GET.
 
-A unit reports its running version to the server as `fw=` in the settings-sync
-field of a telemetry record, and in the reply to the `config` command. The
+A unit reports its running version to the server as `fw=` on the first
+telemetry record after each boot, on any settings-sync record, and in the reply
+to the `config` command; the server stores it on every `log` row by carrying
+the last value forward. The
 update itself is visible as two alerts: `fota: x -> y, rebooting` before the
 swap and `fota: updated to y` from the new image after it confirms.
 
