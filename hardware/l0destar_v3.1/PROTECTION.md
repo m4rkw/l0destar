@@ -78,19 +78,19 @@ The capacitance figures are backed by measured data, not the generic X7R
 heuristic: TDK's characterization sheet for the 47 uF part shows about 14
 percent loss at 14 V bias, so each contributes roughly 40 uF effective.
 
-A third capacitor, S2C3 (10 uF / 50 V 1210, Murata GCJ soft termination,
-GCJ32EC71H106KA01L), was added to close the last soft spot: purchase
-tolerance. The 47 uF parts are rated plus or minus 20 percent, and if both
-arrived at the bottom of that band the peak would have reached about 44 V.
-With S2C3 fitted, even that worst-case stack stays at about 42 V, inside the
-buck's limit, and the typical case drops to about 37 V, right at TVS
-breakdown, meaning the diode barely conducts and everything has margin. S2C3
-is X7S rather than X7R; that is fine in this role because its contribution is
-not load-bearing the way the main bulk is, and its tighter 10 percent
-tolerance offsets the slightly worse bias derating. It sits well away from
-board edges and mounting holes, and its soft termination covers the
-flex-crack risk of a plain chip capacitor on a battery-fed rail. Order by
-MPN, not by the schematic value string.
+A third capacitor, S2C3 (10 uF / 50 V 1210, X7R, soft termination,
+CL32B106KBJNNWE), was added to close the last soft spot: purchase tolerance.
+The 47 uF parts are rated plus or minus 20 percent, and if both arrived at
+the bottom of that band the peak would have reached about 44 V. With S2C3
+fitted, even that worst-case stack stays at about 42 V, inside the buck's
+limit, and the typical case drops to about 37 V, right at TVS breakdown,
+meaning the diode barely conducts and everything has margin. S2C3 is X7R at
+plus or minus 10 percent, so it is both tighter on purchase tolerance and
+better behaved under DC bias than the main bulk; the figures above were
+worked with the earlier X7S part and are therefore slightly conservative
+now. It sits well away from board edges and mounting holes, and its soft
+termination covers the flex-crack risk of a plain chip capacitor on a
+battery-fed rail. Order by MPN, not by the schematic value string.
 
 The on-board fuses do not interfere with any of this. A 2 A 407 Series part
 has a nominal melting I2t of 0.870 A2Sec, against roughly 0.03 to 0.1 A2Sec
