@@ -20,6 +20,9 @@ bool  send_int_to_server;
 bool  last_send_ok;
 
 static int  s_battery_warning_status;
+/* Cleared once a packet carrying fw= has actually left the device, so a
+ * failed first send doesn't lose the version until the next reboot. */
+static bool s_fw_pending = true;
 static int  s_below_voltage_count;
 
 void data_reset(void)
@@ -166,17 +169,27 @@ int collect_data(int ignitionState)
                  ",up=%lld", k_uptime_get() / 1000);
     if (n > 0) data_index += n;
 
-    /* Settings sync — also the only packet carrying the firmware version, so
-     * the server can see what a unit is actually running without paying for
-     * the field on every record. */
+    /* Settings sync */
     if (send_int_to_server) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
-                     ",int=%d;ao=%d;ma=%d;fw=%s",
+                     ",int=%d;ao=%d;ma=%d",
                      g_settings.loop_interval,
                      (int)g_settings.always_on,
-                     (int)g_settings.movement_alarm,
-                     fota_version());
+                     (int)g_settings.movement_alarm);
+        if (n > 0) data_index += n;
+    }
+
+    /* Firmware version.  send_int_to_server is only ever set by a settings
+     * command from the server, so gating fw= on it alone meant a unit whose
+     * settings never change never reported its build.  Emit it on the first
+     * packet after every boot as well — including the one after a FOTA swap —
+     * and the server carries it forward onto subsequent rows.  Still not on
+     * every record: ~10 bytes that cannot change without a reboot. */
+    if (send_int_to_server || s_fw_pending) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1,
+                     ",fw=%s", fota_version());
         if (n > 0) data_index += n;
     }
 
@@ -259,6 +272,7 @@ int send_data(void)
     }
 
     send_int_to_server = false;
+    s_fw_pending = false;
     alert_send();
     return 1;
 }

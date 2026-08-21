@@ -13,9 +13,11 @@
  * topology this encodes.
  */
 enum hw_domain {
-	HW_DOMAIN_AUX,   /* AUX_SW: v2.x aux rail(s), v3.0 GPS bias rail */
+	HW_DOMAIN_AUX,   /* AUX_SW: v2.x aux rail(s), v3.0/v3.1 GPS bias rail */
 	HW_DOMAIN_OBD,   /* OBD_EN: v3.0 PP3V3_OBD + PP12V_OBD (CAN + K-line) */
-	HW_DOMAIN_K,     /* K_EN:   v2.5K/v2.6K 5V/12V K-line rails */
+	HW_DOMAIN_CAN,   /* CAN_EN: v3.1 PP3V3_CAN */
+	HW_DOMAIN_K,     /* K_EN:   v2.5K/v2.6K 5V/12V K rails,
+			  *         v3.1 PP3V3_K + PP12V_K */
 	HW_DOMAIN_COUNT
 };
 

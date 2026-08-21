@@ -41,6 +41,26 @@
   Reported to the server as `fw=` in the settings-sync field and by `config`
 - Application flash use 156 KB -> 178 KB of the 320 KB app partition
 
+### v3.1 carrier board (`Kconfig.boards`)
+- v3.1 board profile re-extracted from the KiCad netlist in
+  `../hardware/l0destar_v3.1/` and corrected: CAN_CS/SDI/SCK/SDO were
+  rotated (now P0.15/16/17/18, header J3-23..26) and ACC_INT1 moved
+  P0.31 -> P0.30, since P0.31 carries the 12V rail sense
+- Split OBD domain (`CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN`): v3.1 has three
+  independent load switches, not v3.0's shared OBD_ENABLE.  GPS_ENABLE
+  (P0.13) gates the bias tee, CAN_EN (P0.23) gates PP3V3_CAN, K_EN (P0.10)
+  gates PP3V3_K + PP12V_K.  New `HW_DOMAIN_CAN`; the K-line moves to
+  `HW_DOMAIN_K`, so selecting one OBD interface no longer powers the other
+- Four rail-sense inputs instead of three: PP3V3_GPS (P0.14), PP3V3_CAN
+  (P0.22), PP3V3_K (P0.0) and PP12V_K (P0.31).  The three 3.3V senses are
+  100K/1M dividers off their own rail (high = up, ~3.0 V, ~3 uA); the 12V
+  sense is a 2N7002 inverter with a 100K pull-up to the always-on rail and
+  reads **low** when PP12V_K is present (`APP_BOARD_RAIL_ST_12V_ACTIVE_LOW`).
+  All four are read with no internal pull so they can't fight the dividers
+- `hw_selftest()` follows the split: `CONFIG_APP_OBD_MODE=1` cycles CAN_EN
+  and checks PP3V3_CAN only, mode 2 cycles K_EN and checks PP3V3_K plus the
+  inverted PP12V_K
+
 ### Sleep-state power
 - Console UARTE is suspended for the duration of the blocking wait in
   `do_sleep()` and resumed on every wake (`CONFIG_PM_DEVICE`).  An enabled

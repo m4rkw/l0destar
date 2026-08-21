@@ -34,11 +34,21 @@
 #              K_TX/K_RX 10K pull-ups and CAN_INT/CAN_CS 10K pull-ups are
 #              on the switched rail.  MAX33041 STBY has a 10K pulldown and
 #              is driven by MCP2518FD GPIO0/XSTBY.
-#   v3.1       Same domain topology as v3.0 with a reshuffled pin map and
-#              three rail-sense inputs (PP3V3_GPS_ST, PP3V3_OBD_ST,
-#              PP12V_OBD_ST) for firmware-side fault detection.  INA228
-#              ALRT is no longer routed to the header.  K_SLEEP has a
-#              pulldown added on the PCB.
+#   v3.1       Reshuffled pin map and a split OBD domain: GPS_ENABLE gates
+#              only the GPS bias tee, CAN_ENABLE gates PP3V3_CAN (MCP2518FD
+#              + MAX33041) and K_ENABLE gates PP3V3_K + PP12V_K (TJA1027T)
+#              - three independent SiP32431/ITS4060 load switches, each
+#              with a 100K pulldown on its enable.  Four rail-sense inputs
+#              feed back the actual rail state: PP3V3_GPS_ST, PP3V3_CAN_ST
+#              and PP3V3_K_ST are 100K/1M dividers off their rails (active
+#              high, ~3.0 V when up), while PP12V_K_ST is a 2N7002 inverter
+#              with a 100K pull-up to the always-on 3.3V rail (active LOW:
+#              low = PP12V_K present).  K_TX/K_RX 10K pull-ups sit on
+#              PP3V3_K; CAN_INT/CAN_CS 10K pull-ups sit on PP3V3_CAN.
+#              MAX33041 STBY has a 10K pulldown and is driven by MCP2518FD
+#              GPIO0/XSTBY.  K_SLEEP gained a 100K pulldown on the PCB and
+#              L_SEND a 10K pulldown, both to the always-on ground side.
+#              INA228 ALRT is no longer routed to the header.
 
 choice APP_BOARD
 	prompt "Carrier board"
@@ -144,10 +154,19 @@ config APP_BOARD_KLINE_SHIFT_ON_AUX
 
 config APP_BOARD_OBD_DOMAIN
 	bool
-	default y if APP_BOARD_L0DESTAR_V3_0 || APP_BOARD_L0DESTAR_V3_1
+	default y if APP_BOARD_L0DESTAR_V3_0
 	help
 	  CAN and K-line share the OBD_EN domain (PP3V3_OBD + PP12V_OBD),
 	  switched separately from the GPS/aux rail.
+
+config APP_BOARD_SPLIT_OBD_DOMAIN
+	bool
+	default y if APP_BOARD_L0DESTAR_V3_1
+	help
+	  CAN and K-line have independent enables (v3.1): CAN_EN gates
+	  PP3V3_CAN, K_EN gates PP3V3_K + PP12V_K.  Both are switched
+	  separately from the GPS/aux rail, so the unused OBD interface
+	  never has to be powered.
 
 config APP_BOARD_CAN_XSTBY
 	bool
@@ -156,8 +175,9 @@ config APP_BOARD_CAN_XSTBY
 	help
 	  The CAN transceiver's standby pin is driven by MCP2518FD GPIO0
 	  (XSTBY).  Firmware must configure IOCON at boot: on v2.5/v2.6 the
-	  TCAN334 STB pin has no other drive and floats until then; on v3.0
-	  the MAX33041 STBY has a 10K pulldown (defaults to normal mode).
+	  TCAN334 STB pin has no other drive and floats until then; on
+	  v3.0/v3.1 the MAX33041 STBY has a 10K pulldown (defaults to normal
+	  mode).
 	  With XSTBYEN set, putting the MCP2518FD into sleep automatically
 	  puts the transceiver into standby — the power-efficiency path for
 	  boards where the CAN rail shares the (GPS) AUX domain.
@@ -229,8 +249,9 @@ config APP_PIN_L_RECV
 	default -1
 
 config APP_PIN_K_EN
-	int "K-line 5V/12V rail enable pin (v2.5K/v2.6K)"
+	int "K-line rail enable pin (v2.5K/v2.6K: 5V/12V; v3.1: PP3V3_K + PP12V_K)"
 	default 23 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	default 10 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
 config APP_PIN_K_SLEEP
@@ -245,7 +266,7 @@ config APP_PIN_CAN_SCK
 	default 14 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 29 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 13 if APP_BOARD_L0DESTAR_V3_0
-	default 16 if APP_BOARD_L0DESTAR_V3_1
+	default 17 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
 config APP_PIN_CAN_SDI
@@ -254,7 +275,7 @@ config APP_PIN_CAN_SDI
 	default 15 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 30 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 14 if APP_BOARD_L0DESTAR_V3_0
-	default 15 if APP_BOARD_L0DESTAR_V3_1
+	default 16 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
 config APP_PIN_CAN_SDO
@@ -263,7 +284,7 @@ config APP_PIN_CAN_SDO
 	default 16 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 31 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 15 if APP_BOARD_L0DESTAR_V3_0
-	default 17 if APP_BOARD_L0DESTAR_V3_1
+	default 18 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
 config APP_PIN_CAN_CS
@@ -272,7 +293,7 @@ config APP_PIN_CAN_CS
 	default 17 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 0  if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 16 if APP_BOARD_L0DESTAR_V3_0
-	default 18 if APP_BOARD_L0DESTAR_V3_1
+	default 15 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
 config APP_PIN_CAN_INT
@@ -296,8 +317,12 @@ config APP_PIN_AUX_SW
 	default 10
 
 config APP_PIN_OBD_EN
-	int "OBD power domain enable pin (v3.0+: PP3V3_OBD + PP12V_OBD)"
+	int "Combined OBD power domain enable pin (v3.0: PP3V3_OBD + PP12V_OBD)"
 	default 24 if APP_BOARD_L0DESTAR_V3_0
+	default -1
+
+config APP_PIN_CAN_EN
+	int "CAN rail enable pin (v3.1: PP3V3_CAN)"
 	default 23 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
@@ -346,7 +371,7 @@ config APP_PIN_ACC_INT1
 		      APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 20 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 29 if APP_BOARD_L0DESTAR_V3_0
-	default 31 if APP_BOARD_L0DESTAR_V3_1
+	default 30 if APP_BOARD_L0DESTAR_V3_1
 	default 19 if BOARD_NRF9151_CONNECTKIT
 	default 2
 
@@ -488,9 +513,13 @@ config APP_PIN_AIO6
 	default -1
 
 # --- rail-sense inputs (v3.1+) ------------------------------------------------
-# GPIO-readable status outputs from the switched-rail load switches: high when
-# the rail is up, low when it is down or faulted.  Enables firmware-side fault
-# detection for the GPS and OBD power domains.
+# GPIO-readable status of each switched rail, for firmware-side fault
+# detection.  On v3.1 the three 3.3V senses are 100K/1M dividers hung off the
+# rail itself (high = rail up, ~3.0 V, ~3 uA draw while up), and the 12V sense
+# is a 2N7002 whose gate is fed by a 180K/100K divider off PP12V_K with a 100K
+# pull-up to the always-on 3.3V rail on the drain, so it reads INVERTED:
+# low = PP12V_K present.  All four are always-on inputs; read them with no
+# internal pull (the external network defines both levels).
 
 config APP_BOARD_HAS_RAIL_SENSE
 	bool "Switched-rail sense/fault detection inputs fitted"
@@ -498,16 +527,29 @@ config APP_BOARD_HAS_RAIL_SENSE
 	default n
 
 config APP_PIN_GPS_RAIL_ST
-	int "GPS 3.3V rail status pin (-1 = not fitted)"
+	int "PP3V3_GPS rail status pin (-1 = not fitted)"
 	default 14 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
-config APP_PIN_OBD3V3_RAIL_ST
-	int "OBD 3.3V rail status pin (-1 = not fitted)"
+config APP_PIN_CAN_RAIL_ST
+	int "PP3V3_CAN rail status pin (-1 = not fitted)"
 	default 22 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
-config APP_PIN_OBD12V_RAIL_ST
-	int "OBD 12V rail status pin (-1 = not fitted)"
+config APP_PIN_K3V3_RAIL_ST
+	int "PP3V3_K rail status pin (-1 = not fitted)"
 	default 0  if APP_BOARD_L0DESTAR_V3_1
 	default -1
+
+config APP_PIN_K12V_RAIL_ST
+	int "PP12V_K rail status pin (-1 = not fitted)"
+	default 31 if APP_BOARD_L0DESTAR_V3_1
+	default -1
+
+config APP_BOARD_RAIL_ST_12V_ACTIVE_LOW
+	bool
+	default y if APP_BOARD_L0DESTAR_V3_1
+	help
+	  The 12V rail sense is inverted by a 2N7002 (v3.1): the pin reads low
+	  while the rail is up.  The 3.3V senses are plain dividers and read
+	  high while their rail is up.
