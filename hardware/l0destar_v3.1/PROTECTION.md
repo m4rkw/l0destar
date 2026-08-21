@@ -81,17 +81,28 @@ percent loss at 14 V bias, so each contributes roughly 40 uF effective.
 A third capacitor, S2C3 (10 uF / 50 V 1210, X7R, soft termination,
 MCJCU32MLB7106KPPDT1), was added to close the last soft spot: purchase
 tolerance. The 47 uF parts are rated plus or minus 20 percent, and if both
-arrived at the bottom of that band the peak would have reached about 44 V.
-With S2C3 fitted, even that worst-case stack stays at about 42 V, inside
-the buck's limit, and the typical case drops to about 37 V, right at TVS
-breakdown, meaning the diode barely conducts and everything has margin.
-S2C3 is X7R at plus or minus 10 percent, so it is both tighter on purchase
-tolerance and better behaved under DC bias than the main bulk; the figures
-above were worked with the earlier X7S part and are therefore slightly
-conservative now. It sits well away from board edges and mounting holes,
-and its soft termination covers the flex-crack risk of a plain chip
-capacitor on a battery-fed rail. Order by MPN, not by the schematic value
-string.
+arrived at the bottom of that band the peak would reach about 44 V.
+
+S2C3 does less for that case than its nameplate suggests. Taiyo Yuden's
+published DC bias curve for this part shows about 63 percent loss at 14 V,
+so it contributes roughly 3.7 uF, not 10. Fitted, it moves the typical
+case from 39 V to about 38 V, and the worst-case stack from 44 V to about
+43 V. The typical case therefore still clears the ITS4060's 40 V, but the
+worst-case stack does not, and it sits marginally outside the buck's 42 V
+limit as well. Purchase tolerance on the 47 uF parts, not the presence of
+S2C3, is what decides that case.
+
+Those figures also assume the 47 uF parts hold their 40 uF across the
+whole swing, which is optimistic in the same way: S2C3's own curve falls
+from 3.7 uF at 14 V to 1.1 uF at 40 V, and the 47 uF parts will lose
+ground as the rail rises too. Treat 43 V as a floor for the worst case,
+not a ceiling.
+
+S2C3 is X7R at plus or minus 10 percent, so it is tighter on purchase
+tolerance than the main bulk. It sits well away from board edges and
+mounting holes, and its soft termination covers the flex-crack risk of a
+plain chip capacitor on a battery-fed rail. Order by MPN, not by the
+schematic value string.
 
 The on-board fuses do not interfere with any of this. A 2 A 407 Series part
 has a nominal melting I2t of 0.870 A2Sec, against roughly 0.03 to 0.1 A2Sec
