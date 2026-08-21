@@ -25,10 +25,14 @@ yourself rather than taking them on trust.
 
 ## New features
 
-- Improved handling of automotive transients
+- Significantly Improved handling of automotive transients
 - Auxillary rail fault detection
-- Same physical footprint and mounting holes as v3.0
-- Many other small improvements
+- Same physical footprint as v3.0 (note: one mounting hole moved slightly)
+- CAN routing optimised for integrity and EMI and a footprint added to support
+  an optional CAN choke
+- Onboard 2A fuses right at the connector as a last line of defence against
+  someone installing one without using external fusing
+- ESD TVS diodes added to the two antenna connectors
 
 See below for a full change summary.
 
@@ -95,9 +99,15 @@ See below for a full change summary.
   (2 × 220R) and 1K on chip select.
 
 - Antenna feed hardened. v3.1 adds a TPD1E05U06 ESD diode on each of the GSM
-  and GPS RF paths
-  and a 15R 1W feed resistor, retunes the DC-block from 100 pF to 47 pF, and
-  upgrades the ferrite bead's current rating from 100 mA to 500 mA.
+  and GPS RF paths and a 15R 1W feed resistor, retunes the DC-block from
+  100 pF to 47 pF, and upgrades the ferrite bead's current rating from 100 mA
+  to 500 mA.
+
+- The CAN traces were optimised for integrity and EMI and an optional footprint
+  was added for a CAN choke
+
+- Onboard 1206 fuses were added (2A recommended) as a last line of defence
+  against installs without external fusing.
 
 ## Power supply
 
