@@ -5131,7 +5131,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a1f68cf5-4e7b-4e09-aeb8-8ed8377eba4b")
-		(property "Reference" "J1"
+		(property "Reference" "S9J1"
 			(at 153.67 34.29 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5193,7 +5193,7 @@
 		(instances
 			(project "l0destar"
 				(path "/d9f8328e-d6fd-4b6c-867a-ed589e52ed08"
-					(reference "J1")
+					(reference "S9J1")
 					(unit 1)
 				)
 			)
