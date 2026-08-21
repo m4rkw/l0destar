@@ -37,14 +37,14 @@ tree are noted where they were removed.
 
 ## 05/08/2026
 
-- Added **l0destar v3.0** — the CAN and K-line variants consolidated onto a
+- Added **l0destar v3.0** - the CAN and K-line variants consolidated onto a
   single PCB. Changes from v2.6:
   - Both the CAN and ISO-9141 (K-line) circuits are on the one board; either,
     neither or both can be populated, with the external connector pins and OBD
     power rails selected by shorting jumper pads (which double as power rail
     test points to save board space)
   - The L9637D was replaced with a TJA1027T LIN transceiver, dramatically
-    simplifying the K-line circuit — the separate 5V buck converter and level
+    simplifying the K-line circuit - the separate 5V buck converter and level
     shifter are gone
   - CAN transceiver swapped for a MAX33041EASA+ for more robust transient
     protection, with a pulldown added to STBY so the transceiver defaults to
@@ -77,7 +77,7 @@ tree are noted where they were removed.
 
 ## 01/08/2026
 
-- Added **l0destar v2.5 micro (v2.5M)** — a major redesign of the mini
+- Added **l0destar v2.5 micro (v2.5M)** - a major redesign of the mini
   prototype:
   - Dramatically smaller PCB footprint
   - Switched to a 4-layer stackup for simpler routing
@@ -85,7 +85,7 @@ tree are noted where they were removed.
     where required by specification
   - Removed the large aluminium polymer caps; buck output cap replaced with
     2x 1210 ceramic 220uF for much lower ESR
-  - Sleep-mode power consumption optimised — estimated quiescent draw with the
+  - Sleep-mode power consumption optimised - estimated quiescent draw with the
     accelerometer armed is ~370 µA
   - Removed the relay power control circuit; with quiescent current this low
     it's unnecessary (the 12V rail can be fed directly from ignition if
@@ -96,10 +96,10 @@ tree are noted where they were removed.
   - Component vias dogleg-routed deliberately to keep fabrication cost down
 - Fixed the input TVS part on v2.5 micro: PTVS30VS1UTR → PTVS33VS1UTR
 - Fixed reference designators in the v2.5 micro schematics
-- Added **l0destar v2.5K** — K-line variant of v2.5 with the ISO-9141
+- Added **l0destar v2.5K** - K-line variant of v2.5 with the ISO-9141
   interface (L9637D), a second LT8609 providing a switchable 5V rail, a
   switchable auxiliary 12V rail on the k-enable signal, and L-line pulldown
-- Added **l0destar v2.5C** — CAN-bus variant of v2.5 with a CAN interface
+- Added **l0destar v2.5C** - CAN-bus variant of v2.5 with a CAN interface
   including standby control via the XSTBY signal
 
 ## 20/07/2026
@@ -121,7 +121,7 @@ tree are noted where they were removed.
 
 ## 15/07/2026
 
-- Added **prototype v2.0** — first fully integrated standalone design (no
+- Added **prototype v2.0** - first fully integrated standalone design (no
   breakout modules): onboard GPS antenna bias tee with SMA/u.FL connectors,
   AIO pins, integrated CAN and ISO-9141 circuits, status LED and test points.
   Superseded by v2.1 four days later.
@@ -137,18 +137,18 @@ tree are noted where they were removed.
 
 ## 13/06/2026
 
-- Added **prototype v1.1 CAN handsolder** — CAN version of the hand-solderable
+- Added **prototype v1.1 CAN handsolder** - CAN version of the hand-solderable
   tracker (MCP2518FD-based CAN interface in place of the K-line circuit)
 
 ## 12/06/2026
 
-- Added **bench_test_iso9141** — bench development board for the nRF9151 Dev
+- Added **bench_test_iso9141** - bench development board for the nRF9151 Dev
   Kit with dual L9637D transceivers and level shifters; a 3V relay gates all
   power rails behind the DK's 3.3V supply so nothing is live when the DK is
   off
-- Added **bench_test_can** — CAN version of the bench board with MikroBUS
+- Added **bench_test_can** - CAN version of the bench board with MikroBUS
   headers for the MIKROE-2379 CAN-FD Click
-- Added **prototype v1.1 ISO-9141 handsolder** — first standalone
+- Added **prototype v1.1 ISO-9141 handsolder** - first standalone
   hand-buildable tracker using the Makerdiary nRF9151 Connect Kit: 4.2V buck
   into the battery connector (USB-C usable without removing power), 12V
   live/ignition inputs with TVS and reverse polarity protection, relay-based
@@ -160,13 +160,13 @@ tree are noted where they were removed.
 
 - v1.0: replaced the voltage divider that derives the ignition signal with a
   MOSFET gating the 3.3V rail. Previously the divider produced ~9V clamped by
-  a 3.3V zener — a failed-open zener would have put 9V straight onto the MCU
+  a 3.3V zener - a failed-open zener would have put 9V straight onto the MCU
   pin. The MOSFET inverts the signal (high when ignition is off), which is
   acceptable and matches similar devices
 
 ## 07/06/2026
 
-- v1.0: fixed the ignition sense divider to give a solid 3.3V/0V signal — the
+- v1.0: fixed the ignition sense divider to give a solid 3.3V/0V signal - the
   nRF9151 docs warn against leaving signal pins floating between logic levels
 - v1.0: added a 4.2V buck converter with an LM66100 ideal diode to power the
   Makerdiary ConnectKit via its battery connector, so the device can be
@@ -176,4 +176,4 @@ tree are noted where they were removed.
 
 ## 30/05/2026
 
-- Added **l0destar v1.0 prototype** — initial schematics and board design
+- Added **l0destar v1.0 prototype** - initial schematics and board design

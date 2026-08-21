@@ -2,14 +2,14 @@
 
 **Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
 
-The tracker pulls updates; the server never pushes — and it doesn't poll
+The tracker pulls updates; the server never pushes - and it doesn't poll
 either. Every telemetry response carries `fota=<latest>` (appended by
 `_process_telemetry` in the server from `fw/manifest.txt`), the device
 compares that against its running build locally, and only when the server has
 something newer does it GET the manifest and image over HTTPS. The steady
 state costs zero extra requests.
 
-Release with **`./push_fw.sh`** — it builds, signs, uploads the image, flips
+Release with **`./push_fw.sh`** - it builds, signs, uploads the image, flips
 the manifest atomically, and verifies the endpoint. Devices pick the release
 up on their next telemetry exchange (or power-on) and install it unattended.
 
@@ -17,7 +17,7 @@ up on their next telemetry exchange (or power-on) and install it unattended.
 
 | Trigger | Where |
 |---|---|
-| **Power-on** — the one unconditional check, so a freshly flashed or long-offline unit converges without waiting for a response | `main()`, after `watchdog_init()` |
+| **Power-on** - the one unconditional check, so a freshly flashed or long-offline unit converges without waiting for a response | `main()`, after `watchdog_init()` |
 | **Telemetry response advertised a newer version** (`fota=X.Y.Z` → `fota_notify_available`) | serviced from `STATE_IDLE` or the `do_sleep()` telemetry wake, right after response processing |
 | Bare `fota` command from the server (manual force, skips the failure holdoff) | same |
 
@@ -27,13 +27,13 @@ on every send while the server keeps advertising it.
 
 ## Battery gate
 
-A download is deferred — not failed — when the battery is below
+A download is deferred - not failed - when the battery is below
 `CONFIG_APP_FOTA_MIN_BATTERY_MV` (12.0 V). Nothing touches flash before that
 gate, so an update can't drain a weak battery, and a brownout mid-download only
 leaves an unusable secondary slot; the running image is never at risk.
 
 A reading below 5 V (`IMPLAUSIBLE_VOLTAGE`) means no INA228 rather than a flat
-battery — the same convention `data.c` uses for the low-battery alert. That
+battery - the same convention `data.c` uses for the low-battery alert. That
 case updates anyway; set `CONFIG_APP_FOTA_REQUIRE_BATTERY_READING=y` to require
 a real measurement instead.
 
@@ -51,7 +51,7 @@ ignored. `file` is relative to the same host. The query string lets a dynamic
 endpoint stage rollouts per device; a static file server ignores it.
 
 Versions are `MAJOR.MINOR.PATCH`, each field 0–255 (the MCUboot image header's
-range). The device installs **strictly newer** only — equal is the steady
+range). The device installs **strictly newer** only - equal is the steady
 state, and older would loop forever against a build whose `VERSION` file was
 never bumped. To roll a fleet back, republish the old image under a higher
 version.
@@ -60,19 +60,19 @@ version.
 
 Everything lives on machine `a` in `/var/www/tracker`:
 
-- **`fw/manifest.txt` + `fw/l0destar-<ver>.bin`** — written by `push_fw.sh`.
-- **`fota=<version>` indication** — `_process_telemetry()` in `main.py` reads
+- **`fw/manifest.txt` + `fw/l0destar-<ver>.bin`** - written by `push_fw.sh`.
+- **`fota=<version>` indication** - `_process_telemetry()` in `main.py` reads
   the manifest (cached on mtime) and appends the version to every telemetry
   response, over UDP, TLS and DTLS alike. Old firmware ignores the unknown
   key.
-- **The download endpoint** — public 443 terminates on a different host, so
+- **The download endpoint** - public 443 terminates on a different host, so
   the firmware is served on the telemetry TLS port **65481**, the one
   forwarded TCP path to the server. `handle_tls_connection()` sniffs the
   first two bytes after the handshake: telemetry frames start with a 2-byte
   length ≤ 8192, HTTP starts with `GE`/`HE`, so the two protocols share the
   port and certificate. `_handle_fw_http()` implements exactly what the
   nRF91's FOTA stack needs: GET/HEAD on `/fw/*`, HTTP/1.1 keep-alive, and
-  Range support — over modem-offloaded TLS the modem decodes ~2 KB at a time,
+  Range support - over modem-offloaded TLS the modem decodes ~2 KB at a time,
   so the downloader fetches the image as sequential 2048-byte ranged GETs and
   expects `206` + `Content-Range` for each.
 
@@ -86,7 +86,7 @@ mixing PSK and CA entries makes certificate-mode TLS `connect()` fail.  No
 manual provisioning needed either way.
 
 One field gotcha worth recording: on mfw 2.0.4 a TLS `connect()` that cannot
-reach the server reports `EINVAL` (22) rather than a timeout — if FOTA fails
+reach the server reports `EINVAL` (22) rather than a timeout - if FOTA fails
 that way while telemetry works, suspect the TCP port forward, not the TLS
 config (UDP telemetry proves nothing about TCP).
 
@@ -98,7 +98,7 @@ then unauthenticated.
 
 1. Bump `VERSION` (`VERSION_MAJOR` / `VERSION_MINOR` / `PATCHLEVEL`). This one
    file feeds Zephyr's `<zephyr/app_version.h>`, the version imgtool stamps
-   into the image header, and the comparison in `fota.c` — they cannot drift.
+   into the image header, and the comparison in `fota.c` - they cannot drift.
 2. `./push_fw.sh`
 
 That's it. The script builds, refuses a stale build (image version must match
@@ -130,7 +130,7 @@ swap and `fota: updated to y` from the new image after it confirms.
 
 Step 6 is the safety net: **an image that hangs or faults during bring-up never
 confirms itself, and MCUboot reverts to the previous one on the next boot.** A
-failed download is also harmless — the primary slot is untouched, the failure
+failed download is also harmless - the primary slot is untouched, the failure
 count backs the retry off, and GNSS is restarted.
 
 ## Flash layout
@@ -144,7 +144,7 @@ one.
 
 `pm_static.yml` pins the map so later builds stay installable by the bootloader
 already on deployed units. Read its header before changing anything about the
-layout — in particular the TF-M partition is 99.4% full, and buying headroom
+layout - in particular the TF-M partition is 99.4% full, and buying headroom
 there costs application space in 32 KB steps.
 
 ## Signing key
@@ -159,7 +159,7 @@ uv pip install imgtool
 imgtool keygen -t ecdsa-p256 -k mcuboot_priv.pem
 ```
 
-`mcuboot_priv.pem` is gitignored. Back it up — the public half is baked into
+`mcuboot_priv.pem` is gitignored. Back it up - the public half is baked into
 every deployed bootloader, so losing the private half means no device already in
 the field can ever be updated again.
 

@@ -1,4 +1,4 @@
-# l0destar — road to a sellable consumer product
+# l0destar - road to a sellable consumer product
 
 Gap analysis against the current design (v3.1, the latest complete board). This
 is the list of things standing between "well-documented prototype that has never
@@ -6,7 +6,7 @@ been powered on" and "product you can sell to a member of the public."
 
 Scope note: v3.1's own test matrix is **entirely NOT TESTED** and the README
 still carries "USE AT YOUR OWN RISK." Everything below assumes the goal is a
-boxed product a non-expert buys and has fitted to their car — not an eval board
+boxed product a non-expert buys and has fitted to their car - not an eval board
 for hobbyists. Items are grouped and roughly ordered within each group by how
 hard they gate a sale.
 
@@ -21,12 +21,12 @@ hard they gate a sale.
   It's a footprint change → board revision. `S2Q1` carries no bulk-charging
   current and does not need it.
   - **Smaller alternatives to the SO-8L (all datasheet-verified, AEC-Q101):**
-    - **Diodes DMP6023LFGQ** — PowerDI3333-8, 3.3×3.3 mm (~⅓ the SO-8L
+    - **Diodes DMP6023LFGQ** - PowerDI3333-8, 3.3×3.3 mm (~⅓ the SO-8L
       footprint). −60 V, Rds(on) 25 mΩ max / 11 mΩ typ, IDM −55 A (10 µs/1 %),
       EAS 62.9 mJ, Tj 150 °C. Lowest Rds → *least* I²R heating in the 45 A
       pulse; cheap (~£0.38). Best size-vs-heat pick. Confirm the graphical
       single-pulse SOA at 45 A/50 µs at BOM sign-off (IDM is spec'd at 10 µs).
-    - **Vishay SQS181ELNW** — PowerPAK 1212-8, 3.3×3.3 mm (~⅓ footprint).
+    - **Vishay SQS181ELNW** - PowerPAK 1212-8, 3.3×3.3 mm (~⅓ footprint).
       **−80 V**, 31 mΩ max, IDM −85 A (1.9× margin), EAS 46 mJ, Tj 175 °C.
       More current/temperature headroom; pricier (~$2.9). The −80 V is margin,
       not a requirement (bulk caps clamp the rail to ~42 V; the FET is ON,
@@ -47,7 +47,7 @@ hard they gate a sale.
 
 ---
 
-## 1. Regulatory & compliance (the true gate — no legal sale without it)
+## 1. Regulatory & compliance (the true gate - no legal sale without it)
 
 This is a **radio device that plugs into a vehicle's electrical system and
 handles location data.** That triggers several independent regimes.
@@ -64,14 +64,14 @@ handles location data.** That triggers several independent regimes.
   forces. (Relevant to the existing 1NCE/DTLS deployment work.)
 - [ ] **RF exposure (MPE/SAR).** Required for RED; needs the final antenna and
   mounting/separation distance defined.
-- [ ] **Automotive EMC — UNECE R10 ("E-mark").** An aftermarket electronic
+- [ ] **Automotive EMC - UNECE R10 ("E-mark").** An aftermarket electronic
   sub-assembly hardwired to the vehicle 12 V system typically needs R10 EMC
   approval for road use in UK/EU. Separate from RED.
 - [ ] **EMC directive testing.** Emissions + immunity. You have designed *to*
-  ISO 7637-2:2011 pulse levels but **never bench-tested them** — see §3.
+  ISO 7637-2:2011 pulse levels but **never bench-tested them** - see §3.
   Formal EMC lab time is a line item, not a formality.
 - [ ] **RoHS / REACH / WEEE.** Requires a controlled BOM with compliant,
-  documented parts — incompatible with the current AliExpress-sourced parts of
+  documented parts - incompatible with the current AliExpress-sourced parts of
   unknown provenance (see §4). WEEE registration + marking. Battery Directive if
   any cell ships in the box.
 - [ ] **Declaration of Conformity + technical file.** Consolidated evidence
@@ -82,12 +82,12 @@ handles location data.** That triggers several independent regimes.
 
 ## 2. Productise away the dev-kit dependency
 
-- [ ] **The board is built around the Makerdiary nRF9151 Connect Kit** — a
+- [ ] **The board is built around the Makerdiary nRF9151 Connect Kit** - a
   hobbyist dev kit with its own USB-C, buttons, regulators, and **2.54 mm pin
   headers**. This is fine for a prototype and unacceptable for a shipped product
-  for three reasons: (a) **supply** — single hobby-scale source, no guaranteed
-  lead time or lifecycle; (b) **cost** — you're paying for a whole dev kit; (c)
-  **certification & robustness** — a socketed module on 0.1" headers will not
+  for three reasons: (a) **supply** - single hobby-scale source, no guaranteed
+  lead time or lifecycle; (b) **cost** - you're paying for a whole dev kit; (c)
+  **certification & robustness** - a socketed module on 0.1" headers will not
   survive automotive vibration and complicates the radio approval above.
   - **Decision needed:** either (i) get a written supply/lifecycle commitment
     from Makerdiary and validate the header stack under vibration, or (ii)
@@ -107,17 +107,17 @@ handles location data.** That triggers several independent regimes.
   input reverse polarity (both inputs), INA228 read, ignition sense, LT8609
   4.2 V, all three switched aux rails, accelerometer + wake-on-motion, GPS bias
   tee, K-line (K + L), CAN + XSTBY standby current.
-- [ ] **Measure quiescent current — this is a product-gating number, not a
+- [ ] **Measure quiescent current - this is a product-gating number, not a
   nicety.** Claim is "~120 µA estimated," **unverified.** A hardwired tracker
   that flattens a parked car's battery is a returns-and-liability event. Need
   measured worst-case sleep current including the module's own sleep, across
   temperature, and a **battery-protection undervoltage cutoff** so the device
   stops drawing before it kills the car battery. I don't see a UVLO/low-battery
-  disconnect in the design — for a consumer tracker that's arguably mandatory.
+  disconnect in the design - for a consumer tracker that's arguably mandatory.
 - [ ] **Bench-test the transients you designed for.** PROTECTION.md is a strong
   paper analysis (load dump 35 V/400 ms ride-through, pulse 2a soak-up to
   ~37–42 V). None of it is measured. At minimum inject pulse 2a and a suppressed
-  load dump before trusting the FET/cap sizing — especially given the FET is
+  load dump before trusting the FET/cap sizing - especially given the FET is
   admittedly at-the-limit (§0).
 - [ ] **Full automotive temperature range.** −40 to +85 °C. Several parts are
   commercial/industrial grade: X7T bulk caps, some 5 % commercial resistors, the
@@ -135,14 +135,14 @@ handles location data.** That triggers several independent regimes.
   and the module itself) with **authorized-distributor parts.** Counterfeit and
   provenance risk is disqualifying for a product and for RoHS/REACH evidence.
 - [ ] **Upgrade grade where the environment demands it.** The docs already note
-  the AEC-Q200 CKG57N (JJ suffix) and flag the ITS4060 as non-AEC — decide,
+  the AEC-Q200 CKG57N (JJ suffix) and flag the ITS4060 as non-AEC - decide,
   per part, whether automotive grading matters and lock it.
 - [ ] **Second-source the single-source and hobby parts** (module above; any
   part with one link). Lifecycle/EOL check on everything.
 - [ ] **Freeze a controlled, versioned production BOM** with MPNs, approved
   manufacturers, and no "example / I generally buy tighter" ambiguity. The
   current README explicitly ships loose tolerances ("indicated spec is the
-  minimum") — fine for a hand build, not for a repeatable product.
+  minimum") - fine for a hand build, not for a repeatable product.
 
 ## 5. Manufacturing / DFM / test
 
@@ -153,7 +153,7 @@ handles location data.** That triggers several independent regimes.
 - [ ] **Design a functional test fixture + firmware test jig** for end-of-line
   test (rails, current draw, RF, sensors, OBD interfaces). At volume you cannot
   hand-verify the v3.1 matrix per unit.
-- [ ] **Production programming & calibration** — firmware flash, INA228
+- [ ] **Production programming & calibration** - firmware flash, INA228
   calibration if you want accurate voltage/current, serialization, and
   identity/credential provisioning, all at end of line.
 - [ ] **Serialization & traceability** (lot/date, board serial ↔ IMEI ↔ SIM).
@@ -171,13 +171,13 @@ handles location data.** That triggers several independent regimes.
   mounting instructions. The RF approval in §1 is against *that* antenna.
 - [ ] **Harness/cable assembly** designed and validated (the Micro-fit / MX1.25
   leads), including the fused-lead option from §0.
-- [ ] **Connector retention & vibration** for the module headers and SMA — or
+- [ ] **Connector retention & vibration** for the module headers and SMA - or
   eliminate them by going to an integrated design (§2).
 
 ## 7. Firmware, security, data (gates a *connected consumer* product)
 
 - [ ] **Secure boot + signed firmware + secure FOTA.** There is a `fota.c` in
-  the firmware tree already — good — but confirm image signing, rollback
+  the firmware tree already - good - but confirm image signing, rollback
   protection, and secure credential storage are in place before shipping.
 - [ ] **Privacy / lawful-use.** This is a location tracker handling personal
   location data → GDPR/UK-GDPR obligations, plus clear anti-stalking / lawful-use
@@ -190,19 +190,19 @@ handles location data.** That triggers several independent regimes.
   only vs DIY changes your liability and your fusing decision in §0).
 - [ ] **Warnings, warranty, support process, RMA path.**
 - [ ] **Remove the "USE AT YOUR OWN RISK / not a finished product" framing** from
-  shipped docs — which is only honest once the items above are actually closed.
+  shipped docs - which is only honest once the items above are actually closed.
 
 ---
 
 ### Shortlist: what actually blocks a first sale
 
-1. **Regulatory approval** (§1) — UKCA/CE-RED, R10, EMC, network cert. Long lead,
+1. **Regulatory approval** (§1) - UKCA/CE-RED, R10, EMC, network cert. Long lead,
    external dependency, and the external-antenna choice likely voids the module's
    free pass. Start scoping this first; it drives §2.
-2. **Get the board powered and the transient/quiescent claims measured** (§3) —
+2. **Get the board powered and the transient/quiescent claims measured** (§3) -
    everything downstream assumes the design works, and it has never run.
-3. **Decide the module-vs-integrated question** (§2) — it's the biggest fork in
+3. **Decide the module-vs-integrated question** (§2) - it's the biggest fork in
    the road and it changes cost, cert, and robustness for everything else.
-4. **Battery-drain cutoff** (§3) — a tracker that flattens the customer's car
+4. **Battery-drain cutoff** (§3) - a tracker that flattens the customer's car
    battery is a product-killer; there's no UVLO today.
 5. Then the known two: **FET uprate + fusing decision** (§0).

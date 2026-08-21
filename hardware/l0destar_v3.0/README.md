@@ -15,7 +15,7 @@ as low as possible
 
 This is a prototype, not a product. Nothing here is validated or certified,
 the parts lists are examples rather than a verified BOM, and any test results
-recorded below are my own unverified bench observations — repeat the testing
+recorded below are my own unverified bench observations - repeat the testing
 yourself rather than taking them on trust.
 
 **Before building or installing anything from this repository, read the
@@ -128,7 +128,7 @@ resistor. **Make sure the pads that should be unconnected are not connected.**
    must drive CAN\_SCK/SDI/CS low or tri-state them before dropping OBD_ENABLE,
    or the nRF backfeeds the dead rail through the clamp diodes. Additionally,
    CAN\_INT's pull-up (S9R2) is on the switched rail, so CAN\_INT floats when
-   the domain is off — enable the nRF internal pulldown on that input
+   the domain is off - enable the nRF internal pulldown on that input
  - Indicated voltages and tolerances are the minimum, I generally always buy the
    tightest tolerances and highest voltages possible of everything as it's just
    simpler for managing inventory. Because of this, several of the "example"
@@ -307,7 +307,7 @@ Can be omited if K-line/ISO-9141 is not required
 | All | 10nF RF capacitor | 1 | 0402 >= 25V 10% C0G / NP0 | [GRM1555CYA103JE01D](https://uk.farnell.com/murata/grm1555cya103je01d/cap-mlcc-0-01uf-c0g-np0-35v-0402/dp/4792250) | |
 | All | u.FL cable - LTE | 2 | 50 ohm 35mm | [U.FL-2LPHF6-04N1TV-A-35](https://uk.farnell.com/hirose-hrs/u-fl-2lphf6-04n1tv-a-35/cbl-assy-u-fl-r-a-plug-r-a-plug/dp/4294251) | |
 | All | JST power cable | 1 | Ultra-thin MX1.25 51146 | [10PCS MX1.25 51146 Cable](https://www.aliexpress.com/item/4000586964114.html) | |
-| All | 0402 0R jumper resistor | 7 | 0402 0R | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Config jumpers — fit only those your configuration needs, see board configuration |
+| All | 0402 0R jumper resistor | 7 | 0402 0R | [MCMR04X000 PTL](https://uk.farnell.com/multicomp-pro/mcmr04x000-ptl/res-0r0-0-0625w-0402-thick-film/dp/2072513) | Config jumpers - fit only those your configuration needs, see board configuration |
 | CAN/ISO-9141 | Reverse-blocking load switch | 1 | Active high 3.3v load switch with reverse blocking | [SiP32431DR3](https://uk.farnell.com/vishay/sip32431dr3-t1ge3/ic-load-switch-1-1v-5-5v-1a-sc70/dp/2361509) | |
 | CAN/ISO-9141 | 1uF 0402 capacitor | 1 | 0402 >= 10V 10% X7R | [KAM05CR71A105KH](https://uk.farnell.com/kyocera-avx/kam05cr71a105kh/capacitor-mlcc-1uf-x7r-10v-0402/dp/4365709) | |
 | CAN/ISO-9141 | 100nF 0402 capacitor | 1 | 0402 >= 25V 10% X7R | [MC0402B104K250CT](https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759) | |

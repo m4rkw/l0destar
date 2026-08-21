@@ -4,7 +4,7 @@
 
 ### Over-the-air updates (`src/fota.c`, [FOTA.md](FOTA.md))
 - MCUboot added via `sysbuild.conf`, splitting the 1 MB flash into two 416 KB
-  slots. **The first build carrying it must be flashed over SWD** — a unit
+  slots. **The first build carrying it must be flashed over SWD** - a unit
   running a pre-MCUboot image has no bootloader to swap slots
 - `pm_static.yml` pins the flash map so later builds stay installable by the
   bootloader already on deployed units, and an image that outgrows its slot
@@ -14,8 +14,8 @@
   its running build locally and only fetches the manifest + image when the
   server has something newer.  Steady state costs no extra requests.  One
   unconditional check at power-on; bare `fota` server command forces one
-- Served from the telemetry TLS port 65481 — the one TCP path forwarded to
-  the server — whose listener protocol-sniffs the first two bytes and answers
+- Served from the telemetry TLS port 65481 - the one TCP path forwarded to
+  the server - whose listener protocol-sniffs the first two bytes and answers
   HTTP GET/HEAD on /fw/* with keep-alive + 2 KB range support alongside the
   telemetry framing (`_handle_fw_http` in the server)
 - Device trusts the endpoint via a dedicated sec_tag (42, auto-provisioned
@@ -37,7 +37,7 @@
   calls `boot_write_img_confirmed()`, so firmware that hangs or faults during
   init is rolled back on the next boot
 - Version lives only in the `VERSION` file, feeding `<zephyr/app_version.h>`,
-  the MCUboot image header and the comparison in `fota.c` — they can't drift.
+  the MCUboot image header and the comparison in `fota.c` - they can't drift.
   Reported to the server as `fw=` in the settings-sync field and by `config`
 - Application flash use 156 KB -> 178 KB of the 320 KB app partition
 
@@ -47,7 +47,7 @@
   UARTE holds the nRF91 HF clock even with no traffic (~600-900 µA at 3.3 V),
   which accounted for the bulk of the ~300 µA parked input draw measured on
   v2.5K; the expected parked floor is now ~40-55 µA at the 12 V input.  All
-  logging while awake is unaffected — the deferred log queue is drained
+  logging while awake is unaffected - the deferred log queue is drained
   before each suspend, and anything logged during the wait is dropped by the
   suspended driver rather than blocking.
 
@@ -71,13 +71,13 @@
 ### Power-domain sequencing (`src/hw_domain.c`)
 - All signals terminating in a switched rail are parked (input + pulldown)
   before that rail drops and released only after it rises: CAN SPI pins
-  (MCP2518FD abs max is VDD + 0.3 V — a high pin would backfeed the dead
+  (MCP2518FD abs max is VDD + 0.3 V - a high pin would backfeed the dead
   rail through the clamp diodes), CAN_INT/CAN_CS whose 10K pull-ups sit on
   the switched rail, K-line pins (TXS0104E A-port / TJA1027T with switched
   pull-ups), and v2.1 relay feedback (supplied from the AUX domain)
 - Domains are reference-counted per board topology: v2.x single AUX domain,
   v2.5K/v2.6K AUX + K_EN (pins released only with both rails up), v3.0
-  GPS_ENABLE and OBD_ENABLE switched separately — engine-off telemetry
+  GPS_ENABLE and OBD_ENABLE switched separately - engine-off telemetry
   wakes now power only the GPS bias rail, and sleep wakes re-enable it
   (previously the aux rail stayed off after the first sleep, killing GPS)
 - v3.0 TJA1027T put to sleep (SLP_N low) before its rail is cut
@@ -85,7 +85,7 @@
 ### CAN controller power handling (`src/hw_can.c`)
 - MCP2518FD verified and configured at boot, then left in sleep mode
   (~10 uA); `IOCON.XSTBYEN` drives the transceiver standby pin from sleep
-  state on v2.5C/v2.6C (TCAN334 STB otherwise floats — it has no other
+  state on v2.5C/v2.6C (TCAN334 STB otherwise floats - it has no other
   drive) and v3.0 (MAX33041). On v2.5/v2.6 the CAN rail shares the GPS AUX
   domain, so controller sleep + transceiver standby is the only power-off
   path during engine-off telemetry wakes; on v3.0 the OBD domain switches
@@ -113,7 +113,7 @@
 
 ### GNSS & A-GNSS
 - A-GNSS assistance from nRF Cloud REST (`src/agnss.c`), authenticated with a
-  per-device JWT — cold TTFF drops from minutes to ~10 s
+  per-device JWT - cold TTFF drops from minutes to ~10 s
 - Device onboarding to nRF Cloud without external sample firmware: `PROV=1`
   build (`prov.conf`, `APP_PROVISION_MODE`) turns the app into an AT-host
   bridge for `nrfcloud-utils`; credentials persist in modem NVM
@@ -121,13 +121,13 @@
   restart on cold-fix timeout
 
 ### Telemetry
-- Gyroscope enabled (104 Hz ±250 dps) — `gx/gy/gz` (raw LSB) per record
-- nRF9151 SiP die temperature — `mt` (°C) per record, via `AT%XTEMP`
-- IMU die temperature — `it` (°C) per record
+- Gyroscope enabled (104 Hz ±250 dps) - `gx/gy/gz` (raw LSB) per record
+- nRF9151 SiP die temperature - `mt` (°C) per record, via `AT%XTEMP`
+- IMU die temperature - `it` (°C) per record
 - Accelerometer fields `ax/ay/az` now in milli-g (FS-independent; previously
   raw LSB at ±2 g)
 - Record batching support (`BATCH_SIZE`)
-- Low-battery warning gated to ignition-off and demoted to normal priority —
+- Low-battery warning gated to ignition-off and demoted to normal priority -
   with smart/regenerative charging the rail swings 11.8–14.9 V by design while
   driving (load-shed at idle/under acceleration, boosted on overrun), so an
   instantaneous mid-drive dip is no longer mistaken for a failing battery
@@ -139,7 +139,7 @@
   g (per-axis), peak rotation rate, disturbance duration and speed, with the
   waveform around the peak dumped to the serial log
 - While asleep: FIFO keeps running accel-only at ±2 g; unconfirmed movement
-  wakes are classified by true FIFO peak — `parked impact` alert above
+  wakes are classified by true FIFO peak - `parked impact` alert above
   `APP_PARKED_IMPACT_MG` (default 0.8 g) instead of being silently ignored
 - 100 ms settle after accel full-scale changes, fixing a spurious wake
   interrupt (and false impact) fired by the sensor's slope filter on every
@@ -148,7 +148,7 @@
 ### Theft detection (while parked/asleep)
 - Tow/jack: gravity vector polled against a sleep-entry reference every
   `APP_TOW_POLL_S` (30 s); sustained tilt past `APP_TOW_TILT_DEG` (6°) raises
-  a `tow/jack` alert — catches slow, vibration-free flatbed lifts and jacking
+  a `tow/jack` alert - catches slow, vibration-free flatbed lifts and jacking
   that never trip the motion wake
 - Tamper: the IMU's 6D orientation engine is armed during sleep; a change of
   orientation zone vs. the armed face (unit flipped / pried off its mount)
@@ -161,7 +161,7 @@
 
 ### Configuration & hardware abstraction
 - All pin assignments moved to Kconfig (`APP_PIN_*`) with production-PCB
-  defaults — any signal remaps from `local.conf`; every pin has a defined
+  defaults - any signal remaps from `local.conf`; every pin has a defined
   assignment even when the hardware isn't fitted (relay pins parked)
 - Bench debug overrides replace in-code stubs: `APP_DEBUG_IGNITION`,
   `APP_DEBUG_BATTERY_MV`, `APP_RELAY_CONNECTED`; live GPIO ignition sense and

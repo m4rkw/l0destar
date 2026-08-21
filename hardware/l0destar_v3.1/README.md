@@ -17,7 +17,7 @@ as low as possible
 
 This is a prototype, not a product. Nothing here is validated or certified,
 the parts lists are examples rather than a verified BOM, and any test results
-recorded below are my own unverified bench observations — repeat the testing
+recorded below are my own unverified bench observations - repeat the testing
 yourself rather than taking them on trust.
 
 **Before building or installing anything from this repository, read the
@@ -136,7 +136,7 @@ resistor. **Make sure the pads that should be unconnected are not connected.**
    must drive CAN\_SCK/SDI/CS low or tri-state them before dropping OBD_ENABLE,
    or the nRF backfeeds the dead rail through the clamp diodes. Additionally,
    CAN\_INT's pull-up (S9R2) is on the switched rail, so CAN\_INT floats when
-   the domain is off — enable the nRF internal pulldown on that input
+   the domain is off - enable the nRF internal pulldown on that input
  - Indicated voltages and tolerances are the minimum, I generally always buy the
    tightest tolerances and highest voltages possible of everything as it's just
    simpler for managing inventory. Because of this, several of the "example"

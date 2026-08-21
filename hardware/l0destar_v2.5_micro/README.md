@@ -17,7 +17,7 @@ as low as possible
 
 This is a prototype, not a product. Nothing here is validated or certified,
 the parts lists are examples rather than a verified BOM, and any test results
-recorded below are my own unverified bench observations — repeat the testing
+recorded below are my own unverified bench observations - repeat the testing
 yourself rather than taking them on trust.
 
 **Before building or installing anything from this repository, read the

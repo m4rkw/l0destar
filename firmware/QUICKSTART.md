@@ -1,4 +1,4 @@
-# l0destar tracker — quickstart
+# l0destar tracker - quickstart
 
 **Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
 
@@ -26,7 +26,7 @@ ifmcu/build.sh
 
 Flash via UF2 bootloader:
 
-1. Double-press the Connect Kit reset button — a `UF2BOOT` mass-storage
+1. Double-press the Connect Kit reset button - a `UF2BOOT` mass-storage
    volume appears.
 2. Copy the built image:
    ```bash
@@ -63,7 +63,7 @@ Create `local.conf` (gitignored) with three required settings and a board
 selection:
 
 ```kconfig
-# Board — pick the carrier PCB variant:
+# Board - pick the carrier PCB variant:
 #   APP_BOARD_L0DESTAR_V2_5_CAN, APP_BOARD_L0DESTAR_V2_5_KLINE,
 #   APP_BOARD_L0DESTAR_V2_5_MICRO, APP_BOARD_L0DESTAR_V2_6_CAN,
 #   APP_BOARD_L0DESTAR_V2_6_KLINE, APP_BOARD_L0DESTAR_V2_6_MICRO,
@@ -71,10 +71,10 @@ selection:
 # See Kconfig.boards for the full list.
 CONFIG_APP_BOARD_L0DESTAR_V2_6_KLINE=y
 
-# Server hostname (DTLS endpoint — server setup documented separately)
+# Server hostname (DTLS endpoint - server setup documented separately)
 CONFIG_APP_SERVER_HOST="tracker.example.com"
 
-# Device PSK — 32-byte key as 64 hex characters.
+# Device PSK - 32-byte key as 64 hex characters.
 # All-zeros disables sending; generate a real key per device.
 CONFIG_APP_PSK_HEX="0000000000000000000000000000000000000000000000000000000000000000"
 ```
@@ -97,7 +97,7 @@ pyocd load -t nrf91 build_prov/merged.hex
 
 Then run `nrf_cloud_onboard` / `device_credentials_installer` over the AT
 console to write credentials to modem NVM. Re-flash the normal firmware
-afterwards — credentials persist across reflashes.
+afterwards - credentials persist across reflashes.
 
 ## 4. Build and flash
 

@@ -17,8 +17,8 @@ deeply when the vehicle is parked, and wakes on movement, ignition, or a timer.
 | Function          | Part / detail |
 |-------------------|---------------|
 | MCU / modem / GNSS | nRF9151 SiP (LTE-M, integrated GNSS receiver) |
-| IMU               | ASM330LHHX (automotive 6-axis, WHO_AM_I 0x6B) over bit-banged I²C — accel-only today: movement detection + hardware wake interrupt; gyro/MLC/FSM/FIFO unused |
-| Voltage monitor   | INA228 over the same I²C bus — battery / ignition-derived voltage |
+| IMU               | ASM330LHHX (automotive 6-axis, WHO_AM_I 0x6B) over bit-banged I²C - accel-only today: movement detection + hardware wake interrupt; gyro/MLC/FSM/FIFO unused |
+| Voltage monitor   | INA228 over the same I²C bus - battery / ignition-derived voltage |
 | Relay             | Latching (separate SET/RST coils with feedback sense) |
 | Diagnostics       | K-line (ISO-9141) via L9637D, bit-banged UART |
 | Ignition sense    | GPIO input (MOSFET-gated 3.3 V rail) |
@@ -33,7 +33,7 @@ in `boards/nrf9151dk_nrf9151_ns.overlay` (+ `.conf`).
 
 Every l0destar PCB carries the same Connect Kit but lands each signal on a
 different header pin and wires the switched power rails differently.
-`Kconfig.boards` defines one selectable definition per PCB — GPIO map,
+`Kconfig.boards` defines one selectable definition per PCB - GPIO map,
 fitted-hardware flags, and power-domain topology, all extracted from the KiCad
 designs in `../hardware/`. Select the board in `local.conf` and everything
 else follows:
@@ -51,13 +51,13 @@ jumper configuration of the physical board).
 Selecting a board also arms the **power-domain sequencing** in
 `src/hw_domain.c`. Signals that terminate inside a switched rail (CAN SPI
 pins, K-line pins, relay feedback) are parked as input+pulldown whenever that
-rail is off and only released while it is powered — a pin driven high into an
+rail is off and only released while it is powered - a pin driven high into an
 unpowered MCP2518FD/TXS0104E would backfeed the dead rail through its ESD
 clamp diodes (abs max VDD + 0.3 V), and the CAN_INT/CAN_CS/K-line pull-ups
 live on the switched rails, so they float when the domain is down. On boards
 with transceiver standby control (v2.5C/v2.6C TCAN334, v3.0 MAX33041),
 `src/hw_can.c` configures MCP2518FD `IOCON.XSTBYEN` at boot so sleep mode
-automatically drops the transceiver into standby — required on v2.5/v2.6
+automatically drops the transceiver into standby - required on v2.5/v2.6
 where the CAN rail shares the GPS AUX domain and stays powered during
 engine-off telemetry wakes.
 
@@ -90,7 +90,7 @@ send failures.
 ### Impact detection
 
 While awake the IMU runs at ±8 g with a high-g interrupt
-(`APP_CRASH_THRESHOLD_MG`, default 4 g — set ~1200 in `local.conf` and rap the
+(`APP_CRASH_THRESHOLD_MG`, default 4 g - set ~1200 in `local.conf` and rap the
 desk to bench-test) and batches accel+gyro at 26 Hz into the chip's 3 KB FIFO
 ring (~9 s of history). On impact, the ring is drained and an alert is sent
 with peak g (per-axis), peak rotation rate, disturbance duration, and speed;
@@ -159,7 +159,7 @@ time-to-first-fix.
 `agnss.c` authenticates to nRF Cloud's REST API with a **per-device JWT** signed
 by a key in the modem at `CONFIG_NRF_CLOUD_SEC_TAG` (default `16842753`). nRF
 Cloud only accepts that JWT once the device has been **onboarded** to your
-account — otherwise the request fails with `401 / 40100 "Auth token is
+account - otherwise the request fails with `401 / 40100 "Auth token is
 malformed"`. See **[nRF Cloud device provisioning](#nrf-cloud-device-provisioning)**.
 
 > A-GNSS is an optimisation, not a dependency: GNSS still cold-fixes without it.
@@ -188,7 +188,7 @@ Requires [nRF Connect SDK **v3.3.0**](https://docs.nordicsemi.com/) installed at
 | `Kconfig`  | yes | Application symbols + defaults (see table below) |
 | `boards/nrf9151dk_nrf9151_ns.{conf,overlay}` | yes | Board-specific Kconfig + devicetree (disables conflicting DK peripherals) |
 | `local.conf` | **no** (git-ignored) | Per-deployment secrets / overrides |
-| `prov.conf`  | yes | Provisioning-build overlay (AT-host bridge) — enabled via `PROV=1` |
+| `prov.conf`  | yes | Provisioning-build overlay (AT-host bridge) - enabled via `PROV=1` |
 
 ### local.conf
 
@@ -211,7 +211,7 @@ west flash -d build                 # or: nrfutil device program / the nRF Conne
 
 (Run `west flash` inside the NCS toolchain, the same way `build.sh` invokes
 `west build`.) On Apple Silicon, flashing needs a **native arm64** SEGGER
-J-Link install — an Intel-only J-Link library cannot be loaded by the arm64
+J-Link install - an Intel-only J-Link library cannot be loaded by the arm64
 toolchain Python.
 
 ---
@@ -221,7 +221,7 @@ toolchain Python.
 The build carries **MCUboot** (`sysbuild.conf`), which splits the 1 MB flash
 into two 416 KB slots pinned by `pm_static.yml`. `fota.c` checks a manifest on
 the telemetry host at power-on and on each engine-off telemetry wake, and
-installs anything newer — provided the battery is above
+installs anything newer - provided the battery is above
 `CONFIG_APP_FOTA_MIN_BATTERY_MV` (12.0 V). A swapped image that never finishes
 booting is rolled back automatically.
 
@@ -229,7 +229,7 @@ The firmware version lives in one place, the `VERSION` file: it feeds
 `<zephyr/app_version.h>`, the MCUboot image header, and the version comparison.
 Bump it before publishing.
 
-> The first build with MCUboot has to be flashed over SWD — a unit running a
+> The first build with MCUboot has to be flashed over SWD - a unit running a
 > pre-MCUboot image has no bootloader to swap slots.
 
 See **[FOTA.md](FOTA.md)** for the manifest format, the server requirements
@@ -242,7 +242,7 @@ key.
 
 One-time per device, to enable A-GNSS. The device's key/cert are written to
 **modem NVM**, so they survive reflashing the application. No separate
-`at_client` sample is needed — a provisioning build of *this* firmware acts as
+`at_client` sample is needed - a provisioning build of *this* firmware acts as
 the AT bridge.
 
 **Prerequisites**
@@ -257,7 +257,7 @@ mkdir -p onboarding
 create_ca_cert -c GB -o l0destar -p onboarding -f l0destar
 ```
 
-Writes `onboarding/*_ca.pem` / `*_prv.pem` (git-ignored — the key is secret).
+Writes `onboarding/*_ca.pem` / `*_prv.pem` (git-ignored - the key is secret).
 
 **2. Build & flash the provisioning firmware**
 
@@ -285,7 +285,7 @@ device_credentials_installer \
 ```
 
 `--id-imei --id-str nrf-` produces device ID `nrf-<IMEI>` and `-S 16842753`
-matches the firmware's JWT sec-tag — both **must** match or nRF Cloud rejects
+matches the firmware's JWT sec-tag - both **must** match or nRF Cloud rejects
 the JWT.
 
 **4. Register the device to your account**
@@ -313,7 +313,7 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 |---|---|---|
 | `APP_LOG_LEVEL` | 3 | App module log level (0=off … 4=dbg) |
 | `APP_PROVISION_MODE` | n | Build as the AT-host provisioning bridge (set via `prov.conf`) |
-| `APP_PIN_*` | PCB map | Every signal's P0.x GPIO (K-line, I²C, IMU INTs, ignition, relay) — remap per-board in `local.conf` |
+| `APP_PIN_*` | PCB map | Every signal's P0.x GPIO (K-line, I²C, IMU INTs, ignition, relay) - remap per-board in `local.conf` |
 | `APP_RELAY_CONNECTED` | n | Latching relay fitted; off = relay ops are no-ops |
 | `APP_DEBUG_IGNITION` | -1 | Force ignition state (0=ON, 1=OFF, -1=live GPIO) |
 | `APP_DEBUG_BATTERY_MV` | 0 | Force battery voltage in mV (0=live INA228) |

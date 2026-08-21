@@ -6,7 +6,7 @@
 - Fully-featured open-source server-side software.
 - Relatively low cost to produce.
 - The reference design will be updated continuously to ensure components are as widely available as possible.
-- Extremely power efficient — can be left connected in a typical car for several weeks without draining the battery.
+- Extremely power efficient - can be left connected in a typical car for several weeks without draining the battery.
 - Smart power management features.
 - Bistable latching relay to allow switching the power supply between 12v live and the ignition rail programmatically.
 - Support for Li-Ion/LiPo battery backup.
