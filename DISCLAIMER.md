@@ -46,9 +46,10 @@ and installation.
 
 A device wired to a vehicle battery can start a fire if it is built or fused
 wrong, and anything connected to OBD or CAN can interfere with systems you want
-working while the vehicle is moving. The bench boards in this repository are
-test equipment rather than trackers, but they still take a 12V supply and
-connect to vehicle diagnostic lines, and the same care applies.
+working while the vehicle is moving or cause irrepairable damage to very
+expensive computers in the car. The bench boards in this repository are test
+equipment rather than trackers, but they still take a 12V supply and connect
+to vehicle diagnostic lines, and the same care applies.
 
 This design is not validated for safety-critical or security-critical use. It
 may fail silently, and it must not be anyone's only theft-recovery, safety or
