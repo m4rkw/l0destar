@@ -10,7 +10,7 @@ part was chosen. These decisions have been re-litigated several times and
 always land in the same place, so the reasoning is written down here.
 
 Everything below was checked against the schematic, the PCB netlist and the
-part datasheets on 21 Aug 2026. PCB DRC is clean with zero unconnected
+part datasheets on 23 Aug 2026. PCB DRC is clean with zero unconnected
 items.
 
 ## The protection chain
@@ -271,10 +271,12 @@ bulk charging current and never needed the swap.
 - No damping electrolytic is needed for hot-plug ringing.
 - 2N7002 gate dividers are in spec for any manufacturer after the 180K
   re-ratio. No zeners.
-- The LM66100 on the buck output has its CE pin tied to VOUT. This is a
-  TI-documented configuration for reverse current blocking (it protects the
-  buck if an external supply is attached to the VCC header), not a wiring
-  error.
+- The LM66100 (S11U1) sits between PP4V2_OVP_PROTECTED and PP4V2, after
+  the OVP MOSFET. Its CE pin is tied to its own output (PP4V2). This is a
+  TI-documented configuration for reverse current blocking — it prevents
+  downstream capacitors from back-driving the rail when the OVP trips, and
+  blocks reverse current if an external supply is attached to the VCC
+  header. Not a wiring error.
 
 ## Known accepted limitations
 
