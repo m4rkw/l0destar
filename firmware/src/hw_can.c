@@ -215,7 +215,11 @@ int hw_can_power_on(void)
 	if (!can_fitted()) {
 		return -ENODEV;
 	}
-	hw_domain_request(can_domain(), HW_DOMAIN_USER_CAN);
+	if (hw_domain_request(can_domain(), HW_DOMAIN_USER_CAN)) {
+		/* Rail never came up — leave the SPI pins parked rather than
+		 * driving them into an unpowered MCP2518FD. */
+		return -EIO;
+	}
 	spi_pins_active();
 
 	if (!s_ok) {
@@ -277,7 +281,10 @@ int hw_can_init(void)
 		return 0;
 	}
 
-	hw_domain_request(can_domain(), HW_DOMAIN_USER_CAN);
+	if (hw_domain_request(can_domain(), HW_DOMAIN_USER_CAN)) {
+		LOG_ERR("CAN rail unavailable — controller not initialised");
+		return -EIO;
+	}
 	spi_pins_active();
 	mcp_reset();
 

@@ -29,25 +29,36 @@ static enum hw_domain kline_domain(void)
  *   v3.1                TJA1027T on its own K_EN domain (PP3V3_K + PP12V_K);
  *                       same SLP_N handling
  */
-void kline_power_on(void)
+int kline_power_on(void)
 {
 	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
-		return;
+		return -ENODEV;
 	}
 	if (IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN) ||
 	    IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN)) {
-		hw_domain_request(kline_domain(), HW_DOMAIN_USER_KLINE);
+		if (hw_domain_request(kline_domain(), HW_DOMAIN_USER_KLINE)) {
+			/* PP12V_K feeds the TJA1027T: with it down, driving
+			 * SLP_N or TXD high backfeeds the transceiver's ESD
+			 * clamps.  Leave the pins parked. */
+			LOG_ERR("K-line rails unavailable — staying parked");
+			return -EIO;
+		}
 		if (PIN_K_SLEEP >= 0) {
 			gpio_pin_configure(hw_gpio0, PIN_K_SLEEP,
 					   GPIO_OUTPUT_HIGH);
 		}
 	} else {
-		hw_domain_request(HW_DOMAIN_AUX, HW_DOMAIN_USER_KLINE);
-		if (IS_ENABLED(CONFIG_APP_BOARD_KLINE_SHIFT_ON_AUX)) {
-			hw_domain_request(HW_DOMAIN_K, HW_DOMAIN_USER_KLINE);
+		if (hw_domain_request(HW_DOMAIN_AUX, HW_DOMAIN_USER_KLINE)) {
+			return -EIO;
+		}
+		if (IS_ENABLED(CONFIG_APP_BOARD_KLINE_SHIFT_ON_AUX) &&
+		    hw_domain_request(HW_DOMAIN_K, HW_DOMAIN_USER_KLINE)) {
+			hw_domain_release(HW_DOMAIN_AUX, HW_DOMAIN_USER_KLINE);
+			return -EIO;
 		}
 	}
 	k_msleep(500);		/* rails + K bus settle */
+	return 0;
 }
 
 /* Park the K pins and drop the rails this board lets us drop.  The TJA1027
@@ -78,7 +89,10 @@ int kline_init(void)
 	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE) || PIN_K1_TX < 0) {
 		return -ENODEV;
 	}
-	kline_power_on();
+	int err = kline_power_on();
+	if (err) {
+		return err;
+	}
 	gpio_pin_configure(hw_gpio0, PIN_K1_TX, GPIO_OUTPUT_HIGH);
 	gpio_pin_configure(hw_gpio0, PIN_K1_RX, GPIO_INPUT | GPIO_PULL_UP);
 	k_msleep(100);
@@ -192,7 +206,10 @@ int kline_test(void)
 
 	printk("\n*** ISO-9141 TEST ***\n");
 
-	kline_power_on();
+	if (kline_power_on()) {
+		printk("K-line test aborted: rails did not come up\n");
+		return -EIO;
+	}
 
 	gpio_pin_configure(hw_gpio0, PIN_K1_TX, GPIO_OUTPUT_HIGH);
 	gpio_pin_configure(hw_gpio0, PIN_K1_RX, GPIO_INPUT | GPIO_PULL_UP);
