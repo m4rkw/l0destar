@@ -5,6 +5,10 @@ tree are noted where they were removed.
 
 ## 23/08/2026
 
+- Updated sheet annotations for all boards v2.6+
+
+## 23/08/2026
+
 - v3.2 board prototype added with MCU over-voltage protection and I2C bus
   hardening
 
