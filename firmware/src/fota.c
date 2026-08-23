@@ -105,6 +105,8 @@ const char *fota_board_id(void)
 #define FOTA_SEC_TAG        CONFIG_APP_FOTA_SEC_TAG
 #define FOTA_USE_TLS        (FOTA_SEC_TAG >= 0)
 #define FOTA_MIN_BATTERY_V  (CONFIG_APP_FOTA_MIN_BATTERY_MV / 1000.0f)
+#define FOTA_DL_ATTEMPTS      CONFIG_APP_FOTA_DOWNLOAD_ATTEMPTS
+#define FOTA_DL_RETRY_DELAY_S CONFIG_APP_FOTA_RETRY_DELAY_S
 
 /* Version fields are one byte each in the MCUboot image header, and the
  * VERSION file is validated against the same range at build time. */
@@ -124,6 +126,7 @@ static int     s_fail_count;
 static bool    s_forced;
 static bool    s_boot_check = true;   /* the one unconditional power-on check */
 static bool    s_dl_init_done;
+static uint32_t s_alerted_ver;    /* version we've already reported stuck */
 
 /* -- download completion --------------------------------------------------- */
 static K_SEM_DEFINE(s_dl_done, 0, 1);
@@ -495,13 +498,72 @@ int fota_check(enum fota_ctx ctx)
     transport_close();
     led_sending();
 
-    int err = download_image();
+    /* One dropped connection should not cost the whole wake.  The image comes
+     * down as ~140 sequential ranged GETs on a single TLS connection with no
+     * resume, so any stall long enough to trip the server's read timeout ends
+     * the transfer and the next attempt restarts at byte 0.  Retrying inside
+     * this wake is nearly free — the radio is already up, GNSS is already
+     * stopped, the manifest is already fetched — and turns a transient radio
+     * stall into a short delay instead of a wait for the next wake. */
+    int err = -EIO;
+
+    /* APP_FOTA_DOWNLOAD_TIMEOUT_S bounds a single attempt; it also bounds the
+     * retry sequence, so adding attempts cannot multiply how long the unit
+     * stays awake with GNSS stopped.  A fast failure — the interesting case,
+     * a dropped connection — leaves nearly the whole budget for another go,
+     * while an attempt that grinds through the budget is not repeated. */
+    int64_t budget_end =
+        k_uptime_get() + (int64_t)CONFIG_APP_FOTA_DOWNLOAD_TIMEOUT_S * 1000;
+
+    for (int attempt = 1; attempt <= FOTA_DL_ATTEMPTS; attempt++) {
+        err = download_image();
+        if (err == 0) {
+            break;
+        }
+        LOG_WRN("download attempt %d/%d failed: %d (cause %d)",
+                attempt, FOTA_DL_ATTEMPTS, err, s_dl_cause);
+
+        if (k_uptime_get() >= budget_end) {
+            LOG_WRN("download budget (%ds) spent — leaving the rest to the "
+                    "next check", CONFIG_APP_FOTA_DOWNLOAD_TIMEOUT_S);
+            break;
+        }
+
+        if (attempt < FOTA_DL_ATTEMPTS) {
+            /* Let the link settle before going again, feeding the watchdog
+             * across the wait rather than sleeping through it in one block. */
+            for (int waited = 0; waited < FOTA_DL_RETRY_DELAY_S; waited++) {
+                k_sleep(K_SECONDS(1));
+                watchdog_kick();
+            }
+        }
+    }
+
     if (err) {
         s_fail_count++;
         led_idle();
         if (gnss_stopped) gnss_resume();
+
+        /* Every attempt this wake failed, so this is not a one-off stall.
+         * Report it once per advertised version — the check re-runs on every
+         * wake while the server keeps advertising, and an alert an hour saying
+         * the same thing is noise.  s_alerted_ver resets when the server
+         * moves to a different version, so a genuinely new stuck update is
+         * still reported.  Queued, not sent standalone: the radio has just
+         * proved unreliable, and the next telemetry send carries it. */
+        if (s_alerted_ver != available) {
+            s_alerted_ver = available;
+            char msg[96];
+            snprintf(msg, sizeof(msg),
+                     "fota: %s -> %s failed after %d attempts (err %d, cause %d)",
+                     APP_VERSION_STRING, ver_str, FOTA_DL_ATTEMPTS,
+                     err, s_dl_cause);
+            alert_enqueue(msg, 0);
+        }
         return err;
     }
+
+    s_alerted_ver = 0;
 
     s_fail_count = 0;
     LOG_INF("image staged — rebooting into %s", ver_str);

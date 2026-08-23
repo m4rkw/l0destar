@@ -199,6 +199,25 @@ config APP_FOTA_REQUIRE_BATTERY_READING
 	  default that case is allowed to update; enable this to require a real
 	  measurement above the threshold instead.
 
+config APP_FOTA_DOWNLOAD_ATTEMPTS
+	int "Download attempts per update check"
+	default 3
+	range 1 10
+	help
+	  The image is fetched as a long run of sequential ranged GETs on one
+	  connection with no resume, so a single radio stall loses the whole
+	  transfer.  Retry this many times within one check before giving up
+	  and waiting for the next one.  All attempts share the wake's already
+	  established radio session.
+
+config APP_FOTA_RETRY_DELAY_S
+	int "Delay between download attempts (seconds)"
+	default 10
+	range 0 300
+	help
+	  Settling time between attempts within a check.  The watchdog is fed
+	  across the wait.
+
 config APP_FOTA_RETRY_HOLDOFF_S
 	int "Holdoff after a failed update attempt (seconds)"
 	default 600
