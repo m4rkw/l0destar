@@ -743,7 +743,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "30/05/2026"
+	(text "02/08/2026"
 		(exclude_from_sim no)
 		(at 206.248 193.294 0)
 		(effects
@@ -756,9 +756,9 @@
 		)
 		(uuid "2a2faf48-3d38-4094-a04e-f08fbe20b48e")
 	)
-	(text "ASM330LHHXG1TR 6-axis IMU\n3-axis accelerometer\n3-axis gyroscope\nConnects to the I2C bus"
+	(text "ASM330LHHXTR 6-axis IMU"
 		(exclude_from_sim no)
-		(at 180.34 172.974 0)
+		(at 179.07 168.91 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -767,7 +767,7 @@
 		)
 		(uuid "6e244cbb-7e2a-4cdc-bc18-692e2b87d28d")
 	)
-	(text "1.0"
+	(text "2.6k"
 		(exclude_from_sim no)
 		(at 268.224 193.294 0)
 		(effects

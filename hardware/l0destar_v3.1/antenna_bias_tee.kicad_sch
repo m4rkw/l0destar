@@ -1450,7 +1450,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "l0destar mounting holes"
+	(text "l0destar antenna bias tee"
 		(exclude_from_sim no)
 		(at 186.182 189.865 0)
 		(effects

@@ -891,7 +891,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "30/05/2026"
+	(text "02/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -949,7 +949,7 @@
 		)
 		(uuid "979798f1-fcfa-4bac-9927-b2cdb7f2c133")
 	)
-	(text "1.0"
+	(text "2.6k"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects

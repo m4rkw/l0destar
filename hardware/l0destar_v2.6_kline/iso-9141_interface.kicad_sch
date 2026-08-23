@@ -2319,7 +2319,7 @@
 		)
 		(uuid "8797c65c-5399-4360-95f4-477dda95adf3")
 	)
-	(text "30/05/2026"
+	(text "02/08/2026"
 		(exclude_from_sim no)
 		(at 206.248 193.294 0)
 		(effects
@@ -2343,7 +2343,7 @@
 		)
 		(uuid "c1301634-7f84-413b-bf60-49b56e61a009")
 	)
-	(text "1.0"
+	(text "2.6k"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects

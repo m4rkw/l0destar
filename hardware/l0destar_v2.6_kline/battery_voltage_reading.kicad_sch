@@ -577,7 +577,7 @@
 		)
 		(uuid "3c3202ba-abe3-4c80-bbf8-a4cb0bb43b3c")
 	)
-	(text "30/05/2026"
+	(text "02/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -614,17 +614,18 @@
 		)
 		(uuid "94ff598d-f7f7-462d-8d10-e7d2317c643b")
 	)
-	(text "Vehicle voltage reading via INA228 using the I2C bus"
+	(text "Vehicle voltage reading via INA228 using the I2C bus\n100nF / 1uF decoupling"
 		(exclude_from_sim no)
-		(at 206.756 169.926 0)
+		(at 179.705 170.18 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
+			(justify left)
 		)
 		(uuid "c65aebed-0873-475c-bd2a-6f9f6c2859c7")
 	)
-	(text "1.0"
+	(text "2.6k"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects

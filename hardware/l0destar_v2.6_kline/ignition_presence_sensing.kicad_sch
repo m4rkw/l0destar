@@ -731,7 +731,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "1.0"
+	(text "2.6k"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects
@@ -777,9 +777,9 @@
 		)
 		(uuid "973effe9-5c26-47b1-918b-b874ca967e54")
 	)
-	(text "Ignition presence sensing\nvoltage divider for minimal power consumption\nZener clamp to 3.3v logic level"
+	(text "Ignition presence sensing\n3.3V signal gated by a MOSFET on the 12V ignition rail"
 		(exclude_from_sim no)
-		(at 180.848 172.212 0)
+		(at 179.705 170.18 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -788,7 +788,7 @@
 		)
 		(uuid "a0609728-9480-460b-9afb-5d92bc2e50b3")
 	)
-	(text "30/05/2026"
+	(text "02/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects

@@ -159,7 +159,7 @@
 		)
 		(uuid "1dd591f0-d6a6-44d6-be4d-64e1ab4db3e2")
 	)
-	(text "l0destar CAN interface"
+	(text "l0destar configuration pads"
 		(exclude_from_sim no)
 		(at 186.182 189.738 0)
 		(effects

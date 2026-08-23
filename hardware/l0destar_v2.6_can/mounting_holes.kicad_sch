@@ -152,7 +152,7 @@
 		)
 		(uuid "77bd872a-d4dd-464c-b40e-33285d4dc477")
 	)
-	(text "1.0"
+	(text "2.6c"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects
@@ -165,7 +165,7 @@
 		)
 		(uuid "dd7739a9-46f1-49ce-86bb-e6cd9f342553")
 	)
-	(text "30/05/2026"
+	(text "02/08/2026"
 		(exclude_from_sim no)
 		(at 206.248 193.294 0)
 		(effects

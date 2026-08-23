@@ -2766,7 +2766,7 @@
 		)
 		(uuid "4d6500a5-c955-476b-8180-055fb261ac76")
 	)
-	(text "Main connector\n40-pin dual header for the MakerDiary nRF9151 Connect Kit\nReset signal with protection\nGPS/LTE connectors"
+	(text "Main external connector 6-pin Microfit 3.0\n40-pin dual header for the MakerDiary nRF9151 Connect Kit\nMakerdiary power cable connection point with bulk caps\nI2C pullups"
 		(exclude_from_sim no)
 		(at 180.848 173.228 0)
 		(effects
@@ -2790,7 +2790,7 @@
 		)
 		(uuid "87b15abc-c57d-48f4-bb23-fb6d1845be27")
 	)
-	(text "30/05/2026"
+	(text "02/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -2841,7 +2841,7 @@
 		)
 		(uuid "c5e20272-1c62-4c69-9e06-6fb20ce69fcf")
 	)
-	(text "1.0"
+	(text "2.6c"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects

@@ -1812,7 +1812,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "l0destar configuration pads"
+	(text "l0destar MCU over-voltage protection"
 		(exclude_from_sim no)
 		(at 186.817 189.738 0)
 		(effects

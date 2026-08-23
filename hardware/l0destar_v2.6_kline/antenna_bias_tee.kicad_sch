@@ -1450,6 +1450,79 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "2.6k"
+		(exclude_from_sim no)
+		(at 268.478 193.421 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "070eaef2-b1fe-4125-8d9a-9e2531fd20f9")
+	)
+	(text "u.Fl -> SMA for LTE/GPS\n3.3V bias tee on the GPS side"
+		(exclude_from_sim no)
+		(at 179.07 170.18 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "21e345c7-3465-44ae-bf94-cfd853e508ec")
+	)
+	(text "14"
+		(exclude_from_sim no)
+		(at 187.706 183.515 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "835f7d6c-86cd-467d-b939-f3cb50f42c16")
+	)
+	(text "02/08/2026"
+		(exclude_from_sim no)
+		(at 206.248 193.421 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "9123ee8c-8140-49e8-932d-e88278dd4556")
+	)
+	(text "l0destar antenna bias tee"
+		(exclude_from_sim no)
+		(at 186.182 189.865 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 2.032 2.032)
+				(thickness 0.4064)
+				(bold yes)
+			)
+			(justify left)
+		)
+		(uuid "eca17bf7-c38e-4e72-8c0a-3874c27e0252")
+	)
+	(text "14"
+		(exclude_from_sim no)
+		(at 184.912 183.515 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f057f0c9-38bd-4225-bd55-d8ec98a3188e")
+	)
 	(junction
 		(at 149.86 50.8)
 		(diameter 0)
