@@ -2,26 +2,36 @@
 
 **Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
 
-## 1. Patch the IF MCU power firmware
+## 1. Update the IF MCU firmware
 
 The Makerdiary Connect Kit's nRF52820 IF MCU (USB bridge + CMSIS-DAP) draws
 ~2 mA after USB disconnect because the stock firmware leaves HFCLK running.
 The fix enters SYSTEM OFF on cable removal, dropping quiescent draw to
-~0.3 µA.
+~0.3 uA. On a battery-backed tracker that 2 mA is the difference between
+weeks and days of standby, so this step is not optional.
 
-Upstream PR: <https://github.com/makerdiary/nrf9151-connectkit/pull/19>
+The fix is now upstream - merged as
+<https://github.com/makerdiary/nrf9151-connectkit/pull/19>, so no patch is
+needed any more.
 
-If the PR hasn't been merged yet, apply the patch from this repo:
+**But it does not reach your board on its own.** The IF MCU firmware is not
+updated automatically, and it is not touched by `./flash.sh` (which only
+programs the nRF9151). Every Connect Kit currently shipping - and every
+prebuilt image in the latest Makerdiary release, v2.0.0 - was built before
+the fix landed, so a new board always needs this done once, by hand.
 
-```bash
-cd ifmcu/.makerdiary-repo
-git apply ../power-fix.patch
-```
-
-Build the patched IF MCU firmware (requires NCS v3.4.0):
+Build the current upstream IF MCU firmware (requires NCS v3.4.0):
 
 ```bash
 ifmcu/build.sh
+```
+
+`ifmcu/build.sh` clones `makerdiary/nrf9151-connectkit` into
+`ifmcu/.makerdiary-repo` on first run. If you already have that clone from
+before the merge, update it first:
+
+```bash
+git -C ifmcu/.makerdiary-repo pull
 ```
 
 Flash via UF2 bootloader:
@@ -33,6 +43,10 @@ Flash via UF2 bootloader:
    cp build_ifmcu/ifmcu_firmware/zephyr/zephyr.uf2 /Volumes/UF2BOOT/
    ```
    The board resets automatically after the copy completes.
+
+To confirm it took: unplug USB with no other supply attached. On patched
+firmware the RGB LED goes fully dark and board draw falls to ~uA; on stock
+firmware the nRF52820 stays awake at ~2 mA.
 
 ## 2. Install nRF tooling
 

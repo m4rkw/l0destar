@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Build the patched Makerdiary IF MCU firmware for the nRF52820.
+# Build the Makerdiary IF MCU firmware for the nRF52820.
 #
 # Clones the official Makerdiary nRF9151 ConnectKit repo (if not already
-# present), applies our power-fix patch, and builds.  The patch adds
-# automatic SYSTEM OFF on USB disconnect so the nRF52820 doesn't hold
-# HFCLK at ~2 mA after the cable is removed.
+# present) and builds it.  The SYSTEM OFF on USB disconnect fix - without
+# which the nRF52820 holds HFCLK at ~2 mA after the cable is removed - is
+# upstream as of makerdiary/nrf9151-connectkit#19, so no patching is needed;
+# an existing clone from before that merge does need a `git pull` though.
 #
 # Output: build_ifmcu/zephyr/zephyr.uf2
 #
@@ -33,20 +34,25 @@ fi
 REPO_DIR="$FIRMWARE_DIR/ifmcu/.makerdiary-repo"
 BUILD_DIR="$FIRMWARE_DIR/build_ifmcu"
 BOARD="nrf9151_connectkit/nrf52820"
-PATCH="$SCRIPT_DIR/power-fix.patch"
 
 # --- clone the Makerdiary repo if missing ---
 if [[ ! -d "$REPO_DIR" ]]; then
 	echo "Cloning makerdiary/nrf9151-connectkit..."
 	git clone --depth 1 https://github.com/makerdiary/nrf9151-connectkit.git "$REPO_DIR"
-	echo "Apply the power-fix patch after cloning:"
-	echo "  cd $REPO_DIR && git apply $PATCH"
-	echo "  (or edit applications/ifmcu_firmware/src/main.c manually)"
 else
 	echo "Using existing repo at $REPO_DIR"
 fi
 
 APP_DIR="$REPO_DIR/applications/ifmcu_firmware"
+
+# The whole reason we build this ourselves: warn loudly if the checkout
+# predates the power fix, otherwise we'd silently produce ~2 mA firmware.
+if ! grep -q "enter_system_off" "$APP_DIR/src/main.c"; then
+	echo "Error: $REPO_DIR predates the USB-disconnect power fix." >&2
+	echo "Update it, then re-run:" >&2
+	echo "  git -C $REPO_DIR pull" >&2
+	exit 1
+fi
 
 echo "Building IF MCU firmware for $BOARD"
 
