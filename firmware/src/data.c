@@ -182,6 +182,19 @@ int collect_data(int ignitionState)
         if (n > 0) data_index += n;
     }
 
+    /* nRF9151 supply voltage (V).  This is the SiP's VDD pin, which on the
+     * Connect Kit is VSYS out of the BQ25180 — the carrier's 4.2V buck feeding
+     * the battery connector, or ~4.5V when the charger is running SYS off USB
+     * VBUS with a cable plugged in.  Distinct from the vehicle battery above:
+     * that one comes off the INA228 and is the ~12V rail. */
+    int vsys_mv;
+    if (modem_read_vbat(&vsys_mv) == 0) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1,
+                     ",vs=%.2f", vsys_mv / 1000.0);
+        if (n > 0) data_index += n;
+    }
+
     /* Cell tower fields — emit on first post-wake packet or as GPS fallback.
      * cl=1 is the server's "this position came from the network, not GNSS"
      * flag; until now it was hardcoded to 0, so the fallback the protocol

@@ -194,6 +194,7 @@ int   accel_read_gyro(int *gx, int *gy, int *gz);
 int   accel_gyro_autozero(void);
 int   accel_read_temp(float *temp_c);
 int   modem_read_temp(float *temp_c);
+int   modem_read_vbat(int *mv);        /* nRF9151 VDD (= VSYS), millivolts */
 int   ignition_read(void);
 float battery_read_voltage(void);
 

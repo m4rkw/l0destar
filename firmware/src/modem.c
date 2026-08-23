@@ -279,6 +279,39 @@ int modem_read_temp(float *temp_c)
     return 0;
 }
 
+/* Supply voltage at the nRF9151 VDD pin, in millivolts.  Despite the command
+ * name this is NOT the Connect Kit's battery connector: schematic sheet 4 ties
+ * the SiP VDD to VSYS, which sheet 2 shows is the BQ25180's SYS output.  So
+ * what this reads depends on which side of the charger's power path is
+ * feeding SYS:
+ *
+ *   USB-C (VBUS) connected   SYS is regulated from VIN, and this returns the
+ *                            BQ25180 SYS setpoint (~4.4-4.9V, per the ifmcu
+ *                            shell's `charger sysreg`) no matter what the
+ *                            battery connector is fed with.  The bench PSU on
+ *                            VBAT goes to zero draw at the same time — that is
+ *                            the power path handing over, not a fault.
+ *   USB-C absent             SYS comes off BAT through the path FET, so this
+ *                            tracks the battery-connector feed (the carrier's
+ *                            4.2V buck) less a few mV of I*Rds — tens of mV
+ *                            under LTE TX bursts.
+ *
+ * Either way it is not the vehicle battery; that one is battery_read_voltage()
+ * on the INA228.  In telemetry the radio is up, so the modem returns the value
+ * it last sampled during modem activity: a few seconds old, and biased towards
+ * the loaded case — which is the interesting one for spotting a supply that
+ * sags under TX. */
+int modem_read_vbat(int *mv)
+{
+    int val;
+    int ret = nrf_modem_at_scanf("AT%XVBAT", "%%XVBAT: %d", &val);
+    if (ret != 1) {
+        return -EIO;
+    }
+    *mv = val;
+    return 0;
+}
+
 int modem_recover(int failure_count)
 {
     transport_teardown();
