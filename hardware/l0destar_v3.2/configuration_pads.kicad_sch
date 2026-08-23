@@ -158,6 +158,79 @@
 		)
 		(uuid "4ae143d4-ed55-4e29-aa06-b95312dd84df")
 	)
+	(text "9"
+		(exclude_from_sim no)
+		(at 185.801 183.388 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "62ffcc4b-d2d9-4f9d-9b4d-6167220fd39a")
+	)
+	(text "Configuration pads, place 0402 0R resistors"
+		(exclude_from_sim no)
+		(at 179.07 168.91 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "69c639dd-e47c-49bf-88df-2a4ea45b286c")
+	)
+	(text "15"
+		(exclude_from_sim no)
+		(at 188.087 183.388 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "6b4456c2-4b15-4983-9147-c1f8a3c906b6")
+	)
+	(text "l0destar configuration pads"
+		(exclude_from_sim no)
+		(at 186.817 189.738 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 2.032 2.032)
+				(thickness 0.4064)
+				(bold yes)
+			)
+			(justify left)
+		)
+		(uuid "71ddeb8f-2711-4b13-94a1-078d7eb7a294")
+	)
+	(text "23/08/2026"
+		(exclude_from_sim no)
+		(at 206.629 193.294 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "769b1b24-1bdc-4d54-8983-69340a306dae")
+	)
+	(text "3.2"
+		(exclude_from_sim no)
+		(at 269.113 193.294 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "9afdfb96-b311-48e7-b573-2f8570602c39")
+	)
 	(text "Configuration pads, connect for either CAN or K-line but not both"
 		(exclude_from_sim no)
 		(at 20.32 20.32 0)

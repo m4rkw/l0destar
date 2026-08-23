@@ -1390,7 +1390,7 @@
 		)
 		(uuid "8797c65c-5399-4360-95f4-477dda95adf3")
 	)
-	(text "30/05/2026"
+	(text "23/08/2026"
 		(exclude_from_sim no)
 		(at 206.248 193.294 0)
 		(effects
@@ -1403,7 +1403,7 @@
 		)
 		(uuid "aaab6686-4cde-479d-8e34-8b1280af2e53")
 	)
-	(text "14"
+	(text "15"
 		(exclude_from_sim no)
 		(at 187.452 183.388 0)
 		(effects
@@ -1414,7 +1414,7 @@
 		)
 		(uuid "c1301634-7f84-413b-bf60-49b56e61a009")
 	)
-	(text "1.0"
+	(text "3.2"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects
@@ -1427,9 +1427,9 @@
 		)
 		(uuid "c37c9d87-c017-4c63-9721-f4e84e487429")
 	)
-	(text "ISO-9141 interface (K-line)\nMOSFETs to level-shift 3.3v -> 5V\nTVS on the K and L wires\nBoth K and L lines wired for completeness"
+	(text "ISO-9141 interface (K-line) using TJA1027T\nTVS on the K and L wires\nL line can be pulled low via L_SEND"
 		(exclude_from_sim no)
-		(at 180.086 172.466 0)
+		(at 179.07 171.45 0)
 		(effects
 			(font
 				(size 1.27 1.27)

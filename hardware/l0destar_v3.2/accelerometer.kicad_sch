@@ -823,7 +823,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "30/05/2026"
+	(text "23/08/2026"
 		(exclude_from_sim no)
 		(at 206.248 193.294 0)
 		(effects
@@ -836,9 +836,9 @@
 		)
 		(uuid "2a2faf48-3d38-4094-a04e-f08fbe20b48e")
 	)
-	(text "ASM330LHHXG1TR 6-axis IMU\n3-axis accelerometer\n3-axis gyroscope\nConnects to the I2C bus"
+	(text "ASM330LHHXTR 6-axis IMU\n100pF decoupling caps on SDA/SCL (paired with 1.8K pullups on the connector sheet)\nOptional ferrite bead filter (0R 0402 by default)"
 		(exclude_from_sim no)
-		(at 180.34 172.974 0)
+		(at 179.07 171.45 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -857,7 +857,7 @@
 		)
 		(uuid "820f89ef-067d-440e-b955-ca24d0c62f84")
 	)
-	(text "1.0"
+	(text "3.2"
 		(exclude_from_sim no)
 		(at 268.224 193.294 0)
 		(effects
@@ -881,7 +881,7 @@
 		)
 		(uuid "b06ac961-55e4-4ca2-b7ca-d12eeaf55649")
 	)
-	(text "14"
+	(text "15"
 		(exclude_from_sim no)
 		(at 187.452 183.388 0)
 		(effects

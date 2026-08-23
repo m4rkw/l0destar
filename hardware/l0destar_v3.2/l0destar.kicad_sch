@@ -2778,7 +2778,7 @@
 		)
 		(uuid "4d6500a5-c955-476b-8180-055fb261ac76")
 	)
-	(text "Main connector\n40-pin dual header for the MakerDiary nRF9151 Connect Kit\nMakerdiary power cable connection point with 100nF decoupling\n"
+	(text "Main external connector 6-pin Microfit 3.0\n40-pin dual header for the MakerDiary nRF9151 Connect Kit\nMakerdiary power cable connection point with 100nF decoupling\nI2C pullups\nPower rail enable pin pulldowns"
 		(exclude_from_sim no)
 		(at 180.848 173.228 0)
 		(effects
@@ -2802,7 +2802,7 @@
 		)
 		(uuid "87b15abc-c57d-48f4-bb23-fb6d1845be27")
 	)
-	(text "30/05/2026"
+	(text "23/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -2815,7 +2815,7 @@
 		)
 		(uuid "9efca953-8fbf-4378-a453-cdecea3c9a89")
 	)
-	(text "14"
+	(text "15"
 		(exclude_from_sim no)
 		(at 187.452 183.388 0)
 		(effects
@@ -2865,7 +2865,7 @@
 		)
 		(uuid "c5e20272-1c62-4c69-9e06-6fb20ce69fcf")
 	)
-	(text "1.0"
+	(text "3.2"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects
@@ -2968,7 +2968,7 @@
 	)
 	(wire
 		(pts
-			(xy 124.46 40.64) (xy 124.46 45.72)
+			(xy 124.46 48.895) (xy 124.46 45.72)
 		)
 		(stroke
 			(width 0)
@@ -3105,16 +3105,6 @@
 			(type default)
 		)
 		(uuid "44a5069e-1243-4048-a157-b1995e9174e0")
-	)
-	(wire
-		(pts
-			(xy 119.38 40.64) (xy 124.46 40.64)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "44d6fb30-6db4-488a-84c6-03355525dd29")
 	)
 	(wire
 		(pts
@@ -5196,7 +5186,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 119.38 40.64 0)
+		(at 124.46 48.895 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -5206,7 +5196,7 @@
 		(dnp no)
 		(uuid "c14ec56e-6423-453f-82b9-98a47b00ad2d")
 		(property "Reference" "#PWR013"
-			(at 119.38 46.99 0)
+			(at 124.46 55.245 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5217,7 +5207,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 121.158 44.704 0)
+			(at 126.238 52.959 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5228,7 +5218,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 119.38 40.64 0)
+			(at 124.46 48.895 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5239,7 +5229,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 119.38 40.64 0)
+			(at 124.46 48.895 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5250,7 +5240,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 119.38 40.64 0)
+			(at 124.46 48.895 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)

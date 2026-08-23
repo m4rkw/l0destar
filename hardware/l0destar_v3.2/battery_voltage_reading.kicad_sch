@@ -577,7 +577,7 @@
 		)
 		(uuid "3c3202ba-abe3-4c80-bbf8-a4cb0bb43b3c")
 	)
-	(text "30/05/2026"
+	(text "23/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -614,17 +614,18 @@
 		)
 		(uuid "94ff598d-f7f7-462d-8d10-e7d2317c643b")
 	)
-	(text "Vehicle voltage reading via INA228 using the I2C bus"
+	(text "Vehicle voltage reading via INA228 using the I2C bus\n100nF / 1uF decoupling"
 		(exclude_from_sim no)
-		(at 206.756 169.926 0)
+		(at 179.07 169.545 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
+			(justify left)
 		)
 		(uuid "c65aebed-0873-475c-bd2a-6f9f6c2859c7")
 	)
-	(text "1.0"
+	(text "3.2"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects
@@ -637,7 +638,7 @@
 		)
 		(uuid "c89e4e08-8f4b-4f37-81a7-4e033ddd8315")
 	)
-	(text "14"
+	(text "15"
 		(exclude_from_sim no)
 		(at 187.452 183.388 0)
 		(effects
@@ -804,16 +805,6 @@
 			(type default)
 		)
 		(uuid "4d476465-e3db-41c3-87cf-d3388357dd53")
-	)
-	(wire
-		(pts
-			(xy 73.66 66.04) (xy 81.28 66.04)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "76dded0a-1d85-4e27-ab93-67c088474475")
 	)
 	(wire
 		(pts
@@ -992,30 +983,6 @@
 		(uuid "61f32912-a038-4100-847f-fe59ed9937c6")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 91.8852 58.42 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-	)
-	(global_label "INA_ALRT"
-		(shape input)
-		(at 81.28 66.04 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "6c6e43f9-86d6-45b4-b068-ff058358f4aa")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 92.611 66.04 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)

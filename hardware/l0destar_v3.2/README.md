@@ -45,6 +45,7 @@ See below for a full change summary.
 | MCU OVP | 4.2V passes through at nominal voltage | NOT TESTED | S11Q1 on, S12TP6 ≈ S12TP7 |
 | MCU OVP | Cuts off when S12TP7 is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
 | MCU OVP | Fault injection via S11TP1 | NOT TESTED | Short S11TP1 to the unprotected rail, PP4V2 should drop |
+| MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | NOT TESTED | |
 | GPS auxillary 3.3V rail | Switches on enable signal | NOT TESTED | |
 | CAN auxillary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
 | K-line auxillary 3.3V rail | Switches on K-enable signal | NOT TESTED | |
@@ -84,14 +85,14 @@ See below for a full change summary.
   of a buck converter fault causing an over-voltage condition. This was done
   using a P-channel MOSFET controlled by an ATL431B shunt reference watching the
   rail through a 1M/1.05M divider. When the rail exceeds the threshold the
-  ATL431 a PNP on which drags the MOSFET gate up so its source and opens the
-  path. A 33M resistor from the gate back to the reference node adds hysteresis
-  so the stage latches cleanly instead of chattering. It should trip at 4.95V
-  and release at 4.80V. A reference DNP footprint was left for an optional 3.3pF
-  cap as a filter option to mitigate nuisance latching and a test point was
-  added to bypass the buck in order to test the circuit. The new protection
-  circuit was designed carefully to not add anything significant to the
-  quiescent current draw in sleep mode, estimated around ~2.5µA difference.
+  ATL431 turns a PNP on which drags the MOSFET gate up so its source and opens
+  the path. A 33M resistor from the gate back to the reference node adds
+  hysteresis so the stage latches cleanly instead of chattering. It should trip
+  at 4.95V and release at 4.80V. A reference DNP footprint was left for an
+  optional 3.3pF cap as a filter option to mitigate nuisance latching and a test
+  point was added to bypass the buck in order to test the circuit. The new
+  protection circuit was designed carefully to not add anything significant to
+  the quiescent current draw in sleep mode, estimated around ~2.5µA difference.
 
 - S5R5 added to the configuration pads: an 0402 0R that bypasses the OVP
   MOSFET in case someone wants to build the board without it. Not recommended

@@ -1812,6 +1812,79 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "l0destar configuration pads"
+		(exclude_from_sim no)
+		(at 186.817 189.738 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 2.032 2.032)
+				(thickness 0.4064)
+				(bold yes)
+			)
+			(justify left)
+		)
+		(uuid "3198e280-cdb9-4f27-aca4-c63d83664ce1")
+	)
+	(text "15"
+		(exclude_from_sim no)
+		(at 188.087 183.388 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "514aa642-195f-48d4-88f5-33e5228b1e66")
+	)
+	(text "11"
+		(exclude_from_sim no)
+		(at 185.801 183.388 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "6f6d5b86-6cfa-4d6d-9894-7d82839c19f6")
+	)
+	(text "3.2"
+		(exclude_from_sim no)
+		(at 269.113 193.294 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "7f2df0f7-0e0b-4c8b-a36c-8b079a2419c1")
+	)
+	(text "MCU overvoltage protection\nP-channel MOSFET controlled by an ATL431B shunt reference watching the rail via a divider\nIf the rail exceeds the threshold the ATL431 turns a PNP on which drags the MOSFET gate up and opens the path\nShould trip at 4.95V and release at 4.80V\nS11R4 and S11R5 should be anti-sulfur AEC-Q200 parts and conformal coated"
+		(exclude_from_sim no)
+		(at 179.07 172.72 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "a28edb93-b958-4a7a-9d34-bff318ab6d7b")
+	)
+	(text "23/08/2026"
+		(exclude_from_sim no)
+		(at 206.629 193.294 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "cd3c3940-7bc0-4d9d-94db-1079642e42fe")
+	)
 	(junction
 		(at 220.345 46.355)
 		(diameter 0)

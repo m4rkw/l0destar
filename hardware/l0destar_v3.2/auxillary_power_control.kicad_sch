@@ -1221,7 +1221,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "30/05/2026"
+	(text "23/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -1234,7 +1234,7 @@
 		)
 		(uuid "15469462-05f7-4f7d-bd0e-0df0c27ee232")
 	)
-	(text "14"
+	(text "15"
 		(exclude_from_sim no)
 		(at 188.722 183.388 0)
 		(effects
@@ -1268,9 +1268,9 @@
 		)
 		(uuid "84e62e2c-41c3-4990-b9c0-567b3f1d61ae")
 	)
-	(text "Auxillary power control to allow extremely low power usage when asleep\nWhen AUX_SW is high the +3.3V_AUX and +5V_AUX rails are enabled\nThe aux rails power the relay feedback pins, CAN chips and L9637D.\n\nThe I2C bus (accelerometer/INA228) don't use these rails as backfeeding causes issues and they\nhave inherent low power states anyway."
+	(text "Load switches for auxillary power rails\nGPS / 3.3V CAN / 3.3V K / 12V K (typically only one of CAN/K will be present)\nState signals via GPIO for rail fault detection\n12V state signal is inverted by its MOSFET"
 		(exclude_from_sim no)
-		(at 179.832 173.482 0)
+		(at 179.705 172.72 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1279,7 +1279,7 @@
 		)
 		(uuid "979798f1-fcfa-4bac-9927-b2cdb7f2c133")
 	)
-	(text "1.0"
+	(text "3.2"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects
