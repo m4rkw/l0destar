@@ -98,6 +98,9 @@ See below for a full change summary.
   MOSFET in case someone wants to build the board without it. Not recommended
   but it's good to have the option.
 
+- The top divider resistor from the buck circuit was re-specced to anti-sulfur /
+  AEC-Q200 as if this resistor fails open it causes the over-voltage condition.
+
 - I2C pull-ups changed from 4.7K to 1.8K and 100pF C0G caps added at the I2C
   pins by the accelerometer. The stronger pull-ups keep the rise time inside
   the 400 kHz Fast-mode limit with the extra capacitance: I2C specifies
