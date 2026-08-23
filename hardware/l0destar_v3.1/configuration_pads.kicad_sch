@@ -146,6 +146,79 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "3.1"
+		(exclude_from_sim no)
+		(at 268.478 193.294 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "1dd591f0-d6a6-44d6-be4d-64e1ab4db3e2")
+	)
+	(text "l0destar CAN interface"
+		(exclude_from_sim no)
+		(at 186.182 189.738 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 2.032 2.032)
+				(thickness 0.4064)
+				(bold yes)
+			)
+			(justify left)
+		)
+		(uuid "1f33115b-b6c8-490a-9edd-e8d53e5ba122")
+	)
+	(text "Configuration pads, connect for either CAN or K-line but not both"
+		(exclude_from_sim no)
+		(at 178.435 168.91 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "66ba857b-3217-4886-a1fb-ad0b44ad93aa")
+	)
+	(text "14"
+		(exclude_from_sim no)
+		(at 187.452 183.388 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "c5a22a19-048a-4ef0-a7a5-c0aae34cbbf4")
+	)
+	(text "19/08/2026"
+		(exclude_from_sim no)
+		(at 205.994 193.294 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "d43f7546-1d5a-429b-b462-48d66ca3a152")
+	)
+	(text "5"
+		(exclude_from_sim no)
+		(at 185.166 183.388 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "dc667f29-7baa-4e3e-8ace-d9e002d7a7b3")
+	)
 	(text "Configuration pads, connect for either CAN or K-line but not both"
 		(exclude_from_sim no)
 		(at 20.32 20.32 0)

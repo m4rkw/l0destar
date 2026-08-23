@@ -1861,9 +1861,9 @@
 		)
 		(uuid "7f2df0f7-0e0b-4c8b-a36c-8b079a2419c1")
 	)
-	(text "MCU overvoltage protection\nP-channel MOSFET controlled by an ATL431B shunt reference watching the rail via a divider\nIf the rail exceeds the threshold the ATL431 turns a PNP on which drags the MOSFET gate up and opens the path\nShould trip at 4.95V and release at 4.80V\nS11R4 and S11R5 should be anti-sulfur AEC-Q200 parts and conformal coated"
+	(text "MCU overvoltage protection\nP-channel MOSFET controlled by an ATL431B shunt reference watching the rail via a divider\nIf the rail exceeds the threshold the ATL431 turns a PNP on which drags the MOSFET gate up and opens the path\nShould trip at 4.95V and release at 4.80V\nS11R4 and S11R5 should be anti-sulfur AEC-Q200 parts and conformal coated\nIdeal diode for reverse current protection and bulk ceramics"
 		(exclude_from_sim no)
-		(at 179.07 172.72 0)
+		(at 179.07 173.355 0)
 		(effects
 			(font
 				(size 1.27 1.27)

@@ -1450,6 +1450,79 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "l0destar mounting holes"
+		(exclude_from_sim no)
+		(at 186.182 189.865 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 2.032 2.032)
+				(thickness 0.4064)
+				(bold yes)
+			)
+			(justify left)
+		)
+		(uuid "14dec27f-12ac-442d-bcf9-23591920d602")
+	)
+	(text "14"
+		(exclude_from_sim no)
+		(at 187.706 183.515 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "5cd580f4-a87b-4623-9dc3-aefecb46da15")
+	)
+	(text "15"
+		(exclude_from_sim no)
+		(at 184.912 183.515 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "c8378b2e-62bf-4ef7-81ac-64503afe8072")
+	)
+	(text "19/08/2026"
+		(exclude_from_sim no)
+		(at 206.248 193.421 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "d27526da-1802-4c7e-812c-760149f795de")
+	)
+	(text "3.1"
+		(exclude_from_sim no)
+		(at 268.478 193.421 0)
+		(effects
+			(font
+				(face "KiCad Font")
+				(size 1.524 1.524)
+				(thickness 0.1905)
+			)
+			(justify left)
+		)
+		(uuid "d693e38d-b99a-45fb-a090-b27a15b6c977")
+	)
+	(text "u.Fl -> SMA for LTE/GPS\n3.3V bias tee on the GPS side\nESD diodes at both external connectors"
+		(exclude_from_sim no)
+		(at 178.435 170.18 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "fdee4620-bb0e-43f9-b33d-c414ceb57956")
+	)
 	(junction
 		(at 72.39 98.425)
 		(diameter 0)

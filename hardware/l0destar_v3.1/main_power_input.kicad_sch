@@ -1831,7 +1831,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "30/05/2026"
+	(text "19/08/2026"
 		(exclude_from_sim no)
 		(at 206.248 193.294 0)
 		(effects
@@ -1844,7 +1844,7 @@
 		)
 		(uuid "012998f9-c1d3-41b9-8a40-a47e172396c9")
 	)
-	(text "Vehicle battery 12v inputs (12v permanent live and the ignition signal)\nReverse polarity protection\nTVS protection and Zener clamp\n47uF ceramic bulk at 50V"
+	(text "Vehicle battery 12v inputs (12v permanent live and the ignition signal)\nReverse polarity protection\nTVS protection and Zener clamp\n47uF ceramic bulk at 50V plus 10uF soft termination for pulse 2A transients"
 		(exclude_from_sim no)
 		(at 180.086 171.958 0)
 		(effects
@@ -1879,7 +1879,7 @@
 		)
 		(uuid "69e76a86-ad73-490c-814c-419a1fcd3fa4")
 	)
-	(text "1.0"
+	(text "3.1"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects

@@ -1239,7 +1239,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "30/05/2026"
+	(text "19/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -1286,7 +1286,7 @@
 		)
 		(uuid "7e4f58e5-0ee3-4d5d-a939-bdd2f2ebfc59")
 	)
-	(text "Buck converter 12V -> 4.2V\nLT8609 reference implementation\nLM66100 ideal diode on the output side to prevent USB voltage flowing backwards"
+	(text "Buck converter 12V -> 4.2V\nLT8609 reference implementation\nLM66100 ideal diode on the output side to prevent USB voltage flowing backwards\nBulk ceramics on the output"
 		(exclude_from_sim no)
 		(at 180.848 172.466 0)
 		(effects
@@ -1308,7 +1308,7 @@
 		)
 		(uuid "9a485d4a-1cce-4ddb-9066-8132a5c8c25b")
 	)
-	(text "1.0"
+	(text "3.1"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects

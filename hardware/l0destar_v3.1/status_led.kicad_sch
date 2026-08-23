@@ -462,7 +462,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "1.0"
+	(text "3.1"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects
@@ -475,7 +475,7 @@
 		)
 		(uuid "04d8a1f2-9710-4273-ab91-8aa3f871180c")
 	)
-	(text "30/05/2026"
+	(text "19/08/2026"
 		(exclude_from_sim no)
 		(at 206.248 193.294 0)
 		(effects
@@ -524,9 +524,9 @@
 		)
 		(uuid "cf82f27d-3f88-48fb-a116-ebca33efc810")
 	)
-	(text "PCB status LED wired to GPIO"
+	(text "3x status LEDs\nWurth 150060RS86000 recommended (800mcd)"
 		(exclude_from_sim no)
-		(at 178.816 168.91 0)
+		(at 179.07 169.545 0)
 		(effects
 			(font
 				(size 1.27 1.27)

@@ -2778,9 +2778,9 @@
 		)
 		(uuid "4d6500a5-c955-476b-8180-055fb261ac76")
 	)
-	(text "Main connector\n40-pin dual header for the MakerDiary nRF9151 Connect Kit\nMakerdiary power cable connection point with ceramic bulk\nJumper pads for CAN / ISO-9141 configuration"
+	(text "Main external connector 6-pin Microfit 3.0\n40-pin dual header for the MakerDiary nRF9151 Connect Kit\nMakerdiary power cable connection point with 100nF decoupling\nI2C pullups\nPower rail enable pin pulldowns"
 		(exclude_from_sim no)
-		(at 180.848 173.228 0)
+		(at 179.705 172.72 0)
 		(effects
 			(font
 				(face "KiCad Font")
@@ -2802,7 +2802,7 @@
 		)
 		(uuid "87b15abc-c57d-48f4-bb23-fb6d1845be27")
 	)
-	(text "30/05/2026"
+	(text "19/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -2865,7 +2865,7 @@
 		)
 		(uuid "c5e20272-1c62-4c69-9e06-6fb20ce69fcf")
 	)
-	(text "1.0"
+	(text "3.1"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects

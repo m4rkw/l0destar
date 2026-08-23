@@ -1933,7 +1933,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "30/05/2026"
+	(text "19/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -1992,9 +1992,9 @@
 		)
 		(uuid "c9e8b704-43bd-46f1-a0e1-756099ca6dde")
 	)
-	(text "CAN interface with dedicated dual-line bus protector\n40MHz crystal"
+	(text "CAN interface with dedicated dual-line bus protector\n40MHz crystal\nOptional choke, bypass with 2x 0R 0402"
 		(exclude_from_sim no)
-		(at 180.086 171.196 0)
+		(at 179.07 171.45 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2003,7 +2003,7 @@
 		)
 		(uuid "db3c8b4b-d092-4c9f-93d3-aefd9173b27a")
 	)
-	(text "1.0"
+	(text "3.1"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects
