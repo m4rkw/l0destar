@@ -202,9 +202,10 @@ int collect_data(int ignitionState)
     if (g_cell.valid && (g_cell.dirty || stale)) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
-                     ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=%d;rat=CATM1",
+                     ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=%d;rat=%s",
                      g_cell.mcc, g_cell.mnc,
-                     g_cell.tac, g_cell.cid, stale ? 1 : 0);
+                     g_cell.tac, g_cell.cid, stale ? 1 : 0,
+                     modem_rat());
         if (n > 0) data_index += n;
         g_cell.dirty = false;
     }

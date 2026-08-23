@@ -107,6 +107,8 @@ const char *fota_board_id(void)
 #define FOTA_MIN_BATTERY_V  (CONFIG_APP_FOTA_MIN_BATTERY_MV / 1000.0f)
 #define FOTA_DL_ATTEMPTS      CONFIG_APP_FOTA_DOWNLOAD_ATTEMPTS
 #define FOTA_DL_RETRY_DELAY_S CONFIG_APP_FOTA_RETRY_DELAY_S
+#define FOTA_NBIOT_DEFERRALS  CONFIG_APP_FOTA_NBIOT_DEFERRALS
+#define FOTA_RESCAN_TIMEOUT_S CONFIG_APP_FOTA_RESCAN_TIMEOUT_S
 
 /* Version fields are one byte each in the MCUboot image header, and the
  * VERSION file is validated against the same range at build time. */
@@ -127,6 +129,7 @@ static bool    s_forced;
 static bool    s_boot_check = true;   /* the one unconditional power-on check */
 static bool    s_dl_init_done;
 static uint32_t s_alerted_ver;    /* version we've already reported stuck */
+static int     s_nbiot_defers;    /* consecutive checks deferred off NB-IoT */
 
 /* -- download completion --------------------------------------------------- */
 static K_SEM_DEFINE(s_dl_done, 0, 1);
@@ -484,6 +487,36 @@ int fota_check(enum fota_ctx ctx)
         return -EAGAIN;
     }
 
+#if FOTA_NBIOT_DEFERRALS > 0
+    /* NB-IoT carries telemetry perfectly well and a ~275 KB image very badly:
+     * a few tens of kbps at best, and a round trip per 2 KB range over a link
+     * whose latency is measured in seconds.  Attempting anyway spends minutes
+     * of radio time to arrive back where it started.
+     *
+     * Deferring outright would be worse — a unit that only ever sees NB-IoT
+     * would never update at all.  So try to get off it first, and if the unit
+     * really is somewhere NB-IoT is all there is, give in and attempt anyway
+     * after a few checks rather than stalling forever. */
+    if (!modem_is_nbiot()) {
+        s_nbiot_defers = 0;
+    } else {
+        LOG_WRN("on NB-IoT — re-scanning for LTE-M before downloading");
+        (void)modem_rescan_plmn(FOTA_RESCAN_TIMEOUT_S);
+
+        if (modem_is_nbiot()) {
+            s_nbiot_defers++;
+            if (s_nbiot_defers <= FOTA_NBIOT_DEFERRALS) {
+                LOG_WRN("still NB-IoT — deferring download (%d/%d)",
+                        s_nbiot_defers, FOTA_NBIOT_DEFERRALS);
+                fail_backoff();
+                return -EAGAIN;
+            }
+            LOG_WRN("still NB-IoT after %d deferrals — attempting anyway",
+                    FOTA_NBIOT_DEFERRALS);
+        }
+    }
+#endif
+
     LOG_INF("updating %s -> %s (%s)", APP_VERSION_STRING, ver_str, s_dl_file);
     snprintf(s_dl_host, sizeof(s_dl_host), "%s://%s:%d",
              FOTA_USE_TLS ? "https" : "http", FOTA_HOST,
@@ -529,6 +562,16 @@ int fota_check(enum fota_ctx ctx)
             break;
         }
 
+        /* Escalate before the last attempt.  Retrying on the same cell covers
+         * a transient stall; it does nothing for the case actually seen in the
+         * field, where a stationary unit camped on a marginal cell failed
+         * three checks in a row and then downloaded in 97 s as soon as
+         * reselection put it somewhere else. */
+        if (IS_ENABLED(CONFIG_APP_FOTA_RESCAN_ON_RETRY) &&
+            attempt == FOTA_DL_ATTEMPTS - 1) {
+            (void)modem_rescan_plmn(FOTA_RESCAN_TIMEOUT_S);
+        }
+
         if (attempt < FOTA_DL_ATTEMPTS) {
             /* Let the link settle before going again, feeding the watchdog
              * across the wait rather than sleeping through it in one block. */
@@ -564,6 +607,7 @@ int fota_check(enum fota_ctx ctx)
     }
 
     s_alerted_ver = 0;
+    s_nbiot_defers = 0;
 
     s_fail_count = 0;
     LOG_INF("image staged — rebooting into %s", ver_str);

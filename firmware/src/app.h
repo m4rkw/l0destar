@@ -103,6 +103,9 @@ void modem_set_apn(const char *apn);
 int  modem_at(const char *cmd, char *resp, size_t resp_len);
 int  modem_recover(int failure_count);
 int  modem_update_cell_info(void);
+const char *modem_rat(void);           /* "CATM1" / "NBIOT" / "UNKNOWN" */
+bool modem_is_nbiot(void);
+int  modem_rescan_plmn(int timeout_s); /* force cell/PLMN reselection */
 
 int  gnss_init(void);
 int  gnss_start(void);

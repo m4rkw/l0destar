@@ -143,10 +143,12 @@ static int provision_fota_tag(void)
     return 0;
 }
 
-int modem_connect(void)
+/* Everything that has to be in place before CFUN=1.  Factored out because
+ * modem_rescan_plmn() drops to CFUN=4 and back, which loses the session these
+ * set up — a re-scan that skipped them would come back registered but without
+ * RAI, quietly costing the GNSS duty cycle the whole design depends on. */
+static void apply_link_settings(void)
 {
-    modem_set_apn(g_settings.apn);
-
     /* +COPS selection mode persists in modem NVM across power cycles; force
      * automatic PLMN selection in case a manual selection was ever stored. */
     nrf_modem_at_printf("AT+COPS=0");
@@ -170,6 +172,86 @@ int modem_connect(void)
     } else {
         at_monitor_resume(&rai_urc);
     }
+}
+
+/* Access technology actually in use, for the telemetry rat= field and the
+ * FOTA gate.  This used to be hardcoded "CATM1", which hid the one thing that
+ * would have explained a run of failed downloads. */
+const char *modem_rat(void)
+{
+    enum lte_lc_lte_mode mode;
+
+    if (lte_lc_lte_mode_get(&mode) != 0) {
+        return "UNKNOWN";
+    }
+    switch (mode) {
+    case LTE_LC_LTE_MODE_LTEM:  return "CATM1";
+    case LTE_LC_LTE_MODE_NBIOT: return "NBIOT";
+    default:                    return "UNKNOWN";
+    }
+}
+
+bool modem_is_nbiot(void)
+{
+    enum lte_lc_lte_mode mode;
+
+    return lte_lc_lte_mode_get(&mode) == 0 && mode == LTE_LC_LTE_MODE_NBIOT;
+}
+
+/* Drop the link and make the modem choose a cell/PLMN from scratch.
+ *
+ * A stationary unit can sit on one marginal cell for hours: telemetry is a few
+ * hundred bytes and goes through, while a multi-minute bulk transfer on the
+ * same cell fails every time.  Reselection only happens on its own terms, so
+ * the escape is to force it — CFUN=4 then CFUN=1 with automatic selection.
+ * This is the automated form of power-cycling the unit, which is what made a
+ * stuck download complete on the bench.
+ *
+ * Registration is polled rather than waited on with lte_lc_connect(): the task
+ * watchdog is a 32 s window and a blocking connect can outlast it. */
+int modem_rescan_plmn(int timeout_s)
+{
+    LOG_INF("forcing PLMN re-scan (was %s)", modem_rat());
+
+    s_connected = false;
+    network_ready = false;
+
+    int err = lte_lc_offline();
+    if (err) {
+        LOG_WRN("lte_lc_offline: %d", err);
+    }
+    k_msleep(500);
+
+    apply_link_settings();
+
+    err = lte_lc_normal();
+    if (err) {
+        LOG_ERR("lte_lc_normal: %d", err);
+        return err;
+    }
+
+    for (int waited = 0; waited < timeout_s; waited++) {
+        k_sleep(K_SECONDS(1));
+        watchdog_kick();
+
+        int reg = modem_get_network_status();
+        if (reg == 1 || reg == 5) {
+            s_connected = true;
+            network_ready = true;
+            LOG_INF("re-registered after %ds on %s", waited + 1, modem_rat());
+            return 0;
+        }
+    }
+
+    LOG_WRN("no registration %ds after re-scan", timeout_s);
+    return -ETIMEDOUT;
+}
+
+int modem_connect(void)
+{
+    modem_set_apn(g_settings.apn);
+
+    apply_link_settings();
 
     LOG_INF("connecting (this can take 30s+)...");
     int err = lte_lc_connect();

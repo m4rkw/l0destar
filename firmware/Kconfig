@@ -218,6 +218,34 @@ config APP_FOTA_RETRY_DELAY_S
 	  Settling time between attempts within a check.  The watchdog is fed
 	  across the wait.
 
+config APP_FOTA_RESCAN_ON_RETRY
+	bool "Force a PLMN re-scan before the last download attempt"
+	default y
+	help
+	  Retrying on the same cell only helps a transient stall.  A stationary
+	  unit camped on a marginal cell fails every attempt until something
+	  makes it reselect, so escalate to a full cell/PLMN re-scan before the
+	  final try.  Needs APP_FOTA_DOWNLOAD_ATTEMPTS >= 2 to have any effect.
+
+config APP_FOTA_NBIOT_DEFERRALS
+	int "Checks to defer while stuck on NB-IoT (0 = never defer)"
+	default 3
+	range 0 20
+	help
+	  NB-IoT moves telemetry fine and a ~275 KB image barely at all.  When a
+	  check finds the modem on NB-IoT, re-scan for LTE-M first; if it is
+	  still NB-IoT, skip the download rather than spend minutes of radio
+	  time on it.  After this many consecutive deferrals, attempt anyway —
+	  otherwise a unit somewhere NB-IoT is all there is would never update.
+	  Set 0 to always attempt regardless of access technology.
+
+config APP_FOTA_RESCAN_TIMEOUT_S
+	int "Seconds to wait for registration after a PLMN re-scan"
+	default 90
+	range 10 600
+	help
+	  The watchdog is fed while waiting.
+
 config APP_FOTA_RETRY_HOLDOFF_S
 	int "Holdoff after a failed update attempt (seconds)"
 	default 600
