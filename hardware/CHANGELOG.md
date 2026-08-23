@@ -3,6 +3,11 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 23/08/2026
+
+- v3.2 board prototype added with MCU over-voltage protection and I2C bus
+  hardening
+
 ## 16/08/2026
 
 - Added v3.1 board with more robust input protection, auxillary power rail
