@@ -1,6 +1,28 @@
 # Changelog
 
-## Unreleased
+## 0.4.9
+
+- Rail sensing was boot-only — the README's headline v3.1 feature wasn't
+actually protecting anything. hw_domain_request() raised the enable, slept 15 ms
+and assumed success. If a load switch failed, hw_can_init() would then drive
+CS/SCK/SDI as outputs into an unpowered MCP2518FD — precisely the clamp-diode
+backfeed the README's Notes exist to prevent. The request path now waits for the
+domain's sense line(s), and on failure re-parks every pin, drops the enable,
+alerts once (latched so it can't spam the 5-deep queue), and returns -EIO.
+hw_can_init/hw_can_power_on/kline_power_on now bail instead of driving.
+hw_domain_request and kline_power_on changed from void to int.
+
+- The self-test's "rail off" check would false-alarm on healthy boards. It
+sampled once after a fixed 20 ms. Nothing on these rails is actively discharged:
+PP3V3_CAN carries 10.2 µF (S9C5 + two 100 nF) draining through the parked
+CAN_CS/CAN_INT pulldowns in series with their 10 K pull-ups once the MCP2518FD
+and MAX33041 drop out of regulation — roughly 130 ms to fall below the sense
+threshold. PP12V_K is ~100 nF against the 280 K sense divider plus the
+TJA1027T's sleep current, which lands in the same tens-of-ms range as the old 20
+ms window. Both now poll with a 500 ms timeout, keeping the per-rail alert
+labels.
+
+## 0.4.5
 
 ### Ignition-off telemetry (`src/main.c`, `src/data.c`)
 - **The final ignition-off point is no longer lost to a latching race.**
