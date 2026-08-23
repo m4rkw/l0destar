@@ -891,7 +891,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "30/05/2026"
+	(text "02/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -938,7 +938,7 @@
 		)
 		(uuid "84e62e2c-41c3-4990-b9c0-567b3f1d61ae")
 	)
-	(text "Auxillary power control to allow extremely low power usage when asleep\nWhen AUX_SW is high the +3.3V_AUX and +5V_AUX rails are enabled\nThe aux rails power the relay feedback pins, CAN chips and L9637D.\n\nThe I2C bus (accelerometer/INA228) don't use these rails as backfeeding causes issues and they\nhave inherent low power states anyway."
+	(text "Auxillary power control to allow extremely low power usage when asleep\nWhen AUX_SW is high the +3.3V_AUX rail is enabled\n\nThe I2C bus (accelerometer/INA228) don't use these rails as backfeeding causes issues and they\nhave inherent low power states anyway."
 		(exclude_from_sim no)
 		(at 179.832 173.482 0)
 		(effects
@@ -949,7 +949,7 @@
 		)
 		(uuid "979798f1-fcfa-4bac-9927-b2cdb7f2c133")
 	)
-	(text "1.0"
+	(text "2.6m"
 		(exclude_from_sim no)
 		(at 268.478 193.294 0)
 		(effects
