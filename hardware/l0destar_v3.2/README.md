@@ -209,8 +209,8 @@ are generated directly and only the enabled interface is ever powered.
 |------|-------------|---------------|---------|-------|
 | MCU | MCU and GSM/GPS 40pin board | nRF9151 Connect Kit | [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) | |
 | S1J1 | Molex Micro-fit 3.0 2x03 PCB connector | 43045-0600 | [43045-0600](https://uk.farnell.com/molex/43045-0600/conn-r-a-pcb-hdr-6pos-2row-3mm/dp/1012252) | |
-| S1J2 | Makerdiary header 1 | 20-pin 2.54mm header | [20-pin pcb header](https://amzn.to/44hTFGN) | |
-| S1J3 | Makerdiary header 2 | 20-pin 2.54mm header | [20-pin pcb header](https://amzn.to/44hTFGN) | |
+| S1J2 | Makerdiary header 1 | 20-pin 2.54mm header | [20-pin pcb header](https://www.aliexpress.com/item/1005003610333849.html) | |
+| S1J3 | Makerdiary header 2 | 20-pin 2.54mm header | [20-pin pcb header](https://www.aliexpress.com/item/1005003610333849.html) | |
 | S1R1 | I2C pull-up resistor | 0402 1.8K 1% | [MCMR04X1801FTL](https://uk.farnell.com/multicomp-pro/mcmr04x1801ftl/res-1k8-1-0-0625w-0402-ceramic/dp/2072709) | |
 | S1R2 | I2C pull-up resistor | 0402 1.8K 1% | [MCMR04X1801FTL](https://uk.farnell.com/multicomp-pro/mcmr04x1801ftl/res-1k8-1-0-0625w-0402-ceramic/dp/2072709) | |
 | S1R3 | 100K pulldown resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
@@ -382,13 +382,13 @@ on which interfaces are fitted. Quantities are per board.
 |-------|------|----------|---------------|---------|-------|
 | All | MCU and GSM/GPS 40pin board | 1 | nRF9151 Connect Kit | [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) | |
 | All | Molex Micro-fit 3.0 2x03 PCB connector | 1 | 43045-0600 | [43045-0600](https://uk.farnell.com/molex/43045-0600/conn-r-a-pcb-hdr-6pos-2row-3mm/dp/1012252) | |
-| All | 20-pin 2.54mm header | 2 | 20-pin 2.54mm header | [20-pin pcb header](https://amzn.to/44hTFGN) | |
+| All | 20-pin 2.54mm header | 2 | 20-pin 2.54mm header | [20-pin pcb header](https://www.aliexpress.com/item/1005003610333849.html) | |
 | All | 15R 0508 resistor | 1 | 0508 15R 5% 1W | [3430A2F15RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f15rtdf/res-15r-1w-thick-film-0508-wide/dp/4206818) | |
 | All | 1K 0402 resistor | 3 | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
 | All | Accelerometer ferrite bead | 1 | 0402 0R (or ferrite bead) | [BLM15AG601SH1D](https://uk.farnell.com/murata/blm15ag601sh1d/ferrite-bead-0-6ohm-0-3a-0402/dp/2470354) | |
 | All | 1.8K 0402 resistor | 2 | 0402 1.8K 1% | [MCMR04X1801FTL](https://uk.farnell.com/multicomp-pro/mcmr04x1801ftl/res-1k8-1-0-0625w-0402-ceramic/dp/2072709) | |
 | All | 10K 0402 resistor | 1 | 0402 10K 1% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
-| All | 15K 0805 anti-sulfur resistor | 0805 15K 1% ANTI-SULFUR AEC-Q200 | [MCMR08X1502FTL](https://uk.farnell.com/multicomp-pro/mcmr08x1502ftl/res-15k-1-0-125w-0805-ceramic/dp/2073646) | anti-sulfur AEC-Q200 recommended |
+| All | 15K 0805 anti-sulfur resistor | 1 | 0805 15K 1% ANTI-SULFUR AEC-Q200 | [MCMR08X1502FTL](https://uk.farnell.com/multicomp-pro/mcmr08x1502ftl/res-15k-1-0-125w-0805-ceramic/dp/2073646) | anti-sulfur AEC-Q200 recommended |
 | All | 18.2K 0402 resistor | 1 | 0402 18.2K 1% | [RC0402FR-0718K2L](https://uk.farnell.com/yageo/rc0402fr-0718k2l/res-18k2-1-0-0625w-0402-thick/dp/3495542) | 18.2K == 2MHz |
 | All | 56K 0402 resistor | 2 | 0402 56K 5% | [MCMR04X5602FTL](https://uk.farnell.com/multicomp-pro/mcmr04x5602ftl/res-56k-1-0-0625w-0402-ceramic/dp/2073131) | |
 | All | 100K 0402 resistor | 5 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
