@@ -47,15 +47,15 @@ See below for a full change summary.
 | LT8609#1 | 4.2V output | PASSED | |
 | GPS auxillary 3.3V rail | Switches on enable signal | PASSED | |
 | CAN auxillary 3.3V rail | Switches on CAN-enable signal | PASSED | |
-| K-line auxillary 3.3V rail | Switches on K-enable signal | NOT TESTED | |
-| K-line auxillary 12V rail | Switches on K-enable signal | NOT TESTED | |
+| K-line auxillary 3.3V rail | Switches on K-enable signal | PASSED | |
+| K-line auxillary 12V rail | Switches on K-enable signal | PASSED | |
 | Accelerometer | Operates while awake | PASSED | |
 | Accelerometer | Wake on motion | PASSED | |
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
-| ISO-9141 | K-wire connectivity | NOT TESTED | |
-| ISO-9141 | L-line pulldown | NOT TESTED | |
+| ISO-9141 | K-wire connectivity | PASSED | |
+| ISO-9141 | L-line pulldown | PASSED | |
 | CAN | Connectivity | PASSED | |
-| CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
+| CAN standby via XSTBY signal | Low standby current | PASSED | |
 | Board | Quiescent current | 120 µA | |
 
 ## Features
