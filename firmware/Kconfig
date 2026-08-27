@@ -67,6 +67,15 @@ config APP_ACCEL_TEST
 	  At startup, print accel/gyro/temp readings continuously at 10 Hz
 	  for noise analysis.  Loops forever; does not enter the main loop.
 
+config APP_VOLTAGE_TEST
+	bool "Stream INA228 bus voltage at boot"
+	default n
+	help
+	  At startup, read VBUS from the INA228 and print it continuously at
+	  2 Hz.  Loops forever; does not enter the main loop.  Temporary bench
+	  bring-up aid — leave off in production.  Has no effect while
+	  APP_DEBUG_BATTERY_MV is set, which fakes the reading.
+
 config APP_OBD_MODE
 	int "OBD interface mode (0=none, 1=CAN, 2=K-line)"
 	default 0
@@ -343,7 +352,19 @@ config APP_MOVEMENT_CONFIRM_MS
 
 config APP_MOVEMENT_CONFIRM_HITS
 	int "Required above-threshold samples to confirm"
-	default 20
+	default 6
+	help
+	  accel_confirm_movement() polls every 100 ms for
+	  APP_MOVEMENT_CONFIRM_MS, so the window offers
+	  APP_MOVEMENT_CONFIRM_MS/100 polls and this must stay comfortably
+	  below that number — set equal to it and every single sample has to
+	  clear the threshold, which real movement never manages because
+	  changes of direction pass through ~1 g.  A BUILD_ASSERT in
+	  hw_accel.c rejects that case outright.
+
+	  6 is 600 ms of cumulative motion, which a hand pushing the unit
+	  around clears easily while a single knock does not.  Hits
+	  accumulate over the whole window and need not be consecutive.
 
 config APP_MOVEMENT_INACTIVITY_RESET
 	int "Inactivity reset timer (seconds)"
@@ -361,6 +382,35 @@ config APP_CRASH_THRESHOLD_MG
 	  Production ~4000 (4 g); set ~1200 in local.conf for bench testing —
 	  a firm rap on the desk reaches 1.5-3 g.  Rounded down to 125 mg
 	  steps (±8 g FS / 64).
+
+config APP_IMPACT_IMMEDIATE_MG
+	int "Report an impact without waiting for the movement confirm (milli-g, 0 = never)"
+	default 700
+	help
+	  Peak | |a| - 1g | from the FIFO ring, drained the moment an accel
+	  wake arrives, that is reported straight away instead of after
+	  accel_confirm_movement() has spent up to APP_MOVEMENT_CONFIRM_MS
+	  deciding whether the unit is being moved.  The confirm still runs
+	  afterwards, so a hit followed by movement raises both alerts.
+
+	  Must sit above APP_PARKED_IMPACT_MG and below the clip ceiling:
+	  sleep runs the accel at +/-2 g, so the deviation saturates around
+	  1000-1200 mg and a threshold above that can never fire.  That
+	  leaves a narrow window, which is why APP_IMPACT_IMMEDIATE_MAX_MS
+	  qualifies it by duration as well.  Set 0 to disable and always
+	  wait for the confirm.
+
+config APP_IMPACT_IMMEDIATE_MAX_MS
+	int "Longest event still treated as an impact (ms)"
+	default 300
+	help
+	  Amplitude alone cannot separate a hit from someone taking firm hold
+	  of the unit, because both clip at +/-2 g.  Duration can: an impact
+	  is a spike of tens of ms, while movement stays above the noise for
+	  hundreds.  An over-threshold wake lasting longer than this is left
+	  to the movement confirm instead of being reported as an impact.
+	  Measured as accel_impact.over_ms — time with the deviation above
+	  250 mg — which the ring resolves in 38 ms steps (26 Hz batching).
 
 config APP_TOW_TILT_DEG
 	int "Tow/jack tilt alert threshold (degrees, 0 = disabled)"
@@ -380,15 +430,66 @@ config APP_TOW_POLL_S
 	  accelerometer read (~ms); the power cost is negligible on vehicle
 	  power.
 
+config APP_ACCEL_ALERT_PRIORITY
+	int "Priority for accelerometer-derived alerts"
+	default 2
+	range -2 2
+	help
+	  Priority sent on the A,<prio>,<msg> line for every accel-derived
+	  alert — movement, tow/jack tilt, parked impact and the awake impact
+	  alert.  The server hands this straight to Pushover, whose scale is
+	  -2 (log only, no notification), -1 (quiet, no sound), 0 (normal),
+	  1 (high, bypasses quiet hours) and 2 (emergency: retries until
+	  acknowledged, per the retry/expire settings in the server config).
+	  Defaults to 2 — a tracker that only alerts on theft should insist.
+	  Drop to 0 or -1 on a bench unit, or on a vehicle parked somewhere
+	  that bumps it all day, so accel alerts still arrive and are logged
+	  without demanding an acknowledgement.  Battery, self-test, FOTA and
+	  command-reply alerts keep their own priorities.  Note the server
+	  already demotes priority 2 to 0 for a device marked as garaged.
+
+config APP_LED_ACCEL_WAKE
+	bool "Blink the status LEDs on accelerometer wakes"
+	default n
+	help
+	  When a sleep wake is qualified as movement/tow-tilt or as a parked
+	  impact, play a pattern on LED1-3: a 1->2->3, hold, 3->2->1 sweep
+	  (twice, 3.6 s) for movement or tilt, and a fast LED1+LED3 / LED2
+	  alternation for an impact (5 s).  The pattern runs on a timer in
+	  the background, so it carries on across the modem session that
+	  sends the alert rather than delaying it.  Off by default —
+	  a parked unit that blinks on every bump both wastes the vehicle
+	  battery and advertises where it is.  Useful for install checks and
+	  bench work.  Needs LED2/LED3 fitted to show the full pattern; with
+	  only LED1 the patterns degrade to blinks on that one.
+
+config APP_TOW_REARM_S
+	int "Re-arm the tow/tilt alert after this long at a new resting attitude (seconds, 0 = never)"
+	default 900
+	help
+	  A tow alert latches so one lift does not produce a stream of them,
+	  and the latch only clears when the unit comes back within half the
+	  threshold of the attitude snapped at sleep entry.  A vehicle set
+	  down anywhere other than where it started therefore never re-arms,
+	  and no later tilt can alert again for the rest of the parked
+	  session.
+
+	  Once the attitude has held still for this long, take it as the new
+	  normal: re-snap the tilt reference, clear the latch, and alert
+	  again only on a further tilt from there.  Stillness is required
+	  precisely so this cannot re-arm mid-lift and hide the rest of a
+	  slow tow.  Set 0 to keep the old behaviour.
+
 config APP_PARKED_IMPACT_MG
 	int "Parked impact alert threshold (milli-g)"
 	default 800
 	help
 	  Peak | |a| - 1g | from the FIFO ring during an unconfirmed movement
 	  wake (a "transient bump") that raises a parked-impact alert instead
-	  of being ignored.  Sleep runs the accel at ±2 g, so hard hits clip:
-	  the measurable deviation caps around ~1000-1200 mg — thresholds
-	  above that can never fire.
+	  of being ignored.  Sleep runs the accel at ±2 g, but each axis
+	  clips independently, so the vector magnitude still reaches
+	  2*sqrt(3) = 3.46 g and the deviation runs to ~2460 mg — bench hits
+	  are logged at 2 g routinely.
 
 # --- coast-to-stop ---------------------------------------------------------
 

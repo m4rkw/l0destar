@@ -9,6 +9,8 @@
  * Boot:  1→2→3→2→1 bounce until first GPS fix.
  * Run:   LED1 on, LED2 flash/solid for GPS, LED3 flash/solid for send.
  * Sleep: 3→2→1 sweep during shutdown, then all off.
+ * Accel: movement/tilt and impact patterns on wake, played in the background
+ *        while the event is handled; off by default (CONFIG_APP_LED_ACCEL_WAKE).
  */
 
 #include <zephyr/kernel.h>
@@ -76,12 +78,96 @@ static void sleep_anim_fn(struct k_timer *t)
 }
 K_TIMER_DEFINE(s_sleep_timer, sleep_anim_fn, NULL);
 
+/* --- accelerometer wake animation engine --------------------------------- */
+/*
+ * Runs in the background off a self-re-arming one-shot timer, so the sleep
+ * loop starts a pattern and carries straight on qualifying the event and
+ * sending the alert — the LEDs keep going across the modem session.
+ *
+ * A pattern is a table of (LED mask, duration) steps played `reps` times;
+ * the callback applies one step and re-arms for that step's duration, so
+ * steps can have different lengths.  Nothing here blocks or allocates, and
+ * it all runs in ISR context.
+ */
+
+#define LED_M1  0x01
+#define LED_M2  0x02
+#define LED_M3  0x04
+
+struct led_step {
+	uint8_t  mask;
+	uint16_t ms;
+};
+
+static void set_leds_mask(uint8_t m)
+{
+	gpio_pin_set(s_gpio, PIN_LED1, (m & LED_M1) != 0);
+	if (PIN_LED2 >= 0) gpio_pin_set(s_gpio, PIN_LED2, (m & LED_M2) != 0);
+	if (PIN_LED3 >= 0) gpio_pin_set(s_gpio, PIN_LED3, (m & LED_M3) != 0);
+}
+
+/* Movement / tow-tilt: 1→2→3, hold on 3, 3→2→1, dark gap — twice. */
+static const struct led_step s_move_seq[] = {
+	{ LED_M1, 150 },
+	{ LED_M2, 150 },
+	{ LED_M3, 900 },   /* up-step + hold + down-step, one contiguous 3 */
+	{ LED_M2, 150 },
+	{ LED_M1, 150 },
+	{ 0,      600 },   /* gap before the repeat (trailing one is harmless) */
+};
+#define ACCEL_MOVE_REPS   2
+
+/* Impact: LED1+LED3 together alternating with LED2 alone, for ~5 s.
+ * 300 ms a side divides into 5000 ms as 8 whole cycles, so the pattern
+ * actually runs 4.8 s rather than being cut off mid-alternation. */
+#define ACCEL_IMPACT_STEP_MS  100
+#define ACCEL_IMPACT_TOTAL_MS 5000
+static const struct led_step s_impact_seq[] = {
+	{ LED_M1 | LED_M3, ACCEL_IMPACT_STEP_MS },
+	{ LED_M2,          ACCEL_IMPACT_STEP_MS },
+};
+#define ACCEL_IMPACT_REPS \
+	(ACCEL_IMPACT_TOTAL_MS / (ARRAY_SIZE(s_impact_seq) * ACCEL_IMPACT_STEP_MS))
+
+static const struct led_step *s_seq;
+static int s_seq_len, s_seq_reps, s_seq_idx;
+
+static void accel_anim_fn(struct k_timer *t);
+K_TIMER_DEFINE(s_accel_timer, accel_anim_fn, NULL);
+
+static void accel_anim_fn(struct k_timer *t)
+{
+	if (s_seq_idx >= s_seq_len) {
+		if (--s_seq_reps <= 0) {
+			set_leds_mask(0);
+			return;         /* not re-armed — the pattern is over */
+		}
+		s_seq_idx = 0;
+	}
+
+	const struct led_step *st = &s_seq[s_seq_idx++];
+	set_leds_mask(st->mask);
+	k_timer_start(&s_accel_timer, K_MSEC(st->ms), K_NO_WAIT);
+}
+
+/* Safe from a thread: the first step is applied inline, the rest by timer. */
+static void accel_anim_start(const struct led_step *seq, int len, int reps)
+{
+	k_timer_stop(&s_accel_timer);
+	s_seq = seq;
+	s_seq_len = len;
+	s_seq_reps = reps;
+	s_seq_idx = 0;
+	accel_anim_fn(NULL);
+}
+
 static void stop_all_timers(void)
 {
 	k_timer_stop(&s_boot_timer);
 	k_timer_stop(&s_led2_timer);
 	k_timer_stop(&s_led3_timer);
 	k_timer_stop(&s_sleep_timer);
+	k_timer_stop(&s_accel_timer);
 }
 
 /* --- init ---------------------------------------------------------------- */
@@ -223,6 +309,29 @@ void led_all_off(void)
 		gpio_pin_set_dt(&dt_led, 0);
 	}
 #endif
+}
+
+/* --- accelerometer wake indication --------------------------------------- */
+/*
+ * Off unless CONFIG_APP_LED_ACCEL_WAKE.  Both return immediately — the
+ * pattern plays out on the timer while the caller qualifies the event,
+ * brings the modem up and sends the alert.  Starting either one cancels
+ * whatever was already running, and the LEDs are left off at the end.
+ */
+
+void led_accel_movement(void)
+{
+	if (!LED_ACCEL_WAKE || !s_multi) return;
+	stop_all_timers();
+	accel_anim_start(s_move_seq, ARRAY_SIZE(s_move_seq), ACCEL_MOVE_REPS);
+}
+
+void led_accel_impact(void)
+{
+	if (!LED_ACCEL_WAKE || !s_multi) return;
+	stop_all_timers();
+	accel_anim_start(s_impact_seq, ARRAY_SIZE(s_impact_seq),
+			 ACCEL_IMPACT_REPS);
 }
 
 /* --- utility ------------------------------------------------------------- */

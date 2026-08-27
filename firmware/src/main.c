@@ -151,6 +151,12 @@ static void accel_irq_enable(void)
     if (!accel_available()) return;
     accel_cb_install();
     accel_enable_wake_int();
+    /* Drop anything latched before this arming — a stale flag from the awake
+     * path, or the FS/ODR step that fires a spurious wake ~26 ms into
+     * accel_enable_wake_int() — so the first sleep iteration doesn't confirm
+     * a phantom.  Cleared before the GPIO interrupt is armed, never after,
+     * or a real edge arriving here would be swallowed. */
+    atomic_clear(&s_accel_int_flag);
     gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
                                  GPIO_INT_EDGE_TO_ACTIVE);
 }
@@ -209,7 +215,7 @@ static void crash_check(void)
                  src, ax, ay, az, (double)g_gnss.speed_kmh);
     }
     LOG_WRN("%s", msg);
-    alert_enqueue(msg, 2);
+    alert_enqueue(msg, ACCEL_ALERT_PRIORITY);
     alert_send();
 }
 
@@ -299,6 +305,8 @@ static void do_sleep(void)
 
     bool tow_alerted = false;
     bool tamper_alerted = false;
+    int  tow_last_tilt = -1;      /* tenths, for the "still" test */
+    int  tow_stable_secs = 0;
 
     if (s_saved_loop_interval < 0) {
         s_saved_loop_interval = g_settings.loop_interval;
@@ -334,6 +342,13 @@ static void do_sleep(void)
         int elapsed = (int)((k_uptime_get() - t0) / 1000);
         if (elapsed < 1) elapsed = 1;
 
+        /* Set by every path below that brings the radio up.  network_ready is
+         * not enough on its own: modem_connect() sets it only on success, but
+         * lte_lc_connect() has already taken the modem out of offline mode by
+         * the time it fails, so a failed connect leaves the radio powered and
+         * searching with the flag still false. */
+        bool modem_raised = false;
+
         /* update timers */
         if (telemetry_remaining > 0) telemetry_remaining -= elapsed;
         if (s_move_cooldown_secs > 0) s_move_cooldown_secs -= elapsed;
@@ -344,25 +359,60 @@ static void do_sleep(void)
         /* --- slow-tilt check (tow / jack) --- */
         if (TOW_TILT_DEG > 0 && accel_available()) {
             int tilt = accel_tilt_from_ref_tenths();
+
+            /* How long the attitude has held still.  The re-arm below leans
+             * on this: re-snapping the reference while the angle is still
+             * creeping would swallow the rest of a slow lift. */
+            if (tilt >= 0) {
+                int drift = (tow_last_tilt < 0) ? -1
+                          : (tilt > tow_last_tilt ? tilt - tow_last_tilt
+                                                  : tow_last_tilt - tilt);
+                if (drift >= 0 && drift <= TOW_STABLE_TENTHS) {
+                    tow_stable_secs += elapsed;
+                } else {
+                    tow_stable_secs = 0;
+                }
+                tow_last_tilt = tilt;
+            }
+
             if (tilt >= TOW_TILT_DEG * 10) {
                 k_msleep(2000);                       /* debounce */
                 tilt = accel_tilt_from_ref_tenths();
                 if (tilt >= TOW_TILT_DEG * 10 && !tow_alerted) {
                     tow_alerted = true;
+                    tow_stable_secs = 0;
                     LOG_WRN("sustained tilt %d.%ddeg - possible tow/jack",
                             tilt / 10, tilt % 10);
+                    led_accel_movement();
                     char msg[56];
                     snprintf(msg, sizeof(msg),
                              "tilt %d.%ddeg - possible tow/jack",
                              tilt / 10, tilt % 10);
-                    alert_enqueue(msg, 2);
+                    alert_enqueue(msg, ACCEL_ALERT_PRIORITY);
                     watchdog_kick();
                     int reg = modem_get_network_status();
-                    if (reg != 1 && reg != 5) modem_connect();
+                    if (reg != 1 && reg != 5) {
+                        modem_connect();
+                        modem_raised = true;
+                    }
                     alert_send_standalone();
                 }
             } else if (tilt >= 0 && tilt < TOW_TILT_DEG * 5) {
                 tow_alerted = false;   /* re-arm once back near level */
+            }
+
+            /* Latched at an attitude it is not coming back from: once that
+             * attitude has held still long enough, adopt it as the new
+             * normal so a *further* tilt can alert again.  Without the
+             * re-snap, clearing the latch would just re-alert on the lift
+             * that is already reported. */
+            if (tow_alerted && TOW_REARM_S > 0 &&
+                tow_stable_secs >= TOW_REARM_S) {
+                accel_snapshot_tilt_ref();
+                tow_alerted = false;
+                tow_stable_secs = 0;
+                tow_last_tilt = -1;
+                LOG_INF("tow tilt re-armed at the new resting attitude");
             }
         }
 
@@ -377,10 +427,14 @@ static void do_sleep(void)
             if (changed && !tamper_alerted) {
                 tamper_alerted = true;
                 LOG_WRN("tamper: orientation changed (D6D_SRC=0x%02x)", d6d);
-                alert_enqueue("tamper: orientation changed", 2);
+                alert_enqueue("tamper: orientation changed",
+                              ACCEL_ALERT_PRIORITY);
                 watchdog_kick();
                 int reg = modem_get_network_status();
-                if (reg != 1 && reg != 5) modem_connect();
+                if (reg != 1 && reg != 5) {
+                    modem_connect();
+                    modem_raised = true;
+                }
                 alert_send_standalone();
             } else if (!changed) {
                 tamper_alerted = false;   /* re-arm once back to armed face */
@@ -417,31 +471,93 @@ static void do_sleep(void)
         }
 
         /* --- movement check (interrupt woke us, confirm sustained) --- */
-        if (accel_available() && gpio_pin_get(hw_gpio0, PIN_ACC_INT1) == 1) {
-            LOG_INF("accel wake — confirming movement");
+        /* Take the edge the ISR latched, not the pin level.  The wake-up
+         * interrupt is not latched in hardware (LIR clear in TAP_CFG0), so
+         * INT1 de-asserts a sample or two after the acceleration falls back
+         * under threshold — ~19-40 ms at 52 Hz.  The tilt and ignition
+         * checks above outlast that (the tilt debounce alone sleeps 2 s), so
+         * a level read here misses every short event: the loop wakes, sees a
+         * pin that has already dropped, and silently sleeps again.  That is
+         * why an impact was never reported and movement only registered
+         * while it was still being moved. */
+        bool accel_int = atomic_clear(&s_accel_int_flag) != 0;
+        if (accel_available() &&
+            (accel_int || gpio_pin_get(hw_gpio0, PIN_ACC_INT1) == 1)) {
+            LOG_INF("accel wake");
             gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
                                          GPIO_INT_DISABLE);
+
+            /* Drain the ring before confirming, not after.  The chip saw the
+             * whole transient; the 100 ms confirm polls only ever see the
+             * residual.  Draining afterwards also means the window includes
+             * up to MOVEMENT_CONFIRM_MS of whatever happened during the
+             * confirm, so a hit followed by handling reports the larger of
+             * the two rather than the hit.  (The ring itself is safe either
+             * way in sleep: accel-only at 26 Hz batching is ~438 samples,
+             * about 16 s, so a 10 s confirm does not wrap it.) */
+            struct accel_impact imp;
+            bool have_imp = (accel_fifo_drain_impact(&imp) == 0 &&
+                             imp.samples > 0);
+            int peak = have_imp ? imp.peak_delta_mg : 0;
+            bool impact_sent = false;
+
+            /* An unambiguous impact is reported straight away rather than
+             * waiting out the confirm.  Qualified by duration as well as
+             * peak: +/-2 g in sleep clips the deviation at ~1000 mg, so
+             * amplitude alone cannot tell a hit from a firm grab, but a hit
+             * is a spike where movement is sustained. */
+            if (have_imp && IMPACT_IMMEDIATE_MG > 0 &&
+                peak >= IMPACT_IMMEDIATE_MG &&
+                imp.over_ms <= IMPACT_IMMEDIATE_MAX_MS) {
+                LOG_WRN("impact: %d mg over %d ms — reporting now",
+                        peak, imp.over_ms);
+                led_accel_impact();
+                char msg[64];
+                snprintf(msg, sizeof(msg), "parked impact %d.%02dg (%dms)",
+                         peak / 1000, (peak % 1000) / 10, imp.over_ms);
+                alert_enqueue(msg, ACCEL_ALERT_PRIORITY);
+                watchdog_kick();
+                int reg = modem_get_network_status();
+                if (reg != 1 && reg != 5) {
+                    modem_connect();
+                    modem_raised = true;
+                }
+                alert_send_standalone();
+                impact_sent = true;
+                /* Modem deliberately left registered: the confirm below may
+                 * have a movement alert to send on the same session. */
+            }
+
             if (!accel_confirm_movement()) {
-                /* True peak comes from the FIFO ring (the chip saw the
-                 * whole transient); the 100 ms confirm polls only see the
-                 * residual.  Fall back to the polled peak if drain fails. */
-                struct accel_impact imp;
-                int peak = (accel_fifo_drain_impact(&imp) == 0 && imp.samples)
-                         ? imp.peak_delta_mg : accel_confirm_peak_mg();
-                if (peak >= PARKED_IMPACT_MG) {
-                    LOG_WRN("parked impact: %d mg", peak);
-                    char msg[48];
-                    snprintf(msg, sizeof(msg), "parked impact %d.%02dg",
-                             peak / 1000, (peak % 1000) / 10);
-                    alert_enqueue(msg, 2);
-                    watchdog_kick();
-                    int reg = modem_get_network_status();
-                    if (reg != 1 && reg != 5) modem_connect();
-                    alert_send_standalone();
+                /* Only fall back to the polled peak if the drain came up
+                 * empty — it is the weaker measurement. */
+                if (!have_imp) peak = accel_confirm_peak_mg();
+                if (!impact_sent) {
+                    if (peak >= PARKED_IMPACT_MG) {
+                        LOG_WRN("parked impact: %d mg", peak);
+                        led_accel_impact();
+                        char msg[48];
+                        snprintf(msg, sizeof(msg), "parked impact %d.%02dg",
+                                 peak / 1000, (peak % 1000) / 10);
+                        alert_enqueue(msg, ACCEL_ALERT_PRIORITY);
+                        watchdog_kick();
+                        int reg = modem_get_network_status();
+                        if (reg != 1 && reg != 5) {
+                            modem_connect();
+                            modem_raised = true;
+                        }
+                        alert_send_standalone();
+                    } else {
+                        LOG_INF("transient bump — ignoring (peak %d mg)",
+                                peak);
+                    }
+                }
+                /* This branch continues past the bottom-of-loop power-off,
+                 * so drop the modem here if anything above raised it —
+                 * whether or not the connect actually registered. */
+                if (modem_raised || network_ready) {
                     lte_lc_power_off();
                     network_ready = false;
-                } else {
-                    LOG_INF("transient bump — ignoring (peak %d mg)", peak);
                 }
                 accel_read_baseline();
                 accel_irq_enable();
@@ -449,6 +565,7 @@ static void do_sleep(void)
             }
             accel_irq_disable();
             LOG_INF("movement confirmed");
+            led_accel_movement();
             s_move_idle_secs = 0;
             s_move_needs_gps = true;
 
@@ -459,11 +576,14 @@ static void do_sleep(void)
                 snprintf(msg, sizeof(msg),
                          "movement: %d.%ddeg tilt, %dmg",
                          tilt / 10, tilt % 10, delta);
-                alert_enqueue(msg, 2);
+                alert_enqueue(msg, ACCEL_ALERT_PRIORITY);
 
                 watchdog_kick();
                 int reg = modem_get_network_status();
-                if (reg != 1 && reg != 5) modem_connect();
+                if (reg != 1 && reg != 5) {
+                    modem_connect();
+                    modem_raised = true;
+                }
                 alert_send_standalone();
 
                 s_move_cooldown_secs =
@@ -483,7 +603,10 @@ static void do_sleep(void)
             } else if (alert_count > 0) {
                 watchdog_kick();
                 int reg = modem_get_network_status();
-                if (reg != 1 && reg != 5) modem_connect();
+                if (reg != 1 && reg != 5) {
+                    modem_connect();
+                    modem_raised = true;
+                }
                 alert_send();
             }
 
@@ -558,7 +681,7 @@ static void do_sleep(void)
         }
 
         /* power modem back off if any alert or telemetry path woke it */
-        if (network_ready) {
+        if (modem_raised || network_ready) {
             lte_lc_power_off();
             network_ready = false;
         }
@@ -740,6 +863,22 @@ int main(void)
     hw_can_test();
     printk("CAN test complete — halting.\n");
     for (;;) { k_msleep(10000); }
+#endif
+
+#if IS_ENABLED(CONFIG_APP_VOLTAGE_TEST)
+    printk("\n*** VOLTAGE TEST — streaming INA228 VBUS at 2 Hz ***\n");
+    if (!hw_power_available()) {
+        printk("INA228 not available — nothing to read.\n");
+    }
+    for (;;) {
+        float v = battery_read_voltage();
+        if (v < 0.0f) {
+            printk("read failed\n");
+        } else {
+            printk("VBUS=%.3f V\n", (double)v);
+        }
+        k_msleep(500);
+    }
 #endif
 
 #if IS_ENABLED(CONFIG_APP_KLINE_TEST)

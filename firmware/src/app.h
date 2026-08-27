@@ -162,6 +162,10 @@ void led_sent(void);
 void led_idle(void);
 void led_sleep_enter(void);
 void led_all_off(void);
+/* Accelerometer wake indication — no-ops unless CONFIG_APP_LED_ACCEL_WAKE.
+ * Both return at once; the pattern plays out on a timer in the background. */
+void led_accel_movement(void);
+void led_accel_impact(void);
 
 void watchdog_init(void);
 void watchdog_kick(void);

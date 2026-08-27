@@ -264,6 +264,13 @@ void accel_get_movement_info(int *tilt_tenths, int *delta_mg)
 
 static int s_confirm_peak_mg;
 
+/* Requiring as many hits as there are polls means every single sample has to
+ * clear the threshold, which real movement never manages — it passes through
+ * ~1 g on every change of direction — so the confirm can never succeed. */
+BUILD_ASSERT(MOVEMENT_CONFIRM_HITS < MOVEMENT_CONFIRM_MS / 100,
+	     "APP_MOVEMENT_CONFIRM_HITS must be below APP_MOVEMENT_CONFIRM_MS/100 "
+	     "(the number of 100 ms polls in the window)");
+
 int accel_confirm_movement(void)
 {
 	if (!s_ok) return 0;
