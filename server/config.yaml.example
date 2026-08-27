@@ -1,0 +1,148 @@
+# l0destar tracking server configuration.
+#
+#   cp config.yaml.example config.yaml
+#   chmod 600 config.yaml
+#
+# config.yaml holds every secret this server has and is gitignored.  Nothing
+# in the source tree carries a hostname, credential or coordinate.
+
+# ---------------------------------------------------------------------------
+# Web
+# ---------------------------------------------------------------------------
+
+# Flask session signing key.  Changing it logs everyone out.
+#   python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+session_secret: CHANGE-ME
+
+session_lifetime_days: 30
+
+# Set false only if the server is reached over plain HTTP, which should mean
+# a local test and nothing else — passkeys require a secure context anyway.
+secure_cookies: true
+
+# Optional.  Without it the map is replaced by a note and everything else
+# still works.  Restrict the key to your own domain in the Google console:
+# it is served to the browser and cannot be kept secret.
+google_maps_api_key: ''
+
+# IMEI the web UI opens on when a request does not name a device.  Every other
+# endpoint takes ?imei= or ?device_id=, so this is only a landing page.
+default_device: '000000000000000'
+
+# ---------------------------------------------------------------------------
+# Storage
+# ---------------------------------------------------------------------------
+
+database:
+  host: 127.0.0.1
+  port: 3306
+  database: tracker
+  user: tracker
+  password: CHANGE-ME
+
+# Both default to directories beside this file.
+# log_dir: /var/log/tracker
+# fw_dir: /var/www/tracker/fw
+
+# ---------------------------------------------------------------------------
+# Listeners
+#
+# Enable whichever transports your devices use; each is independent and a
+# device only ever speaks one of them.  See docs/PROTOCOL.md for the
+# trade-offs between them.
+# ---------------------------------------------------------------------------
+
+# UDP + ChaCha20-Poly1305, keyed per device from `device`.`psk`.
+udp_enabled: true
+udp_host: 0.0.0.0
+udp_port: 65480
+
+# TLS 1.2 over TCP.  Also serves firmware downloads on the same port.
+tls_host: 0.0.0.0
+tls_port: 65481
+tls_cert: certs/server.crt
+tls_key: certs/server.key
+
+# Optional mutual TLS.  With a per-device client certificate the transport
+# authenticates the device instead of trusting the IMEI it presents.
+# tls_client_ca: certs/ca.crt
+
+# Read timeout for a telemetry exchange: one short frame in, one out.
+tls_read_timeout: 10
+# Handshake budget.  Generous on purpose — a device on LTE-M in weak signal
+# needs the certificate chain across before it can reply, and the symptom of
+# setting this too low is repeated handshake timeouts on firmware downloads
+# that never reach the HTTP layer at all.
+tls_handshake_timeout: 45
+# Read timeout during a firmware download.  An image is hundreds of sequential
+# ranged GETs on one connection with the device going quiet between them; a
+# single RRC re-establishment in weak signal outlasts the telemetry timeout,
+# and the downloader has no resume, so a timeout costs the whole transfer.
+fw_download_timeout: 120
+
+# DTLS 1.2 with Connection ID (RFC 9146).  Requires an out-of-tree mbedTLS
+# wrapper — see docs/PROTOCOL.md.  Leave dtls_lib unset to disable.
+# dtls_lib: /usr/local/lib/libdtls_cid.so
+dtls_host: 0.0.0.0
+dtls_port: 65482
+# Falls back to the TLS certificate when unset.
+# dtls_cert: certs/server.crt
+# dtls_key: certs/server.key
+
+# Drop always_on and movement_alarm from the response.  Devices with neither
+# an always-on supply nor a relay have no use for them, and the response is
+# radio time.  Note this also disables OTA indication, which rides the same
+# field.
+slim_response: false
+
+# ---------------------------------------------------------------------------
+# Behaviour
+# ---------------------------------------------------------------------------
+
+# Bus voltage above which the alternator is assumed to be charging, and how
+# many recent readings to look back over before calling the engine stopped.
+# Smart and regenerative charging systems swing the bus widely by design, so
+# without the window the display flickers on a healthy car.
+engine_running_voltage: 13.0
+engine_stopped_count: 10
+
+# Derive journeys from ignition transitions.  A restart within
+# journey_resume_seconds continues the previous journey rather than starting a
+# new one, so a fuel stop does not fragment the history.
+journeys: true
+journey_resume_seconds: 300
+
+# Login rate limit: challenges per IP per window.
+rate_limit_request_count: 5
+rate_limit_reset_period: 3600
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+
+notify:
+  backend: none          # none | pushover | webhook
+
+  # backend: pushover
+  # user: <pushover user key>
+  # app: <pushover application token>
+  # retry: 30            # priority 2 only
+  # expire: 300
+
+  # backend: webhook
+  # url: https://example.invalid/hook
+  # token: <sent as Authorization: Bearer ...>
+
+# ---------------------------------------------------------------------------
+# Home check (optional)
+#
+# A stalled tracker parked at home is invisible from the inside: its last row
+# still looks like a car sitting at home, which is what a healthy one reports
+# too.  Point a cron at POST /api/1.0/home and this catches the other case.
+# ---------------------------------------------------------------------------
+
+# home_check:
+#   imei: '000000000000000'
+#   latitude: 0.0
+#   longitude: 0.0
+#   radius_m: 300

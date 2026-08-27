@@ -1,0 +1,66 @@
+# nginx vhost for the l0destar tracking server.
+#
+# Only the web UI and API go through nginx.  The telemetry listeners bind their
+# own ports directly (65480/udp, 65481/tcp, 65482/udp) and must be forwarded to
+# this host at the firewall, not proxied here — nginx cannot usefully sit in
+# front of a raw datagram or a modem-terminated TLS session.
+
+server {
+    listen 80;
+    server_name tracker.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name tracker.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/tracker.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tracker.example.com/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    # Passkeys bind to the origin, so a mismatch between what the browser sees
+    # and what these headers say breaks login with an opaque error.  Set them
+    # to overwrite rather than append: the app trusts them, which is only safe
+    # because nothing but this proxy can reach the backend.
+    proxy_set_header Host              $host;
+    proxy_set_header X-Forwarded-Host  $host;
+    proxy_set_header X-Forwarded-For   $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Port  443;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    # The map page loads the Google Maps SDK; everything else is same-origin.
+    add_header Content-Security-Policy
+        "default-src 'self'; script-src 'self' https://maps.googleapis.com; img-src 'self' data: https://*.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://$host https://maps.googleapis.com; frame-ancestors 'none'" always;
+
+    client_max_body_size 1m;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+    }
+
+    # The live position stream.  Without these the connection is closed on
+    # upgrade and the map falls back to reconnecting forever.
+    location /ws/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        # The stream is idle between records; the default 60s read timeout
+        # would drop it repeatedly on a parked vehicle.
+        proxy_read_timeout 3600s;
+    }
+
+    location /static/ {
+        alias /srv/l0destar/server/static/;
+        expires 1h;
+    }
+
+    # Optionally serve firmware over public HTTPS as well as over the
+    # telemetry TLS port.  Devices that can reach 443 will prefer it.
+    # location /fw/ {
+    #     alias /srv/l0destar/server/fw/;
+    # }
+}

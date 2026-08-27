@@ -1,0 +1,17 @@
+# Every secret this server has lives here.
+config.yaml
+
+# Server keys.  Only the CA certificate is meant to be shared; it is embedded
+# in the firmware, so it can be committed if a deployment wants to.
+certs/*.key
+certs/*.crt
+certs/*.srl
+
+# Published firmware images and manifests.
+fw/
+
+logs/
+*.log
+__pycache__/
+*.pyc
+.venv/

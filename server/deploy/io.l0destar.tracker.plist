@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd job for the l0destar tracking server on macOS.
+
+    sudo cp io.l0destar.tracker.plist /Library/LaunchDaemons/
+    sudo launchctl load /Library/LaunchDaemons/io.l0destar.tracker.plist
+
+  Binding the telemetry ports needs no privilege (all are above 1024), so the
+  job should run as an unprivileged user.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.l0destar.tracker</string>
+
+    <key>UserName</key>
+    <string>tracker</string>
+
+    <key>WorkingDirectory</key>
+    <string>/srv/l0destar/server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/srv/l0destar/server/.venv/bin/gunicorn</string>
+        <string>-c</string>
+        <string>gunicorn.conf.py</string>
+        <string>wsgi:app</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>TRACKER_BIND</key>
+        <string>127.0.0.1:5000</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/var/log/tracker/stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/tracker/stderr.log</string>
+</dict>
+</plist>

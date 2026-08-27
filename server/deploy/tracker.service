@@ -1,0 +1,39 @@
+# systemd unit for the l0destar tracking server.
+#
+#   install -m 644 tracker.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now tracker
+
+[Unit]
+Description=l0destar tracking server
+After=network-online.target mysqld.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=tracker
+Group=tracker
+WorkingDirectory=/srv/l0destar/server
+Environment=TRACKER_BIND=127.0.0.1:5000
+ExecStart=/srv/l0destar/server/.venv/bin/gunicorn -c gunicorn.conf.py wsgi:app
+Restart=always
+RestartSec=5
+
+# The listener threads live in the gunicorn master, so a reload that replaces
+# the master has to rebind three ports. KillMode=mixed lets the master exit
+# promptly instead of waiting on WebSocket workers that cannot drain.
+KillMode=mixed
+TimeoutStopSec=10
+
+# The process needs to read config.yaml and certificates, write logs, and
+# nothing else on the filesystem.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/tracker
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

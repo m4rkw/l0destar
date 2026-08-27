@@ -1,0 +1,8 @@
+flask>=3.0
+flask-sock>=0.7
+gunicorn>=21.2
+pymysql>=1.1
+cryptography>=42.0
+webauthn>=1.11,<2.0
+requests>=2.31
+PyYAML>=6.0
