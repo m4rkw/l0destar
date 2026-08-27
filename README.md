@@ -20,16 +20,6 @@ This is a prototype, not a product. Nothing here is validated, qualified or cert
 - **Goals** - KiCad reference design, open enclosure CAD, open firmware and server, weeks of standby on a typical car battery, 1 Hz GNSS, LTE-M/NB-IoT, CAN + K-Line diagnostics, accelerometer-driven wake. Full list in [`GOALS.md`](GOALS.md).
 - **Technology choices** - Nordic nRF9151 SiP (LTE-M/NB-IoT + GNSS), LT8609A buck, ASM330LHHX IMU, MCP2518FD + MAX33041 CAN, TJA1027T K-Line. Rationale and trade-offs in [`TECHNOLOGY.md`](TECHNOLOGY.md).
 
-## Repository layout
-
-To be populated as artifacts land. Planned top-level directories:
-
-- `hardware/` - KiCad schematics, PCB layouts, BOM, fabrication outputs
-- `enclosure/` - 3D-printable / fabbable case designs
-- `firmware/` - embedded code for the nRF9151
-- `server/` - backend, ingestion pipeline, web UI
-- `docs/` - extended documentation beyond the top-level `*.md` files
-
 ## License
 
 l0destar is multi-licensed by artifact type - permissive across the board:
