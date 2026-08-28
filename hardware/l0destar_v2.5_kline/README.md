@@ -1,5 +1,13 @@
 # l0destar v2.5K (K-line version)
 
+> [!CAUTION]
+> **DO NOT USE THE ISO-9141 (K-LINE) INTERFACE ON THIS VERSION.**
+>
+> The ISO-9141 L line circuit has a fault condition that can destroy the
+> nRF9151 Connect Kit if the L wire is ever shorted to 12V. It is
+> strongly recommended not to connect the L wire to this board.
+> See [Known defects](#known-defects) below. Fixed in v3.3.
+
 ## Overview
 
 - This is a prototype l0destar vehicle tracker PCB designed to be
@@ -20,6 +28,34 @@ yourself rather than taking them on trust.
 
 **Before building or installing anything from this repository, read the
 [full disclaimer](../../DISCLAIMER.md).**
+
+## Known defects
+
+### L line pull-down can be destroyed by a short to battery
+
+If the external L pin is shorted to battery (12-16 V) while the firmware is
+driving a 5-baud init, S10Q1 is switched hard on into that short. At
+Vgs = 3.3 V a 2N7002 saturates somewhere between ~100 mA and ~1 A depending
+on brand and threshold spread, so it dissipates roughly 1-12 W in a SOT-23
+and fails within the first 200 ms address bit - typically in the first
+few milliseconds.
+
+Consequences:
+
+- The die almost always fails drain-source short, then the bond wire fuses
+  and the L line is permanently open. Estimated 20-30% of failures end
+  resistive instead, in which case the part keeps dissipating several watts
+  for as long as the short exists - there is no fuse in this path (the
+  on-board fuses are on the 12 V inputs, not on L to ground).
+- Roughly half of thermal failures involve the gate. **A drain-gate short puts
+  battery voltage directly onto the L_SEND GPIO, which exceeds the
+  nRF9151's absolute maximum and can destroy the module.**
+- Nothing on the board can detect the short before the init is attempted: L
+  idling at 12 V is indistinguishable from normal. The fault only surfaces as
+  the ECU never answering.
+
+This defect is fixed in v3.3. <strong>It is strongly recommended never to
+connect the L wire of a vehicle to this board.</strong>
 
 ## Test status
 
