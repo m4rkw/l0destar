@@ -1,5 +1,47 @@
 # Changelog
 
+## Unreleased
+
+### v3.3 carrier board (`Kconfig.boards`, `board_test.sh`)
+- New `APP_BOARD_L0DESTAR_V3_3` profile, extracted from the KiCad netlist in
+`../hardware/l0destar_v3.3/`. Same map as v3.1 — split OBD domain, four
+rail-sense inputs, MCP2518FD XSTBY, no INA228 ALRT — except LED1 and LED3
+swap pins (P0.28 / P0.26), L_SENSE arrives on P0.14 (AIN1) and the PP3V3_GPS
+rail sense moves to P0.05 to free that AIN channel. Selectable from
+board_test.sh, where it is now the default entry.
+
+### ISO-9141 L line (`src/hw_kline.c`)
+- **Driving the L line is now off by default on every board before v3.3**
+(`APP_L_SEND_ENABLED`). Those boards switch the 2N7002 pulldown straight
+across the wire, and an L wire shorted to battery is indistinguishable from a
+healthy idle one — both sit at 12-16 V — so a 5-baud init saturates the FET
+into the short, where it dissipates 1-12 W in a SOT-23 and fails inside the
+first address bit. Roughly half of those failures involve the gate, which puts
+battery voltage on the L_SEND GPIO, past the nRF9151's absolute maximum. The
+pin is still parked low (FET off); `kline_l_send()` is now the only way to
+assert it and returns `-EPERM` where the gate is off. Cost is the L half of a
+5-baud init, which nothing implements yet.
+- **L_SENSE support (v3.3+)**, which is what makes that short detectable.
+v3.3 taps the wire through a 1N4148 (cathode to L) and a 47K: the diode blocks
+the vehicle's 12 V from the pin, so the line can only be read by sourcing
+current into it. `kline_l_sense_mv()` samples it on the SAADC with the
+internal pull-up resistor ladder engaged — ~0.7-0.9 V when the line is pulled
+low, full scale when it is high, open or shorted. A GPIO input cannot do this
+(the nRF's ~13K pull-up against the 47K leaves a grounded line at ~2.7 V,
+above VIH) and Zephyr's ADC driver hard-codes the ladder to bypass, so this
+goes through nrfx directly. `kline_l_line_probe()` pulses the pulldown for
+5 ms and reports whether the line followed; `kline_test()` (board test step
+10) prints both readings.
+- The SAADC can only sample AIN0-AIN7 = P0.13-P0.20, so `kline_l_sense_init()`
+rejects an `APP_PIN_L_SENSE` outside that range and reports the sense
+unavailable rather than silently returning garbage.
+
+### Board bring-up test (`src/board_test.c`)
+- The tilt and impact steps merged into one accelerometer test: it streams
+live roll/pitch instead of demanding 90° on each axis, keeps the impact
+interrupt armed throughout, and continues at the first impact (reported with
+its metrics). The suite is 11 steps now, not 12.
+
 ## 0.4.9
 
 - Rail sensing was boot-only — the README's headline v3.1 feature wasn't

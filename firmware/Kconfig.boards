@@ -49,6 +49,16 @@
 #              GPIO0/XSTBY.  K_SLEEP gained a 100K pulldown on the PCB and
 #              L_SEND a 10K pulldown, both to the always-on ground side.
 #              INA228 ALRT is no longer routed to the header.
+#   v3.3       Same map as v3.1 except LED1 and LED3 swap pins (P0.28 /
+#              P0.26), L_SENSE arrives on P0.14 (AIN1) and the PP3V3_GPS
+#              rail sense moves to P0.05 to free it.  The L-line defect that
+#              made L_SEND dangerous on every earlier board is fixed: an
+#              AL5809-90 limits the pulldown to 90 mA into a short, and
+#              L_SENSE reads the wire back through a 1N4148 (cathode to L)
+#              and a 47K, so a line held up by a short to battery can be
+#              detected instead of destroying the FET.  The sense node is
+#              always-on and only readable by sourcing current into it, so
+#              it has to sit on an AIN pin — see APP_BOARD_HAS_L_SENSE.
 
 choice APP_BOARD
 	prompt "Carrier board"
@@ -95,6 +105,9 @@ config APP_BOARD_L0DESTAR_V3_0
 config APP_BOARD_L0DESTAR_V3_1
 	bool "l0destar v3.1 (combined CAN/K-line, jumper-selected, rail sensing)"
 
+config APP_BOARD_L0DESTAR_V3_3
+	bool "l0destar v3.3 (v3.1 map, fixed L-line + L sense)"
+
 endchoice
 
 # Stable identifier for the selected carrier board, published in the FOTA
@@ -119,6 +132,7 @@ config APP_BOARD_ID
 	default "v2.6m"  if APP_BOARD_L0DESTAR_V2_6_MICRO
 	default "v3.0"   if APP_BOARD_L0DESTAR_V3_0
 	default "v3.1"   if APP_BOARD_L0DESTAR_V3_1
+	default "v3.3"   if APP_BOARD_L0DESTAR_V3_3
 	default "unknown"
 
 config APP_BOARD_IS_L0DESTAR
@@ -131,18 +145,43 @@ config APP_BOARD_IS_L0DESTAR
 
 config APP_BOARD_HAS_CAN
 	bool "CAN interface fitted (MCP2518FD)"
-	default y if APP_BOARD_L0DESTAR_V3_1 && APP_OBD_MODE = 1
+	default y if (APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_3) && \
+		     APP_OBD_MODE = 1
 	default y if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_5_CAN || \
 		     APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V3_0
 	default n
 
 config APP_BOARD_HAS_KLINE
 	bool "ISO-9141 (K-line) interface fitted"
-	default y if APP_BOARD_L0DESTAR_V3_1 && APP_OBD_MODE = 2
+	default y if (APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_3) && \
+		     APP_OBD_MODE = 2
 	default y if APP_BOARD_BENCH || APP_BOARD_L0DESTAR_V2_1 || \
 		     APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE || \
 		     APP_BOARD_L0DESTAR_V3_0
 	default n
+
+config APP_L_SEND_ENABLED
+	bool "Allow driving the ISO-9141 L line (L_SEND)"
+	default y if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_BENCH
+	default n
+	help
+	  Every l0destar board before v3.3 switches the L pulldown FET
+	  (2N7002) straight onto the L wire with nothing limiting the current.
+	  If that wire is shorted to battery — which is indistinguishable from
+	  a healthy idle L line, since both sit at 12-16 V — asserting L_SEND
+	  drives the FET hard into the short: it dissipates 1-12 W in a SOT-23
+	  and fails within the first 200 ms address bit of a 5-baud init.
+	  Roughly half of those failures involve the gate, and a drain-gate
+	  short puts battery voltage on the L_SEND GPIO, which is past the
+	  nRF9151's absolute maximum and can take the module with it.  See
+	  "Known defects" in ../hardware/l0destar_v3.2/README.md.
+
+	  So L_SEND is off by default on those boards: the pin is still
+	  configured and parked low (FET off), but nothing ever asserts it,
+	  which costs only the L half of a 5-baud init.  v3.3 fixed the
+	  defect with an AL5809-90 in series (90 mA limit, thermal shutdown)
+	  and added L_SENSE to detect the short, so it defaults on there.
+	  Enable it on an older board only if you know the L wire is safe.
 
 config APP_BOARD_HAS_AIO
 	bool "General-purpose 0-30V AIO inputs fitted"
@@ -185,9 +224,9 @@ config APP_BOARD_OBD_DOMAIN
 
 config APP_BOARD_SPLIT_OBD_DOMAIN
 	bool
-	default y if APP_BOARD_L0DESTAR_V3_1
+	default y if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_3
 	help
-	  CAN and K-line have independent enables (v3.1): CAN_EN gates
+	  CAN and K-line have independent enables (v3.1+): CAN_EN gates
 	  PP3V3_CAN, K_EN gates PP3V3_K + PP12V_K.  Both are switched
 	  separately from the GPS/aux rail, so the unused OBD interface
 	  never has to be powered.
@@ -195,7 +234,8 @@ config APP_BOARD_SPLIT_OBD_DOMAIN
 config APP_BOARD_CAN_XSTBY
 	bool
 	default y if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_6_CAN || \
-		     APP_BOARD_L0DESTAR_V3_0 || APP_BOARD_L0DESTAR_V3_1
+		     APP_BOARD_L0DESTAR_V3_0 || APP_BOARD_L0DESTAR_V3_1 || \
+		     APP_BOARD_L0DESTAR_V3_3
 	help
 	  The CAN transceiver's standby pin is driven by MCP2518FD GPIO0
 	  (XSTBY).  Firmware must configure IOCON at boot: on v2.5/v2.6 the
@@ -233,6 +273,7 @@ config APP_PIN_K1_TX
 	default 5  if APP_BOARD_L0DESTAR_V2_1
 	default 0  if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 2  if APP_BOARD_L0DESTAR_V3_0
+	default 1  if APP_BOARD_L0DESTAR_V3_3
 	default 1  if APP_BOARD_L0DESTAR_V3_1
 	default -1 if APP_BOARD_IS_L0DESTAR
 	default 22
@@ -242,6 +283,7 @@ config APP_PIN_K1_RX
 	default 4  if APP_BOARD_L0DESTAR_V2_1
 	default 1  if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 4  if APP_BOARD_L0DESTAR_V3_0
+	default 3  if APP_BOARD_L0DESTAR_V3_3
 	default 3  if APP_BOARD_L0DESTAR_V3_1
 	default -1 if APP_BOARD_IS_L0DESTAR
 	default 25 if BOARD_NRF9151_CONNECTKIT
@@ -263,8 +305,28 @@ config APP_PIN_L_SEND
 	default 19 if APP_BOARD_L0DESTAR_V2_5_KLINE
 	default 17 if APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 5  if APP_BOARD_L0DESTAR_V3_0
+	default 4  if APP_BOARD_L0DESTAR_V3_3
 	default 4  if APP_BOARD_L0DESTAR_V3_1
 	default -1
+
+config APP_PIN_L_SENSE
+	int "ISO-9141 L-line sense pin (v3.3+; must be an AIN pin, P0.13-P0.20)"
+	default 14 if APP_BOARD_L0DESTAR_V3_3
+	default -1
+	help
+	  The L wire read back through a 1N4148 (cathode to L) and a 47K.  The
+	  diode blocks the vehicle's 12 V from ever reaching the pin, so the
+	  only way to read the line is to source current into it: the SAADC
+	  samples it with its internal pull-up resistor ladder engaged (a GPIO
+	  input cannot — the nRF's ~13K pull-up against the 47K leaves even a
+	  grounded line at ~2.7 V, above VIH).
+
+	  That means the pin has to be an analog input: AIN0-AIN7 are P0.13 to
+	  P0.20 on the nRF9151, and nothing else can be sampled.  v3.3 puts
+	  L_SENSE on P0.14 (AIN1) and moves the PP3V3_GPS rail sense, which
+	  only ever needed a digital read, to P0.05.  Point this at another
+	  AIN pin if a board is reworked; anything outside that range leaves
+	  the sense reporting unavailable.
 
 config APP_PIN_L_RECV
 	int "ISO-9141 L-line receive pin"
@@ -275,12 +337,14 @@ config APP_PIN_L_RECV
 config APP_PIN_K_EN
 	int "K-line rail enable pin (v2.5K/v2.6K: 5V/12V; v3.1: PP3V3_K + PP12V_K)"
 	default 23 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
+	default 10 if APP_BOARD_L0DESTAR_V3_3
 	default 10 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
 config APP_PIN_K_SLEEP
 	int "TJA1027T SLP_N pin (v3.0+; high = awake)"
 	default 3  if APP_BOARD_L0DESTAR_V3_0
+	default 2  if APP_BOARD_L0DESTAR_V3_3
 	default 2  if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
@@ -290,6 +354,7 @@ config APP_PIN_CAN_SCK
 	default 14 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 29 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 13 if APP_BOARD_L0DESTAR_V3_0
+	default 17 if APP_BOARD_L0DESTAR_V3_3
 	default 17 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
@@ -299,6 +364,7 @@ config APP_PIN_CAN_SDI
 	default 15 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 30 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 14 if APP_BOARD_L0DESTAR_V3_0
+	default 16 if APP_BOARD_L0DESTAR_V3_3
 	default 16 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
@@ -308,6 +374,7 @@ config APP_PIN_CAN_SDO
 	default 16 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 31 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 15 if APP_BOARD_L0DESTAR_V3_0
+	default 18 if APP_BOARD_L0DESTAR_V3_3
 	default 18 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
@@ -317,6 +384,7 @@ config APP_PIN_CAN_CS
 	default 17 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 0  if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 16 if APP_BOARD_L0DESTAR_V3_0
+	default 15 if APP_BOARD_L0DESTAR_V3_3
 	default 15 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
@@ -326,6 +394,7 @@ config APP_PIN_CAN_INT
 	default 18 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 1  if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 17 if APP_BOARD_L0DESTAR_V3_0
+	default 19 if APP_BOARD_L0DESTAR_V3_3
 	default 19 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
@@ -336,6 +405,7 @@ config APP_PIN_AUX_SW
 		      APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_CAN || \
 		      APP_BOARD_L0DESTAR_V2_6_KLINE || APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 26 if APP_BOARD_L0DESTAR_V3_0
+	default 13 if APP_BOARD_L0DESTAR_V3_3
 	default 13 if APP_BOARD_L0DESTAR_V3_1
 	default 13 if BOARD_NRF9151_CONNECTKIT
 	default 10
@@ -347,6 +417,7 @@ config APP_PIN_OBD_EN
 
 config APP_PIN_CAN_EN
 	int "CAN rail enable pin (v3.1: PP3V3_CAN)"
+	default 23 if APP_BOARD_L0DESTAR_V3_3
 	default 23 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
@@ -358,6 +429,7 @@ config APP_PIN_TWI_SDA
 	default 21 if APP_BOARD_L0DESTAR_V2_5_KLINE
 	default 19 if APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V2_6_KLINE || \
 		      APP_BOARD_L0DESTAR_V3_0
+	default 20 if APP_BOARD_L0DESTAR_V3_3
 	default 20 if APP_BOARD_L0DESTAR_V2_6_MICRO || APP_BOARD_L0DESTAR_V3_1
 	default 16 if BOARD_NRF9151_CONNECTKIT
 	default 5
@@ -369,6 +441,7 @@ config APP_PIN_TWI_SCL
 	default 20 if APP_BOARD_L0DESTAR_V2_5_KLINE
 	default 18 if APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V2_6_KLINE || \
 		      APP_BOARD_L0DESTAR_V3_0
+	default 21 if APP_BOARD_L0DESTAR_V3_3
 	default 21 if APP_BOARD_L0DESTAR_V3_1
 	default 19 if APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 17 if BOARD_NRF9151_CONNECTKIT
@@ -382,6 +455,7 @@ config APP_PIN_INA_ALRT
 	default 22 if APP_BOARD_L0DESTAR_V2_5_KLINE
 	default 21 if APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 20 if APP_BOARD_L0DESTAR_V2_6_KLINE || APP_BOARD_L0DESTAR_V3_0
+	default -1 if APP_BOARD_L0DESTAR_V3_3
 	default -1 if APP_BOARD_L0DESTAR_V3_1
 	default 21 if BOARD_NRF9151_CONNECTKIT
 	default 11
@@ -395,6 +469,7 @@ config APP_PIN_ACC_INT1
 		      APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 20 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 29 if APP_BOARD_L0DESTAR_V3_0
+	default 30 if APP_BOARD_L0DESTAR_V3_3
 	default 30 if APP_BOARD_L0DESTAR_V3_1
 	default 19 if BOARD_NRF9151_CONNECTKIT
 	default 2
@@ -407,6 +482,7 @@ config APP_PIN_ACC_INT2
 	default 26 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 17 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 27 if APP_BOARD_L0DESTAR_V3_0
+	default 29 if APP_BOARD_L0DESTAR_V3_3
 	default 29 if APP_BOARD_L0DESTAR_V3_1
 	default 18 if BOARD_NRF9151_CONNECTKIT
 	default 3
@@ -414,6 +490,7 @@ config APP_PIN_ACC_INT2
 config APP_PIN_IGN_SENSE
 	int "Ignition sense pin (active low: low = ignition on)"
 	default 16 if APP_BOARD_L0DESTAR_V2_1
+	default 24 if APP_BOARD_L0DESTAR_V3_3
 	default 24 if APP_BOARD_L0DESTAR_V3_1
 	default 10 if APP_BOARD_IS_L0DESTAR
 	default 10 if BOARD_NRF9151_CONNECTKIT
@@ -460,6 +537,7 @@ config APP_PIN_LED1
 	default 27 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 26 if APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 28 if APP_BOARD_L0DESTAR_V3_0
+	default 28 if APP_BOARD_L0DESTAR_V3_3
 	default 26 if APP_BOARD_L0DESTAR_V3_1
 	default 9  if BOARD_NRF9151_CONNECTKIT
 	default -1
@@ -471,6 +549,7 @@ config APP_PIN_LED2
 	default 29 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 27 if APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 30 if APP_BOARD_L0DESTAR_V3_0
+	default 27 if APP_BOARD_L0DESTAR_V3_3
 	default 27 if APP_BOARD_L0DESTAR_V3_1
 	default 8  if BOARD_NRF9151_CONNECTKIT
 	default -1
@@ -482,6 +561,7 @@ config APP_PIN_LED3
 	default 30 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 28 if APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 31 if APP_BOARD_L0DESTAR_V3_0
+	default 26 if APP_BOARD_L0DESTAR_V3_3
 	default 28 if APP_BOARD_L0DESTAR_V3_1
 	default 7  if BOARD_NRF9151_CONNECTKIT
 	default -1
@@ -536,6 +616,28 @@ config APP_PIN_AIO6
 	default 20 if APP_BOARD_L0DESTAR_V2_1
 	default -1
 
+# --- L-line sense (v3.3+) ------------------------------------------------------
+
+config APP_BOARD_HAS_L_SENSE
+	bool "ISO-9141 L-line sense input fitted"
+	default y if APP_BOARD_L0DESTAR_V3_3
+	default n
+	select NRFX_SAADC
+	help
+	  v3.3 added a sense tap on the L wire so firmware can tell a line it
+	  has pulled low from one held up by a short to battery.  Read through
+	  the SAADC with its internal pull-up (see APP_PIN_L_SENSE).
+
+config APP_L_SENSE_LOW_MV
+	int "L line counts as pulled low below this (mV)"
+	default 1500
+	depends on APP_BOARD_HAS_L_SENSE
+	help
+	  A line pulled to ground sits at a diode drop plus 47K x the ladder
+	  current, ~0.7-0.9 V; a line that is high, open or shorted to battery
+	  reverse-biases the diode and the reading runs up to the 3.6 V full
+	  scale.  Anywhere in between separates the two.
+
 # --- rail-sense inputs (v3.1+) ------------------------------------------------
 # GPIO-readable status of each switched rail, for firmware-side fault
 # detection.  On v3.1 the three 3.3V senses are 100K/1M dividers hung off the
@@ -547,32 +649,36 @@ config APP_PIN_AIO6
 
 config APP_BOARD_HAS_RAIL_SENSE
 	bool "Switched-rail sense/fault detection inputs fitted"
-	default y if APP_BOARD_L0DESTAR_V3_1
+	default y if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_3
 	default n
 
 config APP_PIN_GPS_RAIL_ST
 	int "PP3V3_GPS rail status pin (-1 = not fitted)"
+	default 5  if APP_BOARD_L0DESTAR_V3_3
 	default 14 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
 config APP_PIN_CAN_RAIL_ST
 	int "PP3V3_CAN rail status pin (-1 = not fitted)"
+	default 22 if APP_BOARD_L0DESTAR_V3_3
 	default 22 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
 config APP_PIN_K3V3_RAIL_ST
 	int "PP3V3_K rail status pin (-1 = not fitted)"
+	default 0  if APP_BOARD_L0DESTAR_V3_3
 	default 0  if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
 config APP_PIN_K12V_RAIL_ST
 	int "PP12V_K rail status pin (-1 = not fitted)"
+	default 31 if APP_BOARD_L0DESTAR_V3_3
 	default 31 if APP_BOARD_L0DESTAR_V3_1
 	default -1
 
 config APP_BOARD_RAIL_ST_12V_ACTIVE_LOW
 	bool
-	default y if APP_BOARD_L0DESTAR_V3_1
+	default y if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_3
 	help
 	  The 12V rail sense is inverted by a 2N7002 (v3.1): the pin reads low
 	  while the rail is up.  The 3.3V senses are plain dividers and read

@@ -839,6 +839,9 @@ int main(void)
     if (hw_power_init())  LOG_WRN("INA228 init failed — voltage unavailable");
     if (hw_accel_init())  LOG_WRN("accel init failed — readings unavailable");
     if (hw_can_init())    LOG_WRN("CAN controller init failed");
+    if (IS_ENABLED(CONFIG_APP_BOARD_HAS_L_SENSE) && kline_l_sense_init()) {
+        LOG_WRN("L sense init failed — no L-line short detection");
+    }
 
     relay_init();
 

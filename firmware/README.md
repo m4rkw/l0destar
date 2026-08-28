@@ -43,7 +43,8 @@ CONFIG_APP_BOARD_L0DESTAR_V3_0=y
 ```
 
 Available: `APP_BOARD_BENCH` (default), `..._L0DESTAR_V2_1`, `..._V2_1_MINI`,
-`..._V2_5_CAN/_KLINE/_MICRO`, `..._V2_6_CAN/_KLINE/_MICRO`, `..._V3_0`.
+`..._V2_5_CAN/_KLINE/_MICRO`, `..._V2_6_CAN/_KLINE/_MICRO`, `..._V3_0`,
+`..._V3_1`, `..._V3_3`.
 Individual pins/flags can still be overridden after the board defaults apply
 (on v3.0, set `CONFIG_APP_BOARD_HAS_CAN=n` or `..._HAS_KLINE=n` to match the
 jumper configuration of the physical board).

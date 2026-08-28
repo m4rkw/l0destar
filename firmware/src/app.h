@@ -195,6 +195,19 @@ int  kline_power_on(void);
 void kline_power_off(void);
 uint8_t kline_tx_rx_byte(uint8_t tx);
 
+/* ISO-9141 L line.  kline_l_send() is the only sanctioned way to drive the
+ * pulldown FET: it returns -EPERM on the boards where doing so can destroy
+ * the FET (and the nRF) if the wire is shorted to battery — see
+ * APP_L_SEND_ENABLED.  The sense side (v3.3+) reads the wire back through
+ * the SAADC; kline_l_line_probe() pulses the pulldown and reports whether
+ * the line actually followed, which is how a short to battery is caught
+ * before a 5-baud init runs into it. */
+int  kline_l_send(bool on);
+int  kline_l_sense_init(void);
+bool kline_l_sense_available(void);
+int  kline_l_sense_mv(void);            /* millivolts, or a negative errno */
+int  kline_l_line_probe(int *idle_mv, int *pulled_mv);
+
 int  hw_can_init(void);
 bool hw_can_available(void);
 int  hw_can_power_on(void);
