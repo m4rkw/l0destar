@@ -3,6 +3,14 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 28/08/2026
+
+- Added v3.3 with a fix for an L-line defect that could brick the MCU on earlier
+  boards if L_SEND was used while the external L wire had been shorted to 12V.
+  Also added a sensing capability for the L wire so this condition can be
+  detected and also tuned the buck to turn off cleanly below ~3.5v and turn on
+  at 4.6V.
+
 ## 23/08/2026
 
 - Updated sheet annotations for all boards v2.6+
