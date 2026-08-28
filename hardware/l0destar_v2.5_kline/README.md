@@ -1,7 +1,7 @@
 # l0destar v2.5K (K-line version)
 
 > [!CAUTION]
-> **DO NOT USE THE ISO-9141 (K-LINE) INTERFACE ON THIS VERSION.**
+> **DO NOT USE THE L wire on the ISO-9141 (K-LINE) INTERFACE ON THIS VERSION.**
 >
 > The ISO-9141 L line circuit has a fault condition that can destroy the
 > nRF9151 Connect Kit if the L wire is ever shorted to 12V. It is
