@@ -345,22 +345,12 @@ static void mcp_read_n(uint16_t addr, uint8_t *data, size_t len)
 	spi_cs(0);
 }
 
-int hw_can_test(void)
+/* Shared bring-up for the bus tests, run from Configuration mode after
+ * hw_can_power_on(): clean reset, oscillator, XSTBY, TEF/TXQ off, 500 kbps
+ * timing, FIFO 1 = TX (4 deep, 8 bytes), FIFO 2 = RX (4 deep, 8 bytes),
+ * accept-all filter into FIFO 2.  Leaves the chip in Configuration mode. */
+static int mcp_test_setup(void)
 {
-	if (!can_fitted()) {
-		printk("CAN test: no CAN hardware fitted\n");
-		return -ENODEV;
-	}
-
-	printk("\n*** CAN BUS TEST ***\n");
-	printk("start the host script now, sending first frame in 3s...\n");
-
-	int err = hw_can_power_on();
-	if (err) {
-		printk("FAIL: hw_can_power_on: %d\n", err);
-		return err;
-	}
-
 	/* Reset to get clean POR register state, then re-enable oscillator. */
 	mcp_reset();
 	uint32_t osc = mcp_read32(MCP_REG_OSC);
@@ -372,6 +362,9 @@ int hw_can_test(void)
 			if (osc & OSC_OSCRDY) break;
 			k_msleep(1);
 		}
+	}
+	if (!(osc & OSC_OSCRDY)) {
+		return -EIO;
 	}
 	mcp_config_xstby();
 
@@ -414,6 +407,31 @@ int hw_can_test(void)
 	fltcon |= BIT(7)   /* FLTEN0 = enable */
 		| 2;       /* F0BP = FIFO 2 */
 	mcp_write32(MCP_REG_C1FLTCON0, fltcon);
+	return 0;
+}
+
+int hw_can_test(void)
+{
+	if (!can_fitted()) {
+		printk("CAN test: no CAN hardware fitted\n");
+		return -ENODEV;
+	}
+
+	printk("\n*** CAN BUS TEST ***\n");
+	printk("start the host script now, sending first frame in 3s...\n");
+
+	int err = hw_can_power_on();
+	if (err) {
+		printk("FAIL: hw_can_power_on: %d\n", err);
+		return err;
+	}
+
+	err = mcp_test_setup();
+	if (err) {
+		printk("FAIL: MCP2518FD oscillator not ready\n");
+		hw_can_power_off();
+		return err;
+	}
 
 	/* Switch to CAN 2.0 Normal mode */
 	err = mcp_set_mode(MCP_MODE_NORMAL_2_0);
@@ -520,4 +538,174 @@ int hw_can_test(void)
 
 	hw_can_power_off();
 	return got_reply ? 0 : -ETIMEDOUT;
+}
+
+/* --- CAN loopback self-test (no bus partner needed) ----------------------- */
+
+/* Queue one standard frame into TX FIFO 1 and wait for it to go out. */
+static int mcp_send_std(uint16_t sid, const uint8_t *data, uint8_t dlc)
+{
+	uint32_t fifoua = mcp_read32(MCP_REG_C1FIFOUA(1));
+	uint16_t ram = (uint16_t)(fifoua + MCP_REG_RAM);
+	uint8_t obj[16];
+	uint32_t t0 = sid & 0x7FFu;
+	uint32_t t1 = dlc & 0xFu;
+
+	memset(obj, 0, sizeof(obj));
+	obj[0] = t0 & 0xFF;
+	obj[1] = (t0 >> 8) & 0xFF;
+	obj[2] = (t0 >> 16) & 0xFF;
+	obj[3] = (t0 >> 24) & 0xFF;
+	obj[4] = t1 & 0xFF;
+	obj[5] = (t1 >> 8) & 0xFF;
+	obj[6] = (t1 >> 16) & 0xFF;
+	obj[7] = (t1 >> 24) & 0xFF;
+	memcpy(&obj[8], data, dlc <= 8 ? dlc : 8);
+	mcp_write_n(ram, obj, 16);
+
+	/* UINC then TXREQ as separate writes */
+	uint32_t fifocon = mcp_read32(MCP_REG_C1FIFOCON(1));
+	mcp_write32(MCP_REG_C1FIFOCON(1), fifocon | BIT(8));   /* UINC */
+	fifocon = mcp_read32(MCP_REG_C1FIFOCON(1));
+	mcp_write32(MCP_REG_C1FIFOCON(1), fifocon | BIT(9));   /* TXREQ */
+
+	for (int i = 0; i < 100; i++) {
+		fifocon = mcp_read32(MCP_REG_C1FIFOCON(1));
+		if (!(fifocon & BIT(9))) {
+			return 0;
+		}
+		if (mcp_read32(MCP_REG_C1FIFOSTA(1)) & BIT(2)) {  /* TXABT */
+			return -EIO;
+		}
+		k_msleep(1);
+	}
+	return -ETIMEDOUT;
+}
+
+/* Pop one frame from RX FIFO 2 (waits up to timeout_ms). */
+static int mcp_recv_std(uint16_t *sid, uint8_t *data, uint8_t *dlc,
+			int timeout_ms)
+{
+	for (int waited = 0; waited <= timeout_ms; waited += 5) {
+		uint32_t sta = mcp_read32(MCP_REG_C1FIFOSTA(2));
+
+		if (sta & BIT(0)) {  /* TFNRFNIF: not empty */
+			uint32_t ua = mcp_read32(MCP_REG_C1FIFOUA(2));
+			uint8_t obj[16];
+
+			mcp_read_n((uint16_t)(ua + MCP_REG_RAM), obj, 16);
+			*sid = (obj[0] | (obj[1] << 8)) & 0x7FF;
+			*dlc = obj[4] & 0xF;
+			memcpy(data, &obj[8], 8);
+
+			uint32_t fc = mcp_read32(MCP_REG_C1FIFOCON(2));
+			mcp_write32(MCP_REG_C1FIFOCON(2), fc | BIT(8)); /* UINC */
+			return 0;
+		}
+		k_msleep(5);
+	}
+	return -ETIMEDOUT;
+}
+
+/* Self-contained loopback test, used by the board bring-up rig.
+ *
+ * Phase 1, Internal Loopback (REQOP=2): TX is routed to RX inside the digital
+ * core — proves the SPI link, oscillator, bit timing and the TX/RX FIFO
+ * machinery without touching the pins.
+ *
+ * Phase 2, External Loopback (REQOP=5): the frame really leaves on TXCAN,
+ * goes through the transceiver (TXD -> driver -> CANH/CANL -> receiver ->
+ * RXD) and comes back on RXCAN, so it also proves the MAX33041/TCAN334 and
+ * its standby control.  Works on an unterminated bench stub: the driver still
+ * develops the dominant differential at its own pins.  The module self-ACKs
+ * in both loopback modes, so no bus partner is required.
+ */
+int hw_can_selftest(void)
+{
+	static const struct {
+		uint8_t mode;
+		const char *name;
+		uint16_t sid;
+		uint8_t pay[4];
+	} phases[] = {
+		{ MCP_MODE_INT_LOOP, "internal (controller)",  0x100, "LOOP" },
+		{ MCP_MODE_EXT_LOOP, "external (transceiver)", 0x101, "XCVR" },
+	};
+
+	if (!can_fitted()) {
+		printk("CAN loopback: no CAN hardware fitted\n");
+		return -ENODEV;
+	}
+
+	printk("\n*** CAN LOOPBACK TEST ***\n");
+
+	int err = hw_can_power_on();
+	if (err) {
+		printk("FAIL: CAN rail/controller power-on (%d)\n", err);
+		return err;
+	}
+	err = mcp_test_setup();
+	if (err) {
+		printk("FAIL: MCP2518FD oscillator not ready\n");
+		hw_can_power_off();
+		return err;
+	}
+
+	int fails = 0;
+
+	for (int p = 0; p < (int)ARRAY_SIZE(phases); p++) {
+		/* Clean FIFOs between phases, from Configuration mode. */
+		if (mcp_set_mode(MCP_MODE_CONFIG)) {
+			printk("  %s: could not enter config mode\n",
+			       phases[p].name);
+			fails++;
+			continue;
+		}
+		mcp_write32(MCP_REG_C1FIFOCON(1),
+			    mcp_read32(MCP_REG_C1FIFOCON(1)) | BIT(10));
+		mcp_write32(MCP_REG_C1FIFOCON(2),
+			    mcp_read32(MCP_REG_C1FIFOCON(2)) | BIT(10));
+
+		if (mcp_set_mode(phases[p].mode)) {
+			printk("  %s: mode change refused\n", phases[p].name);
+			fails++;
+			continue;
+		}
+
+		err = mcp_send_std(phases[p].sid, phases[p].pay, 4);
+		if (err) {
+			printk("  %s: TX failed (%d)\n", phases[p].name, err);
+			fails++;
+			continue;
+		}
+
+		uint16_t sid = 0;
+		uint8_t dlc = 0, data[8] = {0};
+
+		err = mcp_recv_std(&sid, data, &dlc, 500);
+		if (err) {
+			printk("  %s: nothing received\n", phases[p].name);
+			fails++;
+		} else if (sid != phases[p].sid || dlc != 4 ||
+			   memcmp(data, phases[p].pay, 4) != 0) {
+			printk("  %s: got ID=0x%03x DLC=%d %02x%02x%02x%02x "
+			       "(expected ID=0x%03x \"%c%c%c%c\")\n",
+			       phases[p].name, sid, dlc,
+			       data[0], data[1], data[2], data[3],
+			       phases[p].sid, phases[p].pay[0],
+			       phases[p].pay[1], phases[p].pay[2],
+			       phases[p].pay[3]);
+			fails++;
+		} else {
+			printk("  %s: OK (ID=0x%03x, 4 bytes echoed)\n",
+			       phases[p].name, sid);
+		}
+	}
+
+	mcp_set_mode(MCP_MODE_CONFIG);
+	hw_can_power_off();
+
+	printk("%s: CAN loopback test\n", fails ? "FAIL" : "PASS");
+	printk("*** CAN LOOPBACK TEST DONE ***\n\n");
+	return fails ? -EIO : 0;
 }

@@ -181,6 +181,7 @@ bool hw_power_available(void);
 void hw_power_shutdown(void);
 void hw_power_wake(void);
 void hw_aux_power_on(void);
+void hw_aux_power_off(void);
 int  hw_accel_init(void);
 bool accel_available(void);
 int  relay_init(void);
@@ -194,7 +195,15 @@ int  kline_power_on(void);
 void kline_power_off(void);
 uint8_t kline_tx_rx_byte(uint8_t tx);
 
+int  hw_can_init(void);
+bool hw_can_available(void);
+int  hw_can_power_on(void);
+void hw_can_power_off(void);
 int  hw_can_test(void);
+int  hw_can_selftest(void);
+
+/* Interactive board bring-up rig (board_test.c, CONFIG_APP_BOARD_TEST). */
+void board_test_run(void);
 
 int   accel_read(int *ax, int *ay, int *az);
 int   accel_read_gyro(int *gx, int *gy, int *gz);

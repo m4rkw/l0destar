@@ -33,6 +33,11 @@ CONFIG_APP_APN=""
 # CONFIG_APP_MOVEMENT_ALARM=n
 # CONFIG_LOG_MODE_IMMEDIATE=y
 
+# --- board test (board_test.sh) --------------------------------------------
+# Hide the GPS fix coordinates in the board-test output (public demos).
+# board_test.sh copies this into its generated overlay.
+# CONFIG_APP_BOARD_TEST_HIDE_COORDS=y
+
 # --- intervals (seconds) ---------------------------------------------------
 # CONFIG_APP_ENGINE_OFF_LOOP_INTERVAL=0
 # CONFIG_APP_IGNITION_ON_SLEEP_INTERVAL=30

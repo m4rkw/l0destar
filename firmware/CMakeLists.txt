@@ -29,4 +29,7 @@ target_sources(app PRIVATE
     src/reboot.c
 )
 
+# Interactive bring-up rig (board_test.sh) — bench builds only.
+target_sources_ifdef(CONFIG_APP_BOARD_TEST app PRIVATE src/board_test.c)
+
 target_include_directories(app PRIVATE src)

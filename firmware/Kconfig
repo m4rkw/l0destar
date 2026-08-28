@@ -104,6 +104,32 @@ config APP_KLINE_TEST
 	  K-line to verify the two transceivers talk to each other across the
 	  wire.  Bench bring-up aid; leave off in production.
 
+config APP_BOARD_TEST
+	bool "Run the interactive board bring-up test instead of the tracker"
+	default n
+	help
+	  Walks an operator through every fitted subsystem over the serial
+	  console: rail switching, ignition sense + wake, battery voltage,
+	  tilt/impact/movement-wake on the IMU, a raw (unassisted) GPS fix,
+	  modem + DNS, and the K-line/CAN loopbacks.  Driven by board_test.sh,
+	  which generates the overlay that sets this.  Never enable in a
+	  production image — main() runs the test and parks.
+
+config APP_BOARD_TEST_HIDE_COORDS
+	bool "Board test: do not print the GPS fix coordinates"
+	default n
+	help
+	  The raw-fix test reports sats/HDOP/altitude/time but hides lat/lon —
+	  for running the board test in public demos.  Set it in local.conf;
+	  board_test.sh copies it into the generated test overlay.
+
+config APP_BOARD_TEST_SKIP_MODEM
+	bool "Board test: skip the modem + DNS test"
+	default n
+	help
+	  Set by board_test.sh when no APN is configured and the operator
+	  chose to skip the modem test.
+
 config APP_PSK_HEX
 	string "32-byte device PSK as 64 hex chars"
 	default ""

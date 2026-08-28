@@ -842,6 +842,12 @@ int main(void)
 
     relay_init();
 
+#if IS_ENABLED(CONFIG_APP_BOARD_TEST)
+    /* Interactive bring-up rig (board_test.sh): walks the operator through
+     * every fitted subsystem over the console, then parks.  Never returns. */
+    board_test_run();
+#endif
+
 #if IS_ENABLED(CONFIG_APP_ACCEL_TEST)
     if (accel_available()) {
         printk("\n*** ACCEL TEST — streaming at 10 Hz ***\n");
