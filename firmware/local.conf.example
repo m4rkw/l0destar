@@ -33,9 +33,15 @@ CONFIG_APP_APN=""
 # CONFIG_APP_MOVEMENT_ALARM=n
 # CONFIG_LOG_MODE_IMMEDIATE=y
 
+# --- public demos ----------------------------------------------------------
+# Mask lat/lon in everything printed on the console (telemetry records, locate
+# alerts, the board test's fix line).  What goes to the server is unchanged.
+# board_test.sh copies this into its generated overlay too.
+# CONFIG_APP_DEMO_MODE=y
+
 # --- board test (board_test.sh) --------------------------------------------
-# Hide the GPS fix coordinates in the board-test output (public demos).
-# board_test.sh copies this into its generated overlay.
+# Drop the GPS fix coordinates from the board-test line altogether, rather
+# than masking them the way APP_DEMO_MODE does.  Wins if both are set.
 # CONFIG_APP_BOARD_TEST_HIDE_COORDS=y
 
 # --- intervals (seconds) ---------------------------------------------------

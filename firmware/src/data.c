@@ -278,7 +278,15 @@ int send_data(void)
     for (int r = 0; r < rec_count && p < data_current + data_index; r++) {
         char *nl = memchr(p, '\n', data_current + data_index - p);
         int len = nl ? (int)(nl - p) : (int)(data_current + data_index - p);
+#ifdef CONFIG_APP_DEMO_MODE
+        /* A record is ~250 bytes at its longest; anything past the buffer is
+         * dropped from the console line rather than printed unmasked. */
+        char masked[384];
+        LOG_INF("[%d/%d] %s", r + 1, rec_count,
+                demo_mask_coords(p, (size_t)len, masked, sizeof(masked)));
+#else
         LOG_INF("[%d/%d] %.*s", r + 1, rec_count, len, p);
+#endif
         p += len + 1;
     }
 

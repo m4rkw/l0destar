@@ -44,7 +44,7 @@ CONFIG_APP_BOARD_L0DESTAR_V3_0=y
 
 Available: `APP_BOARD_BENCH` (default), `..._L0DESTAR_V2_1`, `..._V2_1_MINI`,
 `..._V2_5_CAN/_KLINE/_MICRO`, `..._V2_6_CAN/_KLINE/_MICRO`, `..._V3_0`,
-`..._V3_1`, `..._V3_3`.
+`..._V3_1`, `..._V3_2`, `..._V3_3`.
 Individual pins/flags can still be overridden after the board defaults apply
 (on v3.0, set `CONFIG_APP_BOARD_HAS_CAN=n` or `..._HAS_KLINE=n` to match the
 jumper configuration of the physical board).
@@ -321,6 +321,7 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_CRASH_THRESHOLD_MG` | 4000 | Impact alert threshold while awake (mg) |
 | `APP_PARKED_IMPACT_MG` | 800 | Parked-impact threshold from FIFO peak (mg) |
 | `APP_ALWAYS_ON` | n | Hold the relay set regardless of ignition |
+| `APP_DEMO_MODE` | n | Mask lat/lon in the serial log (public demos); telemetry unaffected |
 | `APP_SERVER_HOST` | "" | Telemetry hostname (else `HOSTNAME` in `config.h`) |
 | `APP_APN` | "" | Cellular APN (else `DEFAULT_APN`) |
 | `APP_PSK_HEX` | "" | **Legacy** PSK for the old ChaCha20 transport |

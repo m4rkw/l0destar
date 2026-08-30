@@ -9,7 +9,10 @@
 # fitted subsystem (rails, ignition, voltage, IMU, GPS, modem, OBD loopbacks).
 #
 # Environment overrides, all optional:
-#   SERIAL=/dev/cu.usbmodemXXX   serial console port (skips the port menu)
+#   SERIAL=/dev/cu.usbmodemXXX   serial console port (default: the first
+#                                /dev/cu.usbmodem*)
+#   VERBOSE=1                    keep the module logs at info; the default
+#                                quiets them so the boot is clean
 #   PROFILE=dk|makerdiary         forwarded to build.sh (bench DK: PROFILE=dk)
 #   BOARD=<zephyr target>         forwarded to build.sh
 #
@@ -19,7 +22,8 @@
 #                                      the profile overlay, e.g. makerdiary.conf,
 #                                      then prj.conf — the same layering as
 #                                      build.sh — before asking)
-#   CONFIG_APP_BOARD_TEST_HIDE_COORDS  =y hides the GPS fix lat/lon (demos)
+#   CONFIG_APP_DEMO_MODE               =y masks the GPS fix lat/lon (demos)
+#   CONFIG_APP_BOARD_TEST_HIDE_COORDS  =y drops them from the line entirely
 #   CONFIG_APP_CRASH_THRESHOLD_MG      impact threshold (default 1200 mg here:
 #                                      a firm desk bang is 1.5-3 g)
 set -euo pipefail
@@ -33,6 +37,7 @@ BAUD=115200
 # id|menu label|Kconfig board select|flags (obd = ask which OBD interface)
 BOARDS=(
     "v3.3|l0destar v3.3  (v3.1 map, fixed L-line + L sense)|CONFIG_APP_BOARD_L0DESTAR_V3_3=y|obd"
+    "v3.2|l0destar v3.2  (v3.1 map + MCU OVP)|CONFIG_APP_BOARD_L0DESTAR_V3_2=y|obd"
     "v3.1|l0destar v3.1  (combined CAN/K-line, rail sensing)|CONFIG_APP_BOARD_L0DESTAR_V3_1=y|obd"
     "v3.0|l0destar v3.0  (combined CAN/K-line, jumper-selected)|CONFIG_APP_BOARD_L0DESTAR_V3_0=y|"
     "v2.6c|l0destar v2.6C (CAN)|CONFIG_APP_BOARD_L0DESTAR_V2_6_CAN=y|"
@@ -165,6 +170,14 @@ CRASH_MG="${CRASH_MG:-1200}"
     [[ -n "$OBD_MODE" ]] && echo "CONFIG_APP_OBD_MODE=$OBD_MODE"
     echo "CONFIG_APP_BOARD_TEST=y"
     echo "CONFIG_LOG_MODE_IMMEDIATE=y"
+    if [[ "${VERBOSE:-}" == 1 ]]; then
+        echo "CONFIG_APP_LOG_LEVEL=3"
+    else
+        echo "# quiet boot: every test prints its own result, and the driver"
+        echo "# init chatter only scrolls the start prompt away.  VERBOSE=1"
+        echo "# restores the module logs; warnings and errors always print."
+        echo "CONFIG_APP_LOG_LEVEL=2"
+    fi
     echo "# bounded registration attempt for the bench (default is 600 s)"
     echo "CONFIG_LTE_NETWORK_TIMEOUT=180"
     echo "# desk-bang friendly impact threshold"
@@ -173,6 +186,9 @@ CRASH_MG="${CRASH_MG:-1200}"
     [[ "$SKIP_MODEM" == 1 ]] && echo "CONFIG_APP_BOARD_TEST_SKIP_MODEM=y"
     if local_conf_has_y CONFIG_APP_BOARD_TEST_HIDE_COORDS; then
         echo "CONFIG_APP_BOARD_TEST_HIDE_COORDS=y"
+    fi
+    if local_conf_has_y CONFIG_APP_DEMO_MODE; then
+        echo "CONFIG_APP_DEMO_MODE=y"
     fi
 } > "$FRAGMENT"
 echo
@@ -216,22 +232,13 @@ else
         echo "No /dev/cu.usbmodem* serial port found." >&2
         echo "Power/cable? (bench: try 'power on')  Or set SERIAL=/dev/..." >&2
         exit 1
-    elif [[ ${#ports[@]} -eq 1 ]]; then
-        PORT="${ports[0]}"
     else
-        echo
-        echo "Serial ports (Connect Kit's DAPLink exposes two CDC ports; the"
-        echo "console is usually the first — if it's silent, rerun with the other):"
-        for i in "${!ports[@]}"; do
-            printf "  %2d) %s\n" "$((i + 1))" "${ports[$i]}"
-        done
-        read -r -p "Port [1]: " psel
-        psel="${psel:-1}"
-        if ! [[ "$psel" =~ ^[0-9]+$ ]] || (( psel < 1 || psel > ${#ports[@]} )); then
-            echo "Invalid selection: $psel" >&2
-            exit 1
+        # The Connect Kit's DAPLink exposes two CDC ports and the console is
+        # always the first.  If it ever comes up silent, rerun with SERIAL=.
+        PORT="${ports[0]}"
+        if [[ ${#ports[@]} -gt 1 ]]; then
+            echo "Serial ports: ${ports[*]} -- using the first"
         fi
-        PORT="${ports[$((psel - 1))]}"
     fi
 fi
 echo

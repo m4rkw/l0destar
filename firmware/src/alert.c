@@ -29,7 +29,15 @@ void alert_enqueue(const char *msg, int priority)
     alert_queue[alert_count][ALERT_MSG_SIZE - 1] = '\0';
     alert_prio[alert_count] = priority;
     alert_count++;
+#ifdef CONFIG_APP_DEMO_MODE
+    /* The locate/tomtom replies carry the position in their text. */
+    char masked[ALERT_MSG_SIZE];
+    LOG_INF("queued: %s", demo_mask_coords(alert_queue[alert_count - 1],
+                                           strlen(alert_queue[alert_count - 1]),
+                                           masked, sizeof(masked)));
+#else
     LOG_INF("queued: %s", msg);
+#endif
 }
 
 int alert_send(void)

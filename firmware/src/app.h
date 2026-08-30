@@ -113,6 +113,16 @@ int  gnss_stop(void);
 int  gnss_collect(int timeout_ms, struct gnss_fix *out);  /* blocking with timeout */
 int  gnss_resume(void);   /* restart without resetting fix state (warm) */
 
+#ifdef CONFIG_APP_DEMO_MODE
+/* Placeholder printed in place of a latitude or longitude in demo mode. */
+#define DEMO_COORD_MASK "xxxx.xx"
+/* Copy `len` bytes of `in` into `out` with any coordinate replaced by the
+ * placeholder, NUL-terminated; returns `out`.  Console output only — see
+ * gnss.c. */
+const char *demo_mask_coords(const char *in, size_t len,
+                             char *out, size_t out_sz);
+#endif
+
 int  agnss_init(void);
 int  agnss_fetch(void *agnss_request);  /* NULL = request all; else nrf_modem_gnss_agnss_data_frame* */
 

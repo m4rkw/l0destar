@@ -11,8 +11,9 @@
  *   6. Accelerometer             (live roll/pitch readout; continues on the
  *                                 first impact, reported with its metrics)
  *   7. Movement wake from sleep  (once)
- *   8. Raw GPS fix               (no A-GNSS assistance, coords optionally
- *                                 hidden via APP_BOARD_TEST_HIDE_COORDS)
+ *   8. Raw GPS fix               (no A-GNSS assistance; coords masked by
+ *                                 APP_DEMO_MODE, dropped entirely by
+ *                                 APP_BOARD_TEST_HIDE_COORDS)
  *   9. Modem + DNS               (needs SIM + APN; resolves www.google.com)
  *  10. K-line loopback           (kline_test(): TX -> transceiver -> RX)
  *  11. CAN loopback              (hw_can_selftest(): internal + external)
@@ -702,6 +703,15 @@ static void test_gps_fix(bool rail_ok, bool modem_ok)
 		return;
 	}
 
+	/* Demo mode keeps the line's shape and swaps the position for the same
+	 * placeholder the telemetry log uses; HIDE_COORDS drops the field
+	 * altogether and wins when both are set. */
+#ifdef CONFIG_APP_DEMO_MODE
+	const char *lat = DEMO_COORD_MASK, *lon = DEMO_COORD_MASK;
+#else
+	const char *lat = g_gnss.lat_str, *lon = g_gnss.lon_str;
+#endif
+
 	if (IS_ENABLED(CONFIG_APP_BOARD_TEST_HIDE_COORDS)) {
 		printk("        FIX OK: sats=%ld hdop=%ld.%ld alt=%.0fm "
 		       "time=%s (coords hidden)\n",
@@ -710,7 +720,7 @@ static void test_gps_fix(bool rail_ok, bool modem_ok)
 	} else {
 		printk("        FIX OK: %s,%s  sats=%ld hdop=%ld.%ld alt=%.0fm"
 		       " time=%s\n",
-		       g_gnss.lat_str, g_gnss.lon_str,
+		       lat, lon,
 		       g_gnss.sats, g_gnss.hdop_x10 / 10, g_gnss.hdop_x10 % 10,
 		       (double)g_gnss.altitude_m, g_gnss.time_iso);
 	}

@@ -834,7 +834,12 @@ int main(void)
     hw_aux_power_on();
     k_msleep(10);
 
-    hw_selftest();
+    /* Tests 1 and 2 of the board test walk the same rails interactively, so
+     * at boot the self-test would only cycle them a second time and bury the
+     * operator's prompt under its own log. */
+    if (!IS_ENABLED(CONFIG_APP_BOARD_TEST)) {
+        hw_selftest();
+    }
 
     if (hw_power_init())  LOG_WRN("INA228 init failed — voltage unavailable");
     if (hw_accel_init())  LOG_WRN("accel init failed — readings unavailable");

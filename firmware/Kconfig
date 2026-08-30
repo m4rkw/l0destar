@@ -80,13 +80,13 @@ config APP_OBD_MODE
 	int "OBD interface mode (0=none, 1=CAN, 2=K-line)"
 	default 0
 	help
-	  Which OBD interface is populated on a v3.1 board.  The jumper pads
-	  select the electrical path; this tells firmware which rails to test
-	  and which protocol driver to start.
+	  Which OBD interface is populated on a v3.1/v3.2/v3.3 board.  The
+	  jumper pads select the electrical path; this tells firmware which
+	  rails to test and which protocol driver to start.
 	    0 = no OBD interface (S5R1-S5R4 all open)
 	    1 = CAN bus (S5R1 + S5R3; PP3V3_CAN via CAN_EN)
 	    2 = K-line / ISO-9141 (S5R2 + S5R4; PP3V3_K + PP12V_K via K_EN)
-	  Ignored on boards other than v3.1.
+	  Ignored on boards other than v3.1+.
 
 config APP_CAN_TEST
 	bool "Run the CAN bus loopback test at boot"
@@ -115,13 +115,28 @@ config APP_BOARD_TEST
 	  which generates the overlay that sets this.  Never enable in a
 	  production image — main() runs the test and parks.
 
+config APP_DEMO_MODE
+	bool "Demo mode: mask the GPS coordinates in the serial log"
+	default n
+	help
+	  Replaces latitude and longitude with a placeholder everywhere the
+	  firmware prints them on the console: the telemetry records echoed by
+	  send_data() and the position alerts raised by the locate/tomtom
+	  commands, and the board test's raw-fix line.  Only the console view is
+	  masked — the record and the alert text still carry the real fix to the
+	  server — so a live unit can be demonstrated in public without showing
+	  where it is.
+
 config APP_BOARD_TEST_HIDE_COORDS
 	bool "Board test: do not print the GPS fix coordinates"
 	default n
 	help
-	  The raw-fix test reports sats/HDOP/altitude/time but hides lat/lon —
-	  for running the board test in public demos.  Set it in local.conf;
-	  board_test.sh copies it into the generated test overlay.
+	  The raw-fix test reports sats/HDOP/altitude/time and drops lat/lon
+	  from the line entirely.  APP_DEMO_MODE already masks them there, which
+	  keeps the line's shape and is usually what a demo wants; this is the
+	  stricter option for when the field should not appear at all, and it
+	  wins if both are set.  Set it in local.conf; board_test.sh copies it
+	  into the generated test overlay.
 
 config APP_BOARD_TEST_SKIP_MODEM
 	bool "Board test: skip the modem + DNS test"

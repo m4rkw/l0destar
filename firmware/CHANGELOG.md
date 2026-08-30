@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Board test boot noise (`board_test.sh`, `src/main.c`)
+- **The boot rail self-test is skipped in board-test builds.** Tests 1 and 2
+walk the same rails interactively moments later, so at boot `hw_selftest()`
+only cycled them a second time and pushed the start prompt off the screen.
+- **Module logs default to warning** in the generated test overlay
+(`APP_LOG_LEVEL=2`). Every test prints its own result with `printk`, so the
+driver init chatter was pure scrollback; warnings and errors still print, and
+`VERBOSE=1 ./board_test.sh` puts them back at info.
+- **No more serial port menu** — the console is always the first
+`/dev/cu.usbmodem*` (the Connect Kit's DAPLink exposes two). `SERIAL=` still
+overrides.
+
+### Demo mode (`APP_DEMO_MODE`)
+- New build flag that masks latitude and longitude wherever the firmware
+prints them on the console — the telemetry records echoed by `send_data()`, the
+`locate`/`tomtom` alert text logged by `alert_enqueue()`, and the board test's
+raw-fix line (`board_test.sh` copies the flag into its generated overlay).
+`APP_BOARD_TEST_HIDE_COORDS` stays the stricter board-test option — it drops
+the field rather than masking it, and wins if both are set. Coordinates are matched by
+shape in `demo_mask_coords()` — five or more decimals at the start of a field —
+so the timestamp's fractional seconds, the `%.2f` voltages and the `%.1f`
+temperatures print as usual. Console only: the record and the alert still carry
+the real position to the server.
+
 ### v3.3 carrier board (`Kconfig.boards`, `board_test.sh`)
 - New `APP_BOARD_L0DESTAR_V3_3` profile, extracted from the KiCad netlist in
 `../hardware/l0destar_v3.3/`. Same map as v3.1 — split OBD domain, four
