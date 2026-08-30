@@ -58,8 +58,9 @@ emergency measure.
 ## Firmware and over-the-air updates
 
 Over-the-air updates mean that whoever controls the configured endpoint can
-execute code on the device. Point it only at infrastructure you control. No
-server software is provided with this project.
+execute code on the device. Point it only at infrastructure you control.
+Example server software is provided but it has not been comprehensively
+tested or audited and should be evaluated carefully before being used.
 
 ## Location data
 
