@@ -110,11 +110,13 @@ current into the nRF and S10D5/S10R8 adding fault detection on L\_SENSE.
   diode ever failed short, S10R8 (47K) bounds the current reaching the GPIO
   to ~250 uA at 12V.
 - 3-resistor divider added to the LT8609 enable pin. It now won't turn on until
-  the supply voltage reaches 4.6V and will turn off if the supply falls to
-  ~3.5-3.7V, requiring 4.6V to turn on again (clear hysteresis here avoids it
-  ending up in a continuously flapping state). This is to address ISO 16750-2
-  tests that require clearly defined behaviour during low voltage or drop-out
-  events.
+  the supply voltage reaches ~5.6V and will turn off if the supply falls to
+  ~4.3V, requiring ~5.6V to turn on again (clear hysteresis here avoids it
+  ending up in a continuously flapping state). Worst case over the EN/UV pin
+  threshold's specified 0.99-1.11V band the turn-off point stays within
+  3.97-4.61V, comfortably above the ~3.4V at which the board browns out under
+  peak LTE load. This is to address ISO 16750-2 tests that require clearly
+  defined behaviour during low voltage or drop-out events.
 - 1uF caps were resized to 0603 - higher voltage ratings available, some of the
   1uF parts were right at the limit of suitability. Now standardised on 2.2uF
   25V 0603.
@@ -278,7 +280,7 @@ separate load switches.
 | S6R2 | Output voltage divider resistor | 0402 226K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V, sets output voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | S6R3 | Output voltage divider resistor | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Sets output voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | S6R4 | Enable voltage divider resistor | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
-| S6R5 | Enable voltage divider resistor | 0402 300K 1% ANTI-SULFUR AEC-Q200 | [MCS04020C3003FE000](https://uk.farnell.com/vishay/mcs04020c3003fe000/res-300k-1-0-1w-0402-thin-film/dp/3546555) | Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
+| S6R5 | Enable voltage divider resistor | 0402 243K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2433FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2433ftl/res-243k-1-0-0625w-0402-ceramic/dp/2072824) | Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | S6R6 | Enable voltage divider resistor | 0402 3.92M 1% | [CRCW04023M92FKED](https://uk.farnell.com/vishay/crcw04023m92fked/res-3m92-1-0-063w-0402-thick-film/dp/2141113) | |
 | S7U1 | Reverse-blocking load switch | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://uk.farnell.com/vishay/sip32431dr3-t1ge3/ic-load-switch-1-1v-5-5v-1a-sc70/dp/2361509) | |
 | S7R1 | 100K resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
@@ -291,7 +293,7 @@ separate load switches.
 | S8C3 | 100nF capacitor | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | S8C4 | 100pF SDA filter capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
 | S8C5 | 100pF SCL filter capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
-| S8R1 | Accelerometer ferrite bead | Ferrite 600R 300mA | [BLM15AG601SN1D](https://uk.farnell.com/murata/blm15ag601sn1d/ferrite-bead-0-6ohm-300ma-0402/dp/1515762) | |
+| S8R1 | Accelerometer ferrite bead | Ferrite 600R 300mA | [BLM15AG601SH1D](https://uk.farnell.com/murata/blm15ag601sh1d/ferrite-bead-0-6ohm-0-3a-0402/dp/2470354) | |
 | S11U1 | Ideal diode | LM66100 | [LM66100](https://www.aliexpress.com/item/1005008565117953.html) | |
 | S11U2 | Shunt voltage reference | ATL431BQDBZR SOT-23 | [ATL431BQDBZR](https://www.digikey.co.uk/en/products/detail/texas-instruments/ATL431BQDBZR/5278910) | 2.5V, 0.5%, low Iq |
 | S11Q1 | OVP series MOSFET | SQ2361 SOT-23 | [SQ2361CES-T1_BE3](https://uk.farnell.com/vishay/sq2361ces-t1-be3/mosfet-p-ch-60v-2-8a-sot-23/dp/4644757) | |
@@ -305,7 +307,7 @@ separate load switches.
 | S11R6 | OVP divider (bottom) | 0402 1.05M 1% | [RC0402FR-071M05L](https://uk.farnell.com/yageo/rc0402fr-071m05l/res-1m05-1-0-063w-thick-film-0402/dp/3951647) | Sets trip point, keep 1% |
 | S11C1 | 47uF capacitor | 1210 >= 10V 20% X7R | [CL32B476MPJNNNE](https://uk.farnell.com/semco/cl32b476mpjnnne/cap-mlcc-47uf-10vdc-x7r-1210/dp/5109745) | Was S6C6 in v3.1 |
 | S11C2 | 47uF capacitor | 1210 >= 10V 20% X7R | [CL32B476MPJNNNE](https://uk.farnell.com/semco/cl32b476mpjnnne/cap-mlcc-47uf-10vdc-x7r-1210/dp/5109745) | Was S6C7 in v3.1 |
-| S11C3 | 3.3pF reference filter capacitor | 0402 >= 50V ±0.25pF C0G / NP0 | [GRM1555C1H3R3CA01D](https://uk.farnell.com/murata/grm1555c1h3r3ca01d/cap-mlcc-3-3pf-c0g-np0-50v-0402/dp/4326713) | |
+| S11C3 | 3.3pF reference filter capacitor | 0402 >= 50V ±0.25pF C0G / NP0 | [CGA2B2C0G1H3R3C050BA](https://uk.farnell.com/tdk/cga2b2c0g1h3r3c050ba/cap-3-3pf-50v-c0g-np0-0402/dp/2210780) | |
 | S13R1 | LED resistor | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
 | S13R2 | LED resistor | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
 | S13R3 | LED resistor | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
@@ -421,7 +423,7 @@ on which interfaces are fitted. Quantities are per board.
 | All | 20-pin 2.54mm header | 2 | 20-pin 2.54mm header | [20-pin pcb header](https://www.aliexpress.com/item/1005003610333849.html) | |
 | All | 15R 0508 resistor | 1 | 0508 15R 5% 1W | [3430A2F15RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f15rtdf/res-15r-1w-thick-film-0508-wide/dp/4206818) | |
 | All | 1K 0402 resistor | 3 | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
-| All | Accelerometer ferrite bead | 1 | Ferrite 600R 300mA | [BLM15AG601SN1D](https://uk.farnell.com/murata/blm15ag601sn1d/ferrite-bead-0-6ohm-300ma-0402/dp/1515762) | |
+| All | Accelerometer ferrite bead | 1 | Ferrite 600R 300mA | [BLM15AG601SH1D](https://uk.farnell.com/murata/blm15ag601sh1d/ferrite-bead-0-6ohm-0-3a-0402/dp/2470354) | |
 | All | 1.8K 0402 resistor | 2 | 0402 1.8K 1% | [MCMR04X1801FTL](https://uk.farnell.com/multicomp-pro/mcmr04x1801ftl/res-1k8-1-0-0625w-0402-ceramic/dp/2072709) | |
 | All | 10K 0402 resistor | 1 | 0402 10K 1% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | All | 15K 0402 anti-sulfur resistor | 1 | 0402 15K 1% ANTI-SULFUR AEC-Q200 | [MCSR04X1502FTL](https://uk.farnell.com/multicomp-pro/mcsr04x1502ftl/res-15k-1-0-0625w-0402-thick-film/dp/2073998) | anti-sulfur AEC-Q200 recommended |
@@ -430,14 +432,14 @@ on which interfaces are fitted. Quantities are per board.
 | All | 100K 0402 resistor | 5 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | All | 180K 0402 resistor | 1 | 0402 180K 5% | [MCWR04X1803FTL](https://uk.farnell.com/multicomp-pro/mcwr04x1803ftl/res-180k-1-0-0625w-thick-film/dp/2447116) | |
 | All | 226K 0402 anti-sulfur resistor | 1 | 0402 226K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V, sets output voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
-| All | 300K 0402 anti-sulfur resistor | 1 | 0402 300K 1% ANTI-SULFUR AEC-Q200 | [MCS04020C3003FE000](https://uk.farnell.com/vishay/mcs04020c3003fe000/res-300k-1-0-1w-0402-thin-film/dp/3546555) | Keep 1% anti-sulfur |
+| All | 243K 0402 anti-sulfur resistor | 1 | 0402 243K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2433FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2433ftl/res-243k-1-0-0625w-0402-ceramic/dp/2072824) | Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | All | 1M 0402 resistor 1% | 1 | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | All | 1M 0402 resistor 5% | 2 | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | All | 1M 0402 anti-sulfur resistor | 3 | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Regulator output / trip point, keep 1%, anti-sulfur AEC-Q200 recommended |
 | All | 3.92M 1% resistor | 1 | 0402 3.92M 1% | [CRCW04023M92FKED](https://uk.farnell.com/vishay/crcw04023m92fked/res-3m92-1-0-063w-0402-thick-film/dp/2141113) | |
 | All | 1.05M 0402 resistor | 1 | 0402 1.05M 1% | [RC0402FR-071M05L](https://uk.farnell.com/yageo/rc0402fr-071m05l/res-1m05-1-0-063w-thick-film-0402/dp/3951647) | Sets trip point, keep 1% |
 | All | 33M 0603 resistor | 1 | 0603 33M 5% | [MCHVR03JTHX3305](https://uk.farnell.com/multicomp-pro/mchvr03jthx3305/res-33m-5-0-1w-0603-thick-film/dp/2825824) | |
-| All | 3.3pF 0402 capacitor | 1 | 0402 >= 50V ±0.25pF C0G / NP0 | [GRM1555C1H3R3CA01D](https://uk.farnell.com/murata/grm1555c1h3r3ca01d/cap-mlcc-3-3pf-c0g-np0-50v-0402/dp/4326713) | |
+| All | 3.3pF 0402 capacitor | 1 | 0402 >= 50V ±0.25pF C0G / NP0 | [CGA2B2C0G1H3R3C050BA](https://uk.farnell.com/tdk/cga2b2c0g1h3r3c050ba/cap-3-3pf-50v-c0g-np0-0402/dp/2210780) | |
 | All | 10pF capacitor | 1 | 0402 >= 50V 5% C0G/NP0 | [GRM1555C1H100JA01D](https://uk.farnell.com/murata/grm1555c1h100ja01d/cap-mlcc-10pf-c0g-np0-50v-0402/dp/4326648) | |
 | All | 47pF RF capacitor | 1 | 0402 >= 50V 5% C0G / NP0 | [CBR04C470J5GACAUTO](https://uk.farnell.com/kemet/cbr04c470j5gacauto/rf-capacitor-47pf-50v-125deg-c/dp/4062386) | **Matched pair with the 100pF cap** |
 | All | 100pF capacitor | 2 | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |

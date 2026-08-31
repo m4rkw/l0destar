@@ -1244,7 +1244,7 @@
 		)
 		(uuid "57aef596-9130-4a4d-9625-4cb48b97acad")
 	)
-	(text "l0destar auxillary power control"
+	(text "l0destar auxilliary power control"
 		(exclude_from_sim no)
 		(at 185.928 189.738 0)
 		(effects
@@ -1268,7 +1268,7 @@
 		)
 		(uuid "84e62e2c-41c3-4990-b9c0-567b3f1d61ae")
 	)
-	(text "Load switches for auxillary power rails\nGPS / 3.3V CAN / 3.3V K / 12V K (typically only one of CAN/K will be present)\nState signals via GPIO for rail fault detection\n12V state signal is inverted by its MOSFET"
+	(text "Load switches for auxilliary power rails\nGPS / 3.3V CAN / 3.3V K / 12V K (typically only one of CAN/K will be present)\nState signals via GPIO for rail fault detection\n12V state signal is inverted by its MOSFET"
 		(exclude_from_sim no)
 		(at 179.705 172.72 0)
 		(effects

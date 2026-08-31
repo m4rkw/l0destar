@@ -3119,7 +3119,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 300K 1% ANTI-SULFUR AEC-Q200"
+		(property "Value" "0402 243K 1% ANTI-SULFUR AEC-Q200"
 			(at 107.95 120.015 0)
 			(show_name no)
 			(do_not_autoplace no)
