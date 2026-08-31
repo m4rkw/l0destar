@@ -171,6 +171,12 @@ void led_sent(void);
 void led_idle(void);
 void led_sleep_enter(void);
 void led_all_off(void);
+/* Direct steady-state control: stop every pattern timer and drive LED1-3
+ * from the mask.  On single-LED builds the LED1 bit drives led0. */
+#define LED_MASK_1  0x01
+#define LED_MASK_2  0x02
+#define LED_MASK_3  0x04
+void led_mask(uint8_t mask);
 /* Accelerometer wake indication — no-ops unless CONFIG_APP_LED_ACCEL_WAKE.
  * Both return at once; the pattern plays out on a timer in the background. */
 void led_accel_movement(void);
@@ -222,6 +228,9 @@ int  hw_can_selftest(void);
 
 /* Interactive board bring-up rig (board_test.c, CONFIG_APP_BOARD_TEST). */
 void board_test_run(void);
+
+/* LTE TX power / brown-out rig (lte_power_test.c, CONFIG_APP_LTE_POWER_TEST). */
+void lte_power_test_run(void);
 
 int   accel_read(int *ax, int *ay, int *az);
 int   accel_read_gyro(int *gx, int *gy, int *gz);

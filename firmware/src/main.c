@@ -826,6 +826,13 @@ int main(void)
     hw_aux_power_on();
     k_msleep(10);
 
+#if IS_ENABLED(CONFIG_APP_LTE_POWER_TEST)
+    /* LTE TX power / brown-out rig: idles with LED1 on, blasts uplink
+     * traffic on ENTER.  Skips the self-test and every peripheral the
+     * radio doesn't need.  Never returns. */
+    lte_power_test_run();
+#endif
+
     /* Tests 1 and 2 of the board test walk the same rails interactively, so
      * at boot the self-test would only cycle them a second time and bury the
      * operator's prompt under its own log. */

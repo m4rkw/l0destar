@@ -175,6 +175,10 @@ fi
 if [[ "${PROV:-}" == "1" && -f "$APP_DIR/prov.conf" ]]; then
 	CONF_OVERLAYS+=("prov.conf")
 fi
+# LTE_TEST=1 layers lte_power_test.conf on top (TX power / brown-out rig).
+if [[ "${LTE_TEST:-}" == "1" && -f "$APP_DIR/lte_power_test.conf" ]]; then
+	CONF_OVERLAYS+=("lte_power_test.conf")
+fi
 # Optional bench-only devicetree overlay (gitignored), applied last so it wins.
 if [[ -f "$APP_DIR/local.overlay" ]]; then
 	DTC_OVERLAYS+=("local.overlay")

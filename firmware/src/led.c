@@ -296,6 +296,19 @@ void led_sleep_enter(void)
 	k_timer_start(&s_sleep_timer, K_MSEC(150), K_MSEC(150));
 }
 
+void led_mask(uint8_t mask)
+{
+	stop_all_timers();
+	if (s_multi) {
+		set_leds_mask(mask);
+	}
+#if HAS_DT_LED0
+	else {
+		gpio_pin_set_dt(&dt_led, (mask & LED_M1) != 0);
+	}
+#endif
+}
+
 void led_all_off(void)
 {
 	stop_all_timers();

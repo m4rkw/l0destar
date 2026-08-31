@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### LTE TX power / brown-out test mode (`src/lte_power_test.c`)
+- **New bench rig, `CONFIG_APP_LTE_POWER_TEST`** (build with
+`LTE_TEST=1 BUILD_SUBDIR=build_lte_test ./build.sh`). Replaces the tracker:
+the modem registers once at boot, then the board idles with LED1 on. An
+ignition OFF->ON edge — or ENTER on the serial console, when USB is attached
+(a PSU-only run, the point of the test, has none: USB takes over the power
+input) — starts a ~10 s burst of uplink UDP datagrams pushed at the
+modem as fast as it will queue them, keeping the radio transmitting for the
+whole window — the sustained full-power TX load of a unit in a low-signal
+area. LED2 joins LED1 for the burst; if the supply carries it, all three LEDs
+light and hold until ignition is turned OFF, which returns the rig to LED1
+alone and re-arms the trigger. A brown-out resets the board
+instead, so LED3 never lights and the unit comes back up at LED1 only. The
+burst reports progress and the modem's own VDD reading (`AT%XVBAT`, sampled
+under TX load) every 2 s, so sag is visible on the console before it becomes
+a reset.
+- **`led_mask()`** added to `led.c`: direct steady-state control of LED1-3
+(stops every pattern timer first), used by the rig for its fixed LED states.
+
 ### Relay support removed (firmware + server)
 - **The latching relay is gone from the product, so it is gone from the code.**
 `src/hw_relay.c`, `APP_RELAY_CONNECTED`, the four `APP_PIN_RLY_*` assignments,

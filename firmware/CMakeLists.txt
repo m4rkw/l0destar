@@ -31,4 +31,7 @@ target_sources(app PRIVATE
 # Interactive bring-up rig (board_test.sh) — bench builds only.
 target_sources_ifdef(CONFIG_APP_BOARD_TEST app PRIVATE src/board_test.c)
 
+# LTE TX power / brown-out rig — bench builds only.
+target_sources_ifdef(CONFIG_APP_LTE_POWER_TEST app PRIVATE src/lte_power_test.c)
+
 target_include_directories(app PRIVATE src)

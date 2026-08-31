@@ -97,6 +97,25 @@ config APP_BOARD_TEST
 	  which generates the overlay that sets this.  Never enable in a
 	  production image — main() runs the test and parks.
 
+config APP_LTE_POWER_TEST
+	bool "Run the LTE TX power / brown-out test instead of the tracker"
+	default n
+	help
+	  Bring the modem up, then idle with LED1 on.  An ignition OFF->ON
+	  edge — or ENTER on the serial console, when USB is attached —
+	  starts a ~10 s burst of uplink UDP traffic pushed at the modem as
+	  fast as it will queue it, keeping the radio transmitting for the
+	  whole window: the sustained-TX supply load of a unit in a
+	  low-signal area.  The ignition trigger is the one to use when
+	  measuring draw, since USB takes over the power input and a
+	  PSU-only run has no console; it needs APP_DEBUG_IGNITION=-1 (the
+	  live GPIO read).  LED2 joins LED1 during the burst; surviving it
+	  lights all three LEDs, held until ignition is turned OFF — which
+	  also re-arms the trigger.  A brown-out resets the board instead,
+	  so LED3 never lights and the unit comes back up at LED1 only.  Bench aid for validating the
+	  supply; never enable in a production image — main() runs the test
+	  and never enters the tracker.
+
 config APP_DEMO_MODE
 	bool "Demo mode: mask the GPS coordinates in the serial log"
 	default n

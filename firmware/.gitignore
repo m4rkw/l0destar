@@ -29,3 +29,4 @@ CLAUDE_LOCAL.md
 .claude
 screenlog.0
 release.sh
+build_lte_test/*
