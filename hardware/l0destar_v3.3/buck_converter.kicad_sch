@@ -1112,7 +1112,7 @@
 		)
 		(uuid "bd537b67-b98f-469a-9fdb-355a655016d7")
 	)
-	(text "Output voltage divider:\n\n0.782V x (1 + S6R3/S6R2) == 4.24V\n\n\n\n\nEnable divider:\n\nEN threshold: 1.05V rising, 1.00V falling.  VOUT = 4.24V\n\nK = 1 + S6R4/S6R5 + S6R4/S6R6\n\nVIN_on  = K x 1.05                            -> 4.82V\nVIN_off = K x 1.00 - S6R4 x VOUT / S6R6   -> 3.51V\n\n\n\n\nNote: VIN_off very likely does not satisfy ISO 16750-2, this is deliberate. Bench tests using a Riden RD6006 power supply,\na v3.1 board and firmware modified to deliberately peak the modem current (CONFIG_APP_LTE_POWER_TEST=y) for 10 seconds\nshowed reliable operation at 3.38v+, consistent failure at 3.36v and non-deterministic failure at 3.37v.\n\n"
+	(text "Output voltage divider:\n\n0.782V x (1 + S6R3/S6R2) == 4.24V\n\n\n\n\nEnable divider:\n\nEN threshold: 1.05V rising, 1.00V falling.  VOUT = 4.24V\n\nK = 1 + S6R4/S6R5 + S6R4/S6R6\n\nVIN_on  = K x 1.05                            -> 5.37V\nVIN_off = K x 1.00 - S6R4 x VOUT / S6R6   -> 4.29V\n\n\n\n\nNote: VIN_off may not satisfy ISO 16750-2. Bench tests using a Riden RD6006 power supply,\na v3.1 board and firmware modified to deliberately peak the modem current (CONFIG_APP_LTE_POWER_TEST=y) for 10 seconds\nshowed reliable operation at 3.38v+, consistent failure at 3.36v and non-deterministic failure at 3.37v.\nCurrently unclear if the gap to 4.29V is sufficient to allow the hysteresis to work.\n\n"
 		(exclude_from_sim no)
 		(at 18.415 116.84 0)
 		(effects
@@ -3130,7 +3130,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 300K 1% ANTI-SULFUR AEC-Q200"
+		(property "Value" "0402 243K 1% ANTI-SULFUR AEC-Q200"
 			(at 148.59 119.38 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3151,7 +3151,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
+		(property "Datasheet" ""
 			(at 169.545 112.395 0)
 			(hide yes)
 			(show_name no)
@@ -3162,7 +3162,7 @@
 				)
 			)
 		)
-		(property "Description" "Resistor"
+		(property "Description" ""
 			(at 169.545 112.395 0)
 			(hide yes)
 			(show_name no)
@@ -3173,7 +3173,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "ERJ2RKF1004X"
+		(property "Manufacturer_Part_Number" ""
 			(at 169.545 112.395 0)
 			(hide yes)
 			(show_name no)
@@ -3185,7 +3185,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Panasonic"
+		(property "Manufacturer_Name" ""
 			(at 169.545 112.395 0)
 			(hide yes)
 			(show_name no)
