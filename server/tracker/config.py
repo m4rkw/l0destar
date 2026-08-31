@@ -76,8 +76,7 @@ DTLS_CERT = get('dtls_cert', '') or TLS_CERT
 DTLS_KEY = get('dtls_key', '') or TLS_KEY
 DTLS_LIB = get('dtls_lib', '')
 
-# Devices with no always-on supply and no relay have no use for the always_on
-# and movement_alarm response fields; dropping them shortens every reply.
+# Drop the movement_alarm response field; shortens every reply.
 SLIM_RESPONSE = bool(get('slim_response', False))
 
 # -- storage -----------------------------------------------------------------

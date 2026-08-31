@@ -113,11 +113,11 @@ def test_device_config_defaults():
     # movement_alarm defaults on: a device that has never been configured
     # should still raise the alarm rather than silently not.
     assert telemetry.device_config(
-        {'int': None, 'always_on': None, 'movement_alarm': None}
-    ) == {'int': 0, 'ao': 0, 'ma': 1}
+        {'int': None, 'movement_alarm': None}
+    ) == {'int': 0, 'ma': 1}
 
 
 def test_device_config_preserves_explicit_zero():
     assert telemetry.device_config(
-        {'int': 900, 'always_on': 1, 'movement_alarm': 0}
-    ) == {'int': 900, 'ao': 1, 'ma': 0}
+        {'int': 900, 'movement_alarm': 0}
+    ) == {'int': 900, 'ma': 0}

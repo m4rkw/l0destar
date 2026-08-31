@@ -124,8 +124,8 @@ def test_device_settings_are_mirrored(device, database):
     response = send(device, record(0, 51.5, -0.1, 0,
                                    extras=',ri=1;int=900;ao=1;ma=0'))
     updated = db.lookup_device(imei=device['imei'])
-    assert (updated['int'], updated['always_on'], updated['movement_alarm']) == (900, 1, 0)
-    assert response.startswith('1,900,1,0')
+    assert (updated['int'], updated['movement_alarm']) == (900, 0)
+    assert response.startswith('1,900,0')
 
 
 def test_commands_are_delivered_once(device, database):

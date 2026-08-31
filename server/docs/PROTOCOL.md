@@ -42,7 +42,7 @@ Anything after the twelve fixed fields is a comma-separated group of
 | Key | Column | Sticky? |
 |---|---|---|
 | `ri` | request config in the response | per-packet |
-| `int`, `ao`, `ma` | settings the device believes it has | per-packet |
+| `int`, `ma` | settings the device believes it has | per-packet |
 | `fw` | running firmware version | **carried forward** |
 | `mcc`, `mnc`, `lac`, `cid` | serving cell | **carried forward** |
 | `rat` | `CATM1` or `NBIOT` | **carried forward** |
@@ -91,13 +91,12 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>[,<always_on>,<movement_alarm>][,<commands>][,fota=<version>]
+1,<interval>[,<movement_alarm>][,<commands>][,fota=<version>]
 ```
 
 The leading `1` is the ack the firmware checks before clearing its send
-buffer. `slim_response` drops the two middle fields for devices with neither
-an always-on supply nor a relay — and with them the OTA indication, which
-rides the same field.
+buffer. `slim_response` drops the movement_alarm field — and with it the OTA
+indication, which rides the same field.
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is

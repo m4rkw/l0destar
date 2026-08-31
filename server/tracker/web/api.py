@@ -27,8 +27,7 @@ COMMAND_CONFLICTS = {
     'locatenow': {'locate', 'locatenow'},
     'tomtom':    {'tomtom', 'tomtomnow'},
     'tomtomnow': {'tomtom', 'tomtomnow'},
-    'poweroff':  {'poweroff', 'alwayson'},
-    'alwayson':  {'alwayson', 'poweroff'},
+    'poweroff':  {'poweroff'},
 }
 
 # Settings the server acts on itself.  These never reach the device — alerting
@@ -44,7 +43,6 @@ SERVER_SIDE_SETTINGS = {
 
 CONFIG_FIELDS = {
     'int': 'int',
-    'ao': 'always_on',
     'ma': 'movement_alarm',
     'al': 'alarm',
     'ga': 'garage',

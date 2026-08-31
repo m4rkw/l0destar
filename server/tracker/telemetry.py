@@ -48,7 +48,6 @@ REQUIRED_KEYS = [
 EXTRA_KEYS = {
     'ri':  'request_int',        # device is asking for its config back
     'int': 'int',                # reporting interval the device believes it has
-    'ao':  'always_on',
     'ma':  'movement_alarm',
     'fw':  'fw',                 # running firmware version, e.g. 0.4.12
     'mcc': 'mcc',
@@ -72,7 +71,7 @@ EXTRA_KEYS = {
 
 # Config the device may report back, mirrored onto the `device` row so the
 # server's view of a unit's settings tracks what the unit actually applied.
-DEVICE_SYNC_KEYS = ['int', 'always_on', 'movement_alarm']
+DEVICE_SYNC_KEYS = ['int', 'movement_alarm']
 
 # Fields that describe a slowly-changing condition rather than this instant.
 # When absent, the previous row's value is carried forward.
@@ -387,11 +386,10 @@ def process_record(data, device, ip, database=None):
 
 
 def device_config(device):
-    """The three settings the device syncs, with their defaults."""
+    """The settings the device syncs, with their defaults."""
     movement_alarm = device.get('movement_alarm')
     return {
         'int': device.get('int') or 0,
-        'ao': device.get('always_on') or 0,
         'ma': 1 if movement_alarm is None else movement_alarm,
     }
 
@@ -439,7 +437,7 @@ def _handle_alert(line, device, database, log):
 def build_response(device, database, log, firmware_version=None):
     """Build the reply the device reads after a successful send.
 
-    Format: ``1,<interval>[,<always_on>,<movement_alarm>][,<commands>]``.
+    Format: ``1,<interval>[,<movement_alarm>][,<commands>]``.
 
     The leading ``1`` is the ack the firmware checks before clearing its send
     buffer.  Commands are appended as a comma-separated list and deleted as
@@ -452,7 +450,7 @@ def build_response(device, database, log, firmware_version=None):
     if config.SLIM_RESPONSE:
         response = '1,%s' % settings['int']
     else:
-        response = '1,%s,%s,%s' % (settings['int'], settings['ao'], settings['ma'])
+        response = '1,%s,%s' % (settings['int'], settings['ma'])
 
     commands = database.all(
         'SELECT `id`, `command` FROM `command` WHERE `device_id` = %s ORDER BY `id`',

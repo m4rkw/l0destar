@@ -13,7 +13,6 @@ Commands
 --------
     int=<seconds>          reporting interval
     movealarm=0|1          wake and report on accelerometer trigger
-    alwayson=0|1           never enter deep sleep (mains-powered installs)
     locate                 report position on next check-in
     locatenow              wake and report position immediately
     config                 report current settings

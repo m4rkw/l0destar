@@ -89,10 +89,8 @@ dtls_port: 65482
 # dtls_cert: certs/server.crt
 # dtls_key: certs/server.key
 
-# Drop always_on and movement_alarm from the response.  Devices with neither
-# an always-on supply nor a relay have no use for them, and the response is
-# radio time.  Note this also disables OTA indication, which rides the same
-# field.
+# Drop movement_alarm from the response — shortens every reply.  Note this
+# also disables OTA indication, which rides the same field.
 slim_response: false
 
 # ---------------------------------------------------------------------------

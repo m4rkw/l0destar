@@ -28,7 +28,6 @@ CREATE TABLE `device` (
 
   -- Settings the device syncs and applies.
   `int`           INT UNSIGNED NOT NULL DEFAULT 0  COMMENT 'reporting interval, seconds',
-  `always_on`     TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'never enter deep sleep',
   `movement_alarm` TINYINT(1)  NOT NULL DEFAULT 1  COMMENT 'wake and report on accelerometer trigger',
 
   -- Settings the server acts on; these never reach the device.
