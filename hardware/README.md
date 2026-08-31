@@ -65,6 +65,13 @@ Same as v2.5 with a stacked 47uF ceramic bulk cap (2220, 50V X7R) added on the
 
 ### v3.0 - consolidated CAN + K-line
 
+> [!CAUTION]
+> v3.0, v3.1 and v3.2 share an L-line defect: a short from the external L wire
+> to 12V while L_SEND is driven can destroy the pulldown MOSFET and put battery
+> voltage onto an nRF9151 GPIO, destroying the module. Do not connect the L
+> wire on these versions. Fixed in v3.3. See the
+> [v3.2 README](l0destar_v3.2/README.md#known-defects) for the full analysis.
+
 - **[l0destar v3.0](l0destar_v3.0/)** - CAN and K-line circuits on a single
   PCB, either/both/neither can be populated. Jumper pads select connector pins
   and OBD power rails (double as test points). L9637D replaced with TJA1027T
@@ -72,7 +79,27 @@ Same as v2.5 with a stacked 47uF ceramic bulk cap (2220, 50V X7R) added on the
   MAX33041EASA+, auxiliary MOSFETs replaced with load switches, OBD power rails
   switched separately from GPS. Not tested.
 
-### v3.1 - v3.0 with better input resilience, hardened antenna feed and
-auxillary power rail sensing/fault detection
+### v3.1 - input resilience, hardened antenna feed, aux rail fault detection
 
-- **[l0destar v3.1](l0destar_v3.1/)** - same footprint as v3.0. Not yet tested.
+- **[l0destar v3.1](l0destar_v3.1/)** - v3.0 with more robust input protection
+  (sized for ISO 7637-2 pulse 2a), auxiliary power rail sensing/fault
+  detection, and a hardened antenna feed with 15R series resistance and ESD
+  protection. Same footprint as v3.0. Tested - 120 µA quiescent, all major
+  subsystems passed.
+
+### v3.2 - MCU over-voltage protection
+
+- **[l0destar v3.2](l0destar_v3.2/)** - v3.1 plus hardware over-voltage
+  protection that disconnects the module supply within microseconds of a
+  regulator fault (self-recovering, no firmware dependency, <3 µA), and I2C
+  bus hardening against LTE TX bursts (stronger pull-ups, 100pF filter caps
+  on SDA/SCL, series jumper/ferrite on the accelerometer supply). Not tested.
+
+### v3.3 - L-line defect fix
+
+- **[l0destar v3.3](l0destar_v3.3/)** - fixes the L-line short-to-battery
+  defect present in v3.0-v3.2 (pulldown current limited to 90 mA via an
+  AL5809-90, gate-fault current into the nRF limited) and adds L-line fault
+  sensing so a 12V short can be detected. Buck converter tuned to shut off
+  cleanly below ~3.5V and restart at 4.6V to avoid flapping. Not tested;
+  quiescent estimated ~132 µA.
