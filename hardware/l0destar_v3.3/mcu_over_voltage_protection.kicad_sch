@@ -1885,7 +1885,7 @@
 		)
 		(uuid "cd3c3940-7bc0-4d9d-94db-1079642e42fe")
 	)
-	(text "ANTI-SULFUR RESISTORS (AEC-Q200 recommended)\n\nS11R4 - If this fails open the ATL431 can no longer pull the PNP base down hard enough to saturate it, so S11Q1's gate never gets pulled to source. Also starves the ATL431 of its minimum cathode current. OVP never fires, silently.\nS11R5 - If this fails open REF is pulled to GND by S11R6, the ATL431 never conducts, S11Q1 stays on. OVP silently disabled while everything looks healthy.\n\nBoth are critical, conformal coating is also recommended after build."
+	(text "ANTI-SULFUR RESISTORS (AEC-Q200 recommended)\n\nS11R4 - If this fails open the ATL431 can no longer pull the PNP base down hard enough to saturate it, so S11Q1's gate never gets pulled to source. Also starves the ATL431 of its minimum cathode current. OVP never fires, silently.\nS11R5 - If this fails open REF is pulled to GND by S11R6, the ATL431 never conducts, S11Q1 stays on. OVP silently disabled while everything looks healthy.\n\nBoth are critical, conformal coating is also recommended after build.\n\n\n\n\nDuring a 40-50V pass-through fault with the comparator tripped, the base-drive path puts roughly 3mA through S11R4, roughly 150mW. Needs to stay 0805 for current handling in the fault scenario."
 		(exclude_from_sim no)
 		(at 21.59 128.905 0)
 		(effects
@@ -2697,7 +2697,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "0402 15K 1% ANTI-SULFUR AEC-Q200"
+		(property "Value" "0805 15K 1% ANTI-SULFUR AEC-Q200"
 			(at 53.975 73.0249 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2708,7 +2708,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+		(property "Footprint" "Resistor_SMD:R_0805_2012Metric"
 			(at 53.213 71.755 90)
 			(hide yes)
 			(show_name no)
