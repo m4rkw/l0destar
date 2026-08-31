@@ -212,11 +212,6 @@ int hw_domain_init(void)
 			dom_add_kline_pins(obd);
 		}
 	}
-	if (IS_ENABLED(CONFIG_APP_BOARD_RELAY_FB_ON_AUX)) {
-		dom_add(aux, PIN_RLY_SET_FB, ROLE_IN);
-		dom_add(aux, PIN_RLY_RST_FB, ROLE_IN);
-	}
-
 	/* Everything starts parked with the enables low. */
 	for (int i = 0; i < HW_DOMAIN_COUNT; i++) {
 		struct domain *d = &s_dom[i];

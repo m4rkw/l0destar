@@ -220,9 +220,8 @@ int collect_data(int ignitionState)
     if (send_int_to_server) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
-                     ",int=%d;ao=%d;ma=%d",
+                     ",int=%d;ma=%d",
                      g_settings.loop_interval,
-                     (int)g_settings.always_on,
                      (int)g_settings.movement_alarm);
         if (n > 0) data_index += n;
     }
@@ -307,18 +306,17 @@ int send_data(void)
         int n = transport_recv_response(resp, sizeof(resp), 2000);
         if (n > 0) {
             LOG_INF("resp: %s", resp);
-            /* Plaintext shape:  "1,int,ao,ma[,cmd]"  */
-            int interval = -1, ao = -1, ma = -1;
+            /* Plaintext shape:  "1,int,ma[,cmd]"  */
+            int interval = -1, ma = -1;
             char cmd[128] = "";
-            int matched = sscanf(resp, "1,%d,%d,%d,%127[^\n]",
-                                 &interval, &ao, &ma, cmd);
-            if (matched >= 3) {
+            int matched = sscanf(resp, "1,%d,%d,%127[^\n]",
+                                 &interval, &ma, cmd);
+            if (matched >= 2) {
                 if (!send_int_to_server) {
                     if (interval >= 0) g_settings.loop_interval = interval;
-                    if (ao >= 0)       g_settings.always_on = (int8_t)(ao != 0);
                     if (ma >= 0)       g_settings.movement_alarm = (int8_t)ma;
                 }
-                if (matched == 4 && cmd[0]) {
+                if (matched == 3 && cmd[0]) {
                     strncpy(pending_server_cmd, cmd,
                             sizeof(pending_server_cmd) - 1);
                 }

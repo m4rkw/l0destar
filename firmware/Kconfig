@@ -28,16 +28,6 @@ rsource "Kconfig.boards"
 
 # --- hardware presence / debug overrides ------------------------------------
 
-config APP_RELAY_CONNECTED
-	bool "Latching relay fitted"
-	default n if APP_BOARD_IS_L0DESTAR && !APP_BOARD_L0DESTAR_V2_1 && !APP_BOARD_L0DESTAR_V2_1_MINI
-	default y
-	help
-	  When disabled, relay_init/set/reset are no-ops and the relay pins are
-	  never driven.  relay_init() self-detects an absent relay (both feedback
-	  lines low) and falls back to no-ops, so this can stay enabled on a
-	  bench without the relay wired.
-
 config APP_DEBUG_IGNITION
 	int "Force ignition state (-1 = read the GPIO)"
 	default -1
@@ -51,14 +41,6 @@ config APP_DEBUG_BATTERY_MV
 	help
 	  Debug override for benches without the INA228/vehicle supply:
 	  e.g. 13000 reports 13.0 V.  0 = live reading.
-
-config APP_ALWAYS_ON
-	bool "Keep relay set regardless of ignition state"
-	default n
-	help
-	  When enabled, relay_set() is called at boot and the relay is never
-	  reset by the state machine.  Use for installations where the tracker
-	  supplies its own load and should stay powered continuously.
 
 config APP_ACCEL_TEST
 	bool "Stream accelerometer data at boot"

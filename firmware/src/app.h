@@ -21,7 +21,6 @@ struct app_settings {
     char    pwd[20];
     char    imei[20];
     int     loop_interval;
-    int8_t  always_on;
     int8_t  movement_alarm;
     uint8_t psk[32];
 };
@@ -194,10 +193,6 @@ void hw_aux_power_on(void);
 void hw_aux_power_off(void);
 int  hw_accel_init(void);
 bool accel_available(void);
-int  relay_init(void);
-int  relay_set(void);
-int  relay_reset(void);
-bool relay_available(void);
 int  kline_init(void);
 int  kline_self_test(void);
 int  kline_test(void);

@@ -3,7 +3,7 @@
  *
  * Default values target initial bring-up on the nRF9151 DK with the BG96
  * external modem replaced by the SoC's built-in LTE-M + GNSS, and with no
- * accelerometer, ignition pin, or relay board attached. Anything that
+ * accelerometer or ignition pin attached. Anything that
  * depends on missing hardware is stubbed via the dedicated *_stub.c modules,
  * not by adding new conditionals here.
  */
@@ -75,8 +75,6 @@
 #define SPEED_MIN_SATS              4
 
 /* -- hardware presence flags (compiled-out paths) -------------------------- */
-#define ALWAYS_ON_POWER             1
-#define RELAY_CONNECTED             IS_ENABLED(CONFIG_APP_RELAY_CONNECTED)
 #define LOW_POWER_STANDBY           1
 
 /* -- coast-to-stop --------------------------------------------------------- */

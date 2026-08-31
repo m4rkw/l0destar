@@ -23,7 +23,6 @@ static void settings_defaults(void)
     strncpy(g_settings.pwd,  DEFAULT_PASS, sizeof(g_settings.pwd) - 1);
     g_settings.loop_interval  = ENGINE_OFF_LOOP_INTERVAL;
     g_settings.movement_alarm = DEFAULT_MOVEMENT_ALARM;
-    g_settings.always_on      = IS_ENABLED(CONFIG_APP_ALWAYS_ON);
 
     const char *psk_hex = CONFIG_APP_PSK_HEX;
     if (!psk_hex || psk_hex[0] == '\0') {

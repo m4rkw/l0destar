@@ -49,37 +49,6 @@ void cmd_run(char *cmd)
         alert_enqueue("movement alarm reset", 0);
     }
 
-    tmp = strstr(cmd, "ao=");
-    if (tmp) {
-        tmp += 3;
-        int8_t old_ao = g_settings.always_on;
-        g_settings.always_on = (atoi(tmp) != 0) ? 1 : 0;
-        send_int_to_server = true;
-        if (g_settings.always_on != old_ao) {
-            if (g_settings.always_on) {
-                relay_set();
-            } else if (ignition != 0) {
-                relay_reset();
-            }
-        }
-        alert_enqueue(g_settings.always_on
-                         ? "always-on ON"
-                         : "always-on OFF",
-                      0);
-    }
-
-    tmp = strstr(cmd, "relay=");
-    if (tmp) {
-        tmp += 6;
-        if (atoi(tmp)) {
-            relay_set();
-            alert_enqueue("relay SET", 0);
-        } else {
-            relay_reset();
-            alert_enqueue("relay RESET", 0);
-        }
-    }
-
     if (strstr(cmd, "locatenow")) {
         collect_data(ignition);
         send_data();
@@ -138,10 +107,9 @@ void cmd_run(char *cmd)
     if (strstr(cmd, "config")) {
         char msg[160];
         snprintf(msg, sizeof(msg),
-                 "fw=%s int=%d ao=%d ma=%d bat=%.1fV ign=%s up=%llus",
+                 "fw=%s int=%d ma=%d bat=%.1fV ign=%s up=%llus",
                  fota_version(),
                  g_settings.loop_interval,
-                 (int)g_settings.always_on,
                  (int)g_settings.movement_alarm,
                  (double)battery_v,
                  (ignition == 0) ? "on" : "off",

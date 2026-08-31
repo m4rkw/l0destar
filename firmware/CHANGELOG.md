@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Relay support removed (firmware + server)
+- **The latching relay is gone from the product, so it is gone from the code.**
+`src/hw_relay.c`, `APP_RELAY_CONNECTED`, the four `APP_PIN_RLY_*` assignments,
+`APP_BOARD_RELAY_FB_ON_AUX` and its `hw_domain.c` park/release entries, and the
+`relay=` server command are all deleted.
+- **`always_on` went with it.** Its only effect was holding the relay set
+regardless of ignition, so `APP_ALWAYS_ON`, `g_settings.always_on` and the
+`ao=` command are removed too.
+- **Wire format changed.** The settings-sync group is now `,int=<n>;ma=<n>`
+and the server response is `1,<int>,<ma>[,<cmd>]` — one field shorter in both
+directions. The server (`/var/www/tracker/main.py`) drops `ao` in lockstep:
+`UPDATE_KEYS`, the `ao` extras key, the `/api/1.0/config` field, and the
+response builder. **Sequencing matters** — an older image parses the shorter
+response with `matched == 2`, which fails its `>= 3` gate and silently discards
+both the settings and the `fota=` indication riding the command field. Publish
+the firmware first, let the fleet take it, then restart the server.
+- The unused `ALWAYS_ON_POWER` macro (a leftover from the Polaris port,
+referenced nowhere) is removed as well.
+- **Dropped the relay-only battery wake.** `do_sleep()` armed a
+`BATTERY_CHECK_INTERVAL` countdown when `loop_interval == 0` so a relay unit
+could still wake to check the battery and cut power — but the telemetry block
+it fed is gated on `loop_interval > 0`, so it only ever produced a wake that
+did nothing. It is gone with the relay.
+- The `device.always_on` column is left in place on the server; nothing reads
+or writes it now.
+
 ### Board test boot noise (`board_test.sh`, `src/main.c`)
 - **The boot rail self-test is skipped in board-test builds.** Tests 1 and 2
 walk the same rails interactively moments later, so at boot `hw_selftest()`

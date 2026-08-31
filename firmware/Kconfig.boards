@@ -18,10 +18,10 @@
 # 10K on CAN_INT) float when the rail is down.
 #
 #   v2.1       AUX_ENABLE gates 3V3/5V/12V aux rails together: the whole CAN
-#              interface (MCP2518FD + TJA1051), the whole K-line interface
-#              (L9637D + TXS0104E shifter) and the relay-feedback supply all
-#              die with AUX.  TJA1051 S pin is grounded (no standby control).
-#   v2.1 mini  AUX_ENABLE gates the GPS bias tee + relay-feedback supply.
+#              interface (MCP2518FD + TJA1051) and the whole K-line interface
+#              (L9637D + TXS0104E shifter) die with AUX.  TJA1051 S pin is
+#              grounded (no standby control).
+#   v2.1 mini  AUX_ENABLE gates the GPS bias tee.
 #   v2.5/v2.6  AUX_ENABLE gates PP3V3_AUX (GPS bias tee; CAN variants: also
 #              the whole CAN interface).  K-line variants add K_ENABLE for
 #              the 5V/12V K rails; the shifter A-side sits on the AUX rail.
@@ -81,10 +81,10 @@ config APP_BOARD_BENCH
 	  defaults (including the makerdiary console re-park).
 
 config APP_BOARD_L0DESTAR_V2_1
-	bool "l0destar v2.1 (CAN + ISO-9141 + AIO + relay)"
+	bool "l0destar v2.1 (CAN + ISO-9141 + AIO)"
 
 config APP_BOARD_L0DESTAR_V2_1_MINI
-	bool "l0destar v2.1 mini (no OBD, 5 LEDs, relay)"
+	bool "l0destar v2.1 mini (no OBD, 5 LEDs)"
 
 config APP_BOARD_L0DESTAR_V2_5_CAN
 	bool "l0destar v2.5C (CAN)"
@@ -254,14 +254,6 @@ config APP_BOARD_CAN_XSTBY
 	  With XSTBYEN set, putting the MCP2518FD into sleep automatically
 	  puts the transceiver into standby — the power-efficiency path for
 	  boards where the CAN rail shares the (GPS) AUX domain.
-
-config APP_BOARD_RELAY_FB_ON_AUX
-	bool
-	default y if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
-	help
-	  The relay feedback contacts are fed from PP3V3_RLY_FB on the AUX
-	  domain: feedback reads are only valid while AUX_SW is high, and the
-	  FB pins are parked when AUX is off.
 
 config APP_BOARD_IGN_EXT_PULLUP
 	bool
@@ -504,36 +496,6 @@ config APP_PIN_IGN_SENSE
 	default 10 if APP_BOARD_IS_L0DESTAR
 	default 10 if BOARD_NRF9151_CONNECTKIT
 	default 31
-
-config APP_PIN_RLY_SET
-	int "Relay SET coil pin"
-	default 15 if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
-	default -1 if APP_BOARD_IS_L0DESTAR
-	default 15 if BOARD_NRF9151_CONNECTKIT
-	default 12
-
-config APP_PIN_RLY_RST
-	int "Relay RESET coil pin"
-	default 14 if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
-	default -1 if APP_BOARD_IS_L0DESTAR
-	default 14 if BOARD_NRF9151_CONNECTKIT
-	default 30
-
-config APP_PIN_RLY_SET_FB
-	int "Relay SET feedback pin"
-	default 26 if APP_BOARD_L0DESTAR_V2_1
-	default 27 if APP_BOARD_L0DESTAR_V2_1_MINI
-	default -1 if APP_BOARD_IS_L0DESTAR
-	default 27 if BOARD_NRF9151_CONNECTKIT
-	default 7
-
-config APP_PIN_RLY_RST_FB
-	int "Relay RESET feedback pin"
-	default 27 if APP_BOARD_L0DESTAR_V2_1
-	default 26 if APP_BOARD_L0DESTAR_V2_1_MINI
-	default -1 if APP_BOARD_IS_L0DESTAR
-	default 26 if BOARD_NRF9151_CONNECTKIT
-	default 6
 
 # --- status LEDs -------------------------------------------------------------
 # All l0destar PCBs drive the LEDs active-high (GPIO -> 1K -> LED -> GND).

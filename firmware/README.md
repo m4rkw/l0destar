@@ -19,7 +19,6 @@ deeply when the vehicle is parked, and wakes on movement, ignition, or a timer.
 | MCU / modem / GNSS | nRF9151 SiP (LTE-M, integrated GNSS receiver) |
 | IMU               | ASM330LHHX (automotive 6-axis, WHO_AM_I 0x6B) over bit-banged I²C - accel-only today: movement detection + hardware wake interrupt; gyro/MLC/FSM/FIFO unused |
 | Voltage monitor   | INA228 over the same I²C bus - battery / ignition-derived voltage |
-| Relay             | Latching (separate SET/RST coils with feedback sense) |
 | Diagnostics       | K-line (ISO-9141) via L9637D, bit-banged UART |
 | Ignition sense    | GPIO input (MOSFET-gated 3.3 V rail) |
 | Status LED        | board `led0` alias (LED1 on the nRF9151 DK) |
@@ -51,7 +50,7 @@ jumper configuration of the physical board).
 
 Selecting a board also arms the **power-domain sequencing** in
 `src/hw_domain.c`. Signals that terminate inside a switched rail (CAN SPI
-pins, K-line pins, relay feedback) are parked as input+pulldown whenever that
+pins, K-line pins) are parked as input+pulldown whenever that
 rail is off and only released while it is powered - a pin driven high into an
 unpowered MCP2518FD/TXS0104E would backfeed the dead rail through its ESD
 clamp diodes (abs max VDD + 0.3 V), and the CAN_INT/CAN_CS/K-line pull-ups
@@ -120,7 +119,6 @@ at ±250 dps.
 | `hw_power.c`  | INA228 voltage, ignition read, INA shutdown/wake, AUX domain wrappers |
 | `hw_can.c`    | MCP2518FD power/domain handling, sleep mode + transceiver standby (XSTBY) |
 | `hw_accel.c`  | ASM330LHHX IMU (accel path): polling + hardware wake interrupt |
-| `hw_relay.c`  | Latching relay with feedback verification |
 | `hw_kline.c`  | K-line bit-bang UART (L9637D) |
 | `fota.c`      | Over-the-air updates: manifest check, battery gate, MCUboot image download ([FOTA.md](FOTA.md)) |
 | `led.c` · `watchdog.c` · `reboot.c` | Status LED · 32 s task watchdog (HW fallback) · reboot helper |
@@ -314,13 +312,11 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 |---|---|---|
 | `APP_LOG_LEVEL` | 3 | App module log level (0=off … 4=dbg) |
 | `APP_PROVISION_MODE` | n | Build as the AT-host provisioning bridge (set via `prov.conf`) |
-| `APP_PIN_*` | PCB map | Every signal's P0.x GPIO (K-line, I²C, IMU INTs, ignition, relay) - remap per-board in `local.conf` |
-| `APP_RELAY_CONNECTED` | n | Latching relay fitted; off = relay ops are no-ops |
+| `APP_PIN_*` | PCB map | Every signal's P0.x GPIO (K-line, I²C, IMU INTs, ignition) - remap per-board in `local.conf` |
 | `APP_DEBUG_IGNITION` | -1 | Force ignition state (0=ON, 1=OFF, -1=live GPIO) |
 | `APP_DEBUG_BATTERY_MV` | 0 | Force battery voltage in mV (0=live INA228) |
 | `APP_CRASH_THRESHOLD_MG` | 4000 | Impact alert threshold while awake (mg) |
 | `APP_PARKED_IMPACT_MG` | 800 | Parked-impact threshold from FIFO peak (mg) |
-| `APP_ALWAYS_ON` | n | Hold the relay set regardless of ignition |
 | `APP_DEMO_MODE` | n | Mask lat/lon in the serial log (public demos); telemetry unaffected |
 | `APP_SERVER_HOST` | "" | Telemetry hostname (else `HOSTNAME` in `config.h`) |
 | `APP_APN` | "" | Cellular APN (else `DEFAULT_APN`) |

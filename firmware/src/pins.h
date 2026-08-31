@@ -32,12 +32,6 @@
 #define PIN_CAN_CS     CONFIG_APP_PIN_CAN_CS
 #define PIN_CAN_INT    CONFIG_APP_PIN_CAN_INT
 
-/* Latching relay (no-ops unless APP_RELAY_CONNECTED) */
-#define PIN_RLY_SET    CONFIG_APP_PIN_RLY_SET
-#define PIN_RLY_RST    CONFIG_APP_PIN_RLY_RST
-#define PIN_RLY_SET_FB CONFIG_APP_PIN_RLY_SET_FB
-#define PIN_RLY_RST_FB CONFIG_APP_PIN_RLY_RST_FB
-
 /* Status LEDs (-1 = not fitted; LED4/5 exist only on v2.1 mini) */
 #define PIN_LED1       CONFIG_APP_PIN_LED1
 #define PIN_LED2       CONFIG_APP_PIN_LED2

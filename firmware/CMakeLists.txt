@@ -14,7 +14,6 @@ target_sources(app PRIVATE
     src/hw_power.c
     src/hw_can.c
     src/hw_accel.c
-    src/hw_relay.c
     src/hw_kline.c
     src/gnss.c
     src/agnss.c

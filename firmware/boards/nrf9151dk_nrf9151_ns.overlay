@@ -1,4 +1,4 @@
-/* The tracker drives I2C, the relay and the K-lines as plain GPIO on gpio0,
+/* The tracker drives I2C and the K-lines as plain GPIO on gpio0,
  * so any DK peripheral whose default pinctrl claims one of those pins must be
  * disabled to hand the pin back to the app.  (UART0 keeps its default pins
  * P0.14/15/26/27 — none of which the tracker uses — for the USB VCOM console.)

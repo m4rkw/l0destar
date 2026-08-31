@@ -46,8 +46,8 @@ BOARDS=(
     "v2.5c|l0destar v2.5C (CAN)|CONFIG_APP_BOARD_L0DESTAR_V2_5_CAN=y|"
     "v2.5k|l0destar v2.5K (ISO-9141 K-line)|CONFIG_APP_BOARD_L0DESTAR_V2_5_KLINE=y|"
     "v2.5m|l0destar v2.5M (micro, no OBD)|CONFIG_APP_BOARD_L0DESTAR_V2_5_MICRO=y|"
-    "v2.1|l0destar v2.1  (CAN + ISO-9141 + AIO + relay)|CONFIG_APP_BOARD_L0DESTAR_V2_1=y|"
-    "v2.1m|l0destar v2.1 mini (no OBD, 5 LEDs, relay)|CONFIG_APP_BOARD_L0DESTAR_V2_1_MINI=y|"
+    "v2.1|l0destar v2.1  (CAN + ISO-9141 + AIO)|CONFIG_APP_BOARD_L0DESTAR_V2_1=y|"
+    "v2.1m|l0destar v2.1 mini (no OBD, 5 LEDs)|CONFIG_APP_BOARD_L0DESTAR_V2_1_MINI=y|"
     "bench|bench (DK / Connect Kit + breadboard)|CONFIG_APP_BOARD_BENCH=y|"
 )
 

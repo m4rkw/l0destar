@@ -313,9 +313,6 @@ static void do_sleep(void)
     }
 
     int telemetry_remaining = g_settings.loop_interval;
-    if (telemetry_remaining == 0 && RELAY_CONNECTED) {
-        telemetry_remaining = BATTERY_CHECK_INTERVAL;
-    }
 
     ign_irq_enable();
     int ign_before = ignition_read();
@@ -462,8 +459,6 @@ static void do_sleep(void)
                 modem_connect();
                 LOG_INF("wake: GNSS start");
                 gnss_start();
-                LOG_INF("wake: relay set");
-                relay_set();
                 s_state = STATE_IDLE;
                 return;
             }
@@ -622,7 +617,6 @@ static void do_sleep(void)
 
             if (v > 0 && v < BATTERY_POWEROFF_LEVEL) {
                 LOG_WRN("battery %.2fV < poweroff", (double)v);
-                relay_reset();
                 hw_power_shutdown();
                 telemetry_remaining = BATTERY_CHECK_INTERVAL;
                 continue;
@@ -707,8 +701,6 @@ static void do_sleep(void)
             modem_connect();
             LOG_INF("wake: GNSS start");
             gnss_start();
-            LOG_INF("wake: relay set");
-            relay_set();
             s_state = STATE_IDLE;
             return;
         }
@@ -848,8 +840,6 @@ int main(void)
         LOG_WRN("L sense init failed — no L-line short detection");
     }
 
-    relay_init();
-
 #if IS_ENABLED(CONFIG_APP_BOARD_TEST)
     /* Interactive bring-up rig (board_test.sh): walks the operator through
      * every fitted subsystem over the console, then parks.  Never returns. */
@@ -933,10 +923,6 @@ int main(void)
     }
 
     gnss_start();
-
-    if (ignition_read() == 0 || g_settings.always_on) {
-        relay_set();
-    }
 
     crash_irq_enable();
 

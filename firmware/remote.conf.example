@@ -39,7 +39,6 @@
 # is the production build, not a copy of local.conf.
 CONFIG_APP_PSK_HEX="<64 hex chars — same value as local.conf>"
 CONFIG_APP_SERVER_HOST="tracker.example.com"
-CONFIG_APP_ALWAYS_ON=y
 CONFIG_APP_MOVEMENT_ALARM=y
 
 [000000000000000]
@@ -48,4 +47,3 @@ profile = makerdiary
 CONFIG_APP_BOARD_L0DESTAR_V3_0=y
 CONFIG_APP_BOARD_HAS_CAN=n
 CONFIG_APP_BOARD_HAS_KLINE=y
-CONFIG_APP_RELAY_CONNECTED=y
