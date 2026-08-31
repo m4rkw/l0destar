@@ -2068,7 +2068,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100nF 10V 10% X7R"
+		(property "Value" "0402 100nF 50V 10% X7R"
 			(at 136.906 43.815 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2090,7 +2090,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
+		(property "Datasheet" ""
 			(at 135.89 37.465 0)
 			(hide yes)
 			(show_name no)
@@ -2101,7 +2101,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" ""
 			(at 135.89 37.465 0)
 			(hide yes)
 			(show_name no)
@@ -2112,7 +2112,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+		(property "Manufacturer_Part_Number" "GRM155R71H104KE14D"
 			(at 135.89 37.465 0)
 			(hide yes)
 			(show_name no)
@@ -2124,7 +2124,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Multicomp Pro"
+		(property "Manufacturer_Name" "Murata"
 			(at 135.89 37.465 0)
 			(hide yes)
 			(show_name no)
@@ -2173,7 +2173,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100nF 10V 10% X7R"
+		(property "Value" "0402 100nF 50V 10% X7R"
 			(at 105.41 37.719 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2195,7 +2195,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
+		(property "Datasheet" ""
 			(at 101.6 36.195 0)
 			(hide yes)
 			(show_name no)
@@ -2206,7 +2206,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" ""
 			(at 101.6 36.195 0)
 			(hide yes)
 			(show_name no)
@@ -2217,7 +2217,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+		(property "Manufacturer_Part_Number" "GRM155R71H104KE14D"
 			(at 101.6 36.195 0)
 			(hide yes)
 			(show_name no)
@@ -2229,7 +2229,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Multicomp Pro"
+		(property "Manufacturer_Name" "Murata"
 			(at 101.6 36.195 0)
 			(hide yes)
 			(show_name no)

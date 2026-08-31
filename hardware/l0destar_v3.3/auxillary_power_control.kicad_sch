@@ -1335,7 +1335,7 @@
 		(uuid "3ac49a17-5e16-4787-b7a0-a3f2b591e680")
 	)
 	(junction
-		(at 33.02 98.425)
+		(at 34.29 100.33)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "45d287c3-64ba-45e3-abd5-88a59e657c52")
@@ -1377,13 +1377,13 @@
 		(uuid "a1c938ba-06e6-46c4-994c-588ca97a0934")
 	)
 	(junction
-		(at 80.01 98.425)
+		(at 81.28 100.33)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "a2d57b61-bb2e-4c0e-9810-ca1a2764eae5")
 	)
 	(junction
-		(at 125.095 98.425)
+		(at 126.365 100.33)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "d0ce7145-4728-4e02-9d13-15cdf1905b8a")
@@ -1462,7 +1462,7 @@
 	)
 	(wire
 		(pts
-			(xy 125.095 98.425) (xy 125.095 103.505)
+			(xy 126.365 100.33) (xy 126.365 105.41)
 		)
 		(stroke
 			(width 0)
@@ -1502,7 +1502,7 @@
 	)
 	(wire
 		(pts
-			(xy 80.01 98.425) (xy 80.01 93.98)
+			(xy 81.28 100.33) (xy 81.28 95.885)
 		)
 		(stroke
 			(width 0)
@@ -1522,7 +1522,7 @@
 	)
 	(wire
 		(pts
-			(xy 80.01 98.425) (xy 83.82 98.425)
+			(xy 81.28 100.33) (xy 85.09 100.33)
 		)
 		(stroke
 			(width 0)
@@ -1572,7 +1572,7 @@
 	)
 	(wire
 		(pts
-			(xy 33.02 109.22) (xy 33.02 113.03)
+			(xy 34.29 111.125) (xy 34.29 114.935)
 		)
 		(stroke
 			(width 0)
@@ -1652,7 +1652,7 @@
 	)
 	(wire
 		(pts
-			(xy 80.01 98.425) (xy 80.01 102.235)
+			(xy 81.28 100.33) (xy 81.28 104.14)
 		)
 		(stroke
 			(width 0)
@@ -1682,7 +1682,7 @@
 	)
 	(wire
 		(pts
-			(xy 74.93 98.425) (xy 80.01 98.425)
+			(xy 76.2 100.33) (xy 81.28 100.33)
 		)
 		(stroke
 			(width 0)
@@ -1762,7 +1762,7 @@
 	)
 	(wire
 		(pts
-			(xy 122.555 98.425) (xy 125.095 98.425)
+			(xy 123.825 100.33) (xy 126.365 100.33)
 		)
 		(stroke
 			(width 0)
@@ -1782,7 +1782,7 @@
 	)
 	(wire
 		(pts
-			(xy 33.02 98.425) (xy 33.02 101.6)
+			(xy 34.29 100.33) (xy 34.29 103.505)
 		)
 		(stroke
 			(width 0)
@@ -1812,7 +1812,7 @@
 	)
 	(wire
 		(pts
-			(xy 125.095 98.425) (xy 127.635 98.425)
+			(xy 126.365 100.33) (xy 128.905 100.33)
 		)
 		(stroke
 			(width 0)
@@ -1822,7 +1822,7 @@
 	)
 	(wire
 		(pts
-			(xy 105.41 98.425) (xy 114.935 98.425)
+			(xy 106.68 100.33) (xy 116.205 100.33)
 		)
 		(stroke
 			(width 0)
@@ -1882,7 +1882,7 @@
 	)
 	(wire
 		(pts
-			(xy 30.48 100.965) (xy 59.69 100.965)
+			(xy 31.75 102.87) (xy 60.96 102.87)
 		)
 		(stroke
 			(width 0)
@@ -1892,7 +1892,7 @@
 	)
 	(wire
 		(pts
-			(xy 105.41 93.98) (xy 105.41 98.425)
+			(xy 106.68 95.885) (xy 106.68 100.33)
 		)
 		(stroke
 			(width 0)
@@ -1912,7 +1912,7 @@
 	)
 	(wire
 		(pts
-			(xy 125.095 111.125) (xy 125.095 112.395)
+			(xy 126.365 113.03) (xy 126.365 114.3)
 		)
 		(stroke
 			(width 0)
@@ -1942,7 +1942,7 @@
 	)
 	(wire
 		(pts
-			(xy 80.01 109.855) (xy 80.01 113.665)
+			(xy 81.28 111.76) (xy 81.28 115.57)
 		)
 		(stroke
 			(width 0)
@@ -2042,7 +2042,7 @@
 	)
 	(wire
 		(pts
-			(xy 80.01 93.98) (xy 105.41 93.98)
+			(xy 81.28 95.885) (xy 106.68 95.885)
 		)
 		(stroke
 			(width 0)
@@ -2152,7 +2152,7 @@
 	)
 	(wire
 		(pts
-			(xy 30.48 98.425) (xy 33.02 98.425)
+			(xy 31.75 100.33) (xy 34.29 100.33)
 		)
 		(stroke
 			(width 0)
@@ -2162,7 +2162,7 @@
 	)
 	(wire
 		(pts
-			(xy 67.31 108.585) (xy 67.31 113.665)
+			(xy 68.58 110.49) (xy 68.58 115.57)
 		)
 		(stroke
 			(width 0)
@@ -2212,7 +2212,7 @@
 	)
 	(wire
 		(pts
-			(xy 33.02 98.425) (xy 59.69 98.425)
+			(xy 34.29 100.33) (xy 60.96 100.33)
 		)
 		(stroke
 			(width 0)
@@ -2316,7 +2316,7 @@
 	)
 	(global_label "K_ENABLE"
 		(shape input)
-		(at 30.48 100.965 180)
+		(at 31.75 102.87 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2326,7 +2326,7 @@
 		)
 		(uuid "3382781f-246f-484b-996e-2219823faffd")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 18.242 100.965 0)
+			(at 19.512 102.87 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2388,7 +2388,7 @@
 	)
 	(global_label "PP3V3_K"
 		(shape input)
-		(at 83.82 98.425 0)
+		(at 85.09 100.33 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2398,7 +2398,7 @@
 		)
 		(uuid "7b7245b7-88de-4e5b-b6fa-72699c0f7b49")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 95.0904 98.425 0)
+			(at 96.3604 100.33 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2412,7 +2412,7 @@
 	)
 	(global_label "PP3V3"
 		(shape input)
-		(at 30.48 98.425 180)
+		(at 31.75 100.33 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2422,7 +2422,7 @@
 		)
 		(uuid "82d3a538-6604-457c-a290-9712e807eb28")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 21.4472 98.425 0)
+			(at 22.7172 100.33 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2676,7 +2676,7 @@
 	)
 	(global_label "PP3V3_K_ST"
 		(shape input)
-		(at 127.635 98.425 0)
+		(at 128.905 100.33 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2686,7 +2686,7 @@
 		)
 		(uuid "febf6dc8-c1bf-4306-8353-ad65bb47904b")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 142.0501 98.425 0)
+			(at 143.3201 100.33 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2942,7 +2942,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100nF 10V 10% X7R"
+		(property "Value" "0402 100nF 50V 10% X7R"
 			(at 85.09 72.39 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2964,7 +2964,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
+		(property "Datasheet" ""
 			(at 81.28 71.12 0)
 			(hide yes)
 			(show_name no)
@@ -2975,7 +2975,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" ""
 			(at 81.28 71.12 0)
 			(hide yes)
 			(show_name no)
@@ -2986,7 +2986,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+		(property "Manufacturer_Part_Number" "GRM155R71H104KE14D"
 			(at 81.28 71.12 0)
 			(hide yes)
 			(show_name no)
@@ -2998,7 +2998,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Multicomp Pro"
+		(property "Manufacturer_Name" "Murata"
 			(at 81.28 71.12 0)
 			(hide yes)
 			(show_name no)
@@ -3978,7 +3978,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 33.02 105.41 0)
+		(at 34.29 107.315 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3988,7 +3988,7 @@
 		(dnp no)
 		(uuid "5fd61716-dcc0-4f4b-a31b-cce668d9c0c3")
 		(property "Reference" "S7C8"
-			(at 36.83 104.14 0)
+			(at 38.1 106.045 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3998,8 +3998,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 1uF 10V 10% X7R"
-			(at 36.83 106.68 0)
+		(property "Value" "0603 2.2uF 25V 10% X7R"
+			(at 38.1 108.585 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4009,8 +4009,8 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 33.9852 109.22 0)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 35.2552 111.125 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4021,7 +4021,7 @@
 			)
 		)
 		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
-			(at 33.02 105.41 0)
+			(at 34.29 107.315 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4032,7 +4032,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 33.02 105.41 0)
+			(at 34.29 107.315 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4043,7 +4043,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
-			(at 33.02 105.41 0)
+			(at 34.29 107.315 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4055,7 +4055,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Kyocera AVX"
-			(at 33.02 105.41 0)
+			(at 34.29 107.315 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4103,7 +4103,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 1uF 10V 10% X7R"
+		(property "Value" "0603 2.2uF 25V 10% X7R"
 			(at 38.1 36.195 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4114,7 +4114,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
 			(at 35.2552 38.735 0)
 			(hide yes)
 			(show_name no)
@@ -4188,7 +4188,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 125.095 112.395 0)
+		(at 126.365 114.3 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4199,7 +4199,7 @@
 		(fields_autoplaced yes)
 		(uuid "69f75edc-2fb4-4237-a869-245cdc0bb599")
 		(property "Reference" "#PWR067"
-			(at 125.095 118.745 0)
+			(at 126.365 120.65 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4210,7 +4210,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 125.095 117.475 0)
+			(at 126.365 119.38 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4220,7 +4220,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 125.095 112.395 0)
+			(at 126.365 114.3 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4231,7 +4231,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 125.095 112.395 0)
+			(at 126.365 114.3 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4242,7 +4242,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 125.095 112.395 0)
+			(at 126.365 114.3 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4605,7 +4605,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 125.095 107.315 180)
+		(at 126.365 109.22 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4616,7 +4616,7 @@
 		(fields_autoplaced yes)
 		(uuid "72b51da7-7231-444c-b69e-f8c6c9f0be2e")
 		(property "Reference" "S7R9"
-			(at 127.635 106.0449 0)
+			(at 128.905 107.9499 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4627,7 +4627,7 @@
 			)
 		)
 		(property "Value" "0402 1M 5%"
-			(at 127.635 108.5849 0)
+			(at 128.905 110.4899 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4638,7 +4638,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 126.873 107.315 90)
+			(at 128.143 109.22 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4649,7 +4649,7 @@
 			)
 		)
 		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
-			(at 125.095 107.315 0)
+			(at 126.365 109.22 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4660,7 +4660,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 125.095 107.315 0)
+			(at 126.365 109.22 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4671,7 +4671,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "ERJ2RKF1004X"
-			(at 125.095 107.315 0)
+			(at 126.365 109.22 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4683,7 +4683,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Panasonic"
-			(at 125.095 107.315 0)
+			(at 126.365 109.22 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4711,7 +4711,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 80.01 113.665 0)
+		(at 81.28 115.57 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4722,7 +4722,7 @@
 		(fields_autoplaced yes)
 		(uuid "85126d68-1930-4281-a36c-ad8b0b9c1571")
 		(property "Reference" "#PWR066"
-			(at 80.01 120.015 0)
+			(at 81.28 121.92 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4733,7 +4733,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 80.01 118.745 0)
+			(at 81.28 120.65 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4743,7 +4743,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 80.01 113.665 0)
+			(at 81.28 115.57 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4754,7 +4754,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 80.01 113.665 0)
+			(at 81.28 115.57 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4765,7 +4765,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 80.01 113.665 0)
+			(at 81.28 115.57 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4789,7 +4789,7 @@
 	)
 	(symbol
 		(lib_id "Power_Management:SiP32431DR3")
-		(at 67.31 100.965 0)
+		(at 68.58 102.87 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4800,7 +4800,7 @@
 		(fields_autoplaced yes)
 		(uuid "8cb59600-491e-4697-a8e1-df280eccb761")
 		(property "Reference" "S7U4"
-			(at 67.31 90.805 0)
+			(at 68.58 92.71 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4810,7 +4810,7 @@
 			)
 		)
 		(property "Value" "SiP32431DR3"
-			(at 67.31 93.345 0)
+			(at 68.58 95.25 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4820,7 +4820,7 @@
 			)
 		)
 		(property "Footprint" "Package_TO_SOT_SMD:SOT-363_SC-70-6"
-			(at 67.31 89.535 0)
+			(at 68.58 91.44 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4831,7 +4831,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.vishay.com/docs/66597/sip32431.pdf"
-			(at 67.31 100.965 0)
+			(at 68.58 102.87 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4842,7 +4842,7 @@
 			)
 		)
 		(property "Description" "10 pA, Ultra Low Leakage and Quiescent Current, Load Switch with Reverse Blocking, High Enable, SC-70-6"
-			(at 67.31 100.965 0)
+			(at 68.58 102.87 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4853,7 +4853,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "SiP32431DR3"
-			(at 67.31 100.965 0)
+			(at 68.58 102.87 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4865,7 +4865,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Vishay"
-			(at 67.31 100.965 0)
+			(at 68.58 102.87 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4905,7 +4905,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 118.745 98.425 90)
+		(at 120.015 100.33 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4916,7 +4916,7 @@
 		(fields_autoplaced yes)
 		(uuid "9409cec0-f897-43ea-a4c0-e77ca143ea42")
 		(property "Reference" "S7R8"
-			(at 118.745 92.71 90)
+			(at 120.015 94.615 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4926,7 +4926,7 @@
 			)
 		)
 		(property "Value" "0402 100K 5%"
-			(at 118.745 95.25 90)
+			(at 120.015 97.155 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4936,7 +4936,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 118.745 100.203 90)
+			(at 120.015 102.108 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4947,7 +4947,7 @@
 			)
 		)
 		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
-			(at 118.745 98.425 0)
+			(at 120.015 100.33 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4958,7 +4958,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 118.745 98.425 0)
+			(at 120.015 100.33 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4969,7 +4969,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
-			(at 118.745 98.425 0)
+			(at 120.015 100.33 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4981,7 +4981,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Multicomp Pro"
-			(at 118.745 98.425 0)
+			(at 120.015 100.33 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5009,7 +5009,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 33.02 113.03 0)
+		(at 34.29 114.935 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -5020,7 +5020,7 @@
 		(fields_autoplaced yes)
 		(uuid "984a429b-501b-4fdd-8be3-642dda50ec72")
 		(property "Reference" "#PWR062"
-			(at 33.02 119.38 0)
+			(at 34.29 121.285 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5031,7 +5031,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 33.02 118.11 0)
+			(at 34.29 120.015 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5041,7 +5041,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 33.02 113.03 0)
+			(at 34.29 114.935 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5052,7 +5052,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 33.02 113.03 0)
+			(at 34.29 114.935 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5063,7 +5063,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 33.02 113.03 0)
+			(at 34.29 114.935 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5371,7 +5371,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100nF 10V 10% X7R"
+		(property "Value" "0402 100nF 50V 10% X7R"
 			(at 85.09 35.56 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5393,7 +5393,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
+		(property "Datasheet" ""
 			(at 81.28 34.29 0)
 			(hide yes)
 			(show_name no)
@@ -5404,7 +5404,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" ""
 			(at 81.28 34.29 0)
 			(hide yes)
 			(show_name no)
@@ -5415,7 +5415,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+		(property "Manufacturer_Part_Number" "GRM155R71H104KE14D"
 			(at 81.28 34.29 0)
 			(hide yes)
 			(show_name no)
@@ -5427,7 +5427,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Multicomp Pro"
+		(property "Manufacturer_Name" "Murata"
 			(at 81.28 34.29 0)
 			(hide yes)
 			(show_name no)
@@ -5534,7 +5534,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 80.01 106.045 0)
+		(at 81.28 107.95 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -5544,7 +5544,7 @@
 		(dnp no)
 		(uuid "b83ca539-1e9f-4b7d-a596-57793448c6ed")
 		(property "Reference" "S7C9"
-			(at 83.82 104.775 0)
+			(at 85.09 106.68 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5554,8 +5554,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100nF 10V 10% X7R"
-			(at 83.82 107.315 0)
+		(property "Value" "0402 100nF 50V 10% X7R"
+			(at 85.09 109.22 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5566,7 +5566,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 80.9752 109.855 0)
+			(at 82.2452 111.76 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5576,8 +5576,8 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
-			(at 80.01 106.045 0)
+		(property "Datasheet" ""
+			(at 81.28 107.95 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5587,8 +5587,8 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
-			(at 80.01 106.045 0)
+		(property "Description" ""
+			(at 81.28 107.95 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5598,8 +5598,8 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
-			(at 80.01 106.045 0)
+		(property "Manufacturer_Part_Number" "GRM155R71H104KE14D"
+			(at 81.28 107.95 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5610,8 +5610,8 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Multicomp Pro"
-			(at 80.01 106.045 0)
+		(property "Manufacturer_Name" "Murata"
+			(at 81.28 107.95 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5717,7 +5717,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 67.31 113.665 0)
+		(at 68.58 115.57 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -5728,7 +5728,7 @@
 		(fields_autoplaced yes)
 		(uuid "ba29a2ae-24a2-444c-ab38-4e51fef0e30f")
 		(property "Reference" "#PWR065"
-			(at 67.31 120.015 0)
+			(at 68.58 121.92 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5739,7 +5739,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 67.31 118.745 0)
+			(at 68.58 120.65 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5749,7 +5749,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 67.31 113.665 0)
+			(at 68.58 115.57 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5760,7 +5760,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 67.31 113.665 0)
+			(at 68.58 115.57 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5771,7 +5771,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 67.31 113.665 0)
+			(at 68.58 115.57 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5921,7 +5921,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 1uF 10V 10% X7R"
+		(property "Value" "0603 2.2uF 25V 10% X7R"
 			(at 38.1 71.755 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -5932,7 +5932,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
 			(at 35.2552 74.295 0)
 			(hide yes)
 			(show_name no)

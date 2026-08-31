@@ -2246,7 +2246,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 10nF 10V 5% C0G/NP0"
+		(property "Value" "0402 10nF 50V 5% C0G/NP0"
 			(at 145.415 76.8349 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2430,7 +2430,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100pF 10V 5% C0G/NP0"
+		(property "Value" "0402 100pF 50V 5% C0G/NP0"
 			(at 106.68 76.8349 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3787,7 +3787,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 47pF 10V 5% C0G/NP0"
+		(property "Value" "0402 47pF 50V 5% C0G/NP0"
 			(at 49.53 81.915 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3890,7 +3890,7 @@
 				)
 			)
 		)
-		(property "Value" "0508 1W 1% 15R"
+		(property "Value" "0508 1W 5% 15R"
 			(at 41.91 62.865 90)
 			(show_name no)
 			(do_not_autoplace no)

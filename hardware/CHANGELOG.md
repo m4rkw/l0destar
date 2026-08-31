@@ -3,6 +3,17 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 31/08/2026
+
+- Fixed decoupling and other cap discrepencies between the v3.1+ schematics and
+  the associated BOMs/parts lists and changed the cap specs to match what v3.1
+  was actually tested with. I made a silly mistake here thinking that the base
+  spec for 100nF caps was fine even though I was testing with higher rated ones
+  but turns out this was not the case. Builds are now standardised on a single
+  50V 100nF X7R cap everywhere these are needed.
+- Fixed various minor discrepencies between the schematics and README's for
+  v3.1+
+
 ## 28/08/2026
 
 - Added v3.3 with a fix for an L-line defect that could brick the MCU on earlier

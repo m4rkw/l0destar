@@ -696,7 +696,7 @@
 		)
 		(uuid "2a2faf48-3d38-4094-a04e-f08fbe20b48e")
 	)
-	(text "ASM330LHHXTR 6-axis IMU\n100pF decoupling caps on SDA/SCL (paired with 1.8K pullups on the connector sheet)\nOptional ferrite bead filter (0R 0402 by default)"
+	(text "ASM330LHHXTR 6-axis IMU\n100nF decoupling caps on SDA/SCL (paired with 1.8K pullups on the connector sheet)\nOptional ferrite bead filter (0R 0402 by default)"
 		(exclude_from_sim no)
 		(at 179.07 170.815 0)
 		(effects
@@ -1529,7 +1529,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100nF 10V 10% X7R"
+		(property "Value" "0402 100nF 50V 10% X7R"
 			(at 122.936 48.26 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1551,7 +1551,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
+		(property "Datasheet" ""
 			(at 121.92 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -1562,7 +1562,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" ""
 			(at 121.92 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -1573,7 +1573,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+		(property "Manufacturer_Part_Number" "GRM155R71H104KE14D"
 			(at 121.92 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -1585,7 +1585,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Multicomp Pro"
+		(property "Manufacturer_Name" "Murata"
 			(at 121.92 41.91 0)
 			(hide yes)
 			(show_name no)
@@ -1634,7 +1634,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100nF 10V 10% X7R"
+		(property "Value" "0402 100nF 50V 10% X7R"
 			(at 91.44 42.164 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1656,7 +1656,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mc0402b104k250ct/cap-0-1-f-25v-10-x7r-0402/dp/2320759"
+		(property "Datasheet" ""
 			(at 87.63 40.64 0)
 			(hide yes)
 			(show_name no)
@@ -1667,7 +1667,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" ""
 			(at 87.63 40.64 0)
 			(hide yes)
 			(show_name no)
@@ -1678,7 +1678,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "MC0402B104K250CT"
+		(property "Manufacturer_Part_Number" "GRM155R71H104KE14D"
 			(at 87.63 40.64 0)
 			(hide yes)
 			(show_name no)
@@ -1690,7 +1690,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Multicomp Pro"
+		(property "Manufacturer_Name" "Murata"
 			(at 87.63 40.64 0)
 			(hide yes)
 			(show_name no)

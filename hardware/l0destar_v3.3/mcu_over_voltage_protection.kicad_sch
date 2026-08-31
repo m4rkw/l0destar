@@ -4804,7 +4804,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "0402 3.3pF 50V C0G/NP0 +/- 0.25pF DNP"
+		(property "Value" "0402 3.3pF 50V C0G/NP0 +/- 0.25pF"
 			(at 165.1 92.71 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4826,7 +4826,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://search.kemet.com/component-documentation/download/specsheet/C0402C100K5RACTU"
+		(property "Datasheet" ""
 			(at 163.195 98.425 0)
 			(hide yes)
 			(show_name no)
@@ -4848,7 +4848,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "C0402C100K5RACTU"
+		(property "Manufacturer_Part_Number" "GRM1555C1H3R3CA01D"
 			(at 163.195 98.425 0)
 			(hide yes)
 			(show_name no)
@@ -4860,7 +4860,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Kemet"
+		(property "Manufacturer_Name" "Murata"
 			(at 163.195 98.425 0)
 			(hide yes)
 			(show_name no)

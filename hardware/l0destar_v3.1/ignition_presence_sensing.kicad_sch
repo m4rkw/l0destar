@@ -1750,7 +1750,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://ds.yuden.co.jp/TYCOMPAS/or/detail?pn=MCASU105SB7104KFNA01&u=M"
+		(property "Datasheet" ""
 			(at 76.2 62.23 0)
 			(hide yes)
 			(show_name no)
@@ -1761,7 +1761,7 @@
 				)
 			)
 		)
-		(property "Description" "Unpolarized capacitor"
+		(property "Description" ""
 			(at 76.2 62.23 0)
 			(hide yes)
 			(show_name no)
@@ -1772,7 +1772,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "MCASU105SB7104KFNA01"
+		(property "Manufacturer_Part_Number" "GRM155R71H104KE14D"
 			(at 76.2 62.23 0)
 			(hide yes)
 			(show_name no)
@@ -1784,7 +1784,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Taiyo Yuden"
+		(property "Manufacturer_Name" "Murata"
 			(at 76.2 62.23 0)
 			(hide yes)
 			(show_name no)

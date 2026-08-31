@@ -1450,7 +1450,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "23/08/2026"
+	(text "31/08/2026"
 		(exclude_from_sim no)
 		(at 206.248 193.294 0)
 		(effects
@@ -1512,9 +1512,9 @@
 		)
 		(uuid "f585053c-1c5f-46df-a35f-16eddaf00df6")
 	)
-	(text "u.Fl -> SMA for LTE/GPS\n3.3V bias tee on the GPS side\nESD diodes at both external connectors"
+	(text "u.Fl -> SMA for LTE/GPS\n3.3V bias tee on the GPS side\nESD diodes at both external connectors\nNote: the 47pF and 100pF RF caps are a matched pair"
 		(exclude_from_sim no)
-		(at 179.07 171.45 0)
+		(at 179.07 172.085 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1524,56 +1524,56 @@
 		(uuid "f9efcc98-c4ac-4fc3-930a-f7a3018aa3a4")
 	)
 	(junction
-		(at 72.39 98.425)
+		(at 96.52 84.455)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "09eb803d-143e-44d8-bc42-49ec9200feee")
+	)
+	(junction
+		(at 96.52 95.885)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "159c3ce4-8904-4ca8-b04a-c9c43ae76d35")
 	)
 	(junction
-		(at 141.605 65.405)
+		(at 138.43 62.865)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "28a9dd87-d22f-4a84-b1bd-074bc9e88c83")
 	)
 	(junction
-		(at 98.425 99.695)
+		(at 127 62.865)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "45a2e864-0968-4a0e-af88-f98f7a5b6e71")
+	)
+	(junction
+		(at 122.555 97.155)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "6ff68693-b09a-4724-baa2-4312452295c2")
 	)
 	(junction
-		(at 77.47 107.315)
+		(at 101.6 104.775)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "8b85b609-c7a9-42e5-bd22-f8f21edf3c0b")
 	)
 	(junction
-		(at 69.215 25.4)
+		(at 93.345 22.86)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "9ccfb6c9-a133-4158-b8c5-f80e2e4dfbd0")
 	)
 	(junction
-		(at 102.87 65.405)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "af09265c-3875-4371-99e0-9953190668ce")
-	)
-	(junction
-		(at 72.39 86.995)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "c330d4b1-8dc0-495b-9c6e-31f270eb76fc")
-	)
-	(junction
-		(at 72.39 65.405)
+		(at 96.52 62.865)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "d6eb78c2-6a4d-4fbb-87a9-931f443832d9")
 	)
 	(wire
 		(pts
-			(xy 38.1 102.235) (xy 38.1 86.995)
+			(xy 62.23 99.695) (xy 62.23 84.455)
 		)
 		(stroke
 			(width 0)
@@ -1583,7 +1583,7 @@
 	)
 	(wire
 		(pts
-			(xy 178.435 79.375) (xy 178.435 84.455)
+			(xy 175.26 76.835) (xy 175.26 81.915)
 		)
 		(stroke
 			(width 0)
@@ -1593,7 +1593,7 @@
 	)
 	(wire
 		(pts
-			(xy 141.605 65.405) (xy 141.605 71.755)
+			(xy 138.43 62.865) (xy 138.43 69.215)
 		)
 		(stroke
 			(width 0)
@@ -1603,7 +1603,17 @@
 	)
 	(wire
 		(pts
-			(xy 60.325 25.4) (xy 69.215 25.4)
+			(xy 96.52 84.455) (xy 96.52 95.885)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0fc9000d-9c62-4a1c-973c-090b5c7b505d")
+	)
+	(wire
+		(pts
+			(xy 84.455 22.86) (xy 93.345 22.86)
 		)
 		(stroke
 			(width 0)
@@ -1613,7 +1623,7 @@
 	)
 	(wire
 		(pts
-			(xy 38.735 21.59) (xy 60.325 21.59)
+			(xy 62.865 19.05) (xy 84.455 19.05)
 		)
 		(stroke
 			(width 0)
@@ -1623,7 +1633,7 @@
 	)
 	(wire
 		(pts
-			(xy 102.87 65.405) (xy 72.39 65.405)
+			(xy 127 62.865) (xy 96.52 62.865)
 		)
 		(stroke
 			(width 0)
@@ -1633,7 +1643,7 @@
 	)
 	(wire
 		(pts
-			(xy 98.425 99.695) (xy 113.665 99.695)
+			(xy 122.555 97.155) (xy 137.795 97.155)
 		)
 		(stroke
 			(width 0)
@@ -1643,7 +1653,7 @@
 	)
 	(wire
 		(pts
-			(xy 104.775 41.91) (xy 106.045 41.91)
+			(xy 128.905 39.37) (xy 130.175 39.37)
 		)
 		(stroke
 			(width 0)
@@ -1653,17 +1663,7 @@
 	)
 	(wire
 		(pts
-			(xy 72.39 81.915) (xy 72.39 86.995)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "2d0a2237-2eb2-4d8b-9e11-303004b6a1cc")
-	)
-	(wire
-		(pts
-			(xy 60.325 21.59) (xy 60.325 25.4)
+			(xy 84.455 19.05) (xy 84.455 22.86)
 		)
 		(stroke
 			(width 0)
@@ -1673,7 +1673,7 @@
 	)
 	(wire
 		(pts
-			(xy 77.47 107.315) (xy 77.47 112.395)
+			(xy 101.6 104.775) (xy 101.6 109.855)
 		)
 		(stroke
 			(width 0)
@@ -1683,7 +1683,7 @@
 	)
 	(wire
 		(pts
-			(xy 86.36 97.155) (xy 86.36 107.315)
+			(xy 110.49 94.615) (xy 110.49 104.775)
 		)
 		(stroke
 			(width 0)
@@ -1693,7 +1693,7 @@
 	)
 	(wire
 		(pts
-			(xy 98.425 99.695) (xy 98.425 117.475)
+			(xy 122.555 97.155) (xy 122.555 114.935)
 		)
 		(stroke
 			(width 0)
@@ -1703,7 +1703,7 @@
 	)
 	(wire
 		(pts
-			(xy 102.87 71.755) (xy 102.87 65.405)
+			(xy 127 69.215) (xy 127 62.865)
 		)
 		(stroke
 			(width 0)
@@ -1713,7 +1713,7 @@
 	)
 	(wire
 		(pts
-			(xy 77.47 22.86) (xy 65.405 22.86)
+			(xy 101.6 20.32) (xy 89.535 20.32)
 		)
 		(stroke
 			(width 0)
@@ -1723,7 +1723,7 @@
 	)
 	(wire
 		(pts
-			(xy 100.965 117.475) (xy 98.425 117.475)
+			(xy 125.095 114.935) (xy 122.555 114.935)
 		)
 		(stroke
 			(width 0)
@@ -1733,7 +1733,7 @@
 	)
 	(wire
 		(pts
-			(xy 69.85 98.425) (xy 72.39 98.425)
+			(xy 93.98 95.885) (xy 96.52 95.885)
 		)
 		(stroke
 			(width 0)
@@ -1743,7 +1743,7 @@
 	)
 	(wire
 		(pts
-			(xy 66.04 65.405) (xy 72.39 65.405)
+			(xy 90.17 62.865) (xy 96.52 62.865)
 		)
 		(stroke
 			(width 0)
@@ -1753,7 +1753,7 @@
 	)
 	(wire
 		(pts
-			(xy 141.605 79.375) (xy 141.605 84.455)
+			(xy 138.43 76.835) (xy 138.43 81.915)
 		)
 		(stroke
 			(width 0)
@@ -1763,7 +1763,7 @@
 	)
 	(wire
 		(pts
-			(xy 72.39 99.695) (xy 98.425 99.695)
+			(xy 96.52 97.155) (xy 122.555 97.155)
 		)
 		(stroke
 			(width 0)
@@ -1773,7 +1773,7 @@
 	)
 	(wire
 		(pts
-			(xy 141.605 65.405) (xy 178.435 65.405)
+			(xy 138.43 62.865) (xy 175.26 62.865)
 		)
 		(stroke
 			(width 0)
@@ -1783,7 +1783,7 @@
 	)
 	(wire
 		(pts
-			(xy 77.47 107.315) (xy 86.36 107.315)
+			(xy 101.6 104.775) (xy 110.49 104.775)
 		)
 		(stroke
 			(width 0)
@@ -1793,7 +1793,7 @@
 	)
 	(wire
 		(pts
-			(xy 38.735 25.4) (xy 38.735 21.59)
+			(xy 62.865 22.86) (xy 62.865 19.05)
 		)
 		(stroke
 			(width 0)
@@ -1803,7 +1803,7 @@
 	)
 	(wire
 		(pts
-			(xy 72.39 99.695) (xy 72.39 98.425)
+			(xy 96.52 97.155) (xy 96.52 95.885)
 		)
 		(stroke
 			(width 0)
@@ -1813,17 +1813,7 @@
 	)
 	(wire
 		(pts
-			(xy 72.39 98.425) (xy 72.39 86.995)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "88ad3da8-2868-4aa2-85cc-86bfc3b5f3df")
-	)
-	(wire
-		(pts
-			(xy 102.87 65.405) (xy 141.605 65.405)
+			(xy 127 62.865) (xy 138.43 62.865)
 		)
 		(stroke
 			(width 0)
@@ -1833,7 +1823,7 @@
 	)
 	(wire
 		(pts
-			(xy 31.75 65.405) (xy 38.1 65.405)
+			(xy 55.88 62.865) (xy 62.23 62.865)
 		)
 		(stroke
 			(width 0)
@@ -1843,7 +1833,7 @@
 	)
 	(wire
 		(pts
-			(xy 178.435 65.405) (xy 178.435 71.755)
+			(xy 175.26 62.865) (xy 175.26 69.215)
 		)
 		(stroke
 			(width 0)
@@ -1853,7 +1843,17 @@
 	)
 	(wire
 		(pts
-			(xy 65.405 22.86) (xy 65.405 30.48)
+			(xy 96.52 79.375) (xy 96.52 84.455)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a6a51f1b-73db-42dd-9a55-aa7682550df9")
+	)
+	(wire
+		(pts
+			(xy 89.535 20.32) (xy 89.535 27.94)
 		)
 		(stroke
 			(width 0)
@@ -1863,7 +1863,7 @@
 	)
 	(wire
 		(pts
-			(xy 38.1 86.995) (xy 45.72 86.995)
+			(xy 62.23 84.455) (xy 61.595 84.455)
 		)
 		(stroke
 			(width 0)
@@ -1873,7 +1873,7 @@
 	)
 	(wire
 		(pts
-			(xy 69.215 25.4) (xy 69.215 41.91)
+			(xy 93.345 22.86) (xy 93.345 39.37)
 		)
 		(stroke
 			(width 0)
@@ -1883,7 +1883,7 @@
 	)
 	(wire
 		(pts
-			(xy 136.525 117.475) (xy 139.065 117.475)
+			(xy 160.655 114.935) (xy 163.195 114.935)
 		)
 		(stroke
 			(width 0)
@@ -1893,7 +1893,7 @@
 	)
 	(wire
 		(pts
-			(xy 53.34 86.995) (xy 72.39 86.995)
+			(xy 69.215 84.455) (xy 96.52 84.455)
 		)
 		(stroke
 			(width 0)
@@ -1903,7 +1903,7 @@
 	)
 	(wire
 		(pts
-			(xy 113.665 97.155) (xy 86.36 97.155)
+			(xy 137.795 94.615) (xy 110.49 94.615)
 		)
 		(stroke
 			(width 0)
@@ -1913,7 +1913,7 @@
 	)
 	(wire
 		(pts
-			(xy 45.72 65.405) (xy 58.42 65.405)
+			(xy 69.85 62.865) (xy 82.55 62.865)
 		)
 		(stroke
 			(width 0)
@@ -1923,7 +1923,7 @@
 	)
 	(wire
 		(pts
-			(xy 102.87 79.375) (xy 102.87 84.455)
+			(xy 127 76.835) (xy 127 81.915)
 		)
 		(stroke
 			(width 0)
@@ -1933,7 +1933,7 @@
 	)
 	(wire
 		(pts
-			(xy 72.39 65.405) (xy 72.39 74.295)
+			(xy 96.52 62.865) (xy 96.52 71.755)
 		)
 		(stroke
 			(width 0)
@@ -1943,7 +1943,7 @@
 	)
 	(wire
 		(pts
-			(xy 106.045 41.91) (xy 106.045 46.355)
+			(xy 130.175 39.37) (xy 130.175 43.815)
 		)
 		(stroke
 			(width 0)
@@ -1953,7 +1953,7 @@
 	)
 	(wire
 		(pts
-			(xy 69.215 25.4) (xy 77.47 25.4)
+			(xy 93.345 22.86) (xy 101.6 22.86)
 		)
 		(stroke
 			(width 0)
@@ -1963,7 +1963,7 @@
 	)
 	(wire
 		(pts
-			(xy 139.065 117.475) (xy 139.065 123.825)
+			(xy 163.195 114.935) (xy 163.195 121.285)
 		)
 		(stroke
 			(width 0)
@@ -1973,7 +1973,7 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 107.315) (xy 77.47 107.315)
+			(xy 67.31 104.775) (xy 101.6 104.775)
 		)
 		(stroke
 			(width 0)
@@ -1983,7 +1983,7 @@
 	)
 	(wire
 		(pts
-			(xy 43.815 30.48) (xy 65.405 30.48)
+			(xy 67.945 27.94) (xy 89.535 27.94)
 		)
 		(stroke
 			(width 0)
@@ -1993,7 +1993,7 @@
 	)
 	(global_label "PP3V3_GPS"
 		(shape input)
-		(at 31.75 65.405 180)
+		(at 55.88 62.865 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2003,7 +2003,7 @@
 		)
 		(uuid "414765c5-0461-46e2-9743-b3204b43a894")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 18.0001 65.405 0)
+			(at 42.1301 62.865 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2017,7 +2017,7 @@
 	)
 	(global_label "RF"
 		(shape input)
-		(at 69.85 98.425 180)
+		(at 93.98 95.885 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2027,7 +2027,7 @@
 		)
 		(uuid "ba6c9da7-0935-4a1e-b323-d774453ad72d")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 64.5062 98.425 0)
+			(at 88.6362 95.885 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2041,7 +2041,7 @@
 	)
 	(symbol
 		(lib_id "TPD1E05U06DPYR:TPD1E05U06DPYR")
-		(at 86.995 44.45 0)
+		(at 111.125 41.91 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2052,7 +2052,7 @@
 		(fields_autoplaced yes)
 		(uuid "0ad56b50-f3a7-4684-9c67-c9963296b795")
 		(property "Reference" "S15D1"
-			(at 86.995 34.29 0)
+			(at 111.125 31.75 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2062,7 +2062,7 @@
 			)
 		)
 		(property "Value" "TPD1E05U06DPYR"
-			(at 86.995 36.83 0)
+			(at 111.125 34.29 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2072,7 +2072,7 @@
 			)
 		)
 		(property "Footprint" "libs:DIO_TPD1E05U06DPYR"
-			(at 86.995 44.45 0)
+			(at 111.125 41.91 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2084,7 +2084,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tpd1e05u06.pdf"
-			(at 86.995 44.45 0)
+			(at 111.125 41.91 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2095,7 +2095,7 @@
 			)
 		)
 		(property "Description" "0.5-pF, 5.5-V, ±12-kV ESD protection diode in 0402 package for High Speed Interfaces"
-			(at 86.995 44.45 0)
+			(at 111.125 41.91 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2107,7 +2107,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Texas Instruments"
-			(at 86.995 44.45 0)
+			(at 111.125 41.91 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2119,7 +2119,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "TPD1E05U06DPYR"
-			(at 86.995 44.45 0)
+			(at 111.125 41.91 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2147,7 +2147,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 178.435 84.455 0)
+		(at 175.26 81.915 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2158,7 +2158,7 @@
 		(fields_autoplaced yes)
 		(uuid "0c65b345-44d7-4f5c-bf08-2e482566edec")
 		(property "Reference" "#PWR019"
-			(at 178.435 90.805 0)
+			(at 175.26 88.265 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2169,7 +2169,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 178.435 89.535 0)
+			(at 175.26 86.995 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2179,7 +2179,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 178.435 84.455 0)
+			(at 175.26 81.915 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2190,7 +2190,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 178.435 84.455 0)
+			(at 175.26 81.915 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2201,7 +2201,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 178.435 84.455 0)
+			(at 175.26 81.915 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2225,7 +2225,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 141.605 75.565 0)
+		(at 138.43 73.025 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2236,7 +2236,7 @@
 		(fields_autoplaced yes)
 		(uuid "1051be42-f646-46ea-afd5-b8656113bbf2")
 		(property "Reference" "S15C3"
-			(at 145.415 74.2949 0)
+			(at 142.24 71.7549 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2246,8 +2246,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 10nF 10V 5% C0G/NP0"
-			(at 145.415 76.8349 0)
+		(property "Value" "0402 10nF 50V 5% C0G/NP0"
+			(at 142.24 74.2949 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2258,7 +2258,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 142.5702 79.375 0)
+			(at 139.3952 76.835 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2269,7 +2269,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=GRM1555CYA103JE01D"
-			(at 141.605 75.565 0)
+			(at 138.43 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2280,7 +2280,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 141.605 75.565 0)
+			(at 138.43 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2291,7 +2291,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "GRM1555CYA103JE01D"
-			(at 141.605 75.565 0)
+			(at 138.43 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2303,7 +2303,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Murata"
-			(at 141.605 75.565 0)
+			(at 138.43 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2331,7 +2331,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 106.045 46.355 0)
+		(at 130.175 43.815 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2342,7 +2342,7 @@
 		(fields_autoplaced yes)
 		(uuid "1acab339-ca29-4a2a-8011-1a39f8be920d")
 		(property "Reference" "#PWR061"
-			(at 106.045 52.705 0)
+			(at 130.175 50.165 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2353,7 +2353,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 106.045 51.435 0)
+			(at 130.175 48.895 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2363,7 +2363,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 106.045 46.355 0)
+			(at 130.175 43.815 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2374,7 +2374,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 106.045 46.355 0)
+			(at 130.175 43.815 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2385,7 +2385,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 106.045 46.355 0)
+			(at 130.175 43.815 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2409,7 +2409,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 102.87 75.565 0)
+		(at 127 73.025 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2417,10 +2417,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "22e069cd-8d24-42c7-b23b-2baf5bade10d")
 		(property "Reference" "S15C2"
-			(at 106.68 74.2949 0)
+			(at 104.775 57.785 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2430,8 +2429,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 100pF 10V 5% C0G/NP0"
-			(at 106.68 76.8349 0)
+		(property "Value" "0402 100pF 50V 5% C0G/NP0 - Kemet HiQ-CBR series - CBR04C101J5GACAUTO"
+			(at 104.775 60.325 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2442,7 +2441,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 103.8352 79.375 0)
+			(at 127.9652 76.835 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2452,8 +2451,8 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://yageogroup.com/component-documentation/download/specsheet/AC0402FRNPO9BN101"
-			(at 102.87 75.565 0)
+		(property "Datasheet" ""
+			(at 127 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2464,7 +2463,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 102.87 75.565 0)
+			(at 127 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2474,8 +2473,8 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "AC0402FRNPO9BN101"
-			(at 102.87 75.565 0)
+		(property "Manufacturer_Part_Number" " CBR04C101J5GACAUTO"
+			(at 127 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2486,8 +2485,8 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Yageo"
-			(at 102.87 75.565 0)
+		(property "Manufacturer_Name" "Kemet"
+			(at 127 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2515,7 +2514,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 77.47 112.395 0)
+		(at 101.6 109.855 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2526,7 +2525,7 @@
 		(fields_autoplaced yes)
 		(uuid "241adecb-df18-4353-b021-e39df8738591")
 		(property "Reference" "#PWR026"
-			(at 77.47 118.745 0)
+			(at 101.6 116.205 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2537,7 +2536,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 77.47 117.475 0)
+			(at 101.6 114.935 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2547,7 +2546,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 77.47 112.395 0)
+			(at 101.6 109.855 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2558,7 +2557,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 77.47 112.395 0)
+			(at 101.6 109.855 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2569,7 +2568,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 77.47 112.395 0)
+			(at 101.6 109.855 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2593,7 +2592,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 102.87 84.455 0)
+		(at 127 81.915 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2604,7 +2603,7 @@
 		(fields_autoplaced yes)
 		(uuid "25192f56-11e4-4560-921a-868f3badeee7")
 		(property "Reference" "#PWR05"
-			(at 102.87 90.805 0)
+			(at 127 88.265 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2615,7 +2614,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 102.87 89.535 0)
+			(at 127 86.995 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2625,7 +2624,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 102.87 84.455 0)
+			(at 127 81.915 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2636,7 +2635,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 102.87 84.455 0)
+			(at 127 81.915 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2647,7 +2646,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 102.87 84.455 0)
+			(at 127 81.915 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2671,7 +2670,7 @@
 	)
 	(symbol
 		(lib_id "TPD1E05U06DPYR:TPD1E05U06DPYR")
-		(at 118.745 120.015 0)
+		(at 142.875 117.475 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2682,7 +2681,7 @@
 		(fields_autoplaced yes)
 		(uuid "6b69d227-ca67-4bcf-88cc-f76456c809a3")
 		(property "Reference" "S15D2"
-			(at 118.745 109.855 0)
+			(at 142.875 107.315 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2692,7 +2691,7 @@
 			)
 		)
 		(property "Value" "TPD1E05U06DPYR"
-			(at 118.745 112.395 0)
+			(at 142.875 109.855 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2702,7 +2701,7 @@
 			)
 		)
 		(property "Footprint" "libs:DIO_TPD1E05U06DPYR"
-			(at 118.745 120.015 0)
+			(at 142.875 117.475 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2714,7 +2713,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tpd1e05u06.pdf"
-			(at 118.745 120.015 0)
+			(at 142.875 117.475 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2725,7 +2724,7 @@
 			)
 		)
 		(property "Description" "0.5-pF, 5.5-V, ±12-kV ESD protection diode in 0402 package for High Speed Interfaces"
-			(at 118.745 120.015 0)
+			(at 142.875 117.475 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2737,7 +2736,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Texas Instruments"
-			(at 118.745 120.015 0)
+			(at 142.875 117.475 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2749,7 +2748,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "TPD1E05U06DPYR"
-			(at 118.745 120.015 0)
+			(at 142.875 117.475 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2777,7 +2776,7 @@
 	)
 	(symbol
 		(lib_id "Device:FerriteBead")
-		(at 62.23 65.405 90)
+		(at 86.36 62.865 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2788,7 +2787,7 @@
 		(fields_autoplaced yes)
 		(uuid "7bd5a42a-c1c5-4e27-9ad9-f57b4edf5f3d")
 		(property "Reference" "S15FB1"
-			(at 62.1792 57.785 90)
+			(at 86.3092 55.245 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2798,7 +2797,7 @@
 			)
 		)
 		(property "Value" "0402 600R 0.5A 25%"
-			(at 62.1792 60.325 90)
+			(at 86.3092 57.785 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2808,7 +2807,7 @@
 			)
 		)
 		(property "Footprint" "Inductor_SMD:L_0402_1005Metric"
-			(at 62.23 67.183 90)
+			(at 86.36 64.643 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2819,7 +2818,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=BLM15PX601SZ1D"
-			(at 62.23 65.405 0)
+			(at 86.36 62.865 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2830,7 +2829,7 @@
 			)
 		)
 		(property "Description" "Ferrite bead"
-			(at 62.23 65.405 0)
+			(at 86.36 62.865 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2841,7 +2840,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "BLM15PX601SZ1D"
-			(at 62.23 65.405 0)
+			(at 86.36 62.865 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2853,7 +2852,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Murata"
-			(at 62.23 65.405 0)
+			(at 86.36 62.865 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2881,7 +2880,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 178.435 75.565 0)
+		(at 175.26 73.025 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2892,7 +2891,7 @@
 		(fields_autoplaced yes)
 		(uuid "7f9b9e7e-2b6f-4084-92eb-c8e7d99dfa09")
 		(property "Reference" "S15C4"
-			(at 182.245 74.2949 0)
+			(at 179.07 71.7549 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2902,8 +2901,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0402 1uF 10V 10% X7R"
-			(at 182.245 76.8349 0)
+		(property "Value" "0603 2.2uF 25V 10% X7R"
+			(at 179.07 74.2949 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2913,8 +2912,8 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 179.4002 79.375 0)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 176.2252 76.835 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2925,7 +2924,7 @@
 			)
 		)
 		(property "Datasheet" "https://datasheets.kyocera-avx.com/AutoMLCCKAM.pdf"
-			(at 178.435 75.565 0)
+			(at 175.26 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2936,7 +2935,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 178.435 75.565 0)
+			(at 175.26 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2947,7 +2946,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "KAM05CR71A105KH"
-			(at 178.435 75.565 0)
+			(at 175.26 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2959,7 +2958,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Kyocera AVX"
-			(at 178.435 75.565 0)
+			(at 175.26 73.025 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2987,7 +2986,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 141.605 84.455 0)
+		(at 138.43 81.915 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2998,7 +2997,7 @@
 		(fields_autoplaced yes)
 		(uuid "87a793d0-0f8c-479e-a09b-172c80336336")
 		(property "Reference" "#PWR011"
-			(at 141.605 90.805 0)
+			(at 138.43 88.265 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3009,7 +3008,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 141.605 89.535 0)
+			(at 138.43 86.995 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3019,7 +3018,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 141.605 84.455 0)
+			(at 138.43 81.915 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3030,7 +3029,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 141.605 84.455 0)
+			(at 138.43 81.915 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3041,7 +3040,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 141.605 84.455 0)
+			(at 138.43 81.915 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3065,7 +3064,7 @@
 	)
 	(symbol
 		(lib_id "Connector:Conn_Coaxial")
-		(at 43.18 102.235 0)
+		(at 67.31 99.695 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3076,7 +3075,7 @@
 		(fields_autoplaced yes)
 		(uuid "8e6bb840-b01b-4942-9949-1f082eed6162")
 		(property "Reference" "S15J1"
-			(at 46.99 101.2581 0)
+			(at 71.12 98.7181 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3087,7 +3086,7 @@
 			)
 		)
 		(property "Value" "GPS_UFL"
-			(at 46.99 103.7981 0)
+			(at 71.12 101.2581 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3098,7 +3097,7 @@
 			)
 		)
 		(property "Footprint" "Connector_Coaxial:U.FL_Hirose_U.FL-R-SMT-1_Vertical"
-			(at 43.18 102.235 0)
+			(at 67.31 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3109,7 +3108,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.digikey.com/en/products/detail/hirose-electric-co-ltd/U-FL-R-SMT-01/513010"
-			(at 43.18 102.235 0)
+			(at 67.31 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3120,7 +3119,7 @@
 			)
 		)
 		(property "Description" "coaxial connector (BNC, SMA, SMB, SMC, Cinch/RCA, LEMO, ...)"
-			(at 43.18 102.235 0)
+			(at 67.31 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3131,7 +3130,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "U.FL-R-SMT(01)"
-			(at 43.18 102.235 0)
+			(at 67.31 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3143,7 +3142,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Hirose"
-			(at 43.18 102.235 0)
+			(at 67.31 99.695 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3171,7 +3170,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 139.065 123.825 0)
+		(at 163.195 121.285 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3182,7 +3181,7 @@
 		(fields_autoplaced yes)
 		(uuid "a68373d4-669f-4de3-a362-3da6761ff7de")
 		(property "Reference" "#PWR047"
-			(at 139.065 130.175 0)
+			(at 163.195 127.635 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3193,7 +3192,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 139.065 128.905 0)
+			(at 163.195 126.365 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3203,7 +3202,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 139.065 123.825 0)
+			(at 163.195 121.285 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3214,7 +3213,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 139.065 123.825 0)
+			(at 163.195 121.285 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3225,7 +3224,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 139.065 123.825 0)
+			(at 163.195 121.285 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3249,7 +3248,7 @@
 	)
 	(symbol
 		(lib_id "SMA-J-P-H-RA-TH1:SMA-J-P-H-RA-TH1")
-		(at 123.825 99.695 180)
+		(at 147.955 97.155 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3260,7 +3259,7 @@
 		(fields_autoplaced yes)
 		(uuid "adeb6d7a-6c8c-427d-ac4d-0bfcd1474734")
 		(property "Reference" "S15J2"
-			(at 130.175 98.4249 0)
+			(at 154.305 95.8849 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3271,7 +3270,7 @@
 			)
 		)
 		(property "Value" "GPS_SMA"
-			(at 130.175 100.9649 0)
+			(at 154.305 98.4249 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3282,7 +3281,7 @@
 			)
 		)
 		(property "Footprint" "libs:SAMTEC_SMA-J-P-H-RA-TH1"
-			(at 123.825 99.695 0)
+			(at 147.955 97.155 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3294,7 +3293,7 @@
 			)
 		)
 		(property "Datasheet" "https://suddendocs.samtec.com/catalog_english/sma.pdf"
-			(at 123.825 99.695 0)
+			(at 147.955 97.155 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3305,7 +3304,7 @@
 			)
 		)
 		(property "Description" "SMA Connector Jack, Female Socket 50 Ohms Through Hole, Right Angle Solder"
-			(at 123.825 99.695 0)
+			(at 147.955 97.155 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3317,7 +3316,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Samtec"
-			(at 123.825 99.695 0)
+			(at 147.955 97.155 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3329,7 +3328,7 @@
 			)
 		)
 		(property "STANDARD" "Manufacturer recommendations"
-			(at 123.825 99.695 0)
+			(at 147.955 97.155 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3341,7 +3340,7 @@
 			)
 		)
 		(property "PARTREV" "K"
-			(at 123.825 99.695 0)
+			(at 147.955 97.155 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3353,7 +3352,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "SMA-J-P-H-RA-TH1"
-			(at 123.825 99.695 0)
+			(at 147.955 97.155 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3365,7 +3364,7 @@
 			)
 		)
 		(property "MANUFACTURER" "Samtec"
-			(at 123.825 99.695 0)
+			(at 147.955 97.155 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3402,7 +3401,7 @@
 	)
 	(symbol
 		(lib_id "SMA-J-P-H-RA-TH1:SMA-J-P-H-RA-TH1")
-		(at 87.63 25.4 180)
+		(at 111.76 22.86 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3413,7 +3412,7 @@
 		(fields_autoplaced yes)
 		(uuid "c32349aa-af47-444e-bc27-459183b8062b")
 		(property "Reference" "S15J4"
-			(at 93.98 24.1299 0)
+			(at 118.11 21.5899 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3424,7 +3423,7 @@
 			)
 		)
 		(property "Value" "GSM_SMA"
-			(at 93.98 26.6699 0)
+			(at 118.11 24.1299 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3435,7 +3434,7 @@
 			)
 		)
 		(property "Footprint" "libs:SAMTEC_SMA-J-P-H-RA-TH1"
-			(at 87.63 25.4 0)
+			(at 111.76 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3447,7 +3446,7 @@
 			)
 		)
 		(property "Datasheet" "https://suddendocs.samtec.com/catalog_english/sma.pdf"
-			(at 87.63 25.4 0)
+			(at 111.76 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3458,7 +3457,7 @@
 			)
 		)
 		(property "Description" "SMA Connector Jack, Female Socket 50 Ohms Through Hole, Right Angle Solder"
-			(at 87.63 25.4 0)
+			(at 111.76 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3470,7 +3469,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Samtec"
-			(at 87.63 25.4 0)
+			(at 111.76 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3482,7 +3481,7 @@
 			)
 		)
 		(property "STANDARD" "Manufacturer recommendations"
-			(at 87.63 25.4 0)
+			(at 111.76 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3494,7 +3493,7 @@
 			)
 		)
 		(property "PARTREV" "K"
-			(at 87.63 25.4 0)
+			(at 111.76 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3506,7 +3505,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "SMA-J-P-H-RA-TH1"
-			(at 87.63 25.4 0)
+			(at 111.76 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3518,7 +3517,7 @@
 			)
 		)
 		(property "MANUFACTURER" "Samtec"
-			(at 87.63 25.4 0)
+			(at 111.76 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3555,7 +3554,7 @@
 	)
 	(symbol
 		(lib_id "Connector:Conn_Coaxial")
-		(at 43.815 25.4 0)
+		(at 67.945 22.86 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3566,7 +3565,7 @@
 		(fields_autoplaced yes)
 		(uuid "ccf65940-11e6-40dc-8415-eaadc49c1a9e")
 		(property "Reference" "S15J3"
-			(at 47.625 24.4231 0)
+			(at 71.755 21.8831 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3577,7 +3576,7 @@
 			)
 		)
 		(property "Value" "GSM_UFL"
-			(at 47.625 26.9631 0)
+			(at 71.755 24.4231 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3588,7 +3587,7 @@
 			)
 		)
 		(property "Footprint" "Connector_Coaxial:U.FL_Hirose_U.FL-R-SMT-1_Vertical"
-			(at 43.815 25.4 0)
+			(at 67.945 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3599,7 +3598,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.digikey.com/en/products/detail/hirose-electric-co-ltd/U-FL-R-SMT-01/513010"
-			(at 43.815 25.4 0)
+			(at 67.945 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3610,7 +3609,7 @@
 			)
 		)
 		(property "Description" "coaxial connector (BNC, SMA, SMB, SMC, Cinch/RCA, LEMO, ...)"
-			(at 43.815 25.4 0)
+			(at 67.945 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3621,7 +3620,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "U.FL-R-SMT(01)"
-			(at 43.815 25.4 0)
+			(at 67.945 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3633,7 +3632,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Hirose"
-			(at 43.815 25.4 0)
+			(at 67.945 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3661,7 +3660,7 @@
 	)
 	(symbol
 		(lib_id "Device:L")
-		(at 72.39 78.105 0)
+		(at 96.52 75.565 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3672,7 +3671,7 @@
 		(fields_autoplaced yes)
 		(uuid "df8c812e-1498-4d07-9b02-6d751ddc5c73")
 		(property "Reference" "S15L1"
-			(at 73.66 76.8349 0)
+			(at 97.79 74.2949 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3683,7 +3682,7 @@
 			)
 		)
 		(property "Value" "LQW18AN68NJ00D"
-			(at 73.66 79.3749 0)
+			(at 97.79 76.8349 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3694,7 +3693,7 @@
 			)
 		)
 		(property "Footprint" "Inductor_SMD:L_0603_1608Metric"
-			(at 72.39 78.105 0)
+			(at 96.52 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3705,7 +3704,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.murata.com/en-global/products/productdetail?partno=LQW18AN68NJ00D"
-			(at 72.39 78.105 0)
+			(at 96.52 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3716,7 +3715,7 @@
 			)
 		)
 		(property "Description" "Inductor"
-			(at 72.39 78.105 0)
+			(at 96.52 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3727,7 +3726,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "LQW18AN68NJ00D"
-			(at 72.39 78.105 0)
+			(at 96.52 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3739,7 +3738,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "Murata"
-			(at 72.39 78.105 0)
+			(at 96.52 75.565 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3767,7 +3766,7 @@
 	)
 	(symbol
 		(lib_id "Device:C")
-		(at 49.53 86.995 90)
+		(at 65.405 84.455 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3775,10 +3774,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "e027ebde-2fe3-4491-b609-50d59630baaf")
 		(property "Reference" "S15C1"
-			(at 49.53 79.375 90)
+			(at 55.245 78.105 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3787,8 +3785,8 @@
 				)
 			)
 		)
-		(property "Value" "0402 47pF 10V 5% C0G/NP0"
-			(at 49.53 81.915 90)
+		(property "Value" "0402 47pF 50V 5% C0G/NP0 - Kemet HiQ-CBR series - CBR04C470J5GACAUTO"
+			(at 55.245 80.645 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3798,7 +3796,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 53.34 86.0298 0)
+			(at 69.215 83.4898 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3808,8 +3806,8 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/0402n470f500ct/cap-47pf-50v-mlcc-0402/dp/3764092"
-			(at 49.53 86.995 0)
+		(property "Datasheet" ""
+			(at 65.405 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3820,7 +3818,7 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor"
-			(at 49.53 86.995 0)
+			(at 65.405 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3830,8 +3828,8 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "0402N470F500CT"
-			(at 49.53 86.995 0)
+		(property "Manufacturer_Part_Number" " CBR04C470J5GACAUTO"
+			(at 65.405 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3842,8 +3840,8 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" "Multicomp Pro"
-			(at 49.53 86.995 0)
+		(property "Manufacturer_Name" "Kemet"
+			(at 65.405 84.455 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3871,7 +3869,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 41.91 65.405 270)
+		(at 66.04 62.865 270)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3881,7 +3879,7 @@
 		(dnp no)
 		(uuid "ec0960f1-5230-41f9-bd7c-3163aaacbc02")
 		(property "Reference" "S15R1"
-			(at 41.91 60.325 90)
+			(at 66.04 57.785 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3891,7 +3889,7 @@
 			)
 		)
 		(property "Value" "0508 1W 5% 15R"
-			(at 41.91 62.865 90)
+			(at 66.04 60.325 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3901,7 +3899,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0508_1220Metric"
-			(at 41.91 63.627 90)
+			(at 66.04 61.087 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3912,7 +3910,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.farnell.com/datasheets/3822554.pdf"
-			(at 41.91 65.405 0)
+			(at 66.04 62.865 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3923,7 +3921,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 41.91 65.405 0)
+			(at 66.04 62.865 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3934,7 +3932,7 @@
 			)
 		)
 		(property "Manufacturer_Part_Number" "3430A2F15RTDF"
-			(at 41.91 65.405 0)
+			(at 66.04 62.865 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3946,7 +3944,7 @@
 			)
 		)
 		(property "Manufacturer_Name" "CGS / TE Connectivity"
-			(at 41.91 65.405 0)
+			(at 66.04 62.865 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
