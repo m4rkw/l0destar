@@ -1030,7 +1030,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "28/08/2026"
+	(text "31/08/2026"
 		(exclude_from_sim no)
 		(at 205.994 193.294 0)
 		(effects
@@ -1077,7 +1077,7 @@
 		)
 		(uuid "7e4f58e5-0ee3-4d5d-a939-bdd2f2ebfc59")
 	)
-	(text "Buck converter 12V -> 4.2V\nLT8609 reference implementation\nVOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V\n3-resistor divider added 28/08 to switch off if the supply falls below 3.3V\nuses hysteresis to avoid powering back on until the supply is over 4.6V"
+	(text "Buck converter 12V -> 4.2V\nLT8609 reference implementation\nVOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V\n3-resistor divider added 28/08 to switch off if the supply falls below 3.3V\nuses hysteresis to avoid powering back on until the supply is over 4.6V\nrevised spec of resistors to include anti-sulfur parts"
 		(exclude_from_sim no)
 		(at 179.705 173.355 0)
 		(effects
@@ -1121,6 +1121,17 @@
 			)
 		)
 		(uuid "e3067861-81c2-44d1-a032-39bd2bb0b1b6")
+	)
+	(text "ANTI-SULFUR RESISTORS (AEC-Q200 recommended)\n\nS6R2 - FB divider, bottom. If this fails open the output voltage collapses. Safe failure mode but the BOM part is already anti-sulfur so advise keeping it to match the bottom half of the divider.\nS6R3 - FB divider, top. If this fails open the LT8609 sees no feedback and drives output to maximum leading to over-voltage downstream. Mitigated by OVP in sheet 11 but wise to use anti-sulfur here for defence in depth.\nS6R4 - Enable divider, top. If this fails open the board doesn't enable. Safe failure mode but bricks until resolved so fitting anti-sulfur here is sensible.\nS6R5 - Enable divider, bottom. If this fails the device may turn on in brown-out input voltage territory causing unexpected behaviour. Safe failure mode but still wise to use anti-sulfur.\n\nS6R3 is the only critical one for anti-sulfur, the others are recommended but fail safe.\n\nConformal coating is also recommended after build."
+		(exclude_from_sim no)
+		(at 18.415 146.05 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f74c5785-3594-45c4-a6e1-506309bd81c2")
 	)
 	(junction
 		(at 148.59 48.26)
@@ -2346,7 +2357,7 @@
 		(dnp no)
 		(uuid "6487e365-3b4c-423e-9a6a-fa2550e271b9")
 		(property "Reference" "S6R2"
-			(at 104.775 78.74 0)
+			(at 92.71 83.185 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2355,8 +2366,8 @@
 				)
 			)
 		)
-		(property "Value" "0402 226K 1%"
-			(at 104.775 81.28 0)
+		(property "Value" "0402 226K 1% ANTI-SULFUR AEC-Q200"
+			(at 92.71 85.725 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3707,7 +3718,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
 			(at 39.0652 73.66 0)
 			(hide yes)
 			(show_name no)

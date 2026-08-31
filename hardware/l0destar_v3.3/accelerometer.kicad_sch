@@ -1781,7 +1781,7 @@
 				)
 			)
 		)
-		(property "Value" "0402 FB BLM15AG601SH1D"
+		(property "Value" "0402 FB BLM15AG601SN1D"
 			(at 182.88 27.305 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1802,7 +1802,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
+		(property "Datasheet" ""
 			(at 182.88 30.48 0)
 			(hide yes)
 			(show_name no)
@@ -1824,7 +1824,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "BLM15AG601SH1D"
+		(property "Manufacturer_Part_Number" "BLM15AG601SN1D"
 			(at 182.88 30.48 0)
 			(hide yes)
 			(show_name no)
@@ -1836,7 +1836,7 @@
 				(justify left top)
 			)
 		)
-		(property "Manufacturer_Name" ""
+		(property "Manufacturer_Name" "Murata"
 			(at 182.88 30.48 0)
 			(hide yes)
 			(show_name no)

@@ -25,7 +25,7 @@ yourself rather than taking them on trust.
 
 ## New features
 
-- Fixed L-line defect (see below) that could brick earlier boards if L_SEND was
+- Fixed L-line defect that could brick earlier boards if L_SEND was
   used while the external L wire had been shorted to 12V.
 - Added L-line sensing capability to detect 12V short faults.
 - Buck converter tuned to shut off cleanly below inadequate supply voltage and
@@ -33,6 +33,15 @@ yourself rather than taking them on trust.
   threshold (to avoid flapping states).
 
 See below for a full change summary.
+
+## Fixed defects
+
+### L line pull-down can be destroyed by a short to battery
+
+Present in v3.0 - v3.2 and described in full in the
+[v3.2 README](../l0destar_v3.2/README.md#known-defects). Fixed here by S10U2
+(AL5809-90) limiting the pulldown to 90 mA, with S10R7 limiting gate-fault
+current into the nRF and S10D5/S10R8 adding fault detection on L\_SENSE.
 
 ## Test status
 
@@ -43,7 +52,7 @@ See below for a full change summary.
 | INA228 | Voltage reading function | NOT TESTED | |
 | Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
 | LT8609 | 4.2V output | NOT TESTED | |
-| LT8609 | UVLO thesholds | NOT TESTED | |
+| LT8609 | UVLO thresholds | NOT TESTED | |
 | MCU OVP | 4.2V passes through at nominal voltage | NOT TESTED | S11Q1 on, S12TP6 ≈ S12TP7 |
 | MCU OVP | Cuts off when S12TP7 is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
 | MCU OVP | Fault injection via S11TP1 | NOT TESTED | Short S11TP1 to the unprotected rail, PP4V2 should drop |
@@ -89,20 +98,38 @@ See below for a full change summary.
   wire to limit the pulldown current to 90mA in the event of the external L pin
   being shorted to 12V. This part also automatically shuts down blocking the
   current if it exceeds its rated temperature.
+- A secondary mitigation for the same defect is S10R7, a 47K resistor in
+  series between the L\_SEND GPIO and the 2N7002 gate, backed by S10R9 (1M)
+  holding the gate down. If S10Q1 ever fails drain-gate short - the failure
+  mode that destroyed the nRF on earlier boards - S10R7 limits the fault
+  current reaching the GPIO to ~250 uA at 12V, the same limit as the L\_SENSE
+  path.
 - Add a sense capability on the L line to safely detect fault conditions. If
-  the L wire is shorted to 12V this is safely detected at the L\_SENSE GPIO with
-  current from the external 12V blocked by a 1N4148. If the diode ever failed
-  short a 47k resistor limits the current into the GPIO to 250 uA which the
-  nRF9151's protection clamp can absorb without damage.
+  the L wire is shorted to 12V this is safely detected at the L\_SENSE GPIO,
+  with current from the external 12V blocked by a 1N4148 (S10D5). If that
+  diode ever failed short, S10R8 (47K) bounds the current reaching the GPIO
+  to ~250 uA at 12V.
 - 3-resistor divider added to the LT8609 enable pin. It now won't turn on until
   the supply voltage reaches 4.6V and will turn off if the supply falls to
   ~3.5-3.7V, requiring 4.6V to turn on again (clear hysteresis here avoids it
-  ending up in a continously flapping state). This is to address ISO 16750-2
+  ending up in a continuously flapping state). This is to address ISO 16750-2
   tests that require clearly defined behaviour during low voltage or drop-out
   events.
-- As the ASM330 was necessarily moved closer to the LTE connector it has been
-  defended against interference with with a ferrite bead and local C0G/NP0
-  decoupling caps on the I2C data pins.
+- 1uF caps were resized to 0603 - higher voltage ratings available, some of the
+  1uF parts were right at the limit of suitability. Now standardised on 2.2uF
+  25V 0603.
+- S11R4 resized to 0402, not really any good reason for it to be 0805 by itself.
+- Made S11C3 fitted by default, no good reason to have it be DNP by default.
+- Made the accelerometer bead fitted by default, same reason. Also switched the
+  part number for availability reasons.
+- Made S6R2 explictly anti-sulfur, although it doesn't really technically need
+  it the part number in the README was already specifying an anti-sulfur part by
+  chance and having it be explicitly anti-sulfer matches the other half of the
+  divider.
+- GPIOs reassigned and some layout tweals in order to allow L_SENSE to be on
+  one of the GPIOs that supports SAADC. It needs the SAADC's internal pull-up
+  resistor ladder in order to work properly as the diode only conducts when you
+  source current into the node.
 
 ## Power supply
 
@@ -140,9 +167,8 @@ straight to `PP4V2_OVP_PROTECTED`, bypassing the OVP MOSFET S11Q1. Leave it
 **OPEN** unless the S11x protection circuit is not populated. Not recommended.
 
 The S5R1-S5R4 pads only route the two vehicle bus lines (S1J1 pin 3 and pin 6)
-to one interface or the other. Unlike v3.0 there are no rail-selection pads: CAN and
-K-line each have their own load switch, so PP3V3\_CAN, PP3V3\_K and PP12V\_K
-are generated directly and only the enabled interface is ever powered.
+to one interface or the other. Power rails for CAN and K-line are switched by
+separate load switches.
 
 ## Notes
 
@@ -160,10 +186,17 @@ are generated directly and only the enabled interface is ever powered.
    carry 10K pull-ups (S10R2, S10R1) to PP3V3\_K, which float when that rail
    is down. Firmware must take the TJA1027T to sleep (K\_SLEEP low) and then
    park K\_TX/K\_RX/K\_SLEEP before dropping K\_ENABLE
- - L\_SEND is not on a switched rail - it gates a 2N7002 (S10Q1) with a 10K
-   pulldown (S10R5) to ground, so it is safe to drive at any time. K\_SLEEP
-   likewise now has a 100K pulldown (S10R6), so the transceiver stays asleep
-   while the nRF is in reset or the pin is parked
+ - L\_SEND is not on a switched rail, so it is safe to drive at any time. It
+   reaches S10Q1's gate through S10R7 (47K series), with the 10K pulldown
+   (S10R5) on the GPIO side and S10R9 (1M) holding the gate down directly, so
+   the FET stays off while the nRF is in reset or the pin is parked - and even
+   if S10R7 opens. S10Q1's drain reaches the L wire through S10U2, an
+   AL5809-90 that caps the pulldown at 90 mA and thermally shuts down, so an
+   external short to battery can no longer cook the FET. The same node is
+   tapped for L\_SENSE through S10D5 (cathode on the L node, blocking the
+   vehicle's 12V) and S10R8 (47K)
+ - K\_SLEEP has a 100K pulldown (S10R6), so the transceiver stays asleep while
+   the nRF is in reset or the pin is parked
  - The OVP stage latches off while the unprotected rail stays above the
    release threshold. If the buck is genuinely faulted it will stay off; to
    clear a transient trip the input power has to drop far enough for the buck
@@ -187,6 +220,16 @@ are generated directly and only the enabled interface is ever powered.
    simpler for managing inventory. Because of this, several of the "example"
    links will be to the parts I bought which might be tighter tolerance or
    higher voltage rating than the indicated minimum spec
+ - Both L-line GPIO protections work the same way: S10R7 on L\_SEND (against a
+   drain-gate short in S10Q1) and S10R8 on L\_SENSE (against S10D5 failing
+   short). Each is 47K, bounding the fault current to ~250 uA at 12V, and each
+   relies on the nRF9151's internal clamp to hold the voltage. Note that
+   Nordic specify only a voltage limit on I/O pins (-0.3V to VDD\_GPIO + 0.3V)
+   and publish no clamp or injection current rating; while the clamp conducts
+   the pin necessarily sits above that limit, and the current is delivered
+   into VDD\_GPIO, which the Connect Kit's TPS63901 cannot sink. 250 uA is
+   judged small enough on both counts, but this is a design assumption rather
+   than a datasheet-backed guarantee
 
 ## Bill of materials - required
 
@@ -232,7 +275,7 @@ are generated directly and only the enabled interface is ever powered.
 | S6C5 | 22uF capacitor | 0805 >= 10V 20% X7R | [GMC21X7R226M10NT](https://www.digikey.co.uk/en/products/detail/cal-chip-electronics-inc/GMC21X7R226M10NT/22461324) | |
 | S6C8 | 100nF capacitor | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | S6R1 | Oscillator frequency resistor | 0402 18.2K 1% | [RC0402FR-0718K2L](https://uk.farnell.com/yageo/rc0402fr-0718k2l/res-18k2-1-0-0625w-0402-thick/dp/3495542) | 18.2K == 2MHz |
-| S6R2 | Output voltage divider resistor | 0402 226K 1% | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V |
+| S6R2 | Output voltage divider resistor | 0402 226K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V, sets output voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | S6R3 | Output voltage divider resistor | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Sets output voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | S6R4 | Enable voltage divider resistor | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | S6R5 | Enable voltage divider resistor | 0402 300K 1% ANTI-SULFUR AEC-Q200 | [MCS04020C3003FE000](https://uk.farnell.com/vishay/mcs04020c3003fe000/res-300k-1-0-1w-0402-thin-film/dp/3546555) | Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
@@ -248,7 +291,7 @@ are generated directly and only the enabled interface is ever powered.
 | S8C3 | 100nF capacitor | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | S8C4 | 100pF SDA filter capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
 | S8C5 | 100pF SCL filter capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
-| S8R1 | Accelerometer ferrite bead | Ferrite 600R 300mA | [BLM15AG601SH1D](https://uk.farnell.com/murata/blm15ag601sh1d/ferrite-bead-0-6ohm-0-3a-0402/dp/2470354) | |
+| S8R1 | Accelerometer ferrite bead | Ferrite 600R 300mA | [BLM15AG601SN1D](https://uk.farnell.com/murata/blm15ag601sn1d/ferrite-bead-0-6ohm-300ma-0402/dp/1515762) | |
 | S11U1 | Ideal diode | LM66100 | [LM66100](https://www.aliexpress.com/item/1005008565117953.html) | |
 | S11U2 | Shunt voltage reference | ATL431BQDBZR SOT-23 | [ATL431BQDBZR](https://www.digikey.co.uk/en/products/detail/texas-instruments/ATL431BQDBZR/5278910) | 2.5V, 0.5%, low Iq |
 | S11Q1 | OVP series MOSFET | SQ2361 SOT-23 | [SQ2361CES-T1_BE3](https://uk.farnell.com/vishay/sq2361ces-t1-be3/mosfet-p-ch-60v-2-8a-sot-23/dp/4644757) | |
@@ -257,7 +300,7 @@ are generated directly and only the enabled interface is ever powered.
 | S11R1 | PNP base pull-up | 0402 10K 1% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S11R2 | MOSFET gate pulldown | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | S11R3 | Hysteresis resistor | 0603 33M 5% | [MCHVR03JTHX3305](https://uk.farnell.com/multicomp-pro/mchvr03jthx3305/res-33m-5-0-1w-0603-thick-film/dp/2825824) | |
-| S11R4 | ATL431 cathode / PNP base resistor | 0805 15K 1% ANTI-SULFUR AEC-Q200 | [MCMR08X1502FTL](https://uk.farnell.com/multicomp-pro/mcmr08x1502ftl/res-15k-1-0-125w-0805-ceramic/dp/2073646) | anti-sulfur AEC-Q200 recommended |
+| S11R4 | ATL431 cathode / PNP base resistor | 0402 15K 1% ANTI-SULFUR AEC-Q200 | [MCSR04X1502FTL](https://uk.farnell.com/multicomp-pro/mcsr04x1502ftl/res-15k-1-0-0625w-0402-thick-film/dp/2073998) | anti-sulfur AEC-Q200 recommended |
 | S11R5 | OVP divider (top) | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Sets trip point, keep 1%, anti-sulfur AEC-Q200 recommended |
 | S11R6 | OVP divider (bottom) | 0402 1.05M 1% | [RC0402FR-071M05L](https://uk.farnell.com/yageo/rc0402fr-071m05l/res-1m05-1-0-063w-thick-film-0402/dp/3951647) | Sets trip point, keep 1% |
 | S11C1 | 47uF capacitor | 1210 >= 10V 20% X7R | [CL32B476MPJNNNE](https://uk.farnell.com/semco/cl32b476mpjnnne/cap-mlcc-47uf-10vdc-x7r-1210/dp/5109745) | Was S6C6 in v3.1 |
@@ -360,8 +403,9 @@ Can be omitted if K-line/ISO-9141 is not required
 | S10R4 | 510R 0508 resistor | 0508 510R 5% 1W | [3430A2F510RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f510rtdf/res-510r-1w-thick-film-0508-wide/dp/4206859) | |
 | S10R5 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S10R6 | 100K resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
-| S10R7 | 4.7K resistor | 0402 4.7K 5% | [MP003476](https://uk.farnell.com/multicomp-pro/mp003476/res-4k7-1-0-0625w-0402-thick-film/dp/3392645) | |
+| S10R7 | 47K resistor | 0402 47K 5% | [ERJ2RKF4702X](https://uk.farnell.com/panasonic/erj2rkf4702x/res-47k-1-0-1w-0402-thick-film/dp/2302806) | |
 | S10R8 | 47K resistor | 0402 47K 5% | [ERJ2RKF4702X](https://uk.farnell.com/panasonic/erj2rkf4702x/res-47k-1-0-1w-0402-thick-film/dp/2302806) | |
+| S10R9 | 1M gate pulldown resistor | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | anti-sulfur recommended, not critical |
 | S10C1 | 100nF capacitor | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 
 ## Parts list
@@ -377,15 +421,15 @@ on which interfaces are fitted. Quantities are per board.
 | All | 20-pin 2.54mm header | 2 | 20-pin 2.54mm header | [20-pin pcb header](https://www.aliexpress.com/item/1005003610333849.html) | |
 | All | 15R 0508 resistor | 1 | 0508 15R 5% 1W | [3430A2F15RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f15rtdf/res-15r-1w-thick-film-0508-wide/dp/4206818) | |
 | All | 1K 0402 resistor | 3 | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
-| All | Accelerometer ferrite bead | 1 | Ferrite 600R 300mA | [BLM15AG601SH1D](https://uk.farnell.com/murata/blm15ag601sh1d/ferrite-bead-0-6ohm-0-3a-0402/dp/2470354) | |
+| All | Accelerometer ferrite bead | 1 | Ferrite 600R 300mA | [BLM15AG601SN1D](https://uk.farnell.com/murata/blm15ag601sn1d/ferrite-bead-0-6ohm-300ma-0402/dp/1515762) | |
 | All | 1.8K 0402 resistor | 2 | 0402 1.8K 1% | [MCMR04X1801FTL](https://uk.farnell.com/multicomp-pro/mcmr04x1801ftl/res-1k8-1-0-0625w-0402-ceramic/dp/2072709) | |
 | All | 10K 0402 resistor | 1 | 0402 10K 1% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
-| All | 15K 0805 anti-sulfur resistor | 1 | 0805 15K 1% ANTI-SULFUR AEC-Q200 | [MCMR08X1502FTL](https://uk.farnell.com/multicomp-pro/mcmr08x1502ftl/res-15k-1-0-125w-0805-ceramic/dp/2073646) | anti-sulfur AEC-Q200 recommended |
+| All | 15K 0402 anti-sulfur resistor | 1 | 0402 15K 1% ANTI-SULFUR AEC-Q200 | [MCSR04X1502FTL](https://uk.farnell.com/multicomp-pro/mcsr04x1502ftl/res-15k-1-0-0625w-0402-thick-film/dp/2073998) | anti-sulfur AEC-Q200 recommended |
 | All | 18.2K 0402 resistor | 1 | 0402 18.2K 1% | [RC0402FR-0718K2L](https://uk.farnell.com/yageo/rc0402fr-0718k2l/res-18k2-1-0-0625w-0402-thick/dp/3495542) | 18.2K == 2MHz |
 | All | 56K 0402 resistor | 2 | 0402 56K 5% | [MCMR04X5602FTL](https://uk.farnell.com/multicomp-pro/mcmr04x5602ftl/res-56k-1-0-0625w-0402-ceramic/dp/2073131) | |
 | All | 100K 0402 resistor | 5 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | All | 180K 0402 resistor | 1 | 0402 180K 5% | [MCWR04X1803FTL](https://uk.farnell.com/multicomp-pro/mcwr04x1803ftl/res-180k-1-0-0625w-thick-film/dp/2447116) | |
-| All | 226K 0402 resistor | 1 | 0402 226K 1% | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V |
+| All | 226K 0402 anti-sulfur resistor | 1 | 0402 226K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V, sets output voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | All | 300K 0402 anti-sulfur resistor | 1 | 0402 300K 1% ANTI-SULFUR AEC-Q200 | [MCS04020C3003FE000](https://uk.farnell.com/vishay/mcs04020c3003fe000/res-300k-1-0-1w-0402-thin-film/dp/3546555) | Keep 1% anti-sulfur |
 | All | 1M 0402 resistor 1% | 1 | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | All | 1M 0402 resistor 5% | 2 | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
@@ -447,12 +491,12 @@ on which interfaces are fitted. Quantities are per board.
 | CAN | Reverse-blocking load switch | 1 | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://uk.farnell.com/vishay/sip32431dr3-t1ge3/ic-load-switch-1-1v-5-5v-1a-sc70/dp/2361509) | |
 | CAN | 2-pin 2.54mm header | 1 | 2-pin 2.54mm header | [68001-402HLF](https://uk.farnell.com/amphenol-communications-solutions/68001-402hlf/conn-header-2pos-1row-2-54mm-th/dp/3881905) | |
 | ISO-9141 | 510R 0508 resistor | 2 | 0508 510R 5% 1W | [3430A2F510RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f510rtdf/res-510r-1w-thick-film-0508-wide/dp/4206859) | |
-| ISO-9141 | 4.7K resistor | 1 | 0402 4.7K 5% | [MP003476](https://uk.farnell.com/multicomp-pro/mp003476/res-4k7-1-0-0625w-0402-thick-film/dp/3392645) | |
 | ISO-9141 | 10K 0402 resistor | 3 | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
-| ISO-9141 | 47K resistor | 1 | 0402 47K 5% | [ERJ2RKF4702X](https://uk.farnell.com/panasonic/erj2rkf4702x/res-47k-1-0-1w-0402-thick-film/dp/2302806) | |
+| ISO-9141 | 47K resistor | 2 | 0402 47K 5% | [ERJ2RKF4702X](https://uk.farnell.com/panasonic/erj2rkf4702x/res-47k-1-0-1w-0402-thick-film/dp/2302806) | |
 | ISO-9141 | 100K 0402 resistor | 4 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | ISO-9141 | 180K 0402 resistor | 1 | 0402 180K 5% | [MCWR04X1803FTL](https://uk.farnell.com/multicomp-pro/mcwr04x1803ftl/res-180k-1-0-0625w-thick-film/dp/2447116) | |
 | ISO-9141 | 1M 0402 resistor | 1 | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
+| ISO-9141 | 1M 0402 anti-sulfur resistor | 1 | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | anti-sulfur recommended, not critical |
 | ISO-9141 | 1nF capacitor | 2 | 0402 >= 50V 10% X7R | [0402B102K500CT](https://uk.farnell.com/multicomp-pro/0402b102k500ct/cap-1000pf-50v-10-x7r-0402/dp/2496767) | |
 | ISO-9141 | 100nF 50V 0402 capacitor | 2 | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | ISO-9141 | 220nF capacitor | 1 | 0603 >= 50V 10% X7R | [GRM188R71H224KAC4D](https://uk.farnell.com/murata/grm188r71h224kac4d/cap-0-22-f-50v-10-x7r-0603/dp/2688525) | |
