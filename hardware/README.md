@@ -71,6 +71,10 @@ Same as v2.5 with a stacked 47uF ceramic bulk cap (2220, 50V X7R) added on the
 > voltage onto an nRF9151 GPIO, destroying the module. Do not connect the L
 > wire on these versions. Fixed in v3.3. See the
 > [v3.2 README](l0destar_v3.2/README.md#known-defects) for the full analysis.
+> The firmware will refuse to drive L\_SEND on affected boards, the odds of
+> anyone actually having this problem are miniscule given how rare ISO-9141 is
+> and how rare using the L wire is even within ISO-9141 but it bears mentioning
+> because the failure mode is severe.
 
 - **[l0destar v3.0](l0destar_v3.0/)** - CAN and K-line circuits on a single
   PCB, either/both/neither can be populated. Jumper pads select connector pins
