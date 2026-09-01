@@ -5,6 +5,31 @@ tree are noted where they were removed.
 
 ## 01/09/2026
 
+- VNA measured signal attenuation on a v3.1 board at -2.4dB which isn't great.
+  Suspect it's because the SMA connectors are through-hole. in v3.3 I edited the
+  footprint for the SMA and set the centre pins to connect to F.cu and B.cu only
+  and put a keepout around them excluding In.1 and In.2.
+- Increased width for the LTE RF trace to 0.36mm (was previously 0.292mm,
+  incorrect)
+- Increased width for the GPS TF trace to 0.306mm (was 0.292mm, incorrect)
+
+Noting here for future reference:
+
+Board: Rigid, 4 layers, 1.6 mm, inner 0.5 oz, outer 1 oz, unit mil. Stack-up:
+JLC04161H-7628 (the "Standard" entry, what you get with "no requirement"):
+L1 1 oz (0.035 mm), prepreg 7628 RC49% 0.2104 mm, L2 0.5 oz. Target 50 Ω,
+signal layer L1, bottom ref L2, solder mask on.
+
+GNSS feed (coplanar, top GND pour at 0.2 mm clearance)
+
+Type: Coplanar Single Ended. Impedance trace to copper: 8 mil (0.2 mm). Result: trace width 12.04 mil = 0.306 mm.
+
+LTE feed (plain microstrip, no top pour)
+
+Type: Single Ended (Non coplanar). Result: trace width 14.12 mil = 0.359 mm.
+
+## 01/09/2026
+
 - Fixed the 0508 footprint in v3.3 to actually match the part dimensions
   properly, saving precious microns of board real estate.
 

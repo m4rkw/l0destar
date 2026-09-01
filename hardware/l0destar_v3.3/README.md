@@ -43,6 +43,15 @@ Present in v3.0 - v3.2 and described in full in the
 (AL5809-90) limiting the pulldown to 90 mA, with S10R7 limiting gate-fault
 current into the nRF and S10D5/S10R8 adding fault detection on L\_SENSE.
 
+### Suboptimal RF tuning
+
+A VNA sweep of the v3.2 GNSS feed showed about 2.4 dB of insertion loss,
+caused by shunt capacitance from the through-hole SMA centre pin against
+the In.1/In.2 ground planes. v3.3 modifies the SMA footprint to remove the
+centre pin's inner-layer pads and add a 4 mm copper keepout on In.1 and
+In.2, bringing the launch closer to 50 Ω. The trace widths on both RF
+feeds have also been recalculated for the JLC04161H-7628 stack-up.
+
 ## Test status
 
 | Item | Test | Result | Notes |
@@ -94,6 +103,13 @@ current into the nRF and S10D5/S10R8 adding fault detection on L\_SENSE.
 
 ## Changes from v3.2
 
+- VNA measured signal attenuation pre-v3.3 boards at -2.4dB which isn't great.
+  Suspect it's because the SMA connectors are through-hole. in v3.3 I edited the
+  footprint for the SMA and set the centre pins to connect to F.cu and B.cu only
+  and put a keepout around them excluding In.1 and In.2.
+- Increased width for the LTE RF trace to 0.36mm (was previously 0.292mm,
+  incorrect)
+- Increased width for the GPS TF trace to 0.306mm (was 0.292mm, incorrect)
 - An L-line circuit defect was fixed by adding an AL5809-90 in series on the L
   wire to limit the pulldown current to 90mA in the event of the external L pin
   being shorted to 12V. This part also automatically shuts down blocking the
@@ -320,8 +336,8 @@ separate load switches.
 | S15J4 | SMA PCB connector | 50 ohm | [SMA-J-P-H-RA-TH1](https://uk.farnell.com/samtec/sma-j-p-h-ra-th1/rf-coaxial-sma-jack-50-ohm-pcb/dp/2856817) | |
 | S15FB1 | Ferrite bead | 600 ohm | [BLM15PX601SZ1D](https://uk.farnell.com/murata/blm15px601sz1d/ferrite-bead-0-9a-0-23ohm-0402/dp/3678458) | |
 | S15L1 | RF inductor | 0603 47-100 nH, SRF > 2GHz | [LQW18AN68NJ00D](https://uk.farnell.com/murata/lqw18an68nj00d/inductor-68nh-2-2ghz-0-34a-0603/dp/3471533) | |
-| S15C1 | 47pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [CBR04C470J5GACAUTO](https://uk.farnell.com/kemet/cbr04c470j5gacauto/rf-capacitor-47pf-50v-125deg-c/dp/4062386) | **Matched pair with the 100pF cap** |
-| S15C2 | 100pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [CBR04C101J5GACAUTO](https://uk.farnell.com/kemet/cbr04c101j5gacauto/rf-capacitor-100pf-50v-125deg/dp/4062389) | **Matched pair with the 47pF cap** |
+| S15C1 | 47pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N470J500CT](https://uk.farnell.com/multicomp-pro/0402n470j500ct/cap-47pf-50v-5-c0g-np0-0402/dp/2496804) | |
+| S15C2 | 100pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
 | S15C3 | 10nF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [GRM1555C1H103JE01D](https://uk.farnell.com/murata/grm1555c1h103je01d/cap-mlcc-0-01uf-5-c0g-50vdc-0402/dp/4803046RL) | |
 | S15C4 | 2.2uF capacitor | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |
 | S15D1 | ESD protection diode (GSM path) | TPD1E05U06DPYR X1SON-2 | [TPD1E05U06DPYR](https://www.digikey.com/en/products/detail/texas-instruments/TPD1E05U06DPYR/3844805) | |
@@ -441,9 +457,8 @@ on which interfaces are fitted. Quantities are per board.
 | All | 33M 0603 resistor | 1 | 0603 33M 5% | [MCHVR03JTHX3305](https://uk.farnell.com/multicomp-pro/mchvr03jthx3305/res-33m-5-0-1w-0603-thick-film/dp/2825824) | |
 | All | 3.3pF 0402 capacitor | 1 | 0402 >= 50V ±0.25pF C0G / NP0 | [CGA2B2C0G1H3R3C050BA](https://uk.farnell.com/tdk/cga2b2c0g1h3r3c050ba/cap-3-3pf-50v-c0g-np0-0402/dp/2210780) | |
 | All | 10pF capacitor | 1 | 0402 >= 50V 5% C0G/NP0 | [GRM1555C1H100JA01D](https://uk.farnell.com/murata/grm1555c1h100ja01d/cap-mlcc-10pf-c0g-np0-50v-0402/dp/4326648) | |
-| All | 47pF RF capacitor | 1 | 0402 >= 50V 5% C0G / NP0 | [CBR04C470J5GACAUTO](https://uk.farnell.com/kemet/cbr04c470j5gacauto/rf-capacitor-47pf-50v-125deg-c/dp/4062386) | **Matched pair with the 100pF cap** |
-| All | 100pF capacitor | 2 | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
-| All | 100pF RF capacitor | 1 | 0402 >= 50V 5% C0G / NP0 | [CBR04C101J5GACAUTO](https://uk.farnell.com/kemet/cbr04c101j5gacauto/rf-capacitor-100pf-50v-125deg/dp/4062389) | **Matched pair with the 47pF cap** |
+| All | 47pF RF capacitor | 1 | 0402 >= 50V 5% C0G / NP0 | [0402N470J500CT](https://uk.farnell.com/multicomp-pro/0402n470j500ct/cap-47pf-50v-5-c0g-np0-0402/dp/2496804) | |
+| All | 100pF RF capacitor | 3 | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
 | All | 10nF RF capacitor | 1 | 0402 >= 50V 5% C0G / NP0 | [GRM1555C1H103JE01D](https://uk.farnell.com/murata/grm1555c1h103je01d/cap-mlcc-0-01uf-5-c0g-50vdc-0402/dp/4803046RL) | |
 | All | 100nF 50V 0402 capacitor | 8 | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | All | 2.2uF 0603 capacitor | 4 | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |

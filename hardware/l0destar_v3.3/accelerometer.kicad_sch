@@ -847,16 +847,6 @@
 		)
 		(uuid "6e244cbb-7e2a-4cdc-bc18-692e2b87d28d")
 	)
-	(text "0R jumper or ferrite bead if peak TX causes reading offsets"
-		(exclude_from_sim no)
-		(at 182.88 19.685 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-		)
-		(uuid "820f89ef-067d-440e-b955-ca24d0c62f84")
-	)
 	(text "3.3"
 		(exclude_from_sim no)
 		(at 268.224 193.294 0)
