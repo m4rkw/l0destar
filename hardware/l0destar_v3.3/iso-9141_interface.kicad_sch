@@ -3852,7 +3852,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0508_1220Metric"
+		(property "Footprint" "libs:R_0508_1220Metric_WideTerminal"
 			(at 135.382 49.53 90)
 			(hide yes)
 			(show_name no)
@@ -4766,7 +4766,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0508_1220Metric"
+		(property "Footprint" "libs:R_0508_1220Metric_WideTerminal"
 			(at 56.642 102.87 90)
 			(hide yes)
 			(show_name no)

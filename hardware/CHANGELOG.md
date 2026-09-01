@@ -3,6 +3,11 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 01/09/2026
+
+- Fixed the 0508 footprint in v3.3 to actually match the part dimensions
+  properly, saving precious microns of board real estate.
+
 ## 31/08/2026
 
 - Fixed decoupling and other cap discrepencies between the v3.1+ schematics and

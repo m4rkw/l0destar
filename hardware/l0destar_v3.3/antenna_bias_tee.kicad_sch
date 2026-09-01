@@ -3898,7 +3898,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0508_1220Metric"
+		(property "Footprint" "libs:R_0508_1220Metric_WideTerminal"
 			(at 66.04 61.087 90)
 			(hide yes)
 			(show_name no)
