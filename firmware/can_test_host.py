@@ -1,80 +1,31 @@
 #!/usr/bin/env python3
 """
-Host-side CAN test responder for the l0destar CAN bus test.
+Host-side CAN adapter server for the l0destar CAN bench tests.
 
-Listens on a gs_usb-compatible adapter (canable2) for a PING frame
-(ID 0x100, data b"PING"), replies with PONG (ID 0x101, data b"PONG"),
-and prints all traffic.
+Runs as root (the gs_usb adapter needs it on macOS) and hands the CANable
+2.0 to unprivileged test scripts over a localhost socket — see
+can_bench/server.py (protocol), can_bench/client.py (wrapper) and
+can_bench/run_all.py (the test suite).
+
+The firmware's boot-time CAN test (CONFIG_APP_CAN_TEST=y) still works with
+this running: the server answers PING (ID 0x100) with PONG (ID 0x101) by
+default.
 
 Usage:
-    sudo DYLD_LIBRARY_PATH=/opt/local/lib python3 can_test_host.py
+    sudo /Users/mark/.venv/bin/python3 can_test_host.py
 
-Requires: python-can, gs_usb, pyusb, libusb
-    pip install python-can gs_usb pyusb
+Stop it with ctrl-c, or by creating a file named "can_stop" in the working
+directory (it is removed on the way out).
+
+Requires: pyusb, libusb (MacPorts /opt/local/lib/libusb-1.0.dylib)
 """
 
-import ctypes.util
+import os
 import sys
 
-# sudo strips DYLD_LIBRARY_PATH (SIP), so help pyusb find libusb
-_orig_find = ctypes.util.find_library
-def _find_library(name):
-    if name in ("usb-1.0", "usb"):
-        return "/opt/local/lib/libusb-1.0.dylib"
-    return _orig_find(name)
-ctypes.util.find_library = _find_library
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "can_bench"))
 
-import can
-
-
-BITRATE = 500_000
-PING_ID = 0x100
-PONG_ID = 0x101
-
-
-def main():
-    print(f"opening gs_usb adapter at {BITRATE} bps...")
-
-    try:
-        bus = can.Bus(interface="gs_usb", channel=0, bitrate=BITRATE)
-    except Exception as e:
-        print(f"failed to open adapter: {e}")
-        print("is the canable2 plugged in?")
-        sys.exit(1)
-
-    print("listening for CAN frames (ctrl-c to stop)...\n")
-
-    try:
-        while True:
-            msg = bus.recv(timeout=1.0)
-            if msg is None:
-                continue
-
-            data_str = msg.data.hex(" ")
-            ascii_str = "".join(
-                chr(b) if 0x20 <= b < 0x7F else "." for b in msg.data
-            )
-            print(f"RX  ID=0x{msg.arbitration_id:03X}  DLC={msg.dlc}  [{data_str}]  {ascii_str}")
-
-            if (
-                msg.arbitration_id == PING_ID
-                and msg.dlc >= 4
-                and msg.data[:4] == b"PING"
-            ):
-                reply = can.Message(
-                    arbitration_id=PONG_ID,
-                    data=b"PONG",
-                    is_extended_id=False,
-                )
-                bus.send(reply)
-                print(f"TX  ID=0x{PONG_ID:03X}  DLC=4  [50 4f 4e 47]  PONG")
-                print("\nPING/PONG exchange complete.")
-
-    except KeyboardInterrupt:
-        print("\nstopped.")
-    finally:
-        bus.shutdown()
-
+from server import serve   # noqa: E402
 
 if __name__ == "__main__":
-    main()
+    serve()

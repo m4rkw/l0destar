@@ -1,0 +1,1367 @@
+08:09:03 Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:09:03 I: Boot source: none
+08:09:03 I: Image index: 0, Swap type: none
+08:09:03 I: Bootloader chainload address offset: 0x10000
+08:09:03 I: Image version: v0.4.0
+08:09:03 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:09:03 Booting TF-M v2.2.2**
+08:09:03 [Sec Thread] Secure image initializing!
+08:09:03 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:09:03 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:09:03 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:09:03 [00:00:00.265,991] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:09:03 [00:00:00.274,475] <inf> crypto: ready
+08:09:03 [00:00:00.278,747] <inf> settings: apn=sensor.net user=
+08:09:03 [00:00:00.284,454] <inf> settings: int=0 ma=1
+08:09:03 [00:00:00.289,306] <inf> settings: imei=(unset)
+08:09:03 [00:00:00.309,570] <inf> hw_domain: AUX domain on (P0.13)
+08:09:03 [00:00:00.325,531] <inf> hw_selftest: === power rail self-test ===
+08:09:03 [00:00:00.332,183] <inf> hw_selftest: PP3V3_GPS: OK
+08:09:03 [00:00:00.337,554] <inf> hw_selftest: self-test: all rails OK
+08:13:00 [00:00bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=2 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012d int=0x00 opmod=6
+08:13:00 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=2 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000135 int=0x00 opmod=6
+08:13:00 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=2 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000013d int=0x00 opmod=6
+08:13:00 bench: burst id=0x300 n=50 len=8 fd=0 brs=0 ext=0 -> sent=50 failed=0 98350 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:13:00 bench: burst id=0x300 n=200 len=8 fd=0 brs=0 ext=0 -> sent=200 failed=0 387011 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:13:01 bench: stats rx=53 miss=141 bad=0 ovf=18 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x000000ca int=0x00 opmod=6
+08:17:13 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:13 bench: stats rx=53 miss=141 bad=0 ovf=18 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000003 int=0x00 opmod=6
+08:17:13 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:13 bench: SPI slow (Zephyr GPIO API)
+08:17:15 bench: spibench fast=0 n=200 ram_err=0 rw_err=0 write16=1033 us read16=1039 us (~138 kbit/s SPI)
+08:17:15 bench: SPI fast (direct GPIO)
+08:17:15 bench: spibench fast=1 n=200 ram_err=0 rw_err=0 write16=152 us read16=160 us (~900 kbit/s SPI)
+08:17:15 bench: SPI slow (Zephyr GPIO API)
+08:17:15 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:16 bench: stats rx=30 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000020 int=0x00 opmod=6
+08:17:16 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:16 bench: echo on
+08:17:16 bench: echo off
+08:17:16 bench: stats rx=83 miss=3802672201 bad=11 ovf=0 echo=53/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000006f int=0x00 opmod=6
+08:17:17 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:17 bench: stats rx=5 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000007 int=0x00 opmod=6
+08:17:17 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:17 bench: SPI slow (Zephyr GPIO API)
+08:17:17 bench: echo on
+08:17:19 bench: echo off
+08:17:19 bench: SPI fast (direct GPIO)
+08:17:19 bench: echo on
+08:17:20 bench: echo off
+08:17:20 bench: SPI slow (Zephyr GPIO API)
+08:17:20 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:20 bench: SPI slow (Zephyr GPIO API)
+08:17:22 bench: stats rx=134 miss=159 bad=0 ovf=20 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6
+08:17:22 bench: SPI fast (direct GPIO)
+08:17:24 bench: stats rx=273 miss=27 bad=0 ovf=27 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6
+08:17:24 bench: SPI slow (Zephyr GPIO API)
+08:17:24 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:25 bench: stats rx=16 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000012 int=0x00 opmod=6
+08:17:26 bench: stats rx=32 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000022 int=0x00 opmod=6
+08:17:26 bench: stats rx=38 miss=17 bad=0 ovf=4 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000003e int=0x00 opmod=6
+08:17:27 bench: stats rx=43 miss=57 bad=0 ovf=7 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=6
+08:17:27 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:27 bench: SPI slow (Zephyr GPIO API)
+08:17:28 bench: burst id=0x300 n=500 len=8 fd=0 brs=0 ext=0 -> sent=500 failed=0 964621 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:17:29 bench: burst id=0x300 n=500 len=0 fd=0 brs=0 ext=0 -> sent=500 failed=0 734173 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:17:29 bench: SPI fast (direct GPIO)
+08:17:29 bench: burst id=0x300 n=500 len=8 fd=0 brs=0 ext=0 -> sent=500 failed=0 151715 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:17:29 bench: burst id=0x300 n=500 len=0 fd=0 brs=0 ext=0 -> sent=500 failed=0 116958 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:17:30 bench: SPI slow (Zephyr GPIO API)
+08:17:30 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:47 bench: burst id=0x300 n=200 len=8 fd=0 brs=0 ext=0 -> sent=200 failed=0 387048 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:17:48 bench: stats rx=69 miss=16 bad=0 ovf=2 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000123 int=0x00 opmod=6
+08:17:48 bench: stats rx=69 miss=16 bad=0 ovf=2 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012b int=0x00 opmod=6
+08:17:48 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:17:48 bench: echo off
+08:17:48 bench: filter accept-all sid=0x000 mask=0x000
+08:21:35 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:21:35 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:21:35 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:21:35 I: Starting bootloader
+08:21:35 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:21:35 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:21:35 I: Boot source: none
+08:21:35 I: Image index: 0, Swap type: none
+08:21:35 I: Bootloader chainload address offset: 0x10000
+08:21:35 I: Image version: v0.4.0
+08:21:35 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:21:35 Booting TF-M v2.2.2**
+08:21:35 [Sec Thread] Secure image initializing!
+08:21:36 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:21:36 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:21:36 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:21:36 [00:00:00.265,930] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:21:36 [00:00:00.274,353] <inf> crypto: ready
+08:21:36 [00:00:00.278,656] <inf> settings: apn=sensor.net user=
+08:21:36 [00:00:00.284,332] <inf> settings: int=0 ma=1
+08:21:36 [00:00:00.289,184] <inf> settings: imei=(unset)
+08:21:36 [00:00:00.309,448] <inf> hw_domain: AUX domain on (P0.13)
+08:21:36 [00:00:00.325,378] <inf> hw_selftest: === power rail self-test ===
+08:21:36 [00:00:00.332,031] <inf> hw_selftest: PP3V3_GPS: OK
+08:21:36 [00:00:00.337,432] <inf> hw_selftest: self-test: all rails OK
+08:21:36 [00:00:00.353,881] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:21:36 [00:00:00.385,223] <inf> hw_power: INA228 ready  VBUS=0.008 V
+08:21:36 [00:00:00.401,916] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:21:36 [00:00:00.494,354] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:21:36 [00:00:00.518,920] <inf> hw_domain: CAN domain on (P0.23)
+08:21:36 [00:00:00.529,266] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:21:36 [00:00:00.535,247] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:21:36 [00:00:00.547,058] <inf> hw_domain: CAN domain off (P0.23)
+08:21:36 
+08:21:36 *** CAN BENCH AGENT ***
+08:21:36 [00:00:00.570,587] <inf> hw_domain: CAN domain on (P0.23)
+08:21:36 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:21:40 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:21:40 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:21:40 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:21:40 I: Starting bootloader
+08:21:40 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:21:40 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:21:40 I: Boot source: none
+08:21:40 I: Image index: 0, Swap type: none
+08:21:40 I: Bootloader chainload address offset: 0x10000
+08:21:40 I: Image version: v0.4.0
+08:21:41 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:21:41 Booting TF-M v2.2.2**
+08:21:41 [Sec Thread] Secure image initializing!
+08:21:41 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:21:41 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:21:41 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:21:41 [00:00:00.265,991] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:21:41 [00:00:00.274,414] <inf> crypto: ready
+08:21:41 [00:00:00.278,686] <inf> settings: apn=sensor.net user=
+08:21:41 [00:00:00.284,393] <inf> settings: int=0 ma=1
+08:21:41 [00:00:00.289,245] <inf> settings: imei=(unset)
+08:21:41 [00:00:00.309,478] <inf> hw_domain: AUX domain on (P0.13)
+08:21:41 [00:00:00.325,408] <inf> hw_selftest: === power rail self-test ===
+08:21:41 [00:00:00.332,061] <inf> hw_selftest: PP3V3_GPS: OK
+08:21:41 [00:00:00.337,463] <inf> hw_selftest: self-test: all rails OK
+08:21:41 [00:00:00.353,912] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:21:41 [00:00:00.385,253] <inf> hw_power: INA228 ready  VBUS=0.007 V
+08:21:41 [00:00:00.401,947] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:21:41 [00:00:00.494,384] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:21:41 [00:00:00.518,951] <inf> hw_domain: CAN domain on (P0.23)
+08:21:41 [00:00:00.529,296] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:21:41 [00:00:00.535,278] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:21:41 [00:00:00.547,088] <inf> hw_domain: CAN domain off (P0.23)
+08:21:41 
+08:21:41 *** CAN BENCH AGENT ***
+08:21:41 [00:00:00.570,617] <inf> hw_domain: CAN domain on (P0.23)
+08:21:42 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:21:52 bench: stats rx=128 miss=168 bad=0 ovf=21 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6
+08:22:54 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:22:54 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:22:54 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:22:54 I: Starting bootloader
+08:22:54 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:22:54 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:22:54 I: Boot source: none
+08:22:54 I: Image index: 0, Swap type: none
+08:22:54 I: Bootloader chainload address offset: 0x10000
+08:22:54 I: Image version: v0.4.0
+08:22:54 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:22:54 Booting TF-M v2.2.2**
+08:22:54 [Sec Thread] Secure image initializing!
+08:22:54 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:22:54 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:22:54 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:22:54 [00:00:00.265,991] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:22:55 [00:00:00.274,383] <inf> crypto: ready
+08:22:55 [00:00:00.278,686] <inf> settings: apn=sensor.net user=
+08:22:55 [00:00:00.284,362] <inf> settings: int=0 ma=1
+08:22:55 [00:00:00.289,215] <inf> settings: imei=(unset)
+08:22:55 [00:00:00.309,478] <inf> hw_domain: AUX domain on (P0.13)
+08:22:55 [00:00:00.325,408] <inf> hw_selftest: === power rail self-test ===
+08:22:55 [00:00:00.332,061] <inf> hw_selftest: PP3V3_GPS: OK
+08:22:55 [00:00:00.337,463] <inf> hw_selftest: self-test: all rails OK
+08:22:55 [00:00:00.353,912] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:22:55 [00:00:00.385,467] <inf> hw_power: INA228 ready  VBUS=0.007 V
+08:22:55 [00:00:00.402,160] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:22:55 [00:00:00.494,689] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:22:55 [00:00:00.519,256] <inf> hw_domain: CAN domain on (P0.23)
+08:22:55 [00:00:00.529,388] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:22:55 [00:00:00.535,369] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:22:55 [00:00:00.547,058] <inf> hw_domain: CAN domain off (P0.23)
+08:22:55 
+08:22:55 *** CAN BENCH AGENT ***
+08:22:55 [00:00:00.570,526] <inf> hw_domain: CAN domain on (P0.23)
+08:22:55 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:22:59 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:22:59 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:22:59 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:22:59 I: Starting bootloader
+08:22:59 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:22:59 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:22:59 I: Boot source: none
+08:22:59 I: Image index: 0, Swap type: none
+08:22:59 I: Bootloader chainload address offset: 0x10000
+08:22:59 I: Image version: v0.4.0
+08:23:00 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:23:00 Booting TF-M v2.2.2**
+08:23:00 [Sec Thread] Secure image initializing!
+08:23:00 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:23:00 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:23:00 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:23:00 [00:00:00.265,991] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:23:00 [00:00:00.274,475] <inf> crypto: ready
+08:23:00 [00:00:00.278,747] <inf> settings: apn=sensor.net user=
+08:23:00 [00:00:00.284,454] <inf> settings: int=0 ma=1
+08:23:00 [00:00:00.289,306] <inf> settings: imei=(unset)
+08:23:00 [00:00:00.309,570] <inf> hw_domain: AUX domain on (P0.13)
+08:23:00 [00:00:00.325,500] <inf> hw_selftest: === power rail self-test ===
+08:23:00 [00:00:00.332,183] <inf> hw_selftest: PP3V3_GPS: OK
+08:23:00 [00:00:00.337,554] <inf> hw_selftest: self-test: all rails OK
+08:23:00 [00:00:00.354,003] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:23:00 [00:00:00.385,559] <inf> hw_power: INA228 ready  VBUS=0.011 V
+08:23:00 [00:00:00.402,252] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:23:00 [00:00:00.494,781] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:23:00 [00:00:00.519,348] <inf> hw_domain: CAN domain on (P0.23)
+08:23:00 [00:00:00.529,479] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:23:00 [00:00:00.535,461] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:23:00 [00:00:00.547,149] <inf> hw_domain: CAN domain off (P0.23)
+08:23:00 
+08:23:00 *** CAN BENCH AGENT ***
+08:23:00 [00:00:00.570,648] <inf> hw_domain: CAN domain on (P0.23)
+08:23:00 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:23:10 bench: stats rx=132 miss=165 bad=0 ovf=22 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..52640 us (>10ms: 45) loop_max=8474426 us
+08:23:12 bench: stats rx=89 miss=208 bad=0 ovf=27 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=235..52661 us (>10ms: 17) loop_max=10587280 us
+08:23:12 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 234441 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:24:41 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:24:41 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:24:41 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:24:41 I: Starting bootloader
+08:24:41 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:24:41 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:24:41 I: Boot source: none
+08:24:41 I: Image index: 0, Swap type: none
+08:24:41 I: Bootloader chainload address offset: 0x10000
+08:24:41 I: Image version: v0.4.0
+08:24:41 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:24:41 Booting TF-M v2.2.2**
+08:24:41 [Sec Thread] Secure image initializing!
+08:24:42 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:24:42 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:24:42 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:24:42 [00:00:00.265,991] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:24:42 [00:00:00.274,414] <inf> crypto: ready
+08:24:42 [00:00:00.278,686] <inf> settings: apn=sensor.net user=
+08:24:42 [00:00:00.284,393] <inf> settings: int=0 ma=1
+08:24:42 [00:00:00.289,245] <inf> settings: imei=(unset)
+08:24:42 [00:00:00.309,509] <inf> hw_domain: AUX domain on (P0.13)
+08:24:42 [00:00:00.325,439] <inf> hw_selftest: === power rail self-test ===
+08:24:42 [00:00:00.332,092] <inf> hw_selftest: PP3V3_GPS: OK
+08:24:42 [00:00:00.337,493] <inf> hw_selftest: self-test: all rails OK
+08:24:42 [00:00:00.353,942] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:24:42 [00:00:00.385,498] <inf> hw_power: INA228 ready  VBUS=0.009 V
+08:24:42 [00:00:00.402,191] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:24:42 [00:00:00.494,720] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:24:42 [00:00:00.519,256] <inf> hw_domain: CAN domain on (P0.23)
+08:24:42 [00:00:00.529,357] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:24:42 [00:00:00.535,339] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:24:42 [00:00:00.546,997] <inf> hw_domain: CAN domain off (P0.23)
+08:24:42 
+08:24:42 *** CAN BENCH AGENT ***
+08:24:42 [00:00:00.570,465] <inf> hw_domain: CAN domain on (P0.23)
+08:24:42 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:24:46 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:24:46 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:24:46 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:24:46 I: Starting bootloader
+08:24:46 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:24:46 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:24:46 I: Boot source: none
+08:24:46 I: Image index: 0, Swap type: none
+08:24:46 I: Bootloader chainload address offset: 0x10000
+08:24:46 I: Image version: v0.4.0
+08:24:47 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:24:47 Booting TF-M v2.2.2**
+08:24:47 [Sec Thread] Secure image initializing!
+08:24:47 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:24:47 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:24:47 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:24:47 [00:00:00.265,960] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:24:47 [00:00:00.274,353] <inf> crypto: ready
+08:24:47 [00:00:00.278,656] <inf> settings: apn=sensor.net user=
+08:24:47 [00:00:00.284,332] <inf> settings: int=0 ma=1
+08:24:47 [00:00:00.289,184] <inf> settings: imei=(unset)
+08:24:47 [00:00:00.309,448] <inf> hw_domain: AUX domain on (P0.13)
+08:24:47 [00:00:00.325,378] <inf> hw_selftest: === power rail self-test ===
+08:24:47 [00:00:00.332,031] <inf> hw_selftest: PP3V3_GPS: OK
+08:24:47 [00:00:00.337,432] <inf> hw_selftest: self-test: all rails OK
+08:24:47 [00:00:00.353,881] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:24:47 [00:00:00.385,437] <inf> hw_power: INA228 ready  VBUS=0.010 V
+08:24:47 [00:00:00.402,160] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:24:47 [00:00:00.494,689] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:24:47 [00:00:00.519,226] <inf> hw_domain: CAN domain on (P0.23)
+08:24:47 [00:00:00.529,327] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:24:47 [00:00:00.535,308] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:24:47 [00:00:00.546,966] <inf> hw_domain: CAN domain off (P0.23)
+08:24:47 
+08:24:47 *** CAN BENCH AGENT ***
+08:24:47 [00:00:00.570,495] <inf> hw_domain: CAN domain on (P0.23)
+08:24:47 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:24:55 bench: SPI slow (Zephyr GPIO API)
+08:24:57 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=3469..6500 us (>10ms: 0) loop_max=2319 us
+08:24:59 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=1541..4473 us (>10ms: 0) loop_max=4241 us
+08:25:00 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=353..3579 us (>10ms: 0) loop_max=27160 us
+08:25:00 bench: stats rx=179 miss=121 bad=0 ovf=94 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=236..3916 us (>10ms: 0) loop_max=359710 us
+08:25:00 bench: SPI fast (direct GPIO)
+08:25:02 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=3462..6705 us (>10ms: 0) loop_max=427 us
+08:25:04 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=1647..4305 us (>10ms: 0) loop_max=427 us
+08:25:05 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=234..6247 us (>10ms: 0) loop_max=976 us
+08:25:06 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2447 us (>10ms: 0) loop_max=1007 us
+08:25:06 bench: SPI slow (Zephyr GPIO API)
+08:25:23 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:24 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000003 int=0x00 opmod=6 gap=233..2447 us (>10ms: 0) loop_max=427 us
+08:25:24 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:24 bench: SPI slow (Zephyr GPIO API)
+08:25:26 bench: spibench fast=0 n=200 ram_err=0 rw_err=0 write16=1024 us read16=1039 us (~138 kbit/s SPI)
+08:25:26 bench: SPI fast (direct GPIO)
+08:25:26 bench: spibench fast=1 n=200 ram_err=0 rw_err=0 write16=153 us read16=167 us (~862 kbit/s SPI)
+08:25:26 bench: SPI slow (Zephyr GPIO API)
+08:25:26 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:26 bench: stats rx=30 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000020 int=0x00 opmod=6 gap=1788..3749 us (>10ms: 0) loop_max=4180 us
+08:25:27 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:27 bench: echo on
+08:25:27 bench: echo off
+08:25:27 bench: stats rx=83 miss=3802672201 bad=11 ovf=0 echo=53/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000006f int=0x00 opmod=6 gap=1788..570356 us (>10ms: 1) loop_max=4577 us
+08:25:27 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:28 bench: stats rx=5 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000007 int=0x00 opmod=6 gap=2002..2042 us (>10ms: 0) loop_max=7995 us
+08:25:28 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:28 bench: SPI slow (Zephyr GPIO API)
+08:25:28 bench: echo on
+08:25:29 bench: echo off
+08:25:29 bench: SPI fast (direct GPIO)
+08:25:29 bench: echo on
+08:25:30 bench: echo off
+08:25:30 bench: SPI slow (Zephyr GPIO API)
+08:25:30 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:30 bench: SPI slow (Zephyr GPIO API)
+08:25:32 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=3539..6425 us (>10ms: 0) loop_max=2319 us
+08:25:34 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=236..10582 us (>10ms: 1) loop_max=25299 us
+08:25:35 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=344..3728 us (>10ms: 0) loop_max=34881 us
+08:25:36 bench: stats rx=262 miss=38 bad=0 ovf=37 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=234..3669 us (>10ms: 0) loop_max=497131 us
+08:25:36 bench: SPI fast (direct GPIO)
+08:25:37 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=3442..6647 us (>10ms: 0) loop_max=427 us
+08:25:39 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=1562..4422 us (>10ms: 0) loop_max=427 us
+08:25:40 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=405..3492 us (>10ms: 0) loop_max=427 us
+08:25:41 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2860 us (>10ms: 0) loop_max=732 us
+08:25:42 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1960 us (>10ms: 0) loop_max=732 us
+08:25:42 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2029 us (>10ms: 0) loop_max=1007 us
+08:25:43 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2095 us (>10ms: 0) loop_max=1037 us
+08:25:44 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1880 us (>10ms: 0) loop_max=1617 us
+08:25:44 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1729 us (>10ms: 0) loop_max=1892 us
+08:25:45 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1743 us (>10ms: 0) loop_max=2563 us
+08:25:45 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1841 us (>10ms: 0) loop_max=78826 us
+08:25:46 bench: stats rx=271 miss=29 bad=0 ovf=29 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..586 us (>10ms: 0) loop_max=79650 us
+08:25:46 bench: SPI slow (Zephyr GPIO API)
+08:25:46 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:47 bench: stats rx=16 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000012 int=0x00 opmod=6 gap=235..263 us (>10ms: 0) loop_max=31005 us
+08:25:47 bench: stats rx=32 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000022 int=0x00 opmod=6 gap=235..242 us (>10ms: 0) loop_max=61676 us
+08:25:48 bench: stats rx=39 miss=16 bad=0 ovf=4 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000003e int=0x00 opmod=6 gap=235..2131 us (>10ms: 0) loop_max=75805 us
+08:25:48 bench: stats rx=43 miss=52 bad=0 ovf=8 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=6 gap=235..2143 us (>10ms: 0) loop_max=84197 us
+08:25:48 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:49 bench: SPI slow (Zephyr GPIO API)
+08:25:50 bench: burst id=0x300 n=500 len=8 fd=0 brs=0 ext=0 -> sent=500 failed=0 1131296 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:25:51 bench: burst id=0x300 n=500 len=0 fd=0 brs=0 ext=0 -> sent=500 failed=0 904300 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:25:51 bench: SPI fast (direct GPIO)
+08:25:51 bench: burst id=0x300 n=500 len=8 fd=0 brs=0 ext=0 -> sent=500 failed=0 181118 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:25:51 bench: burst id=0x300 n=500 len=0 fd=0 brs=0 ext=0 -> sent=500 failed=0 146168 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:25:52 bench: SPI slow (Zephyr GPIO API)
+08:25:52 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:53 bench: burst id=0x300 n=200 len=8 fd=0 brs=0 ext=0 -> sent=200 failed=0 453487 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:25:54 bench: stats rx=5 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x000000d2 int=0x00 opmod=6 gap=1856..3416 us (>10ms: 0) loop_max=452697 us
+08:25:54 bench: stats rx=5 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x000000db int=0x00 opmod=6 gap=1856..3416 us (>10ms: 0) loop_max=366 us
+08:25:54 bench: setmode mode=6 nom=125000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:25:54 bench: echo on
+08:25:54 bench: echo off
+08:25:54 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 228347 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:25:55 bench: stats rx=25 miss=370480123 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=1856..2023256 us (>10ms: 1) loop_max=226562 us
+08:30:26 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:27 bench: echo off
+08:30:27 bench: filter accept-all sid=0x000 mask=0x000
+08:30:27 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:27 bench: stats rx=25 miss=370480123 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000003 int=0x00 opmod=6 gap=1856..2023256 us (>10ms: 1) loop_max=427 us
+08:30:27 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:27 bench: SPI slow (Zephyr GPIO API)
+08:30:29 bench: spibench fast=0 n=200 ram_err=0 rw_err=0 write16=1024 us read16=1039 us (~138 kbit/s SPI)
+08:30:29 bench: SPI fast (direct GPIO)
+08:30:29 bench: spibench fast=1 n=200 ram_err=0 rw_err=0 write16=153 us read16=167 us (~862 kbit/s SPI)
+08:30:29 bench: SPI slow (Zephyr GPIO API)
+08:30:29 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:30 bench: stats rx=30 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000020 int=0x00 opmod=6 gap=1801..3666 us (>10ms: 0) loop_max=4241 us
+08:30:30 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:30 bench: echo on
+08:30:30 bench: echo off
+08:30:30 bench: stats rx=83 miss=3802672201 bad=11 ovf=0 echo=53/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000006f int=0x00 opmod=6 gap=1801..627108 us (>10ms: 1) loop_max=4577 us
+08:30:31 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:31 bench: stats rx=5 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000007 int=0x00 opmod=6 gap=3078..3716 us (>10ms: 0) loop_max=2288 us
+08:30:31 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:32 bench: SPI slow (Zephyr GPIO API)
+08:30:32 bench: echo on
+08:30:33 bench: echo off
+08:30:33 bench: SPI fast (direct GPIO)
+08:30:33 bench: echo on
+08:30:34 bench: echo off
+08:30:34 bench: SPI slow (Zephyr GPIO API)
+08:30:34 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:34 bench: SPI slow (Zephyr GPIO API)
+08:30:36 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=3547..6488 us (>10ms: 0) loop_max=2319 us
+08:30:37 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=1667..3873 us (>10ms: 0) loop_max=4241 us
+08:30:38 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=457..3630 us (>10ms: 0) loop_max=31036 us
+08:30:39 bench: stats rx=262 miss=37 bad=0 ovf=38 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..3660 us (>10ms: 0) loop_max=497131 us
+08:30:39 bench: SPI fast (direct GPIO)
+08:30:41 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=3474..6425 us (>10ms: 0) loop_max=427 us
+08:30:43 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=1765..4167 us (>10ms: 0) loop_max=427 us
+08:30:44 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=1350..3443 us (>10ms: 0) loop_max=427 us
+08:30:44 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2919 us (>10ms: 0) loop_max=732 us
+08:30:45 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1950 us (>10ms: 0) loop_max=732 us
+08:30:46 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=234..1898 us (>10ms: 0) loop_max=976 us
+08:30:47 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1950 us (>10ms: 0) loop_max=1037 us
+08:30:47 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2030 us (>10ms: 0) loop_max=1586 us
+08:30:48 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1781 us (>10ms: 0) loop_max=1647 us
+08:30:48 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1824 us (>10ms: 0) loop_max=2838 us
+08:30:49 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1838 us (>10ms: 0) loop_max=78857 us
+08:30:49 bench: stats rx=271 miss=29 bad=0 ovf=29 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..529 us (>10ms: 0) loop_max=79650 us
+08:30:49 bench: SPI slow (Zephyr GPIO API)
+08:30:50 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:50 bench: stats rx=16 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000012 int=0x00 opmod=6 gap=235..241 us (>10ms: 0) loop_max=31036 us
+08:30:51 bench: stats rx=32 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000022 int=0x00 opmod=6 gap=235..242 us (>10ms: 0) loop_max=61676 us
+08:30:52 bench: stats rx=39 miss=21 bad=0 ovf=3 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000003e int=0x00 opmod=6 gap=235..2138 us (>10ms: 0) loop_max=75622 us
+08:30:52 bench: stats rx=43 miss=52 bad=0 ovf=8 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=6 gap=235..2144 us (>10ms: 0) loop_max=84106 us
+08:30:52 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:52 bench: SPI slow (Zephyr GPIO API)
+08:30:54 bench: burst id=0x300 n=500 len=8 fd=0 brs=0 ext=0 -> sent=500 failed=0 1131930 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:30:55 bench: burst id=0x300 n=500 len=0 fd=0 brs=0 ext=0 -> sent=500 failed=0 903916 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:30:55 bench: SPI fast (direct GPIO)
+08:30:55 bench: burst id=0x300 n=500 len=8 fd=0 brs=0 ext=0 -> sent=500 failed=0 181072 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:30:55 bench: burst id=0x300 n=500 len=0 fd=0 brs=0 ext=0 -> sent=500 failed=0 145806 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:30:56 bench: SPI slow (Zephyr GPIO API)
+08:30:56 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:57 bench: burst id=0x300 n=200 len=8 fd=0 brs=0 ext=0 -> sent=200 failed=0 453785 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:30:58 bench: stats rx=200 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000195 int=0x00 opmod=6 gap=1556..3617 us (>10ms: 0) loop_max=452728 us
+08:30:58 bench: stats rx=200 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000019e int=0x00 opmod=6 gap=1556..3617 us (>10ms: 0) loop_max=366 us
+08:30:58 bench: setmode mode=6 nom=125000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:30:59 bench: echo on
+08:30:59 bench: echo off
+08:30:59 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 228928 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:30:59 bench: stats rx=220 miss=370479928 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=1556..2074155 us (>10ms: 1) loop_max=226928 us
+08:31:12 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:31:12 bench: echo off
+08:31:12 bench: filter accept-all sid=0x000 mask=0x000
+08:31:12 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:31:14 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:35:31 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:35:31 bench: echo on
+08:36:23 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:36:23 bench: echo off
+08:36:23 bench: filter accept-all sid=0x000 mask=0x000
+08:36:23 bench: setmode mode=0 nom=500000 bps dat=1000000 bps flags=0x00 -> ok (opmod=0)
+08:36:24 bench: echo on
+08:36:24 bench: echo off
+08:36:24 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=13682..17302 us (>10ms: 19) loop_max=10955 us
+08:36:24 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:36:24 bench: echo on
+08:37:01 bench: setmode mode=0 nom=500000 bps dat=4000000 bps flags=0x00 -> ok (opmod=0)
+08:37:02 bench: echo on
+08:37:39 bench: setmode mode=0 nom=500000 bps dat=5000000 bps flags=0x00 -> ok (opmod=0)
+08:37:39 bench: echo on
+08:37:39 bench: echo off
+08:37:39 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=12931..77854 us (>10ms: 19) loop_max=10955 us
+08:37:39 bench: setmode mode=0 nom=500000 bps dat=8000000 bps flags=0x00 -> ok (opmod=0)
+08:37:40 bench: echo on
+08:37:40 bench: echo off
+08:37:40 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=5 REC=0 trec=0x00 bdiag0=0x02000000 bdiag1=0x0200002e int=0x80 opmod=0 gap=14668..16305 us (>10ms: 19) loop_max=10955 us
+08:37:40 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:37:40 bench: echo off
+08:37:40 bench: filter accept-all sid=0x000 mask=0x000
+08:37:40 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:37:41 bench: SPI slow (Zephyr GPIO API)
+08:37:53 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=7 failed=5 12108648 us drained=0 TEC=143 REC=0 fifo_flags=0x2
+08:38:09 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=0 failed=5 12005168 us drained=0 TEC=143 REC=0 fifo_flags=0x2
+08:38:25 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=0 failed=5 12005637 us drained=0 TEC=143 REC=0 fifo_flags=0x2
+08:38:37 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:38:37 bench: echo off
+08:38:37 bench: filter accept-all sid=0x000 mask=0x000
+08:38:37 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:38:37 bench: SPI slow (Zephyr GPIO API)
+08:39:13 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:39:13 bench: echo off
+08:39:13 bench: filter accept-all sid=0x000 mask=0x000
+08:39:13 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:39:15 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=17 trec=0x00 bdiag0=0x0000000a bdiag1=0x00100002 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=427 us
+08:39:15 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:39:15 bench: echo off
+08:39:15 bench: filter accept-all sid=0x000 mask=0x000
+08:39:15 bench: setmode mode=6 nom=500000 bps dat=1000000 bps flags=0x00 -> ok (opmod=6)
+08:39:16 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 188980 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:39:19 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 188729 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:39:20 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:39:21 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 188725 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:39:24 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 188972 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:39:26 bench: setmode mode=6 nom=500000 bps dat=4000000 bps flags=0x00 -> ok (opmod=6)
+08:39:27 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 188789 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:39:29 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 188842 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:39:31 bench: setmode mode=6 nom=500000 bps dat=5000000 bps flags=0x00 -> ok (opmod=6)
+08:39:32 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 189060 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:39:35 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 189124 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:39:36 bench: setmode mode=6 nom=500000 bps dat=8000000 bps flags=0x00 -> ok (opmod=6)
+08:39:38 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 166267 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:39:40 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 166604 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:39:42 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:39:42 bench: echo off
+08:39:42 bench: filter accept-all sid=0x000 mask=0x000
+08:39:42 bench: setmode mode=0 nom=500000 bps dat=5000000 bps flags=0x04 -> ok (opmod=0)
+08:39:43 bench: burst id=0x300 n=50 len=64 fd=1 brs=1 ext=0 -> sent=50 failed=0 273633 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:39:43 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000038 int=0x00 opmod=0 gap=0..0 us (>10ms: 0) loop_max=272857 us
+08:39:43 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:39:43 bench: echo off
+08:39:43 bench: filter accept-all sid=0x000 mask=0x000
+08:39:43 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x01 -> ok (opmod=6)
+08:39:44 bench: burst id=0x300 n=10 len=8 fd=0 brs=0 ext=0 -> sent=10 failed=0 24367 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:39:50 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000000f int=0x00 opmod=6 gap=0..0 us (>10ms: 0) loop_max=23284 us
+08:39:50 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:39:52 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000005 int=0x00 opmod=6 gap=0..0 us (>10ms: 0) loop_max=427 us
+08:39:52 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 227811 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:39:52 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000075 int=0x00 opmod=6 gap=0..0 us (>10ms: 0) loop_max=226776 us
+08:39:53 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:39:53 bench: echo off
+08:39:53 bench: filter accept-all sid=0x000 mask=0x000
+08:39:53 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:40:14 bench: burst id=0x300 n=400 len=8 fd=0 brs=0 ext=0 -> sent=400 failed=0 905324 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:40:16 bench: stats rx=79 miss=314 bad=0 ovf=44 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000326 int=0x00 opmod=6 gap=249..2262 us (>10ms: 0) loop_max=904266 us
+08:40:16 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:40:16 bench: echo off
+08:40:16 bench: filter accept-all sid=0x000 mask=0x000
+08:40:16 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:40:17 bench: setmode mode=3 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=3)
+08:40:18 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:40:18 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:40:18 bench: stats rx=4 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000001 int=0x00 opmod=6 gap=4571..5206 us (>10ms: 0) loop_max=2288 us
+08:40:18 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:40:19 bench: filter std sid=0x123 mask=0x7ff
+08:40:19 bench: stats rx=20 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000003e int=0x00 opmod=6 gap=1888..3721 us (>10ms: 0) loop_max=4211 us
+08:40:19 bench: filter accept-all sid=0x000 mask=0x000
+08:40:19 bench: stats rx=20 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000016 int=0x00 opmod=6 gap=1875..3456 us (>10ms: 0) loop_max=4180 us
+08:40:20 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x02 -> ok (opmod=6)
+08:40:20 bench: stats rx=9 miss=36 bad=0 ovf=6 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000034 int=0x00 opmod=6 gap=239..2142 us (>10ms: 0) loop_max=18646 us
+08:40:20 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:40:21 bench: stats rx=20 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000016 int=0x00 opmod=6 gap=1703..3495 us (>10ms: 0) loop_max=4180 us
+08:40:21 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:40:23 bench: sleep 2000 ms xstby=1 -> WAKIF=1 INT low@507 ms (before=1 end=0) osc_before=0x0460 wake=366 us opmod_after=4 c1int=0x40 reconfig=ok
+08:40:26 bench: sleep 2000 ms xstby=0 -> WAKIF=1 INT low@524 ms (before=1 end=0) osc_before=0x0460 wake=366 us opmod_after=4 c1int=0x40 reconfig=ok
+08:40:26 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:40:26 [00:15:39.158,142] <inf> hw_domain: CAN domain off (P0.23)
+08:40:26 [00:15:39.484,466] <inf> hw_domain: CAN domain on (P0.23)
+08:40:26 bench: railcycle off=300 ms -> rail on/off/back=1/1/1 power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:40:26 bench: echo on
+08:40:26 bench: echo off
+08:40:26 [00:15:39.586,639] <inf> hw_domain: CAN domain off (P0.23)
+08:40:27 [00:15:39.912,963] <inf> hw_domain: CAN domain on (P0.23)
+08:40:27 bench: railcycle off=300 ms -> rail on/off/back=1/1/1 power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:40:27 bench: echo on
+08:40:27 bench: echo off
+08:40:27 [00:15:40.003,967] <inf> hw_domain: CAN domain off (P0.23)
+08:40:27 [00:15:40.330,291] <inf> hw_domain: CAN domain on (P0.23)
+08:40:27 bench: railcycle off=300 ms -> rail on/off/back=1/1/1 power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:40:27 bench: echo on
+08:40:27 bench: echo off
+08:40:27 [00:15:40.421,661] <inf> hw_domain: CAN domain off (P0.23)
+08:40:28 [00:15:40.747,985] <inf> hw_domain: CAN domain on (P0.23)
+08:40:28 bench: railcycle off=300 ms -> rail on/off/back=1/1/1 power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:40:28 bench: echo on
+08:40:28 bench: echo off
+08:40:28 [00:15:40.851,867] <inf> hw_domain: CAN domain off (P0.23)
+08:40:28 [00:15:41.178,192] <inf> hw_domain: CAN domain on (P0.23)
+08:40:28 bench: railcycle off=300 ms -> rail on/off/back=1/1/1 power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:40:28 bench: echo on
+08:40:28 bench: echo off
+08:40:28 bench: reboot
+08:40:28 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:40:28 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:40:28 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:40:28 I: Starting bootloader
+08:40:28 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:40:28 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:40:28 I: Boot source: none
+08:40:28 I: Image index: 0, Swap type: none
+08:40:29 I: Bootloader chainload address offset: 0x10000
+08:40:29 I: Image version: v0.4.0
+08:40:29 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:40:29 Booting TF-M v2.2.2**
+08:40:29 [Sec Thread] Secure image initializing!
+08:40:29 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:40:29 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:40:29 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:40:29 [00:00:00.265,991] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:40:29 [00:00:00.274,414] <inf> crypto: ready
+08:40:29 [00:00:00.278,717] <inf> settings: apn=sensor.net user=
+08:40:29 [00:00:00.284,393] <inf> settings: int=0 ma=1
+08:40:29 [00:00:00.289,245] <inf> settings: imei=(unset)
+08:40:29 [00:00:00.309,509] <inf> hw_domain: AUX domain on (P0.13)
+08:40:29 [00:00:00.325,439] <inf> hw_selftest: === power rail self-test ===
+08:40:29 [00:00:00.332,092] <inf> hw_selftest: PP3V3_GPS: OK
+08:40:29 [00:00:00.337,493] <inf> hw_selftest: self-test: all rails OK
+08:40:29 [00:00:00.353,942] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:40:29 [00:00:00.385,498] <inf> hw_power: INA228 ready  VBUS=0.007 V
+08:40:29 [00:00:00.402,191] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:40:30 [00:00:00.494,750] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:40:30 [00:00:00.519,317] <inf> hw_domain: CAN domain on (P0.23)
+08:40:30 [00:00:00.529,418] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:40:30 [00:00:00.535,400] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:40:30 [00:00:00.547,058] <inf> hw_domain: CAN domain off (P0.23)
+08:40:30 
+08:40:30 *** CAN BENCH AGENT ***
+08:40:30 [00:00:00.570,587] <inf> hw_domain: CAN domain on (P0.23)
+08:40:30 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:40:34 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:40:34 bench: echo on
+08:42:35 bench: echo off
+08:42:35 bench: stats rx=28539 miss=7461 bad=0 ovf=7460 echo=28539/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000fc21 int=0x00 opmod=6 gap=232..51862 us (>10ms: 363) loop_max=1084197 us
+08:42:35 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:42:36 bench: echo off
+08:42:36 bench: filter accept-all sid=0x000 mask=0x000
+08:42:56 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:42:56 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:42:56 bench: echo on
+08:43:31 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=121 trec=0x03 bdiag0=0x00dd005b bdiag1=0x1002000a int=0xa0 opmod=0 gap=0..0 us (>10ms: 0) loop_max=427 us
+08:43:31 bench: echo off
+08:43:31 bench: echo off
+08:43:31 bench: echo off
+08:43:31 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=120 trec=0x03 bdiag0=0x00dd005b bdiag1=0x10020016 int=0xa0 opmod=0 gap=0..0 us (>10ms: 0) loop_max=0 us
+08:43:31 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=120 trec=0x03 bdiag0=0x00dd005b bdiag1=0x1002001e int=0xa0 opmod=0 gap=0..0 us (>10ms: 0) loop_max=0 us
+08:43:31 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=120 trec=0x03 bdiag0=0x00dd005b bdiag1=0x10020026 int=0xa0 opmod=0 gap=0..0 us (>10ms: 0) loop_max=0 us
+08:43:31 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:44:58 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:44:58 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:44:58 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:44:58 I: Starting bootloader
+08:44:58 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:44:58 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:44:58 I: Boot source: none
+08:44:58 I: Image index: 0, Swap type: none
+08:44:58 I: Bootloader chainload address offset: 0x10000
+08:44:58 I: Image version: v0.4.0
+08:44:58 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:44:58 Booting TF-M v2.2.2**
+08:44:58 [Sec Thread] Secure image initializing!
+08:44:59 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:44:59 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:44:59 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:44:59 [00:00:00.265,930] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:44:59 [00:00:00.274,353] <inf> crypto: ready
+08:44:59 [00:00:00.278,656] <inf> settings: apn=sensor.net user=
+08:44:59 [00:00:00.284,332] <inf> settings: int=0 ma=1
+08:44:59 [00:00:00.289,184] <inf> settings: imei=(unset)
+08:44:59 [00:00:00.309,448] <inf> hw_domain: AUX domain on (P0.13)
+08:44:59 [00:00:00.325,378] <inf> hw_selftest: === power rail self-test ===
+08:44:59 [00:00:00.332,061] <inf> hw_selftest: PP3V3_GPS: OK
+08:44:59 [00:00:00.337,432] <inf> hw_selftest: self-test: all rails OK
+08:44:59 [00:00:00.353,881] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:44:59 [00:00:00.385,406] <inf> hw_power: INA228 ready  VBUS=0.007 V
+08:44:59 [00:00:00.402,130] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:44:59 [00:00:00.494,659] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:44:59 [00:00:00.519,226] <inf> hw_domain: CAN domain on (P0.23)
+08:44:59 [00:00:00.529,327] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:44:59 [00:00:00.535,308] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:44:59 [00:00:00.546,966] <inf> hw_domain: CAN domain off (P0.23)
+08:44:59 
+08:44:59 *** CAN BENCH AGENT ***
+08:44:59 [00:00:00.570,495] <inf> hw_domain: CAN domain on (P0.23)
+08:44:59 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:45:03 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:45:03 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:45:03 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:45:03 I: Starting bootloader
+08:45:03 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:45:03 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:45:03 I: Boot source: none
+08:45:03 I: Image index: 0, Swap type: none
+08:45:03 I: Bootloader chainload address offset: 0x10000
+08:45:03 I: Image version: v0.4.0
+08:45:04 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:45:04 Booting TF-M v2.2.2**
+08:45:04 [Sec Thread] Secure image initializing!
+08:45:04 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:45:04 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:45:04 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:45:04 [00:00:00.265,991] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:45:04 [00:00:00.274,414] <inf> crypto: ready
+08:45:04 [00:00:00.278,717] <inf> settings: apn=sensor.net user=
+08:45:04 [00:00:00.284,393] <inf> settings: int=0 ma=1
+08:45:04 [00:00:00.289,276] <inf> settings: imei=(unset)
+08:45:04 [00:00:00.309,570] <inf> hw_domain: AUX domain on (P0.13)
+08:45:04 [00:00:00.325,500] <inf> hw_selftest: === power rail self-test ===
+08:45:04 [00:00:00.332,183] <inf> hw_selftest: PP3V3_GPS: OK
+08:45:04 [00:00:00.337,554] <inf> hw_selftest: self-test: all rails OK
+08:45:04 [00:00:00.354,034] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:45:04 [00:00:00.385,589] <inf> hw_power: INA228 ready  VBUS=0.007 V
+08:45:04 [00:00:00.402,313] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:45:04 [00:00:00.494,842] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:45:04 [00:00:00.519,409] <inf> hw_domain: CAN domain on (P0.23)
+08:45:05 [00:00:00.529,510] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:45:05 [00:00:00.535,491] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:45:05 [00:00:00.547,149] <inf> hw_domain: CAN domain off (P0.23)
+08:45:05 
+08:45:05 *** CAN BENCH AGENT ***
+08:45:05 [00:00:00.570,678] <inf> hw_domain: CAN domain on (P0.23)
+08:45:05 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:45:13 bench: setmode mode=6 nom=125000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:45:13 bench: echo on
+08:45:13 bench: echo off
+08:45:13 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 228529 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:45:14 bench: stats rx=20 miss=320017152 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=8002..8864 us (>10ms: 0) loop_max=226776 us
+08:45:14 bench: setmode mode=6 nom=250000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:45:14 bench: echo on
+08:45:14 bench: echo off
+08:45:14 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 227765 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:45:15 bench: stats rx=40 miss=640034304 bad=1 ovf=0 echo=40/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=6995..821021 us (>10ms: 1) loop_max=226715 us
+08:45:15 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:45:15 bench: echo on
+08:45:15 bench: echo off
+08:45:15 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 227828 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:45:16 bench: stats rx=60 miss=960051456 bad=2 ovf=0 echo=60/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=6390..829905 us (>10ms: 2) loop_max=226776 us
+08:45:16 bench: setmode mode=6 nom=1000000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:45:16 bench: echo on
+08:45:16 bench: echo off
+08:45:16 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 226969 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:45:16 bench: stats rx=80 miss=1280068608 bad=3 ovf=0 echo=80/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=5878..829905 us (>10ms: 3) loop_max=4577 us
+08:45:18 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:45:18 bench: echo off
+08:45:18 bench: filter accept-all sid=0x000 mask=0x000
+08:45:18 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:45:18 bench: echo on
+08:45:19 bench: echo off
+08:45:19 bench: stats rx=116 miss=1174540513 bad=22 ovf=0 echo=116/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000004f int=0x00 opmod=0 gap=5459..2476766 us (>10ms: 14) loop_max=10955 us
+08:45:19 bench: setmode mode=0 nom=500000 bps dat=1000000 bps flags=0x00 -> ok (opmod=0)
+08:45:19 bench: echo on
+08:45:20 bench: echo off
+08:45:20 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=15473..17454 us (>10ms: 19) loop_max=10955 us
+08:45:20 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:45:20 bench: echo on
+08:45:20 bench: echo off
+08:45:20 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=14085..15519 us (>10ms: 19) loop_max=10955 us
+08:45:20 bench: setmode mode=0 nom=500000 bps dat=4000000 bps flags=0x00 -> ok (opmod=0)
+08:45:21 bench: echo on
+08:45:21 bench: echo off
+08:45:21 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=12520..15120 us (>10ms: 19) loop_max=10955 us
+08:45:21 bench: setmode mode=0 nom=500000 bps dat=5000000 bps flags=0x00 -> ok (opmod=0)
+08:45:21 bench: echo on
+08:45:21 bench: echo off
+08:45:21 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=14287..14949 us (>10ms: 19) loop_max=10955 us
+08:45:22 bench: setmode mode=0 nom=500000 bps dat=8000000 bps flags=0x00 -> ok (opmod=0)
+08:45:22 bench: echo on
+08:45:22 bench: echo off
+08:45:22 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=3 REC=0 trec=0x00 bdiag0=0x02000000 bdiag1=0x0200002e int=0x80 opmod=0 gap=13014..15130 us (>10ms: 19) loop_max=10955 us
+08:45:22 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:45:22 bench: echo off
+08:45:22 bench: filter accept-all sid=0x000 mask=0x000
+08:45:22 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:45:23 bench: SPI slow (Zephyr GPIO API)
+08:45:24 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 1090997 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:45:25 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=2284..5589 us (>10ms: 0) loop_max=2319 us
+08:45:25 bench: SPI fast (direct GPIO)
+08:45:25 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 173633 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:45:26 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=2573..5426 us (>10ms: 0) loop_max=427 us
+08:45:26 bench: SPI slow (Zephyr GPIO API)
+08:45:27 bench: setmode mode=0 nom=500000 bps dat=5000000 bps flags=0x00 -> ok (opmod=0)
+08:45:27 bench: SPI slow (Zephyr GPIO API)
+08:45:28 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 1090229 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:45:29 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3217..5442 us (>10ms: 0) loop_max=2319 us
+08:45:29 bench: SPI fast (direct GPIO)
+08:45:29 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 173514 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:45:30 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3088..5461 us (>10ms: 0) loop_max=396 us
+08:45:30 bench: SPI slow (Zephyr GPIO API)
+08:45:30 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:45:31 bench: echo off
+08:45:31 bench: filter accept-all sid=0x000 mask=0x000
+08:45:31 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:45:31 bench: SPI slow (Zephyr GPIO API)
+08:45:32 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=6720..9493 us (>10ms: 0) loop_max=2319 us
+08:45:33 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3546..6255 us (>10ms: 0) loop_max=2319 us
+08:45:34 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3133..5481 us (>10ms: 0) loop_max=2319 us
+08:45:35 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1664..3971 us (>10ms: 0) loop_max=4211 us
+08:45:36 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1487..3906 us (>10ms: 0) loop_max=7995 us
+08:45:37 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=466..3389 us (>10ms: 0) loop_max=30944 us
+08:45:37 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..2485 us (>10ms: 0) loop_max=191741 us
+08:45:38 bench: stats rx=73 miss=27 bad=0 ovf=21 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..2844 us (>10ms: 0) loop_max=143798 us
+08:45:38 bench: SPI fast (direct GPIO)
+08:45:39 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=6489..8883 us (>10ms: 0) loop_max=427 us
+08:45:40 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3511..6474 us (>10ms: 0) loop_max=427 us
+08:45:41 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3340..5257 us (>10ms: 0) loop_max=427 us
+08:45:42 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1856..3801 us (>10ms: 0) loop_max=427 us
+08:45:43 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1730..3622 us (>10ms: 0) loop_max=427 us
+08:45:44 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=548..3300 us (>10ms: 0) loop_max=427 us
+08:45:44 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..2079 us (>10ms: 0) loop_max=701 us
+08:45:45 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..2010 us (>10ms: 0) loop_max=1007 us
+08:45:45 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..1620 us (>10ms: 0) loop_max=1678 us
+08:45:46 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..340 us (>10ms: 0) loop_max=1708 us
+08:45:46 bench: SPI slow (Zephyr GPIO API)
+08:45:46 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:45:47 bench: echo off
+08:45:47 bench: filter accept-all sid=0x000 mask=0x000
+08:45:47 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x01 -> ok (opmod=6)
+08:45:49 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=64 REC=0 trec=0x00 bdiag0=0x00000800 bdiag1=0x00040003 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=18768 us
+08:45:51 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=1 TEC=64 REC=0 trec=0x00 bdiag0=0x00000800 bdiag1=0x00040004 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=762 us
+08:45:53 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=2 TEC=64 REC=0 trec=0x00 bdiag0=0x00000800 bdiag1=0x00040005 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=762 us
+08:45:53 bench: burst id=0x300 n=10 len=8 fd=0 brs=0 ext=0 -> sent=8 failed=2 6155126 us drained=0 TEC=64 REC=0 fifo_flags=0x3
+08:46:19 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:46:19 [00:01:15.179,077] <inf> hw_domain: CAN domain off (P0.23)
+08:46:20 [00:01:15.501,220] <inf> hw_domain: CAN domain on (P0.23)
+08:46:20 bench: railcycle off=300 ms -> rail on/off/back=1/0/1 (sense low after 17 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:46:20 bench: echo on
+08:46:20 bench: echo off
+08:46:20 [00:01:15.836,944] <inf> hw_domain: CAN domain off (P0.23)
+08:46:20 [00:01:16.157,989] <inf> hw_domain: CAN domain on (P0.23)
+08:46:20 bench: railcycle off=300 ms -> rail on/off/back=1/0/1 (sense low after 18 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:46:20 bench: echo on
+08:46:20 bench: echo off
+08:46:21 [00:01:16.487,640] <inf> hw_domain: CAN domain off (P0.23)
+08:46:21 [00:01:16.808,685] <inf> hw_domain: CAN domain on (P0.23)
+08:46:21 bench: railcycle off=300 ms -> rail on/off/back=1/0/1 (sense low after 18 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:46:21 bench: echo on
+08:46:21 bench: echo off
+08:46:21 [00:01:17.148,437] <inf> hw_domain: CAN domain off (P0.23)
+08:46:23 [00:01:18.669,189] <inf> hw_domain: CAN domain on (P0.23)
+08:46:23 bench: railcycle off=1500 ms -> rail on/off/back=1/0/1 (sense low after 17 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:46:23 bench: echo on
+08:46:23 bench: echo off
+08:46:23 [00:01:19.008,178] <inf> hw_domain: CAN domain off (P0.23)
+08:46:25 [00:01:20.530,029] <inf> hw_domain: CAN domain on (P0.23)
+08:46:25 bench: railcycle off=1500 ms -> rail on/off/back=1/0/1 (sense low after 17 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:46:25 bench: echo on
+08:46:25 bench: echo off
+08:46:25 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:46:25 bench: echo on
+08:48:26 bench: echo off
+08:48:26 bench: stats rx=22400 miss=0 bad=0 ovf=0 echo=22400/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000af06 int=0x00 opmod=6 gap=235..56530 us (>10ms: 224) loop_max=66986 us
+08:48:26 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:48:26 bench: echo off
+08:48:26 bench: filter accept-all sid=0x000 mask=0x000
+08:49:08 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:49:08 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:49:08 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:49:08 I: Starting bootloader
+08:49:08 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:49:08 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:49:08 I: Boot source: none
+08:49:08 I: Image index: 0, Swap type: none
+08:49:08 I: Bootloader chainload address offset: 0x10000
+08:49:08 I: Image version: v0.4.0
+08:49:08 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:49:08 Booting TF-M v2.2.2**
+08:49:08 [Sec Thread] Secure image initializing!
+08:49:08 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:49:08 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:49:08 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:49:08 [00:00:00.265,930] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:49:08 [00:00:00.274,353] <inf> crypto: ready
+08:49:08 [00:00:00.278,656] <inf> settings: apn=sensor.net user=
+08:49:08 [00:00:00.284,332] <inf> settings: int=0 ma=1
+08:49:08 [00:00:00.289,184] <inf> settings: imei=(unset)
+08:49:08 [00:00:00.309,448] <inf> hw_domain: AUX domain on (P0.13)
+08:49:08 [00:00:00.325,378] <inf> hw_selftest: === power rail self-test ===
+08:49:08 [00:00:00.332,061] <inf> hw_selftest: PP3V3_GPS: OK
+08:49:08 [00:00:00.337,432] <inf> hw_selftest: self-test: all rails OK
+08:49:08 [00:00:00.353,881] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:49:09 [00:00:00.385,406] <inf> hw_power: INA228 ready  VBUS=0.009 V
+08:49:09 [00:00:00.402,099] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:49:09 [00:00:00.494,598] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:49:09 [00:00:00.519,134] <inf> hw_domain: CAN domain on (P0.23)
+08:49:09 [00:00:00.529,235] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:49:09 [00:00:00.535,217] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:49:09 [00:00:00.546,875] <inf> hw_domain: CAN domain off (P0.23)
+08:49:09 
+08:49:09 *** CAN BENCH AGENT ***
+08:49:09 [00:00:00.570,404] <inf> hw_domain: CAN domain on (P0.23)
+08:49:09 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:49:13 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:49:13 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:49:13 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:49:13 I: Starting bootloader
+08:49:13 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:49:13 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:49:13 I: Boot source: none
+08:49:13 I: Image index: 0, Swap type: none
+08:49:13 I: Bootloader chainload address offset: 0x10000
+08:49:13 I: Image version: v0.4.0
+08:49:13 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:49:13 Booting TF-M v2.2.2**
+08:49:13 [Sec Thread] Secure image initializing!
+08:49:14 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:49:14 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:49:14 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:49:14 [00:00:00.265,930] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:49:14 [00:00:00.274,353] <inf> crypto: ready
+08:49:14 [00:00:00.278,656] <inf> settings: apn=sensor.net user=
+08:49:14 [00:00:00.284,332] <inf> settings: int=0 ma=1
+08:49:14 [00:00:00.289,184] <inf> settings: imei=(unset)
+08:49:14 [00:00:00.309,448] <inf> hw_domain: AUX domain on (P0.13)
+08:49:14 [00:00:00.325,378] <inf> hw_selftest: === power rail self-test ===
+08:49:14 [00:00:00.332,061] <inf> hw_selftest: PP3V3_GPS: OK
+08:49:14 [00:00:00.337,432] <inf> hw_selftest: self-test: all rails OK
+08:49:14 [00:00:00.353,881] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:49:14 [00:00:00.385,406] <inf> hw_power: INA228 ready  VBUS=0.006 V
+08:49:14 [00:00:00.402,099] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:49:14 [00:00:00.494,598] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:49:14 [00:00:00.519,165] <inf> hw_domain: CAN domain on (P0.23)
+08:49:14 [00:00:00.529,266] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:49:14 [00:00:00.535,247] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:49:14 [00:00:00.546,905] <inf> hw_domain: CAN domain off (P0.23)
+08:49:14 
+08:49:14 *** CAN BENCH AGENT ***
+08:49:14 [00:00:00.570,434] <inf> hw_domain: CAN domain on (P0.23)
+08:49:14 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:49:22 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000003 int=0x00 opmod=6 gap=0..0 us (>10ms: 0) loop_max=457 us
+08:49:22 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:49:22 bench: echo on
+08:49:25 bench: echo off
+08:49:25 bench: stats rx=300 miss=30716807 bad=115 ovf=0 echo=300/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000025f int=0x00 opmod=0 gap=5606..17867 us (>10ms: 87) loop_max=11993 us
+08:51:21 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:51:21 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:51:21 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:51:21 I: Starting bootloader
+08:51:21 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:51:21 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:51:21 I: Boot source: none
+08:51:21 I: Image index: 0, Swap type: none
+08:51:21 I: Bootloader chainload address offset: 0x10000
+08:51:21 I: Image version: v0.4.0
+08:51:22 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:51:22 Booting TF-M v2.2.2**
+08:51:22 [Sec Thread] Secure image initializing!
+08:51:22 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:51:22 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:51:22 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:51:22 [00:00:00.265,991] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:51:22 [00:00:00.274,414] <inf> crypto: ready
+08:51:22 [00:00:00.278,686] <inf> settings: apn=sensor.net user=
+08:51:22 [00:00:00.284,362] <inf> settings: int=0 ma=1
+08:51:22 [00:00:00.289,215] <inf> settings: imei=(unset)
+08:51:22 [00:00:00.309,478] <inf> hw_domain: AUX domain on (P0.13)
+08:51:22 [00:00:00.325,408] <inf> hw_selftest: === power rail self-test ===
+08:51:22 [00:00:00.332,092] <inf> hw_selftest: PP3V3_GPS: OK
+08:51:22 [00:00:00.337,463] <inf> hw_selftest: self-test: all rails OK
+08:51:22 [00:00:00.353,912] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:51:22 [00:00:00.385,437] <inf> hw_power: INA228 ready  VBUS=0.005 V
+08:51:22 [00:00:00.402,130] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:51:22 [00:00:00.494,628] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:51:22 [00:00:00.519,165] <inf> hw_domain: CAN domain on (P0.23)
+08:51:22 [00:00:00.529,266] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:51:22 [00:00:00.535,247] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:51:22 [00:00:00.546,875] <inf> hw_domain: CAN domain off (P0.23)
+08:51:22 
+08:51:22 *** CAN BENCH AGENT ***
+08:51:22 [00:00:00.570,373] <inf> hw_domain: CAN domain on (P0.23)
+08:51:22 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:51:27 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:51:27 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:51:27 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:51:27 I: Starting bootloader
+08:51:27 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:51:27 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:51:27 I: Boot source: none
+08:51:27 I: Image index: 0, Swap type: none
+08:51:27 I: Bootloader chainload address offset: 0x10000
+08:51:27 I: Image version: v0.4.0
+08:51:27 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:51:27 Booting TF-M v2.2.2**
+08:51:27 [Sec Thread] Secure image initializing!
+08:51:28 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:51:28 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:51:28 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:51:28 [00:00:00.266,021] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:51:28 [00:00:00.274,444] <inf> crypto: ready
+08:51:28 [00:00:00.278,747] <inf> settings: apn=sensor.net user=
+08:51:28 [00:00:00.284,423] <inf> settings: int=0 ma=1
+08:51:28 [00:00:00.289,276] <inf> settings: imei=(unset)
+08:51:28 [00:00:00.309,539] <inf> hw_domain: AUX domain on (P0.13)
+08:51:28 [00:00:00.325,469] <inf> hw_selftest: === power rail self-test ===
+08:51:28 [00:00:00.332,122] <inf> hw_selftest: PP3V3_GPS: OK
+08:51:28 [00:00:00.337,524] <inf> hw_selftest: self-test: all rails OK
+08:51:28 [00:00:00.353,973] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:51:28 [00:00:00.385,498] <inf> hw_power: INA228 ready  VBUS=0.006 V
+08:51:28 [00:00:00.402,191] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:51:28 [00:00:00.494,689] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:51:28 [00:00:00.519,256] <inf> hw_domain: CAN domain on (P0.23)
+08:51:28 [00:00:00.529,357] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:51:28 [00:00:00.535,339] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:51:28 [00:00:00.546,997] <inf> hw_domain: CAN domain off (P0.23)
+08:51:28 
+08:51:28 *** CAN BENCH AGENT ***
+08:51:28 [00:00:00.570,526] <inf> hw_domain: CAN domain on (P0.23)
+08:51:28 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:51:36 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:51:36 bench: echo on
+08:51:40 bench: echo off
+08:51:40 bench: stats rx=400 miss=3860886545 bad=150 ovf=0 echo=400/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000327 int=0x00 opmod=0 gap=5821..18051 us (>10ms: 131) loop_max=11993 us
+08:51:49 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:51:50 bench: stats rx=400 miss=3860886545 bad=150 ovf=0 echo=400/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000003 int=0x00 opmod=6 gap=5821..18051 us (>10ms: 131) loop_max=457 us
+08:51:50 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:51:50 bench: SPI slow (Zephyr GPIO API)
+08:51:52 bench: spibench fast=0 n=200 ram_err=0 rw_err=0 write16=1130 us read16=1131 us (~127 kbit/s SPI)
+08:51:52 bench: SPI fast (direct GPIO)
+08:51:52 bench: spibench fast=1 n=200 ram_err=0 rw_err=0 write16=199 us read16=190 us (~757 kbit/s SPI)
+08:51:52 bench: SPI slow (Zephyr GPIO API)
+08:51:52 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:51:53 bench: stats rx=30 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000020 int=0x00 opmod=6 gap=1829..3498 us (>10ms: 0) loop_max=4608 us
+08:51:53 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:51:53 bench: echo on
+08:51:53 bench: echo off
+08:51:53 bench: stats rx=83 miss=3802672201 bad=11 ovf=0 echo=53/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000006f int=0x00 opmod=6 gap=1829..623509 us (>10ms: 1) loop_max=5004 us
+08:51:53 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:51:54 bench: stats rx=5 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000007 int=0x00 opmod=6 gap=1673..1931 us (>10ms: 0) loop_max=10833 us
+08:51:54 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:51:54 bench: SPI slow (Zephyr GPIO API)
+08:51:54 bench: echo on
+08:51:56 bench: echo off
+08:51:56 bench: SPI fast (direct GPIO)
+08:51:56 bench: echo on
+08:51:56 bench: echo off
+08:51:56 bench: SPI slow (Zephyr GPIO API)
+08:51:57 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:51:57 bench: SPI slow (Zephyr GPIO API)
+08:51:59 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=4205..6521 us (>10ms: 0) loop_max=2532 us
+08:52:00 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=1598..4579 us (>10ms: 0) loop_max=4638 us
+08:52:01 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=327..3484 us (>10ms: 0) loop_max=535522 us
+08:52:02 bench: stats rx=241 miss=59 bad=0 ovf=57 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..3895 us (>10ms: 0) loop_max=515563 us
+08:52:02 bench: SPI fast (direct GPIO)
+08:52:04 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=3346..6549 us (>10ms: 0) loop_max=488 us
+08:52:05 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=1749..4004 us (>10ms: 0) loop_max=488 us
+08:52:06 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=344..3652 us (>10ms: 0) loop_max=793 us
+08:52:07 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2938 us (>10ms: 0) loop_max=854 us
+08:52:08 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=234..2204 us (>10ms: 0) loop_max=854 us
+08:52:09 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2350 us (>10ms: 0) loop_max=1190 us
+08:52:09 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2481 us (>10ms: 0) loop_max=1495 us
+08:52:10 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2074 us (>10ms: 0) loop_max=2197 us
+08:52:11 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2056 us (>10ms: 0) loop_max=3631 us
+08:52:11 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1942 us (>10ms: 0) loop_max=9338 us
+08:52:12 bench: stats rx=280 miss=20 bad=0 ovf=20 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2082 us (>10ms: 0) loop_max=91735 us
+08:52:12 bench: SPI slow (Zephyr GPIO API)
+08:52:12 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:52:13 bench: stats rx=16 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000012 int=0x00 opmod=6 gap=235..242 us (>10ms: 0) loop_max=33813 us
+08:52:13 bench: stats rx=32 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000022 int=0x00 opmod=6 gap=235..561 us (>10ms: 0) loop_max=67291 us
+08:52:14 bench: stats rx=38 miss=19 bad=0 ovf=4 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000003e int=0x00 opmod=6 gap=235..2379 us (>10ms: 0) loop_max=80688 us
+08:52:14 bench: stats rx=42 miss=53 bad=0 ovf=8 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=6 gap=235..2383 us (>10ms: 0) loop_max=89782 us
+08:52:14 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:52:14 bench: SPI slow (Zephyr GPIO API)
+08:52:16 bench: burst id=0x300 n=500 len=8 fd=0 brs=0 ext=0 -> sent=500 failed=0 1434989 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:52:17 bench: burst id=0x300 n=500 len=0 fd=0 brs=0 ext=0 -> sent=500 failed=0 1183670 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:52:18 bench: SPI fast (direct GPIO)
+08:52:18 bench: burst id=0x300 n=500 len=8 fd=0 brs=0 ext=0 -> sent=500 failed=0 250660 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:52:18 bench: burst id=0x300 n=500 len=0 fd=0 brs=0 ext=0 -> sent=500 failed=0 206007 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:52:19 bench: SPI slow (Zephyr GPIO API)
+08:52:19 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:52:20 bench: burst id=0x300 n=200 len=8 fd=0 brs=0 ext=0 -> sent=200 failed=0 574864 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:52:21 bench: stats rx=200 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000195 int=0x00 opmod=6 gap=1749..3839 us (>10ms: 0) loop_max=4608 us
+08:52:21 bench: stats rx=200 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000019f int=0x00 opmod=6 gap=1749..3839 us (>10ms: 0) loop_max=396 us
+08:52:21 bench: setmode mode=6 nom=125000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:52:22 bench: echo on
+08:52:22 bench: echo off
+08:52:22 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 289416 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:52:22 bench: stats rx=220 miss=370479928 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=1749..2219860 us (>10ms: 17) loop_max=287872 us
+08:52:23 bench: setmode mode=6 nom=250000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:52:23 bench: echo on
+08:52:23 bench: echo off
+08:52:23 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 288028 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:52:24 bench: stats rx=240 miss=690497080 bad=1 ovf=0 echo=40/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=1749..2219860 us (>10ms: 18) loop_max=5004 us
+08:52:24 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:52:24 bench: echo on
+08:52:24 bench: echo off
+08:52:24 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 288293 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:52:25 bench: stats rx=260 miss=1010514232 bad=2 ovf=0 echo=60/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=1749..2219860 us (>10ms: 22) loop_max=5004 us
+08:52:25 bench: setmode mode=6 nom=1000000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:52:25 bench: echo on
+08:52:25 bench: echo off
+08:52:25 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 288291 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:52:26 bench: stats rx=280 miss=1330531384 bad=3 ovf=0 echo=80/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=1749..2219860 us (>10ms: 23) loop_max=5004 us
+08:52:27 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:52:27 bench: echo off
+08:52:27 bench: filter accept-all sid=0x000 mask=0x000
+08:52:27 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:52:29 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:56:47 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:56:47 bench: echo on
+08:56:47 bench: echo off
+08:56:47 bench: stats rx=36 miss=4189439201 bad=18 ovf=0 echo=36/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000004f int=0x00 opmod=0 gap=5723..17682 us (>10ms: 15) loop_max=11993 us
+08:56:47 bench: setmode mode=0 nom=500000 bps dat=1000000 bps flags=0x00 -> ok (opmod=0)
+08:56:48 bench: echo on
+08:56:48 bench: echo off
+08:56:48 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=16609..18542 us (>10ms: 19) loop_max=11993 us
+08:56:48 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:56:48 bench: echo on
+08:56:49 bench: echo off
+08:56:49 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=15795..17744 us (>10ms: 19) loop_max=11993 us
+08:56:49 bench: setmode mode=0 nom=500000 bps dat=4000000 bps flags=0x00 -> ok (opmod=0)
+08:56:49 bench: echo on
+08:56:49 bench: echo off
+08:56:49 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=16738..17616 us (>10ms: 19) loop_max=11993 us
+08:56:49 bench: setmode mode=0 nom=500000 bps dat=5000000 bps flags=0x00 -> ok (opmod=0)
+08:56:50 bench: echo on
+08:56:50 bench: echo off
+08:56:50 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=16757..17340 us (>10ms: 19) loop_max=11993 us
+08:56:50 bench: setmode mode=0 nom=500000 bps dat=8000000 bps flags=0x00 -> ok (opmod=0)
+08:56:50 bench: echo on
+08:56:51 bench: echo off
+08:56:51 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x02000000 bdiag1=0x0300002e int=0x80 opmod=0 gap=13967..17387 us (>10ms: 19) loop_max=11993 us
+08:56:51 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:56:51 bench: echo off
+08:56:51 bench: filter accept-all sid=0x000 mask=0x000
+08:56:51 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:56:51 bench: SPI slow (Zephyr GPIO API)
+08:56:53 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 1277632 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:56:54 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=375..10918 us (>10ms: 1) loop_max=6683 us
+08:56:54 bench: SPI fast (direct GPIO)
+08:56:54 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 227600 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:56:55 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3268..5293 us (>10ms: 0) loop_max=457 us
+08:56:55 bench: SPI slow (Zephyr GPIO API)
+08:56:55 bench: setmode mode=0 nom=500000 bps dat=5000000 bps flags=0x00 -> ok (opmod=0)
+08:56:56 bench: SPI slow (Zephyr GPIO API)
+08:56:57 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 1277558 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:56:58 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3155..5242 us (>10ms: 0) loop_max=2532 us
+08:56:58 bench: SPI fast (direct GPIO)
+08:56:58 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 227497 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:56:59 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3108..5169 us (>10ms: 0) loop_max=488 us
+08:56:59 bench: SPI slow (Zephyr GPIO API)
+08:57:00 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:57:00 bench: echo off
+08:57:00 bench: filter accept-all sid=0x000 mask=0x000
+08:57:00 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)
+08:57:00 bench: SPI slow (Zephyr GPIO API)
+08:57:02 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=6676..9326 us (>10ms: 0) loop_max=2532 us
+08:57:03 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3501..6418 us (>10ms: 0) loop_max=2532 us
+08:57:04 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3127..5227 us (>10ms: 0) loop_max=2532 us
+08:57:04 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1725..3819 us (>10ms: 0) loop_max=4608 us
+08:57:05 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1549..3655 us (>10ms: 0) loop_max=8789 us
+08:57:06 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=538..3350 us (>10ms: 0) loop_max=209564 us
+08:57:07 bench: stats rx=92 miss=8 bad=0 ovf=8 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..2402 us (>10ms: 0) loop_max=194458 us
+08:57:07 bench: SPI fast (direct GPIO)
+08:57:08 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=6625..9225 us (>10ms: 0) loop_max=488 us
+08:57:09 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3572..6444 us (>10ms: 0) loop_max=488 us
+08:57:10 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3156..5262 us (>10ms: 0) loop_max=457 us
+08:57:11 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1539..3705 us (>10ms: 0) loop_max=488 us
+08:57:12 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1519..3660 us (>10ms: 0) loop_max=457 us
+08:57:12 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=476..3339 us (>10ms: 0) loop_max=457 us
+08:57:13 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..2164 us (>10ms: 0) loop_max=793 us
+08:57:14 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..2189 us (>10ms: 0) loop_max=1159 us
+08:57:14 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..1971 us (>10ms: 0) loop_max=3997 us
+08:57:15 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..340 us (>10ms: 0) loop_max=35705 us
+08:57:15 bench: SPI slow (Zephyr GPIO API)
+08:57:15 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:57:15 bench: echo off
+08:57:15 bench: filter accept-all sid=0x000 mask=0x000
+08:57:15 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:57:17 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=25 trec=0x00 bdiag0=0x0000000a bdiag1=0x00100002 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=457 us
+08:57:17 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:57:17 bench: echo off
+08:57:17 bench: filter accept-all sid=0x000 mask=0x000
+08:57:17 bench: setmode mode=6 nom=500000 bps dat=1000000 bps flags=0x00 -> ok (opmod=6)
+08:57:18 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205098 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:57:21 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205358 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:57:23 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:57:24 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205355 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:57:26 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205585 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:57:28 bench: setmode mode=6 nom=500000 bps dat=4000000 bps flags=0x00 -> ok (opmod=6)
+08:57:29 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205358 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:57:32 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205355 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:57:33 bench: setmode mode=6 nom=500000 bps dat=5000000 bps flags=0x00 -> ok (opmod=6)
+08:57:35 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205333 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:57:37 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205353 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:57:39 bench: setmode mode=6 nom=500000 bps dat=8000000 bps flags=0x00 -> ok (opmod=6)
+08:57:40 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 182160 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:57:43 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 182421 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0
+08:57:44 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:57:44 bench: echo off
+08:57:44 bench: filter accept-all sid=0x000 mask=0x000
+08:57:44 bench: setmode mode=0 nom=500000 bps dat=5000000 bps flags=0x04 -> ok (opmod=0)
+08:57:45 bench: burst id=0x300 n=50 len=64 fd=1 brs=1 ext=0 -> sent=50 failed=0 320525 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:57:45 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000038 int=0x00 opmod=0 gap=0..0 us (>10ms: 0) loop_max=457 us
+08:57:45 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:57:46 bench: echo off
+08:57:46 bench: filter accept-all sid=0x000 mask=0x000
+08:57:46 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x01 -> ok (opmod=6)
+08:57:48 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=64 REC=0 trec=0x00 bdiag0=0x00000800 bdiag1=0x00040003 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=24078 us
+08:57:50 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=1 TEC=64 REC=0 trec=0x00 bdiag0=0x00000800 bdiag1=0x00040004 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=1556 us
+08:57:52 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=2 TEC=64 REC=0 trec=0x00 bdiag0=0x00000800 bdiag1=0x00040005 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=1586 us
+08:57:52 bench: burst id=0x300 n=10 len=8 fd=0 brs=0 ext=0 -> sent=8 failed=2 6253556 us drained=0 TEC=64 REC=0 fifo_flags=0x3
+08:58:18 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:58:40 bench: burst id=0x300 n=400 len=8 fd=0 brs=0 ext=0 -> sent=400 failed=0 1148489 us drained=1 TEC=0 REC=0 fifo_flags=0x0
+08:58:42 bench: stats rx=76 miss=323 bad=0 ovf=41 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000326 int=0x00 opmod=6 gap=249..2495 us (>10ms: 0) loop_max=167358 us
+08:58:42 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:58:42 bench: echo off
+08:58:42 bench: filter accept-all sid=0x000 mask=0x000
+08:58:42 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:58:42 bench: setmode mode=3 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=3)
+08:58:44 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:58:44 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:58:44 bench: stats rx=3 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000001 int=0x00 opmod=6 gap=4698..4973 us (>10ms: 0) loop_max=2532 us
+08:58:44 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:58:44 bench: filter std sid=0x123 mask=0x7ff
+08:58:45 bench: stats rx=20 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000003e int=0x00 opmod=6 gap=1769..3311 us (>10ms: 0) loop_max=4577 us
+08:58:45 bench: filter accept-all sid=0x000 mask=0x000
+08:58:45 bench: stats rx=20 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000016 int=0x00 opmod=6 gap=1789..3338 us (>10ms: 0) loop_max=4638 us
+08:58:45 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x02 -> ok (opmod=6)
+08:58:46 bench: stats rx=9 miss=40 bad=0 ovf=5 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000034 int=0x00 opmod=6 gap=239..2377 us (>10ms: 0) loop_max=20202 us
+08:58:46 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:58:46 bench: stats rx=20 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000016 int=0x00 opmod=6 gap=1613..3315 us (>10ms: 0) loop_max=4608 us
+08:58:47 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:58:49 bench: sleep 2000 ms xstby=1 -> WAKIF=1 INT low@509 ms (before=1 end=0) osc_before=0x0460 wake=396 us opmod_after=4 c1int=0x40 reconfig=ok
+08:58:51 bench: sleep 2000 ms xstby=0 -> WAKIF=1 INT low@515 ms (before=1 end=0) osc_before=0x0460 wake=396 us opmod_after=4 c1int=0x40 reconfig=ok
+08:58:51 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:58:52 [00:07:24.222,473] <inf> hw_domain: CAN domain off (P0.23)
+08:58:52 [00:07:24.543,518] <inf> hw_domain: CAN domain on (P0.23)
+08:58:52 bench: railcycle off=300 ms -> rail on/off/back=1/0/1 (sense low after 18 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:58:52 bench: echo on
+08:58:52 bench: echo off
+08:58:52 [00:07:24.869,598] <inf> hw_domain: CAN domain off (P0.23)
+08:58:53 [00:07:25.190,643] <inf> hw_domain: CAN domain on (P0.23)
+08:58:53 bench: railcycle off=300 ms -> rail on/off/back=1/0/1 (sense low after 18 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:58:53 bench: echo on
+08:58:53 bench: echo off
+08:58:53 [00:07:25.508,819] <inf> hw_domain: CAN domain off (P0.23)
+08:58:53 [00:07:25.829,864] <inf> hw_domain: CAN domain on (P0.23)
+08:58:53 bench: railcycle off=300 ms -> rail on/off/back=1/0/1 (sense low after 18 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:58:53 bench: echo on
+08:58:53 bench: echo off
+08:58:53 [00:07:26.156,219] <inf> hw_domain: CAN domain off (P0.23)
+08:58:55 [00:07:27.678,070] <inf> hw_domain: CAN domain on (P0.23)
+08:58:55 bench: railcycle off=1500 ms -> rail on/off/back=1/0/1 (sense low after 17 ms) power_on=0 (25 ms) osc=0x00000460 reconfig=0 opmod=6
+08:58:55 bench: echo on
+08:58:55 bench: echo off
+08:58:55 [00:07:28.006,072] <inf> hw_domain: CAN domain off (P0.23)
+08:58:57 [00:07:29.527,923] <inf> hw_domain: CAN domain on (P0.23)
+08:58:57 bench: railcycle off=1500 ms -> rail on/off/back=1/0/1 (sense low after 17 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6
+08:58:57 bench: echo on
+08:58:57 bench: echo off
+08:58:57 bench: reboot
+08:58:57 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+08:58:57 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:58:57 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:58:57 I: Starting bootloader
+08:58:57 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+08:58:57 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+08:58:57 I: Boot source: none
+08:58:57 I: Image index: 0, Swap type: none
+08:58:57 I: Bootloader chainload address offset: 0x10000
+08:58:57 I: Image version: v0.4.0
+08:58:58 I: Jumping to the first image slotAll pins have been configured as non-secure
+08:58:58 Booting TF-M v2.2.2**
+08:58:58 [Sec Thread] Secure image initializing!
+08:58:58 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+08:58:58 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+08:58:58 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+08:58:58 [00:00:00.265,930] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+08:58:58 [00:00:00.274,353] <inf> crypto: ready
+08:58:58 [00:00:00.278,656] <inf> settings: apn=sensor.net user=
+08:58:58 [00:00:00.284,332] <inf> settings: int=0 ma=1
+08:58:58 [00:00:00.289,184] <inf> settings: imei=(unset)
+08:58:58 [00:00:00.309,448] <inf> hw_domain: AUX domain on (P0.13)
+08:58:59 [00:00:00.325,378] <inf> hw_selftest: === power rail self-test ===
+08:58:59 [00:00:00.332,061] <inf> hw_selftest: PP3V3_GPS: OK
+08:58:59 [00:00:00.337,432] <inf> hw_selftest: self-test: all rails OK
+08:58:59 [00:00:00.353,881] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:58:59 [00:00:00.385,406] <inf> hw_power: INA228 ready  VBUS=0.007 V
+08:58:59 [00:00:00.402,099] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+08:58:59 [00:00:00.494,598] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+08:58:59 [00:00:00.519,134] <inf> hw_domain: CAN domain on (P0.23)
+08:58:59 [00:00:00.529,235] <inf> hw_can: CAN_INT idle=1 (expect 1)
+08:58:59 [00:00:00.535,217] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+08:58:59 [00:00:00.546,875] <inf> hw_domain: CAN domain off (P0.23)
+08:58:59 
+08:58:59 *** CAN BENCH AGENT ***
+08:58:59 [00:00:00.570,404] <inf> hw_domain: CAN domain on (P0.23)
+08:58:59 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+08:59:03 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+08:59:03 bench: echo on
+09:01:04 bench: echo off
+09:01:04 bench: stats rx=22300 miss=0 bad=0 ovf=0 echo=22300/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000ae3e int=0x00 opmod=6 gap=233..56557 us (>10ms: 226) loop_max=100952 us
+09:01:04 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+09:01:05 bench: echo off
+09:01:05 bench: filter accept-all sid=0x000 mask=0x000
+09:01:39 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+09:01:39 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+09:01:39 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+09:01:39 I: Starting bootloader
+09:01:39 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+09:01:39 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+09:01:39 I: Boot source: none
+09:01:39 I: Image index: 0, Swap type: none
+09:01:39 I: Bootloader chainload address offset: 0x10000
+09:01:39 I: Image version: v0.4.0
+09:01:39 I: Jumping to the first image slotAll pins have been configured as non-secure
+09:01:39 Booting TF-M v2.2.2**
+09:01:39 [Sec Thread] Secure image initializing!
+09:01:40 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+09:01:40 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+09:01:40 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+09:01:40 [00:00:00.265,930] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+09:01:40 [00:00:00.274,414] <inf> crypto: ready
+09:01:40 [00:00:00.278,686] <inf> settings: apn=sensor.net user=
+09:01:40 [00:00:00.284,393] <inf> settings: int=0 ma=1
+09:01:40 [00:00:00.289,245] <inf> settings: imei=(unset)
+09:01:40 [00:00:00.309,509] <inf> hw_domain: AUX domain on (P0.13)
+09:01:40 [00:00:00.325,439] <inf> hw_selftest: === power rail self-test ===
+09:01:40 [00:00:00.332,122] <inf> hw_selftest: PP3V3_GPS: OK
+09:01:40 [00:00:00.337,493] <inf> hw_selftest: self-test: all rails OK
+09:01:40 [00:00:00.353,942] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+09:01:40 [00:00:00.385,406] <inf> hw_power: INA228 ready  VBUS=0.005 V
+09:01:40 [00:00:00.402,130] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+09:01:40 [00:00:00.494,628] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+09:01:40 [00:00:00.519,195] <inf> hw_domain: CAN domain on (P0.23)
+09:01:40 [00:00:00.529,296] <inf> hw_can: CAN_INT idle=1 (expect 1)
+09:01:40 [00:00:00.535,278] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+09:01:40 [00:00:00.546,936] <inf> hw_domain: CAN domain off (P0.23)
+09:01:40 
+09:01:40 *** CAN BENCH AGENT ***
+09:01:40 [00:00:00.570,465] <inf> hw_domain: CAN domain on (P0.23)
+09:01:40 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+09:01:45 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
+09:01:45 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+09:01:45 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+09:01:45 I: Starting bootloader
+09:01:45 I: Primary image: magic=good, swap_type=0x2, copy_done=0x1, image_ok=0x1
+09:01:45 I: Secondary image: magic=unset, swap_type=0x1, copy_done=0x3, image_ok=0x3
+09:01:45 I: Boot source: none
+09:01:45 I: Image index: 0, Swap type: none
+09:01:45 I: Bootloader chainload address offset: 0x10000
+09:01:45 I: Image version: v0.4.0
+09:01:45 I: Jumping to the first image slotAll pins have been configured as non-secure
+09:01:45 Booting TF-M v2.2.2**
+09:01:45 [Sec Thread] Secure image initializing!
+09:01:45 *** Booting My Application v0.4.0-e791eebdf9e2 ***
+09:01:45 *** Using nRF Connect SDK v3.3.0-ba167d9f3db4 ***
+09:01:45 *** Using Zephyr OS v4.3.99-fd9204a02d52 ***
+09:01:45 [00:00:00.265,930] <inf> main: === l0destar firmware boot (v0.4.0, board v3.1+can) ===
+09:01:45 [00:00:00.274,353] <inf> crypto: ready
+09:01:45 [00:00:00.278,656] <inf> settings: apn=sensor.net user=
+09:01:45 [00:00:00.284,332] <inf> settings: int=0 ma=1
+09:01:45 [00:00:00.289,184] <inf> settings: imei=(unset)
+09:01:45 [00:00:00.309,448] <inf> hw_domain: AUX domain on (P0.13)
+09:01:45 [00:00:00.325,378] <inf> hw_selftest: === power rail self-test ===
+09:01:45 [00:00:00.332,061] <inf> hw_selftest: PP3V3_GPS: OK
+09:01:45 [00:00:00.337,432] <inf> hw_selftest: self-test: all rails OK
+09:01:45 [00:00:00.353,881] <inf> hw_common: INA228 pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+09:01:46 [00:00:00.385,345] <inf> hw_power: INA228 ready  VBUS=0.006 V
+09:01:46 [00:00:00.402,038] <inf> hw_common: ACC pins: SCL(P0.21)=1 SDA(P0.20)=1 OK
+09:01:46 [00:00:00.494,506] <inf> hw_accel: ACC ready (WHO_AM_I=0x6B, XL 416 Hz +/-8g, G 104 Hz +/-250dps)
+09:01:46 [00:00:00.519,042] <inf> hw_domain: CAN domain on (P0.23)
+09:01:46 [00:00:00.529,144] <inf> hw_can: CAN_INT idle=1 (expect 1)
+09:01:46 [00:00:00.535,125] <inf> hw_can: MCP2518FD ready (OSC=0x00000460), XSTBY -> transceiver standby  entering sleep
+09:01:46 [00:00:00.546,783] <inf> hw_domain: CAN domain off (P0.23)
+09:01:46 
+09:01:46 *** CAN BENCH AGENT ***
+09:01:46 [00:00:00.570,312] <inf> hw_domain: CAN domain on (P0.23)
+09:01:46 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+09:01:54 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x01 -> ok (opmod=6)
+09:01:54 bench: burst id=0x300 n=10 len=8 fd=0 brs=0 ext=0 -> sent=5 failed=5 23684 us drained=1 TEC=40 REC=0 fifo_flags=0x0
+09:01:56 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=56 REC=0 trec=0x00 bdiag0=0x00000700 bdiag1=0x00040003 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=1647 us
+09:01:56 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+09:01:58 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=126 REC=0 trec=0x05 bdiag0=0x0000f400 bdiag1=0x00040005 int=0xa0 opmod=6 gap=0..0 us (>10ms: 0) loop_max=427 us
+09:01:58 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=50 failed=50 220540 us drained=1 TEC=67 REC=0 fifo_flags=0x0
+09:01:58 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=65 REC=0 trec=0x00 bdiag0=0x0000f400 bdiag1=0x00040044 int=0xa0 opmod=6 gap=0..0 us (>10ms: 0) loop_max=427 us
+09:01:58 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+09:01:59 bench: echo off
+09:01:59 bench: filter accept-all sid=0x000 mask=0x000
+09:01:59 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)
+09:01:59 bench: echo off
+09:01:59 bench: filter accept-all sid=0x000 mask=0x000

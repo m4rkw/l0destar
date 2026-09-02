@@ -225,6 +225,7 @@ int  hw_can_power_on(void);
 void hw_can_power_off(void);
 int  hw_can_test(void);
 int  hw_can_selftest(void);
+void can_bench_run(void);      /* CONFIG_APP_CAN_BENCH: host-driven test agent */
 
 /* Interactive board bring-up rig (board_test.c, CONFIG_APP_BOARD_TEST). */
 void board_test_run(void);

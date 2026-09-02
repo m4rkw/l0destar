@@ -870,6 +870,10 @@ int main(void)
     }
 #endif
 
+#if IS_ENABLED(CONFIG_APP_CAN_BENCH)
+    can_bench_run();   /* host-driven CAN test target; never returns */
+#endif
+
 #if IS_ENABLED(CONFIG_APP_CAN_TEST)
     hw_can_test();
     printk("CAN test complete — halting.\n");

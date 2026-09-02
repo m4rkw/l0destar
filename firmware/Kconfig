@@ -78,6 +78,15 @@ config APP_CAN_TEST
 	  reply (ID 0x101, "PONG") from an external adapter.  Loops forever
 	  after the test; does not enter the main loop.
 
+config APP_CAN_BENCH
+	bool "Run the CAN bench-test agent at boot"
+	default n
+	help
+	  At startup, bring up the MCP2518FD at 500 kbps CAN 2.0 and act as a
+	  test target driven from the host over the bus (control frames on ID
+	  0x7E0/0x7E8; see can_bench/ and CAN_BENCH_REPORT.md).  Loops forever;
+	  never enable in a production image.
+
 config APP_KLINE_TEST
 	bool "Run the L9637D K-line bring-up test at boot"
 	default n

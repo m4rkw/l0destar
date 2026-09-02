@@ -1,0 +1,911 @@
+{
+ "started": "Wed Sep  2 08:51:49 2026",
+ "adapter": {
+  "sw_version": 2,
+  "hw_version": 1,
+  "channels": 1,
+  "product": "canable2 gs_usb",
+  "manufacturer": "canable.io",
+  "serial": "004900204546500220383145",
+  "bus": 0,
+  "address": 5,
+  "max_packet": 64,
+  "feature": 1515,
+  "fclk_can": 160000000,
+  "tseg1_min": 1,
+  "tseg1_max": 16,
+  "tseg2_min": 1,
+  "tseg2_max": 8,
+  "sjw_max": 4,
+  "brp_min": 1,
+  "brp_max": 1024,
+  "brp_inc": 1,
+  "features": [
+   "LISTEN_ONLY",
+   "LOOP_BACK",
+   "ONE_SHOT",
+   "IDENTIFY",
+   "USER_ID",
+   "PAD_PKTS_TO_MAX_PKT_SIZE",
+   "FD",
+   "BT_CONST_EXT"
+  ],
+  "dtseg1_min": 1,
+  "dtseg1_max": 16,
+  "dtseg2_min": 1,
+  "dtseg2_max": 8,
+  "dsjw_max": 4,
+  "dbrp_min": 1,
+  "dbrp_max": 1024,
+  "dbrp_inc": 1,
+  "ok": true
+ },
+ "results": [
+  {
+   "id": "A1",
+   "name": "Identification and idle state",
+   "status": "PASS",
+   "metrics": {
+    "device_mode": "Normal CAN 2.0",
+    "fast_spi": false,
+    "int_pin_idle": 1,
+    "tec": 0,
+    "rec": 0,
+    "adapter": "canable2 gs_usb",
+    "adapter_features": "LISTEN_ONLY,LOOP_BACK,ONE_SHOT,IDENTIFY,USER_ID,PAD_PKTS_TO_MAX_PKT_SIZE,FD,BT_CONST_EXT",
+    "adapter_clock_hz": 160000000
+   },
+   "notes": [],
+   "console": [
+    "08:51:49 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 0.3
+  },
+  {
+   "id": "A2",
+   "name": "SPI link: MCP2518FD RAM sweep and transaction timing (slow/fast bit-bang)",
+   "status": "PASS",
+   "metrics": {
+    "slow_ram_sweep_errors_of_10240": 0,
+    "slow_rw_errors_of_200": 0,
+    "slow_write16_us": 1130,
+    "slow_read16_us": 1131,
+    "slow_spi_kbit_s": 127,
+    "fast_ram_sweep_errors_of_10240": 0,
+    "fast_rw_errors_of_200": 0,
+    "fast_write16_us": 199,
+    "fast_read16_us": 190,
+    "fast_spi_kbit_s": 757
+   },
+   "notes": [
+    "18 bytes on the wire per timed 16-byte transaction"
+   ],
+   "console": [
+    "08:51:50 bench: stats rx=400 miss=3860886545 bad=150 ovf=0 echo=400/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000003 int=0x00 opmod=6 gap=5821..18051 us (>10ms: 131) loop_max=457 us",
+    "08:51:50 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:51:50 bench: SPI slow (Zephyr GPIO API)",
+    "08:51:52 bench: spibench fast=0 n=200 ram_err=0 rw_err=0 write16=1130 us read16=1131 us (~127 kbit/s SPI)",
+    "08:51:52 bench: SPI fast (direct GPIO)"
+   ],
+   "t": 2.8
+  },
+  {
+   "id": "A3",
+   "name": "CAN_INT line follows RX FIFO",
+   "status": "PASS",
+   "metrics": {
+    "rx": 30,
+    "int_low_whenever_fifo_nonempty": true,
+    "int_idle_now": 1
+   },
+   "notes": [],
+   "console": [
+    "08:51:52 bench: spibench fast=1 n=200 ram_err=0 rw_err=0 write16=199 us read16=190 us (~757 kbit/s SPI)",
+    "08:51:52 bench: SPI slow (Zephyr GPIO API)",
+    "08:51:52 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 3.5
+  },
+  {
+   "id": "B1",
+   "name": "Classic 500 kbps frame integrity: DLC 0-8, std/ext IDs, data patterns (echo)",
+   "status": "PASS",
+   "metrics": {
+    "frames": 53,
+    "ok": 53,
+    "failed": 0,
+    "rtt_ms_median": 6.52,
+    "tec": 0,
+    "rec": 0,
+    "bdiag1": []
+   },
+   "notes": [],
+   "console": [
+    "08:51:53 bench: stats rx=30 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000020 int=0x00 opmod=6 gap=1829..3498 us (>10ms: 0) loop_max=4608 us",
+    "08:51:53 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:51:53 bench: echo on"
+   ],
+   "t": 4.2
+  },
+  {
+   "id": "B1r",
+   "name": "Classic 500 kbps remote (RTR) frames received",
+   "status": "PASS",
+   "metrics": {
+    "rtr_sent": 5,
+    "device_rx": 5,
+    "device_rx_rtr": 5
+   },
+   "notes": [],
+   "console": [
+    "08:51:53 bench: echo off",
+    "08:51:53 bench: stats rx=83 miss=3802672201 bad=11 ovf=0 echo=53/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000006f int=0x00 opmod=6 gap=1829..623509 us (>10ms: 1) loop_max=5004 us",
+    "08:51:53 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 4.7
+  },
+  {
+   "id": "B2",
+   "name": "Classic 500 kbps round-trip latency (200 echoes, slow/fast SPI)",
+   "status": "PASS",
+   "metrics": {
+    "slow_spi_rtt_ms_min/median/p95/max": "6.28 / 6.76 / 8.07 / 9.70",
+    "slow_spi_lost": 0,
+    "fast_spi_rtt_ms_min/median/p95/max": "2.54 / 2.96 / 3.29 / 4.99",
+    "fast_spi_lost": 0
+   },
+   "notes": [
+    "RTT includes USB + adapter latency on both legs; device turnaround = RX read + TX write over SPI"
+   ],
+   "console": [
+    "08:51:54 bench: stats rx=5 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000007 int=0x00 opmod=6 gap=1673..1931 us (>10ms: 0) loop_max=10833 us",
+    "08:51:54 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:51:54 bench: SPI slow (Zephyr GPIO API)",
+    "08:51:54 bench: echo on",
+    "08:51:56 bench: echo off",
+    "08:51:56 bench: SPI fast (direct GPIO)",
+    "08:51:56 bench: echo on"
+   ],
+   "t": 7.1
+  },
+  {
+   "id": "B3",
+   "name": "Classic 500 kbps host->device sustained rate limit",
+   "status": "INFO",
+   "metrics": {
+    "slow_spi_max_lossless_rate_f_s": 501,
+    "slow_spi_min_gap_us": 2000,
+    "fast_spi_max_lossless_rate_f_s": 2491,
+    "fast_spi_min_gap_us": 400
+   },
+   "notes": [
+    "slow gap=5000us: rx=300/300 miss=0 ovf=0 rate=200/s",
+    "slow gap=3000us: rx=300/300 miss=0 ovf=0 rate=334/s",
+    "slow gap=2000us: rx=300/300 miss=0 ovf=0 rate=501/s",
+    "slow gap=1500us: rx=241/300 miss=59 ovf=57 rate=535/s",
+    "fast gap=5000us: rx=300/300 miss=0 ovf=0 rate=200/s",
+    "fast gap=3000us: rx=300/300 miss=0 ovf=0 rate=333/s",
+    "fast gap=2000us: rx=300/300 miss=0 ovf=0 rate=501/s",
+    "fast gap=1500us: rx=300/300 miss=0 ovf=0 rate=666/s",
+    "fast gap=1200us: rx=300/300 miss=0 ovf=0 rate=835/s",
+    "fast gap=1000us: rx=300/300 miss=0 ovf=0 rate=1002/s",
+    "fast gap=800us: rx=300/300 miss=0 ovf=0 rate=1247/s",
+    "fast gap=600us: rx=300/300 miss=0 ovf=0 rate=1668/s",
+    "fast gap=500us: rx=300/300 miss=0 ovf=0 rate=2004/s",
+    "fast gap=400us: rx=300/300 miss=0 ovf=0 rate=2491/s",
+    "fast gap=300us: rx=280/300 miss=20 ovf=20 rate=3108/s"
+   ],
+   "console": [
+    "08:51:56 bench: echo off",
+    "08:51:56 bench: SPI slow (Zephyr GPIO API)",
+    "08:51:57 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:51:57 bench: SPI slow (Zephyr GPIO API)",
+    "08:51:59 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=4205..6521 us (>10ms: 0) loop_max=2532 us",
+    "08:52:00 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=1598..4579 us (>10ms: 0) loop_max=4638 us",
+    "08:52:01 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=327..3484 us (>10ms: 0) loop_max=535522 us",
+    "08:52:02 bench: stats rx=241 miss=59 bad=0 ovf=57 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..3895 us (>10ms: 0) loop_max=515563 us",
+    "08:52:02 bench: SPI fast (direct GPIO)",
+    "08:52:04 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=3346..6549 us (>10ms: 0) loop_max=488 us",
+    "08:52:05 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=1749..4004 us (>10ms: 0) loop_max=488 us",
+    "08:52:06 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=344..3652 us (>10ms: 0) loop_max=793 us",
+    "08:52:07 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2938 us (>10ms: 0) loop_max=854 us",
+    "08:52:08 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=234..2204 us (>10ms: 0) loop_max=854 us",
+    "08:52:09 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2350 us (>10ms: 0) loop_max=1190 us",
+    "08:52:09 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2481 us (>10ms: 0) loop_max=1495 us",
+    "08:52:10 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2074 us (>10ms: 0) loop_max=2197 us",
+    "08:52:11 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2056 us (>10ms: 0) loop_max=3631 us",
+    "08:52:11 bench: stats rx=300 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..1942 us (>10ms: 0) loop_max=9338 us",
+    "08:52:12 bench: stats rx=280 miss=20 bad=0 ovf=20 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000012e int=0x00 opmod=6 gap=233..2082 us (>10ms: 0) loop_max=91735 us"
+   ],
+   "t": 22.4
+  },
+  {
+   "id": "B3b",
+   "name": "Classic 500 kbps RX FIFO burst absorption",
+   "status": "PASS",
+   "metrics": {
+    "burst16_rx/miss/ovf": "16/0/0",
+    "burst32_rx/miss/ovf": "32/0/0",
+    "burst60_rx/miss/ovf": "38/19/4",
+    "burst100_rx/miss/ovf": "42/53/8"
+   },
+   "notes": [
+    "RX FIFO is 32 deep (MCP2518FD FSIZE max): bursts up to 32 must be lossless with the slow SPI; 60 and 100 are expected to overflow"
+   ],
+   "console": [
+    "08:52:12 bench: SPI slow (Zephyr GPIO API)",
+    "08:52:12 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:52:13 bench: stats rx=16 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000012 int=0x00 opmod=6 gap=235..242 us (>10ms: 0) loop_max=33813 us",
+    "08:52:13 bench: stats rx=32 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000022 int=0x00 opmod=6 gap=235..561 us (>10ms: 0) loop_max=67291 us",
+    "08:52:14 bench: stats rx=38 miss=19 bad=0 ovf=4 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000003e int=0x00 opmod=6 gap=235..2379 us (>10ms: 0) loop_max=80688 us"
+   ],
+   "t": 25.0
+  },
+  {
+   "id": "B4",
+   "name": "Classic 500 kbps device->host bursts (500 frames, DLC 8/0, slow/fast SPI)",
+   "status": "PASS",
+   "metrics": {
+    "slow_spi_dlc8_rate_f_s": 347.7,
+    "slow_spi_dlc8_host_got": "500/500",
+    "slow_spi_dlc8_tec": 0,
+    "slow_spi_dlc8_tx_flags": [],
+    "slow_spi_dlc0_rate_f_s": 421.6,
+    "slow_spi_dlc0_host_got": "500/500",
+    "slow_spi_dlc0_tec": 0,
+    "slow_spi_dlc0_tx_flags": [],
+    "fast_spi_dlc8_rate_f_s": 1990.7,
+    "fast_spi_dlc8_host_got": "500/500",
+    "fast_spi_dlc8_tec": 0,
+    "fast_spi_dlc8_tx_flags": [],
+    "fast_spi_dlc0_rate_f_s": 2422.2,
+    "fast_spi_dlc0_host_got": "500/500",
+    "fast_spi_dlc0_tec": 0,
+    "fast_spi_dlc0_tx_flags": []
+   },
+   "notes": [],
+   "console": [
+    "08:52:14 bench: stats rx=42 miss=53 bad=0 ovf=8 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=6 gap=235..2383 us (>10ms: 0) loop_max=89782 us",
+    "08:52:14 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:52:14 bench: SPI slow (Zephyr GPIO API)",
+    "08:52:16 bench: burst id=0x300 n=500 len=8 fd=0 brs=0 ext=0 -> sent=500 failed=0 1434989 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:52:17 bench: burst id=0x300 n=500 len=0 fd=0 brs=0 ext=0 -> sent=500 failed=0 1183670 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:52:18 bench: SPI fast (direct GPIO)",
+    "08:52:18 bench: burst id=0x300 n=500 len=8 fd=0 brs=0 ext=0 -> sent=500 failed=0 250660 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:52:18 bench: burst id=0x300 n=500 len=0 fd=0 brs=0 ext=0 -> sent=500 failed=0 206007 us drained=1 TEC=0 REC=0 fifo_flags=0x0"
+   ],
+   "t": 29.2
+  },
+  {
+   "id": "B5",
+   "name": "Classic 500 kbps simultaneous bidirectional traffic (arbitration)",
+   "status": "PASS",
+   "metrics": {
+    "host_frames": 200,
+    "device_rx": 200,
+    "device_miss": 0,
+    "device_ovf": 0,
+    "device_tx": 200,
+    "host_got": 200,
+    "device_lost_arbitration_flag": false,
+    "tec": 0,
+    "rec": 0,
+    "bdiag1": []
+   },
+   "notes": [],
+   "console": [
+    "08:52:19 bench: SPI slow (Zephyr GPIO API)",
+    "08:52:19 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:52:20 bench: burst id=0x300 n=200 len=8 fd=0 brs=0 ext=0 -> sent=200 failed=0 574864 us drained=1 TEC=0 REC=0 fifo_flags=0x0"
+   ],
+   "t": 32.0
+  },
+  {
+   "id": "B6",
+   "name": "Error counters clean after classic tests",
+   "status": "PASS",
+   "metrics": {
+    "tec": 0,
+    "rec": 0,
+    "trec": [],
+    "bdiag1": [],
+    "nrerr": 0,
+    "nterr": 0,
+    "drerr": 0,
+    "dterr": 0
+   },
+   "notes": [],
+   "console": [],
+   "t": 32.0
+  },
+  {
+   "id": "C1",
+   "name": "Bit rates 125k / 250k / 500k / 1M",
+   "status": "PASS",
+   "metrics": {
+    "125k": "echo 20/20, burst 100/100 @342.1/s, TEC 0 REC 0 []",
+    "250k": "echo 20/20, burst 100/100 @343.7/s, TEC 0 REC 0 []",
+    "500k": "echo 20/20, burst 100/100 @343.4/s, TEC 0 REC 0 []",
+    "1000k": "echo 20/20, burst 100/100 @343.4/s, TEC 0 REC 0 []"
+   },
+   "notes": [],
+   "console": [
+    "08:52:21 bench: stats rx=200 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000195 int=0x00 opmod=6 gap=1749..3839 us (>10ms: 0) loop_max=4608 us",
+    "08:52:21 bench: stats rx=200 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000019f int=0x00 opmod=6 gap=1749..3839 us (>10ms: 0) loop_max=396 us",
+    "08:52:21 bench: setmode mode=6 nom=125000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:52:22 bench: echo on",
+    "08:52:22 bench: echo off",
+    "08:52:22 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 289416 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:52:22 bench: stats rx=220 miss=370479928 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=1749..2219860 us (>10ms: 17) loop_max=287872 us",
+    "08:52:23 bench: setmode mode=6 nom=250000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:52:23 bench: echo on",
+    "08:52:23 bench: echo off",
+    "08:52:23 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 288028 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:52:24 bench: stats rx=240 miss=690497080 bad=1 ovf=0 echo=40/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=1749..2219860 us (>10ms: 18) loop_max=5004 us",
+    "08:52:24 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:52:24 bench: echo on",
+    "08:52:24 bench: echo off",
+    "08:52:24 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 288293 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:52:25 bench: stats rx=260 miss=1010514232 bad=2 ovf=0 echo=60/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=1749..2219860 us (>10ms: 22) loop_max=5004 us",
+    "08:52:25 bench: setmode mode=6 nom=1000000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:52:25 bench: echo on",
+    "08:52:25 bench: echo off",
+    "08:52:25 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=100 failed=0 288291 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:52:26 bench: stats rx=280 miss=1330531384 bad=3 ovf=0 echo=80/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000096 int=0x00 opmod=6 gap=1749..2219860 us (>10ms: 23) loop_max=5004 us",
+    "08:52:27 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 38.0
+  },
+  {
+   "id": "C2",
+   "name": "Host sample-point sweep at 500 kbps",
+   "status": "PASS",
+   "metrics": {
+    "host_sp_60%": "20/20 pings",
+    "host_sp_70%": "20/20 pings",
+    "host_sp_75%": "20/20 pings",
+    "host_sp_80%": "20/20 pings",
+    "host_sp_85%": "20/20 pings",
+    "host_sp_90%": "20/20 pings",
+    "host_sp_95%": "20/20 pings"
+   },
+   "notes": [
+    "device sample point 80 % (62+1 of 80 tq), SJW 16 tq"
+   ],
+   "console": [
+    "08:52:27 bench: echo off",
+    "08:52:27 bench: filter accept-all sid=0x000 mask=0x000",
+    "08:52:27 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 39.9
+  },
+  {
+   "id": "C3",
+   "name": "Host bit-rate offset tolerance at 500 kbps",
+   "status": "INFO",
+   "metrics": {
+    "lossless_window": "-2.44% .. +2.56%"
+   },
+   "notes": [
+    "-6.98% (465.1 kbps, brp 43 x 8 tq): 0/10",
+    "-6.43% (467.8 kbps, brp 18 x 19 tq): 0/10",
+    "-6.16% (469.2 kbps, brp 31 x 11 tq): 0/10",
+    "-5.33% (473.4 kbps, brp 26 x 13 tq): 0/10",
+    "-4.76% (476.2 kbps, brp 14 x 24 tq): 0/10",
+    "-3.90% (480.5 kbps, brp 37 x 9 tq): 0/10",
+    "-3.03% (484.8 kbps, brp 15 x 22 tq): 0/10",
+    "-2.44% (487.8 kbps, brp 41 x 8 tq): 10/10",
+    "-1.54% (492.3 kbps, brp 13 x 25 tq): 10/10",
+    "-1.23% (493.8 kbps, brp 18 x 18 tq): 10/10",
+    "-0.93% (495.4 kbps, brp 17 x 19 tq): 10/10",
+    "+0.00% (500.0 kbps, brp 16 x 20 tq): 10/10",
+    "+0.31% (501.6 kbps, brp 29 x 11 tq): 10/10",
+    "+1.59% (507.9 kbps, brp 15 x 21 tq): 10/10",
+    "+2.56% (512.8 kbps, brp 13 x 24 tq): 10/10",
+    "+3.23% (516.1 kbps, brp 31 x 10 tq): 0/10",
+    "+3.90% (519.5 kbps, brp 14 x 22 tq): 0/10",
+    "+4.58% (522.9 kbps, brp 17 x 18 tq): 0/10",
+    "+5.26% (526.3 kbps, brp 16 x 19 tq): 0/10",
+    "+6.67% (533.3 kbps, brp 12 x 25 tq): 0/10"
+   ],
+   "console": [
+    "08:52:29 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 297.2
+  },
+  {
+   "id": "D1",
+   "name": "CAN FD frame integrity 500k/2M: lengths 0-64, BRS, ext IDs (echo)",
+   "status": "PASS",
+   "metrics": {
+    "frames": 36,
+    "ok": 36,
+    "failed": 0,
+    "tec": 0,
+    "rec": 0,
+    "bdiag1": [],
+    "device_rx_fd": 35,
+    "device_rx_brs": 35
+   },
+   "notes": [],
+   "console": [
+    "08:56:47 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)",
+    "08:56:47 bench: echo on"
+   ],
+   "t": 297.9
+  },
+  {
+   "id": "D2",
+   "name": "CAN FD data rates 1M / 2M / 4M / 5M / 8M (echo)",
+   "status": "PASS",
+   "metrics": {
+    "data_1M": "echo 20/20, TEC 0 REC 0 [] drerr 0 dterr 0",
+    "data_2M": "echo 20/20, TEC 0 REC 0 [] drerr 0 dterr 0",
+    "data_4M": "echo 20/20, TEC 0 REC 0 [] drerr 0 dterr 0",
+    "data_5M": "echo 20/20, TEC 0 REC 0 [] drerr 0 dterr 0",
+    "data_8M": "echo 20/20, TEC 0 REC 0 ['DBIT0ERR', 'DBIT1ERR'] drerr 0 dterr 2"
+   },
+   "notes": [
+    "nominal 500 kbps; device TDC auto, host TDC on above 2.5 Mbps"
+   ],
+   "console": [
+    "08:56:47 bench: echo off",
+    "08:56:47 bench: stats rx=36 miss=4189439201 bad=18 ovf=0 echo=36/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000004f int=0x00 opmod=0 gap=5723..17682 us (>10ms: 15) loop_max=11993 us",
+    "08:56:47 bench: setmode mode=0 nom=500000 bps dat=1000000 bps flags=0x00 -> ok (opmod=0)",
+    "08:56:48 bench: echo on",
+    "08:56:48 bench: echo off",
+    "08:56:48 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=16609..18542 us (>10ms: 19) loop_max=11993 us",
+    "08:56:48 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)",
+    "08:56:48 bench: echo on",
+    "08:56:49 bench: echo off",
+    "08:56:49 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=15795..17744 us (>10ms: 19) loop_max=11993 us",
+    "08:56:49 bench: setmode mode=0 nom=500000 bps dat=4000000 bps flags=0x00 -> ok (opmod=0)",
+    "08:56:49 bench: echo on",
+    "08:56:49 bench: echo off",
+    "08:56:49 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=16738..17616 us (>10ms: 19) loop_max=11993 us",
+    "08:56:49 bench: setmode mode=0 nom=500000 bps dat=5000000 bps flags=0x00 -> ok (opmod=0)",
+    "08:56:50 bench: echo on",
+    "08:56:50 bench: echo off",
+    "08:56:50 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000002e int=0x00 opmod=0 gap=16757..17340 us (>10ms: 19) loop_max=11993 us",
+    "08:56:50 bench: setmode mode=0 nom=500000 bps dat=8000000 bps flags=0x00 -> ok (opmod=0)",
+    "08:56:50 bench: echo on",
+    "08:56:51 bench: echo off",
+    "08:56:51 bench: stats rx=20 miss=2240120178 bad=0 ovf=0 echo=20/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x02000000 bdiag1=0x0300002e int=0x80 opmod=0 gap=13967..17387 us (>10ms: 19) loop_max=11993 us",
+    "08:56:51 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 301.9
+  },
+  {
+   "id": "D3",
+   "name": "CAN FD throughput both directions at 2M and 5M",
+   "status": "PASS",
+   "metrics": {
+    "2M_slow_spi_dev_to_host": "200/200 good @155.8/s TEC 0 []",
+    "2M_slow_spi_host_to_dev_paced4ms": "rx 100/100 miss 0 ovf 0 bytes 6400",
+    "2M_fast_spi_dev_to_host": "200/200 good @874.3/s TEC 0 []",
+    "2M_fast_spi_host_to_dev_paced4ms": "rx 100/100 miss 0 ovf 0 bytes 6400",
+    "5M_slow_spi_dev_to_host": "200/200 good @155.8/s TEC 0 []",
+    "5M_slow_spi_host_to_dev_paced4ms": "rx 100/100 miss 0 ovf 0 bytes 6400",
+    "5M_fast_spi_dev_to_host": "200/200 good @874.7/s TEC 0 []",
+    "5M_fast_spi_host_to_dev_paced4ms": "rx 100/100 miss 0 ovf 0 bytes 6400"
+   },
+   "notes": [],
+   "console": [
+    "08:56:51 bench: echo off",
+    "08:56:51 bench: filter accept-all sid=0x000 mask=0x000",
+    "08:56:51 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)",
+    "08:56:51 bench: SPI slow (Zephyr GPIO API)",
+    "08:56:53 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 1277632 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:56:54 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=375..10918 us (>10ms: 1) loop_max=6683 us",
+    "08:56:54 bench: SPI fast (direct GPIO)",
+    "08:56:54 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 227600 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:56:55 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3268..5293 us (>10ms: 0) loop_max=457 us",
+    "08:56:55 bench: SPI slow (Zephyr GPIO API)",
+    "08:56:55 bench: setmode mode=0 nom=500000 bps dat=5000000 bps flags=0x00 -> ok (opmod=0)",
+    "08:56:56 bench: SPI slow (Zephyr GPIO API)",
+    "08:56:57 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 1277558 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:56:58 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3155..5242 us (>10ms: 0) loop_max=2532 us",
+    "08:56:58 bench: SPI fast (direct GPIO)",
+    "08:56:58 bench: burst id=0x300 n=200 len=64 fd=1 brs=1 ext=0 -> sent=200 failed=0 227497 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:56:59 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3108..5169 us (>10ms: 0) loop_max=488 us",
+    "08:56:59 bench: SPI slow (Zephyr GPIO API)",
+    "08:57:00 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 310.6
+  },
+  {
+   "id": "D4",
+   "name": "CAN FD host->device sustained rate limit (64-byte frames)",
+   "status": "INFO",
+   "metrics": {
+    "slow_spi_max_lossless_rate_64B_f_s": 500,
+    "fast_spi_max_lossless_rate_64B_f_s": 2951
+   },
+   "notes": [
+    "slow gap=8000us: rx=100/100 miss=0 ovf=0 rate=125/s",
+    "slow gap=5000us: rx=100/100 miss=0 ovf=0 rate=200/s",
+    "slow gap=4000us: rx=100/100 miss=0 ovf=0 rate=250/s",
+    "slow gap=3000us: rx=100/100 miss=0 ovf=0 rate=333/s",
+    "slow gap=2500us: rx=100/100 miss=0 ovf=0 rate=400/s",
+    "slow gap=2000us: rx=100/100 miss=0 ovf=0 rate=500/s",
+    "slow gap=1500us: rx=92/100 miss=8 ovf=8 rate=615/s",
+    "fast gap=8000us: rx=100/100 miss=0 ovf=0 rate=125/s",
+    "fast gap=5000us: rx=100/100 miss=0 ovf=0 rate=200/s",
+    "fast gap=4000us: rx=100/100 miss=0 ovf=0 rate=250/s",
+    "fast gap=3000us: rx=100/100 miss=0 ovf=0 rate=333/s",
+    "fast gap=2500us: rx=100/100 miss=0 ovf=0 rate=401/s",
+    "fast gap=2000us: rx=100/100 miss=0 ovf=0 rate=502/s",
+    "fast gap=1500us: rx=100/100 miss=0 ovf=0 rate=670/s",
+    "fast gap=1000us: rx=100/100 miss=0 ovf=0 rate=1010/s",
+    "fast gap=500us: rx=100/100 miss=0 ovf=0 rate=2017/s",
+    "fast gap=0us: rx=100/100 miss=0 ovf=0 rate=2951/s"
+   ],
+   "console": [
+    "08:57:00 bench: echo off",
+    "08:57:00 bench: filter accept-all sid=0x000 mask=0x000",
+    "08:57:00 bench: setmode mode=0 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=0)",
+    "08:57:00 bench: SPI slow (Zephyr GPIO API)",
+    "08:57:02 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=6676..9326 us (>10ms: 0) loop_max=2532 us",
+    "08:57:03 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3501..6418 us (>10ms: 0) loop_max=2532 us",
+    "08:57:04 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3127..5227 us (>10ms: 0) loop_max=2532 us",
+    "08:57:04 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1725..3819 us (>10ms: 0) loop_max=4608 us",
+    "08:57:05 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1549..3655 us (>10ms: 0) loop_max=8789 us",
+    "08:57:06 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=538..3350 us (>10ms: 0) loop_max=209564 us",
+    "08:57:07 bench: stats rx=92 miss=8 bad=0 ovf=8 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..2402 us (>10ms: 0) loop_max=194458 us",
+    "08:57:07 bench: SPI fast (direct GPIO)",
+    "08:57:08 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=6625..9225 us (>10ms: 0) loop_max=488 us",
+    "08:57:09 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3572..6444 us (>10ms: 0) loop_max=488 us",
+    "08:57:10 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=3156..5262 us (>10ms: 0) loop_max=457 us",
+    "08:57:11 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1539..3705 us (>10ms: 0) loop_max=488 us",
+    "08:57:12 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=1519..3660 us (>10ms: 0) loop_max=457 us",
+    "08:57:12 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=476..3339 us (>10ms: 0) loop_max=457 us",
+    "08:57:13 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..2164 us (>10ms: 0) loop_max=793 us",
+    "08:57:14 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..2189 us (>10ms: 0) loop_max=1159 us",
+    "08:57:14 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..1971 us (>10ms: 0) loop_max=3997 us",
+    "08:57:15 bench: stats rx=100 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000066 int=0x00 opmod=0 gap=338..340 us (>10ms: 0) loop_max=35705 us",
+    "08:57:15 bench: SPI slow (Zephyr GPIO API)",
+    "08:57:15 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 326.0
+  },
+  {
+   "id": "D5",
+   "name": "Classic-mode device facing FD frames (misconfiguration hazard)",
+   "status": "INFO",
+   "metrics": {
+    "fd_frames_sent_to_classic_device": 10,
+    "device_rx": 0,
+    "device_rec": 25,
+    "device_bdiag1": [
+     "NSTUFERR"
+    ],
+    "device_nrerr": 10,
+    "host_error_frames": 2000
+   },
+   "notes": [
+    "expected: device receives none, counts form errors and actively destroys the FD frames (host sees error frames)"
+   ],
+   "console": [
+    "08:57:15 bench: echo off",
+    "08:57:15 bench: filter accept-all sid=0x000 mask=0x000",
+    "08:57:15 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:57:17 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=25 trec=0x00 bdiag0=0x0000000a bdiag1=0x00100002 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=457 us",
+    "08:57:17 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 327.8
+  },
+  {
+   "id": "D6",
+   "name": "Device FD loopback through the transceiver at 1M-8M (host stopped)",
+   "status": "PASS",
+   "metrics": {
+    "data_1M": {
+     "int": "16/16 ok, mismatch 0, TEC 0 [] []",
+     "ext": "16/16 ok, mismatch 0, TEC 0 [] []"
+    },
+    "data_2M": {
+     "int": "16/16 ok, mismatch 0, TEC 0 [] []",
+     "ext": "16/16 ok, mismatch 0, TEC 0 [] []"
+    },
+    "data_4M": {
+     "int": "16/16 ok, mismatch 0, TEC 0 [] []",
+     "ext": "16/16 ok, mismatch 0, TEC 0 [] []"
+    },
+    "data_5M": {
+     "int": "16/16 ok, mismatch 0, TEC 0 [] []",
+     "ext": "16/16 ok, mismatch 0, TEC 0 [] []"
+    },
+    "data_8M": {
+     "int": "16/16 ok, mismatch 0, TEC 0 [] []",
+     "ext": "16/16 ok, mismatch 0, TEC 0 [] []"
+    }
+   },
+   "notes": [
+    "internal = digital core only; external = through transceiver and bus"
+   ],
+   "console": [
+    "08:57:17 bench: echo off",
+    "08:57:17 bench: filter accept-all sid=0x000 mask=0x000",
+    "08:57:17 bench: setmode mode=6 nom=500000 bps dat=1000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:57:18 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205098 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0",
+    "08:57:21 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205358 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0",
+    "08:57:23 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:57:24 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205355 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0",
+    "08:57:26 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205585 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0",
+    "08:57:28 bench: setmode mode=6 nom=500000 bps dat=4000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:57:29 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205358 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0",
+    "08:57:32 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205355 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0",
+    "08:57:33 bench: setmode mode=6 nom=500000 bps dat=5000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:57:35 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205333 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0",
+    "08:57:37 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 205353 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0",
+    "08:57:39 bench: setmode mode=6 nom=500000 bps dat=8000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:57:40 bench: looptest internal fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 182160 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0",
+    "08:57:43 bench: looptest external fd=1 brs=1 ext=0 len=64 n=16 -> sent=16 got=16 mismatch=0 182421 us TEC=0 REC=0 bdiag1=0x00000010 fifo=0x0",
+    "08:57:44 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 355.0
+  },
+  {
+   "id": "D7",
+   "name": "FD 5M with TDC disabled",
+   "status": "INFO",
+   "metrics": {
+    "host_got": "50/50",
+    "tec": 0,
+    "tx_flags": [],
+    "bdiag1": [],
+    "dterr": 0
+   },
+   "notes": [
+    "TDC (transmitter delay compensation) is normally required above ~2 Mbps"
+   ],
+   "console": [
+    "08:57:44 bench: echo off",
+    "08:57:44 bench: filter accept-all sid=0x000 mask=0x000",
+    "08:57:44 bench: setmode mode=0 nom=500000 bps dat=5000000 bps flags=0x04 -> ok (opmod=0)",
+    "08:57:45 bench: burst id=0x300 n=50 len=64 fd=1 brs=1 ext=0 -> sent=50 failed=0 320525 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:57:45 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000038 int=0x00 opmod=0 gap=0..0 us (>10ms: 0) loop_max=457 us",
+    "08:57:45 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 356.3
+  },
+  {
+   "id": "E1",
+   "name": "No partner: one-shot abort, error-passive and recovery",
+   "status": "ERROR",
+   "metrics": {},
+   "notes": [
+    "DeviceError: no reply to op 0x02 (got chunks [])"
+   ],
+   "console": [
+    "08:57:46 bench: echo off",
+    "08:57:46 bench: filter accept-all sid=0x000 mask=0x000",
+    "08:57:46 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x01 -> ok (opmod=6)",
+    "08:57:48 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=64 REC=0 trec=0x00 bdiag0=0x00000800 bdiag1=0x00040003 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=24078 us",
+    "08:57:50 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=1 TEC=64 REC=0 trec=0x00 bdiag0=0x00000800 bdiag1=0x00040004 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=1556 us",
+    "08:57:52 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=2 TEC=64 REC=0 trec=0x00 bdiag0=0x00000800 bdiag1=0x00040005 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=1586 us",
+    "08:57:52 bench: burst id=0x300 n=10 len=8 fd=0 brs=0 ext=0 -> sent=8 failed=2 6253556 us drained=0 TEC=64 REC=0 fifo_flags=0x3"
+   ],
+   "t": 364.4
+  },
+  {
+   "id": "E2",
+   "name": "Bus-off provocation and recovery",
+   "status": "PASS",
+   "metrics": {
+    "device_burst": {
+     "sent": 400,
+     "failed": 0,
+     "dur_us": 1148489,
+     "tec": 0,
+     "rec": 0,
+     "tx_fifo_flags": [],
+     "drained": true,
+     "frames_per_s": 347.4
+    },
+    "host_error_frames": 0,
+    "host_bus_off_events": 0,
+    "host_err_passive_events": 0,
+    "host_lost_arb": 0,
+    "device_tec": 0,
+    "device_rec": 0,
+    "device_trec": [],
+    "device_bdiag1": [],
+    "device_c1int": [],
+    "device_responds_after": true
+   },
+   "notes": [
+    "a controller that hits bus-off must recover on its own (128 x 11 recessive bits)"
+   ],
+   "console": [
+    "08:58:18 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:58:40 bench: burst id=0x300 n=400 len=8 fd=0 brs=0 ext=0 -> sent=400 failed=0 1148489 us drained=1 TEC=0 REC=0 fifo_flags=0x0",
+    "08:58:42 bench: stats rx=76 miss=323 bad=0 ovf=41 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000326 int=0x00 opmod=6 gap=249..2495 us (>10ms: 0) loop_max=167358 us",
+    "08:58:42 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 412.7
+  },
+  {
+   "id": "E3",
+   "name": "Listen-only mode is truly passive",
+   "status": "PASS",
+   "metrics": {
+    "host_frames": 20,
+    "host_error_frames": 4,
+    "host_no_ack_errors": 2,
+    "device_rx_counted": 3,
+    "device_rec": 0,
+    "device_tec": 0,
+    "device_bdiag1": []
+   },
+   "notes": [
+    "device rx should be 0: without any ACKing node the host destroys its own frames"
+   ],
+   "console": [
+    "08:58:42 bench: echo off",
+    "08:58:42 bench: filter accept-all sid=0x000 mask=0x000",
+    "08:58:42 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:58:42 bench: setmode mode=3 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=3)",
+    "08:58:44 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:58:44 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 414.4
+  },
+  {
+   "id": "E4",
+   "name": "Acceptance filter",
+   "status": "PASS",
+   "metrics": {
+    "with_filter_0x123_rx": 20,
+    "after_restore_rx_0x124": 20
+   },
+   "notes": [],
+   "console": [
+    "08:58:44 bench: stats rx=3 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000001 int=0x00 opmod=6 gap=4698..4973 us (>10ms: 0) loop_max=2532 us",
+    "08:58:44 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:58:44 bench: filter std sid=0x123 mask=0x7ff",
+    "08:58:45 bench: stats rx=20 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x0000003e int=0x00 opmod=6 gap=1769..3311 us (>10ms: 0) loop_max=4577 us",
+    "08:58:45 bench: filter accept-all sid=0x000 mask=0x000"
+   ],
+   "t": 415.7
+  },
+  {
+   "id": "E5",
+   "name": "RX FIFO overflow detection",
+   "status": "PASS",
+   "metrics": {
+    "small_fifo_rx": 9,
+    "small_fifo_missing": 40,
+    "overflow_events": 5,
+    "c1int": [],
+    "after_restore_rx": "20/20"
+   },
+   "notes": [],
+   "console": [
+    "08:58:45 bench: stats rx=20 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000016 int=0x00 opmod=6 gap=1789..3338 us (>10ms: 0) loop_max=4638 us",
+    "08:58:45 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x02 -> ok (opmod=6)",
+    "08:58:46 bench: stats rx=9 miss=40 bad=0 ovf=5 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000034 int=0x00 opmod=6 gap=239..2377 us (>10ms: 0) loop_max=20202 us",
+    "08:58:46 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 417.1
+  },
+  {
+   "id": "E6",
+   "name": "Sleep and wake-on-bus (transceiver standby vs awake)",
+   "status": "INFO",
+   "metrics": {
+    "xstby_standby": {
+     "wakif": true,
+     "int_low_seen": true,
+     "int_low_at_ms": 509,
+     "osc_ready_us": 396,
+     "mode_after_wake": "Configuration",
+     "int_before": 1,
+     "int_at_end": 0,
+     "osc_before": "0x460",
+     "c1int": [
+      "WAKIF"
+     ],
+     "reconfig_failed": false
+    },
+    "xcvr_awake": {
+     "wakif": true,
+     "int_low_seen": true,
+     "int_low_at_ms": 515,
+     "osc_ready_us": 396,
+     "mode_after_wake": "Configuration",
+     "int_before": 1,
+     "int_at_end": 0,
+     "osc_before": "0x460",
+     "c1int": [
+      "WAKIF"
+     ],
+     "reconfig_failed": false
+    }
+   },
+   "notes": [
+    "host sends 5 frames (one-shot, 100 ms apart) 0.5 s into a 2 s sleep"
+   ],
+   "console": [
+    "08:58:46 bench: stats rx=20 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=0 REC=0 trec=0x00 bdiag0=0x00000000 bdiag1=0x00000016 int=0x00 opmod=6 gap=1613..3315 us (>10ms: 0) loop_max=4608 us",
+    "08:58:47 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:58:49 bench: sleep 2000 ms xstby=1 -> WAKIF=1 INT low@509 ms (before=1 end=0) osc_before=0x0460 wake=396 us opmod_after=4 c1int=0x40 reconfig=ok",
+    "08:58:51 bench: sleep 2000 ms xstby=0 -> WAKIF=1 INT low@515 ms (before=1 end=0) osc_before=0x0460 wake=396 us opmod_after=4 c1int=0x40 reconfig=ok"
+   ],
+   "t": 421.9
+  },
+  {
+   "id": "E7",
+   "name": "CAN rail power cycle x5 and re-init",
+   "status": "PASS",
+   "metrics": {
+    "cycles": 5
+   },
+   "notes": [
+    "off 300 ms: rail before/end-of-off/back=1/0/1 sense low after 18 ms, power_on=0 (24 ms) reconfig=0 osc=0x0460 mode=Normal CAN 2.0",
+    "off 300 ms: rail before/end-of-off/back=1/0/1 sense low after 18 ms, power_on=0 (24 ms) reconfig=0 osc=0x0460 mode=Normal CAN 2.0",
+    "off 300 ms: rail before/end-of-off/back=1/0/1 sense low after 18 ms, power_on=0 (24 ms) reconfig=0 osc=0x0460 mode=Normal CAN 2.0",
+    "off 1500 ms: rail before/end-of-off/back=1/0/1 sense low after 17 ms, power_on=0 (25 ms) reconfig=0 osc=0x0460 mode=Normal CAN 2.0",
+    "off 1500 ms: rail before/end-of-off/back=1/0/1 sense low after 17 ms, power_on=0 (24 ms) reconfig=0 osc=0x0460 mode=Normal CAN 2.0"
+   ],
+   "console": [
+    "08:58:51 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:58:52 bench: railcycle off=300 ms -> rail on/off/back=1/0/1 (sense low after 18 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6",
+    "08:58:52 bench: echo on",
+    "08:58:52 bench: echo off",
+    "08:58:53 bench: railcycle off=300 ms -> rail on/off/back=1/0/1 (sense low after 18 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6",
+    "08:58:53 bench: echo on",
+    "08:58:53 bench: echo off",
+    "08:58:53 bench: railcycle off=300 ms -> rail on/off/back=1/0/1 (sense low after 18 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6",
+    "08:58:53 bench: echo on",
+    "08:58:53 bench: echo off",
+    "08:58:55 bench: railcycle off=1500 ms -> rail on/off/back=1/0/1 (sense low after 17 ms) power_on=0 (25 ms) osc=0x00000460 reconfig=0 opmod=6",
+    "08:58:55 bench: echo on",
+    "08:58:55 bench: echo off",
+    "08:58:57 bench: railcycle off=1500 ms -> rail on/off/back=1/0/1 (sense low after 17 ms) power_on=0 (24 ms) osc=0x00000460 reconfig=0 opmod=6"
+   ],
+   "t": 427.8
+  },
+  {
+   "id": "E8",
+   "name": "Cold reboot re-init",
+   "status": "PASS",
+   "metrics": {
+    "agent_back_after_reboot": true
+   },
+   "notes": [
+    "08:58:57 bench: echo off",
+    "08:58:57 bench: reboot",
+    "08:58:59 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1"
+   ],
+   "console": [],
+   "t": 433.9
+  },
+  {
+   "id": "E9",
+   "name": "Soak: mixed traffic with echo",
+   "status": "PASS",
+   "metrics": {
+    "seconds": 120,
+    "host_sent": 22300,
+    "device_rx": 22300,
+    "device_missing": 0,
+    "device_ovf": 0,
+    "device_echoed": 22300,
+    "echo_dropped": 0,
+    "host_got_echoes": 22300,
+    "tec": 0,
+    "rec": 0,
+    "bdiag1": [],
+    "host_error_frames": 0
+   },
+   "notes": [],
+   "console": [
+    "08:59:03 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "08:59:03 bench: echo on",
+    "09:01:04 bench: echo off"
+   ],
+   "t": 555.1
+  }
+ ]
+}

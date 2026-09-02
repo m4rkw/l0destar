@@ -1,0 +1,85 @@
+{
+ "started": "Wed Sep  2 09:01:53 2026",
+ "adapter": {
+  "sw_version": 2,
+  "hw_version": 1,
+  "channels": 1,
+  "product": "canable2 gs_usb",
+  "manufacturer": "canable.io",
+  "serial": "004900204546500220383145",
+  "bus": 0,
+  "address": 5,
+  "max_packet": 64,
+  "feature": 1515,
+  "fclk_can": 160000000,
+  "tseg1_min": 1,
+  "tseg1_max": 16,
+  "tseg2_min": 1,
+  "tseg2_max": 8,
+  "sjw_max": 4,
+  "brp_min": 1,
+  "brp_max": 1024,
+  "brp_inc": 1,
+  "features": [
+   "LISTEN_ONLY",
+   "LOOP_BACK",
+   "ONE_SHOT",
+   "IDENTIFY",
+   "USER_ID",
+   "PAD_PKTS_TO_MAX_PKT_SIZE",
+   "FD",
+   "BT_CONST_EXT"
+  ],
+  "dtseg1_min": 1,
+  "dtseg1_max": 16,
+  "dtseg2_min": 1,
+  "dtseg2_max": 8,
+  "dsjw_max": 4,
+  "dbrp_min": 1,
+  "dbrp_max": 1024,
+  "dbrp_inc": 1,
+  "ok": true
+ },
+ "results": [
+  {
+   "id": "E1",
+   "name": "No partner: one-shot abort, error-passive and recovery",
+   "status": "PASS",
+   "metrics": {
+    "one_shot_tec": 56,
+    "one_shot_aborted_frames": 6,
+    "one_shot_trec": [],
+    "one_shot_tx_flags": [],
+    "one_shot_bdiag1": [
+     "NACKERR"
+    ],
+    "one_shot_c1int": [
+     "IVMIF"
+    ],
+    "retry_frame_delivered_when_partner_returned": 1,
+    "retry_tec": 126,
+    "retry_trec": [
+     "EWARN",
+     "TXWARN"
+    ],
+    "retry_bdiag1": [
+     "NACKERR"
+    ],
+    "tec_after_100_good_frames": 65,
+    "trec_after": []
+   },
+   "notes": [],
+   "console": [
+    "09:01:54 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x01 -> ok (opmod=6)",
+    "09:01:54 bench: burst id=0x300 n=10 len=8 fd=0 brs=0 ext=0 -> sent=5 failed=5 23684 us drained=1 TEC=40 REC=0 fifo_flags=0x0",
+    "09:01:56 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=56 REC=0 trec=0x00 bdiag0=0x00000700 bdiag1=0x00040003 int=0x80 opmod=6 gap=0..0 us (>10ms: 0) loop_max=1647 us",
+    "09:01:56 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)",
+    "09:01:58 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=126 REC=0 trec=0x05 bdiag0=0x0000f400 bdiag1=0x00040005 int=0xa0 opmod=6 gap=0..0 us (>10ms: 0) loop_max=427 us",
+    "09:01:58 bench: burst id=0x300 n=100 len=8 fd=0 brs=0 ext=0 -> sent=50 failed=50 220540 us drained=1 TEC=67 REC=0 fifo_flags=0x0",
+    "09:01:58 bench: stats rx=0 miss=0 bad=0 ovf=0 echo=0/0 txfail=0 TEC=65 REC=0 trec=0x00 bdiag0=0x0000f400 bdiag1=0x00040044 int=0xa0 opmod=6 gap=0..0 us (>10ms: 0) loop_max=427 us",
+    "09:01:58 bench: setmode mode=6 nom=500000 bps dat=2000000 bps flags=0x00 -> ok (opmod=6)"
+   ],
+   "t": 5.0
+  }
+ ]
+}
