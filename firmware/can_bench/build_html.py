@@ -10,7 +10,7 @@ e1 = json.load(open(f"{R}/can_bench/results/20260902-090159.json"))["results"][0
 res = [e1 if r["id"] == "E1" else r for r in res]
 KEY = {
  "A1": "Normal CAN 2.0, OSC 0x460, CAN_INT idle high, TEC/REC 0",
- "A2": "10 240-byte RAM sweep + 200 write/read/compare: 0 errors. 16-byte transaction 1.1 ms slow (127 kbit/s), 0.2 ms fast (760 kbit/s)",
+ "A2": "2 KB message RAM x 5 patterns (10 240 bytes) + 200 write/read/compare: 0 errors. 16-byte read (18 bytes on the wire) 1.13 ms slow (127 kbit/s), 0.19 ms fast (757 kbit/s)",
  "A3": "CAN_INT low on all 30 frames while the FIFO held data, high otherwise",
  "B1": "53/53 frames echoed bit-exact: DLC 0–8, five patterns, 4 std + 4 ext IDs",
  "B1r": "5/5 remote frames received and flagged",
@@ -22,7 +22,7 @@ KEY = {
  "B6": "TEC 0, REC 0, no flags, no diagnostics",
  "C1": "125 k / 250 k / 500 k / 1 M: 20/20 echoes and 100/100 burst at each",
  "C2": "host sample point 60–95 %: 20/20 pings at every setting",
- "C3": "lossless from −2.44 % to +2.56 %, fails at −3.03 % and +3.23 %",
+ "C3": "lossless from −2.44 % to +2.56 %, fails at −3.03 % and +3.23 % (points ~0.6 % apart)",
  "D1": "36/36 FD frames echoed bit-exact, all DLC codes to 64 bytes, BRS, ext IDs",
  "D2": "20/20 64-byte BRS echoes at 1, 2, 4, 5 and 8 Mbps; 2 bit errors on own TX at 8 M, retried",
  "D3": "200/200 each way at 2 and 5 Mbps: dev→host slow 156 f/s, fast 875 f/s",
@@ -30,7 +30,7 @@ KEY = {
  "D5": "classic-mode device vs 10 FD frames: received 0, REC 25, stuff-error diagnostic, adapter flooded with error frames",
  "D6": "external loopback through the MAX33041E 16/16 at 1, 2, 4, 5, 8 Mbps, 0 mismatches",
  "D7": "5 Mbps with TDC off: 50/50, no data-phase errors (short bus)",
- "E1": "one-shot: 6 aborted, TEC 56; retry: delivered on partner return, TEC 126 → 65 after 100 good frames",
+ "E1": "one-shot: 6 data frames + the report frame aborted (7 × 8 = TEC 56); retry: delivered on partner return, TEC 126, read 65 after the next 100-frame burst",
  "E2": "400 same-ID frames from both ends: no data-field collision produced, bus-off not reached",
  "E3": "listen-only: adapter saw no ACK; 3 frames counted only after the adapter went error-passive",
  "E4": "filter 0x123: 20/20 matching, 40 rejected; accept-all restored 20/20",
@@ -76,8 +76,8 @@ hr{{border:0;border-top:1px solid #ddd;margin:2em 0}}
 <h2>At a glance</h2>
 <table><tbody>
 <tr><th>Hardware</th><td>No faults. Controller, crystal, transceiver, SPI wiring, CAN_INT, rail switching and wake-on-bus all behave as the datasheets say.</td></tr>
-<tr><th>Bit-rate tolerance</th><td>−2.4 % to +2.6 %, symmetric around 500 kbps, so the 40 MHz crystal is centred to well under 0.5 %.</td></tr>
-<tr><th>Throughput, production SPI</th><td>500 frames/s. A busy vehicle bus carries 2000 to 4000. Direct GPIO reaches 2500 to 3300 with identical integrity.</td></tr>
+<tr><th>Bit-rate tolerance</th><td>−2.4 % to +2.6 %, symmetric around 500 kbps to within the ±0.3 % resolution of the test: no gross crystal error (the crystal's ppm spec is far below what this can see).</td></tr>
+<tr><th>Throughput, production SPI</th><td>500 frames/s. A 500 kbps bus at 40–80 % load carries 1600 to 3500, saturated about 4400. Direct GPIO reaches 2500 to 3300 with identical integrity.</td></tr>
 <tr><th>5 Mbps eye, worst bit of 503</th><td>1.81 V dominant differential at the sample point, against a 0.9 V threshold. Recessive 0 V ± 50 mV.</td></tr>
 </tbody></table>
 
@@ -102,8 +102,8 @@ hr{{border:0;border-top:1px solid #ddd;margin:2em 0}}
 <h2>Findings</h2>
 <h3>Hardware: nothing to fix</h3>
 <ul>
-<li><strong>SPI through the series resistors.</strong> 10 240 bytes of message RAM written and read back with five patterns plus 200 timed transactions, zero errors, at both the production timing and the direct-GPIO timing with edges a few hundred nanoseconds apart. The 220 Ω and 1 kΩ resistors do not limit the link at these speeds.</li>
-<li><strong>Controller and crystal.</strong> Every bit rate from 125 k to 1 M works with clean counters. The adapter could be pulled 2.44 % low or 2.56 % high before the link broke, symmetric within the 0.4 % step, so the crystal is centred. Host sample points from 60 % to 95 % all worked against the board's 80 %.</li>
+<li><strong>SPI through the series resistors.</strong> The 2 KB message RAM written and read back with five patterns (10 240 bytes) plus 200 timed transactions, zero errors, at both the production timing (127 kbit/s on the wire) and the direct-GPIO timing (757 kbit/s, edges a few hundred nanoseconds apart). The 220 Ω and 1 kΩ resistors do not limit the link at these speeds.</li>
+<li><strong>Controller and crystal.</strong> Every bit rate from 125 k to 1 M works with clean counters. The adapter could be pulled 2.44 % low or 2.56 % high before the link broke, symmetric to within the ±0.3 % resolution of the test points, which rules out a gross crystal error but says nothing at the ppm level. Host sample points from 60 % to 95 % all worked against the board's 80 %.</li>
 <li><strong>Transceiver.</strong> FD data phase at 1, 2, 4, 5 and 8 Mbps in both directions, including the board's own external loopback with the adapter silent. Two data-phase bit errors on its own 8 Mbps transmissions in one run, above the part's 5 Mbps rating and outside anything a vehicle uses.</li>
 <li><strong>Rail switching.</strong> PP3V3_CAN drops below the sense threshold 17 to 18 ms after CAN_EN goes low and the controller is back in Configuration mode with its oscillator running 24 ms after it goes high, five times out of five.</li>
 <li><strong>Sleep and wake-on-bus.</strong> With the controller asleep and the MAX33041E in standby through XSTBY, the first bus frame set WAKIF and pulled CAN_INT low within 9 ms; the oscillator was ready 396 µs after wake. Identical with the transceiver awake.</li>
@@ -116,19 +116,20 @@ hr{{border:0;border-top:1px solid #ddd;margin:2em 0}}
 <tr><td>transmit, 64-byte FD</td><td>156 frames/s</td><td>875 frames/s</td></tr>
 <tr><td>echo round trip</td><td>6.8 ms median</td><td>3.0 ms median</td></tr>
 </tbody></table></div>
-<p>A saturated 500 kbps bus carries about 3600 eight-byte frames a second; passenger-car powertrain buses run at 40 to 80 % load. With the production driver the 32-frame RX FIFO fills in about 10 ms of bus-rate traffic and frames are lost, with the overflow flag raised reliably. Direct GPIO with no waits gets within a factor of about 1.3 of the bus rate with identical data integrity. Whatever the driver, hardware acceptance filters (E4) should reduce the load to the IDs of interest and the RX FIFO should be the full 32 objects, not the 4 used by the boot-time test.</p>
+<p>A saturated 500 kbps bus carries about 4000 to 4400 eight-byte standard-ID frames a second (111 bits plus stuffing); passenger-car powertrain buses run at 40 to 80 % load, 1600 to 3500 frames/s. With the production driver the 32-frame RX FIFO fills in about 10 ms of bus-rate traffic and frames are lost, with the overflow flag raised reliably. Direct GPIO with no waits reaches 60 to 75 % of the bus maximum with identical data integrity. Whatever the driver, hardware acceptance filters (E4) should reduce the load to the IDs of interest and the RX FIFO should be the full 32 objects, not the 4 used by the boot-time test.</p>
 <h3>Mode choice on a vehicle bus</h3>
 <ul>
 <li><strong>FD tolerance.</strong> A controller in Normal CAN 2.0 mode error-flags every FD frame (D5), destroying it for every node on the bus while its own receive error counter climbs. Normal FD mode accepted classic frames in every test, so it is the safer default; Listen-only is safest if the tracker only observes.</li>
 <li><strong>Listen-only</strong> is genuinely passive (E3). On the two-node bench a lone transmitter's frames only become valid to the passive listener once that transmitter is error-passive; on a real bus other nodes ACK.</li>
 <li><strong>One-shot transmit</strong> works, but an aborted message stays in the FIFO with TXREQ clear and blocks everything behind it until the FIFO is reset (E1). TXATIF was not observed to be set in that state.</li>
+<li><strong>Error counter decay (E1).</strong> TEC read 126 with the partner absent and 65 after the following 100-frame burst. Minus one per successful frame predicts 26, so the reading came before the burst had drained or the burst lost frames; the test shows recovery but does not check the decrement rate.</li>
 <li><strong>Existing test code.</strong> <code>hw_can.c</code> checks bit 2 of C1FIFOSTA for "TX aborted"; bit 2 is the FIFO-empty flag, TXABT is bit 6.</li>
 </ul>
 </section>
 
 <section id="scope">
 <h2>Oscilloscope</h2>
-<p>Rigol DHO814, 10× probes on flying leads soldered to the transceiver's CANH, CANL and GND pins. Whole 1 Mpt records were read over SCPI and every single-bit-wide run in the data phase was measured; the differential was recomputed from the raw samples. Board-transmit shows the MAX33041E's driver; adapter-transmit shows what the board has to decode.</p>
+<p>Rigol DHO814, 10× probes on flying leads soldered to the transceiver's CANH, CANL and GND pins. Whole 1 Mpt records were read over SCPI and every single-bit-wide run in the data phase was measured; the differential was recomputed from the raw samples. Board-transmit shows the MAX33041E's driver; adapter-transmit shows what the board has to decode. Levels are read 75 % into the bit, the earliest sample point in use on either side (board 80 % nominal and at 2 Mbps, 75 % at 5 Mbps; adapter 80 % nominal, 75 % data phase).</p>
 <div class="key"><span><i style="background:var(--accent)"></i>CH1 CANH</span><span><i style="background:var(--canl)"></i>CH2 CANL</span><span><i style="background:var(--diff)"></i>Math CANH − CANL</span></div>
 <div class="tablewrap"><table><thead><tr><th>case</th><th>bits</th><th>dominant at 75 % sample point, min / mean</th><th>recessive</th><th>overshoot / undershoot</th><th>bit width spread</th><th>10–90 % edge</th></tr></thead><tbody>
 <tr><td>500 kbps, board TX</td><td class="mono">130</td><td class="mono">1.84 / 1.90 V</td><td class="mono">0 V</td><td class="mono">+2.11 / −0.65 V</td><td class="mono">±13 ns</td><td class="mono">&lt;10 ns</td></tr>
@@ -138,14 +139,14 @@ hr{{border:0;border-top:1px solid #ddd;margin:2em 0}}
 <tr><td>FD 5 Mbps, board TX</td><td class="mono">503</td><td class="mono">1.81 / 1.87 V</td><td class="mono">0 V</td><td class="mono">+2.12 / −0.66 V</td><td class="mono">±11 ns</td><td class="mono">&lt;10 ns</td></tr>
 <tr><td>FD 5 Mbps, adapter TX</td><td class="mono">419</td><td class="mono">2.01 / 2.08 V</td><td class="mono">0 V</td><td class="mono">+2.21 / −0.04 V</td><td class="mono">±3 ns</td><td class="mono">65 ns</td></tr>
 </tbody></table></div>
-<p>Single-ended, board transmitting: recessive CANH = CANL = 2.16 V; dominant CANH 2.98 V, CANL 1.08 V. Edges are faster than the 100 MHz scope resolves. Each dominant-to-recessive transition has a brief undershoot to about −0.65 V and a ~40 MHz ring for about 150 ns that appears equally on both lines and cancels in the difference; it cannot upset a receiver, but the MAX33041E has no slew-rate control and this is what a harness will radiate, so EMC on a real loom is the open question rather than margin. After every dominant bit both lines drop together to about 1.6 V and drift back to 2.16 V over several microseconds with zero differential: the receiver bias network recharging, normal, and confusing on a single-ended trace.</p>
+<p>Single-ended, board transmitting: recessive CANH = CANL = 2.16 V; dominant CANH 2.98 V, CANL 1.08 V. Edges are faster than the 100 MHz scope resolves. Each dominant-to-recessive transition has a brief undershoot to about −0.65 V and a ~40 MHz ring for about 150 ns that appears equally on both lines and cancels in the difference; it cannot upset a receiver, but this is what a harness will radiate. The MAX33041E has a slew-rate-limited mode selected by a 39.2 kΩ resistor from its STBY pin to ground (rising-edge slew 15 V/µs instead of 120 V/µs) at the cost of the higher FD data rates; if EMC on a real loom is a problem that is the first thing to try, and the board's STBY drive from the controller's GPIO0 would need to accommodate it. After every dominant bit both lines drop together to about 1.6 V and drift back to 2.16 V over several microseconds with zero differential: the receiver bias network recharging, normal, and confusing on a single-ended trace.</p>
 <div class="figs">
 {img("scope_classic_edge.png", "500 kbps rising edge at 100 ns/div", "500 kbps, board transmitting, 100 ns/div. One recessive-to-dominant edge; CANH rises to 3.0 V and CANL falls to 1.1 V in the same sample.")}
 {img("scope_classic_eye.png", "500 kbps persistence eye at 500 ns/div", "500 kbps eye, 500 ns/div, infinite persistence. The slow ramps after the bit are the common-mode recovery, identical on both lines.")}
 {img("scope_fd2m_frame.png", "FD frame at 50 µs/div", "One FD frame at 50 µs/div: sparse 500 kbps arbitration bits from the start-of-frame, then the dense 2 Mbps data phase.")}
 {img("scope_fd2m_eye.png", "FD 2 Mbps eye at 250 ns/div", "FD 2 Mbps data phase, board transmitting, 250 ns/div. 500 ns bits, flat within 20 ns of each edge.")}
 {img("scope_fd5m_eye.png", "FD 5 Mbps eye at 100 ns/div", "FD 5 Mbps, board transmitting, 100 ns/div. 200 ns bits; the eye at the 75 % sample point is fully open.")}
-{img("scope_fd5m_host_eye.png", "FD 5 Mbps eye, adapter transmitting", "FD 5 Mbps, adapter transmitting, 100 ns/div: what the board receives. Slower 65 ns edges, still 130 ns of settled level before the sample point.")}
+{img("scope_fd5m_host_eye.png", "FD 5 Mbps eye, adapter transmitting", "FD 5 Mbps, adapter transmitting, 100 ns/div: what the board receives. Slower 65 ns edges, still about 85 ns of settled level before a 75 % sample point.")}
 {img("scope_fd5m_frame.png", "FD 5 Mbps frame at 50 µs/div", "A 5 Mbps FD frame at 50 µs/div, board transmitting: about 150 µs for 64 bytes.")}
 {img("scope_loopdelay_fall.png", "Transceiver loop delay", "Loop delay, 50 ns/div: TXD (magenta) falls at 0, the bus follows 29 ns later, RXD (blue) 72 ns later. The ringing on the logic pins is the probe ground leads.")}
 </div>
@@ -155,7 +156,7 @@ hr{{border:0;border-top:1px solid #ddd;margin:2em 0}}
 <tr><td>recessive → dominant</td><td class="mono">29 ns</td><td class="mono">43 ns</td><td class="mono">72.5 ns</td></tr>
 <tr><td>dominant → recessive</td><td class="mono">16 ns</td><td class="mono">43 ns</td><td class="mono">60 ns</td></tr>
 </tbody></table></div>
-<p>Inside the part's 120 ns limit. The 13 ns asymmetry lengthens each dominant bit on the bus by 6.5 % of a 5 Mbps bit, normal for a CAN FD transceiver. The MCP2518FD's TDC in auto mode measures this itself; these are the numbers for a manual offset if auto is ever disabled.</p>
+<p>Inside the datasheet's 140 ns maximum (70–90 ns typical). The dominant bit starts 29 ns late on the bus and ends 16 ns late, so the 13 ns asymmetry shortens it by 6.5 % of a 5 Mbps bit, normal for a CAN FD transceiver. The MCP2518FD's TDC in auto mode measures this itself; these are the numbers for a manual offset if auto is ever disabled.</p>
 </section>
 
 <section id="bugs">

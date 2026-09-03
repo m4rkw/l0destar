@@ -17,7 +17,7 @@ classic and FD modes, at every bit rate from 125 kbps to 1 Mbps nominal and
 1 to 8 Mbps FD data phase, the controller, transceiver, crystal and SPI
 wiring produced no data corruption and no bus errors that were not
 deliberately provoked. The bit-rate tolerance window is symmetric around
-500 kbps, so the crystal is on frequency. The transceiver standby / wake
+500 kbps to the resolution of the test, so the crystal has no gross error. The transceiver standby / wake
 path works: bus activity wakes the sleeping controller within the first
 frame and asserts CAN_INT. Rail switching and re-initialisation work
 repeatably.
@@ -27,11 +27,12 @@ The deficiencies found are all in software, and all matter for a vehicle:
 1. **The bit-banged SPI driver is the bottleneck.** With the production
    driver's timing (Zephyr GPIO API with 1 µs waits) the SPI link runs at
    about 138 kbit/s, so the board can absorb roughly 500 classic frames/s
-   and transmit about 440 frames/s. A busy 500 kbps vehicle bus carries
-   2000 to 4000 frames/s, so the board would overflow its 32-frame RX FIFO
-   in well under 100 ms unless it filters. Driving the same pins directly
-   (no Zephyr GPIO calls, no waits) is 6 to 7 times faster and keeps up
-   with about 3300 frames/s, close to the bus maximum, with no loss of
+   and transmit about 440 frames/s. A 500 kbps vehicle bus at a typical 40 to
+   80 % load carries 1600 to 3500 eight-byte frames/s (about 4400 when
+   saturated), so the board would overflow its 32-frame RX FIFO in well
+   under 100 ms unless it filters. Driving the same pins directly (no
+   Zephyr GPIO calls, no waits) is 6 to 7 times faster and keeps up with
+   2500 to 3300 frames/s, 60 to 75 % of the bus maximum, with no loss of
    SPI data integrity.
 2. **Acceptance filtering is essential** for the same reason: with a
    filter set for one ID the controller passed only the matching traffic.
@@ -44,8 +45,9 @@ The deficiencies found are all in software, and all matter for a vehicle:
    classic-only, it should use Normal FD mode (which accepts both) or
    Listen-only mode.
 4. **One-shot transmit needs explicit FIFO recovery.** After a failed
-   single attempt the controller sets TXATIF and leaves the message in the
-   FIFO; everything queued behind it is stuck until the FIFO is reset.
+   single attempt the message stays in the FIFO with TXREQ clear (TXATIF
+   was not seen); everything queued behind it is stuck until the FIFO is
+   reset.
 5. **The existing `hw_can.c` test code checks the wrong status bit** for
    TX abort (bit 2, the FIFO-empty flag, instead of bit 6). Harmless in the
    PING test but worth fixing before it is reused.
@@ -113,7 +115,7 @@ and the symptoms are instructive.
 | B6 | counters | TEC/REC/diagnostics after the classic tests |
 | C1 | bit rates | 125 k / 250 k / 500 k / 1 M, echo + burst at each |
 | C2 | sample point | host sample point swept 60 % to 95 % against the device's 80 % |
-| C3 | tolerance | host bit rate offset in ~0.4 % steps from -7 % to +7 % |
+| C3 | tolerance | host bit rate offset in 0.3-0.7 % steps from -7 % to +7 % |
 | D1 | FD integrity | lengths 0-64 (all DLC codes), BRS, extended IDs, classic frame in FD mode |
 | D2 | FD data rates | 1 / 2 / 4 / 5 / 8 Mbps data phase with 500 kbps arbitration |
 | D3 | FD throughput | 200 x 64-byte frames each way at 2 and 5 Mbps |
@@ -141,7 +143,7 @@ built-in criterion; INFO tests are measurements.
 | id | result | key numbers |
 |---|---|---|
 | A1 | PASS | Normal CAN 2.0, OSC 0x460 (crystal, no PLL), CAN_INT idle high, TEC/REC 0 |
-| A2 | PASS | 10 240-byte RAM sweep and 200 write/read/compare: 0 errors, slow and fast. 16-byte transaction: slow 1.0-1.1 ms (127-138 kbit/s on the wire), fast 0.15-0.2 ms (760-900 kbit/s) |
+| A2 | PASS | the 2 KB message RAM written and read back with five patterns (10 240 bytes) plus 200 write/read/compare: 0 errors, slow and fast. 16-byte read (18 bytes on the wire): slow 1.03-1.13 ms (127-138 kbit/s), fast 0.15-0.19 ms (757-900 kbit/s) |
 | A3 | PASS | CAN_INT low on every one of 30 frames while the FIFO held data, high otherwise |
 | B1 | PASS | 53/53 frames echoed bit-exact (DLC 0-8, five data patterns, 4 standard and 4 extended IDs) |
 | B1r | PASS | 5/5 RTR frames received and flagged as remote |
@@ -153,7 +155,7 @@ built-in criterion; INFO tests are measurements.
 | B6 | PASS | TEC 0, REC 0, no warning flags, no error diagnostics |
 | C1 | PASS | 125 k, 250 k, 500 k, 1 M: 20/20 echoes and 100/100 burst frames at each, counters clean |
 | C2 | PASS | host sample point 60, 70, 75, 80, 85, 90, 95 %: 20/20 pings at every setting |
-| C3 | INFO | host bit rate offset: 10/10 from -2.44 % to +2.56 %, 0/10 at -3.03 % and +3.23 % and beyond |
+| C3 | INFO | host bit rate offset: 10/10 from -2.44 % to +2.56 %, 0/10 at -3.03 % and +3.23 % and beyond (test points about 0.6 % apart near the edges) |
 | D1 | PASS | 36/36 FD frames echoed bit-exact: every DLC code 0-64 bytes, BRS, two extended IDs, one classic frame in FD mode |
 | D2 | PASS | 64-byte BRS echoes, 20/20 at 1, 2, 4, 5 and 8 Mbps. 8 Mbps: 2 data-phase bit errors on the device's own transmissions (retried, all delivered), TEC peaked at 3-5 |
 | D3 | PASS | 200/200 64-byte frames each way at 2 and 5 Mbps: device->host slow 156 frames/s, fast 875 frames/s; host->device at 4 ms pace 100/100 |
@@ -161,7 +163,7 @@ built-in criterion; INFO tests are measurements.
 | D5 | INFO | classic-mode device with 10 FD frames on the bus: received 0, REC rose to 25, stuff-error diagnostic set, adapter reported >2000 error frames |
 | D6 | PASS | device external loopback through the MAX33041E: 16/16 64-byte frames, 0 mismatches, TEC 0 at 1, 2, 4, 5 and 8 Mbps; internal loopback identical |
 | D7 | INFO | 5 Mbps with TDC off: 50/50 delivered, no data-phase errors (short bus) |
-| E1 | PASS | one-shot with no partner: 6 attempts aborted, TEC 56, ACK-error diagnostic; auto-retry: frame delivered the moment the partner returned, TEC had reached 126 (TXWARN), fell to 65 after 100 good frames |
+| E1 | PASS | one-shot with no partner: 6 data frames aborted plus the agent's own report frame (7 x 8 = TEC 56), ACK-error diagnostic; auto-retry: frame delivered the moment the partner returned, TEC had reached 126 (TXWARN) and read 65 after the following 100-frame burst (see 5.3) |
 | E2 | PASS | 400 same-ID frames from each end at once: 0 collisions in the data field, no bus-off reached (see section 7); device kept responding |
 | E3 | PASS | listen-only device: adapter reported ACK errors, device sent nothing; 3 frames counted only after the adapter went error-passive (passive error flags) |
 | E4 | PASS | filter 0x123: 20/20 matching frames received, 40 non-matching rejected; accept-all restored 20/20 |
@@ -175,18 +177,21 @@ built-in criterion; INFO tests are measurements.
 
 ### 5.1 Hardware: no faults found
 
-* **SPI wiring through the series resistors.** 10 240 bytes of message RAM
-  written and read back with five patterns, plus 200 timed write/read
-  pairs, with zero errors at both the production timing (about 130 kbit/s)
-  and the direct-GPIO timing (about 800 kbit/s, SCK edges a few hundred
-  nanoseconds apart). The 220 R / 1 k series resistors do not limit the
+* **SPI wiring through the series resistors.** The 2 KB message RAM
+  written and read back with five patterns (10 240 bytes), plus 200 timed
+  write/read pairs, with zero errors at both the production timing (about
+  130 kbit/s on the wire) and the direct-GPIO timing (about 760 kbit/s,
+  SCK edges a few hundred nanoseconds apart). The 220 R / 1 k series resistors do not limit the
   link at these speeds. (Whether hardware SPIM at 8-10 MHz would work
   through them was not tested; see section 7.)
 * **Controller and crystal.** Every bit rate the OBD/J1939 world uses
   (125 k to 1 M) works with clean counters. The host adapter's bit rate
-  could be pulled 2.44 % low or 2.56 % high before the link broke, and the
-  break is symmetric within the 0.4 % step size, so the 40 MHz crystal
-  with its 27 pF loads is centred to well within half a percent. The host
+  could be pulled 2.44 % low or 2.56 % high before the link broke; the
+  test points near the edges are about 0.6 % apart, so the window is
+  symmetric to within ±0.3 %. That bounds the board's clock relative to
+  the adapter's and rules out a gross crystal error (a wrong load
+  capacitance, say); it says nothing at the tens-of-ppm level a crystal is
+  specified to. The host
   sample point could sit anywhere from 60 % to 95 % against the device's
   80 %.
 * **Transceiver.** The MAX33041E handled the data phase at 1, 2, 4, 5 and
@@ -224,13 +229,13 @@ built-in criterion; INFO tests are measurements.
 | transmit, 64-byte FD | 156 frames/s | 875 frames/s |
 | echo round trip | 6.8 ms median | 3.0 ms median |
 
-A saturated 500 kbps bus carries about 3600 eight-byte frames per second;
-typical passenger-car powertrain buses run 40-80 % load. With the
+A saturated 500 kbps bus carries about 4000-4400 eight-byte standard-ID
+frames per second (111 bits plus stuffing); typical passenger-car
+powertrain buses run 40-80 % load, 1600-3500 frames/s. With the
 production driver the 32-frame RX FIFO fills in about 10 ms of bus-rate
 traffic and frames are then lost (the overflow flag is raised reliably,
 so the firmware would at least know). Direct GPIO access with no waits
-gets within a factor of about 1.3 of the bus rate with identical data
-integrity. The nRF9151's hardware SPIM would remove the CPU cost as well;
+reaches 60-75 % of the bus maximum with identical data integrity. The nRF9151's hardware SPIM would remove the CPU cost as well;
 it was not tried because the production pin-parking scheme is built
 around GPIO control of these pins.
 
@@ -258,6 +263,11 @@ and the RX FIFO should be configured as deep as the message RAM allows
   message stays in the FIFO with TXREQ clear and blocks everything queued
   behind it; the driver must reset the FIFO (FRESET) when it sees that
   state. TXATIF was not observed to be set in this condition.
+* **Error counter decay (E1).** TEC read 126 with the partner absent and
+  65 after the following 100-frame burst. The rule is minus one per
+  successful transmission, which predicts 26, so the reading was taken
+  before the burst had fully drained or the burst lost frames; the test
+  shows recovery but was not designed to check the decrement rate.
 
 ### 5.4 Existing firmware
 
@@ -294,7 +304,9 @@ CANL and GND pins, difference computed on the scope and re-computed from
 the raw samples on the host. Whole 1 Mpt records were read over SCPI and
 every single-bit-wide run in the data phase was measured; screenshots and
 the full table are in `can_bench/results/scope/`, scripts in
-`can_bench/scope/`.
+`can_bench/scope/`. Levels are read at 75 % of the bit, the earliest
+sample point in use on either side (board: 80 % nominal and at 2 Mbps,
+75 % at 5 Mbps; adapter: 80 % nominal, 75 % data phase).
 
 | case | bits measured | dominant at the 75 % sample point (min / mean) | recessive | overshoot / undershoot | bit width spread | 10-90 % edge |
 |---|---|---|---|---|---|---|
@@ -317,13 +329,16 @@ What this says:
   dominant-to-recessive transition has a brief undershoot to about
   -0.65 V (a third of the swing, gone within tens of nanoseconds) and a
   ringing of roughly 40 MHz for about 150 ns that appears equally on both
-  lines and cancels in the difference. Neither affects decoding, but the
-  MAX33041E has no slew-rate control and these edges are what the bus
-  cable will radiate: an EMC test on a real harness is the open question,
-  not signal margin.
+  lines and cancels in the difference. Neither affects decoding, but these
+  edges are what the bus cable will radiate. The MAX33041E has a
+  slew-rate-limited mode selected by a 39.2 k resistor from its STBY pin
+  to ground (rising-edge slew 15 V/us instead of 120 V/us) at the cost of
+  the higher FD data rates; if an EMC test on a real harness shows a
+  problem that is the first thing to try, and the board's STBY drive from
+  the MCP2518FD's GPIO0 would need to accommodate it.
 * **What the board receives** from the adapter's transceiver is a slower,
-  larger signal (65 ns edges, 2.1 V), which at 5 Mbps leaves about 130 ns of
-  settled level before the sample point. The board decoded 100 % of it in
+  larger signal (65 ns edges, 2.1 V), which at 5 Mbps leaves about 85 ns of
+  settled level before a 75 % sample point. The board decoded 100 % of it in
   every FD test.
 * **Bit timing:** the board's bit widths scatter ±11 to 13 ns around
   nominal at every rate (the adapter's ±3 ns), which at 5 Mbps is ±5.5 %
@@ -340,9 +355,10 @@ What this says:
 edges each way at 500 kbps): TXD to RXD is 72.5 ns for the recessive-to-
 dominant edge (29 ns TXD to bus, 43 ns bus to RXD) and 60 ns for the
 dominant-to-recessive edge (16 ns plus 43 ns), spread under ±2 ns. The
-13 ns asymmetry means a dominant bit on the bus is 13 ns longer than the
-TXD pulse, 6.5 % of a 5 Mbps bit, within what CAN FD transceivers are
-allowed (the datasheet limit is 120 ns loop delay). These are the numbers
+dominant bit therefore starts 29 ns late on the bus and ends 16 ns late,
+so it is 13 ns shorter than the TXD pulse, 6.5 % of a 5 Mbps bit, within
+what CAN FD transceivers are allowed (the datasheet gives a maximum loop
+delay of 140 ns, typically 70-90 ns). These are the numbers
 to feed a manual TDC offset if the MCP2518FD's automatic measurement is
 ever turned off; with TDC in auto mode, as configured here, the controller
 measures this delay itself on every frame.

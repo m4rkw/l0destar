@@ -18,8 +18,9 @@ software) and `fdcap.py` (screen windows); screenshots via `scope.py`.
 
 ## Differential (CANH - CANL) statistics over the data phase
 
-Single-bit runs found in one 1 Mpt record; "at 75 %" is the value at the
-receiver sample point of a 75-80 % configuration.
+Single-bit runs found in one 1 Mpt record; "at 75 %" is the value 75 % into
+the bit, the earliest sample point in use on either side (board 80 %
+nominal and at 2 Mbps, 75 % at 5 Mbps; adapter 80 % nominal, 75 % data).
 
 | case | bits | dominant at 75 % min / mean / max | recessive at 75 % | overshoot peak | undershoot trough | bit width min / mean / max | rise 10-90 % |
 |---|---|---|---|---|---|---|---|
@@ -46,6 +47,7 @@ TXD/RXD, 0.9 V on the differential.
 | recessive -> dominant (TXD falls) | 26 / 29 / 32 ns | 42 / 43 / 45 ns | 70 / 72.5 / 74 ns |
 | dominant -> recessive (TXD rises) | 16 / 16 / 19 ns | 42 / 43 / 45 ns | 58 / 60 / 61 ns |
 
-(min / mean / max.)  Loop-delay asymmetry 13 ns: a dominant bit on the bus is
-about 13 ns longer than the TXD pulse that produced it.  Screenshots
+(min / mean / max.)  Loop-delay asymmetry 13 ns: the dominant bit starts 29 ns
+late on the bus and ends 16 ns late, so it is about 13 ns shorter than the TXD
+pulse that produced it.  Screenshots
 `scope_loopdelay_fall.png` / `_rise.png`.
