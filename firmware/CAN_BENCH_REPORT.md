@@ -12,15 +12,20 @@ measurements are in `can_bench/results/<timestamp>.json` / `.md`.
 
 ## 1. Summary
 
-The CAN hardware on the v3.1 board is sound. Across roughly 60 000 frames in
-classic and FD modes, at every bit rate from 125 kbps to 1 Mbps nominal and
-1 to 8 Mbps FD data phase, the controller, transceiver, crystal and SPI
-wiring produced no data corruption and no bus errors that were not
-deliberately provoked. The bit-rate tolerance window is symmetric around
-500 kbps to the resolution of the test, so the crystal has no gross error. The transceiver standby / wake
+The CAN hardware on the v3.1 board appears to be sound. Across roughly
+60 000 frames in classic and FD modes, at every bit rate from 125 kbps to
+1 Mbps nominal and 1 to 8 Mbps FD data phase, the controller, transceiver,
+crystal and SPI wiring produced no data corruption and, within the
+transceiver's 5 Mbps rating, no bus errors that were not deliberately
+provoked (the only unprovoked ones were two data-phase bit errors on the
+board's own 8 Mbps transmissions, above that rating). The bit-rate
+tolerance window is symmetric around 500 kbps to the resolution of the
+test, so the crystal has no gross error. The transceiver standby / wake
 path works: bus activity wakes the sleeping controller within the first
 frame and asserts CAN_INT. Rail switching and re-initialisation work
 repeatably.
+
+This has not been tested in a vehicle yet (my car doesn't have CAN).
 
 The deficiencies found are all in software, and all matter for a vehicle:
 
@@ -32,7 +37,7 @@ The deficiencies found are all in software, and all matter for a vehicle:
    saturated), so the board would overflow its 32-frame RX FIFO in well
    under 100 ms unless it filters. Driving the same pins directly (no
    Zephyr GPIO calls, no waits) is 6 to 7 times faster and keeps up with
-   2500 to 3300 frames/s, 60 to 75 % of the bus maximum, with no loss of
+   2500 to 3300 frames/s, 57 to 75 % of the bus maximum, with no loss of
    SPI data integrity.
 2. **Acceptance filtering is essential** for the same reason: with a
    filter set for one ID the controller passed only the matching traffic.
@@ -163,7 +168,7 @@ built-in criterion; INFO tests are measurements.
 | D5 | INFO | classic-mode device with 10 FD frames on the bus: received 0, REC rose to 25, stuff-error diagnostic set, adapter reported >2000 error frames |
 | D6 | PASS | device external loopback through the MAX33041E: 16/16 64-byte frames, 0 mismatches, TEC 0 at 1, 2, 4, 5 and 8 Mbps; internal loopback identical |
 | D7 | INFO | 5 Mbps with TDC off: 50/50 delivered, no data-phase errors (short bus) |
-| E1 | PASS | one-shot with no partner: 6 data frames aborted plus the agent's own report frame (7 x 8 = TEC 56), ACK-error diagnostic; auto-retry: frame delivered the moment the partner returned, TEC had reached 126 (TXWARN) and read 65 after the following 100-frame burst (see 5.3) |
+| E1 | PASS | one-shot with no partner: 6 data frames aborted plus the agent's own report frame (7 x 8 = TEC 56), ACK-error diagnostic; auto-retry: frame delivered the moment the partner returned; TEC had saturated at 128 (error-passive) and read 126 after two deliveries, then 65 after the following 100-frame burst (see 5.3) |
 | E2 | PASS | 400 same-ID frames from each end at once: 0 collisions in the data field, no bus-off reached (see section 7); device kept responding |
 | E3 | PASS | listen-only device: adapter reported ACK errors, device sent nothing; 3 frames counted only after the adapter went error-passive (passive error flags) |
 | E4 | PASS | filter 0x123: 20/20 matching frames received, 40 non-matching rejected; accept-all restored 20/20 |
@@ -232,10 +237,10 @@ built-in criterion; INFO tests are measurements.
 A saturated 500 kbps bus carries about 4000-4400 eight-byte standard-ID
 frames per second (111 bits plus stuffing); typical passenger-car
 powertrain buses run 40-80 % load, 1600-3500 frames/s. With the
-production driver the 32-frame RX FIFO fills in about 10 ms of bus-rate
+production driver the 32-frame RX FIFO fills in 8 to 9 ms of bus-rate
 traffic and frames are then lost (the overflow flag is raised reliably,
 so the firmware would at least know). Direct GPIO access with no waits
-reaches 60-75 % of the bus maximum with identical data integrity. The nRF9151's hardware SPIM would remove the CPU cost as well;
+reaches 57-75 % of the bus maximum with identical data integrity. The nRF9151's hardware SPIM would remove the CPU cost as well;
 it was not tried because the production pin-parking scheme is built
 around GPIO control of these pins.
 
@@ -263,11 +268,15 @@ and the RX FIFO should be configured as deep as the message RAM allows
   message stays in the FIFO with TXREQ clear and blocks everything queued
   behind it; the driver must reset the FIFO (FRESET) when it sees that
   state. TXATIF was not observed to be set in this condition.
-* **Error counter decay (E1).** TEC read 126 with the partner absent and
-  65 after the following 100-frame burst. The rule is minus one per
-  successful transmission, which predicts 26, so the reading was taken
-  before the burst had fully drained or the burst lost frames; the test
-  shows recovery but was not designed to check the decrement rate.
+* **Error counter decay (E1).** With the partner absent TEC climbed in
+  steps of 8 from 56 and saturated at 128, error-passive (ACK errors do
+  not increment further there); the first read after the partner returned
+  showed 126, two successful frames later. After the following 100-frame
+  burst it read 65. The rule is minus one per successful transmission,
+  which predicts 26, so the reading was taken before the burst had fully
+  drained or the burst lost frames; the test shows entry into and
+  recovery from error-passive but was not designed to check the decrement
+  rate.
 
 ### 5.4 Existing firmware
 
@@ -332,8 +341,10 @@ What this says:
   lines and cancels in the difference. Neither affects decoding, but these
   edges are what the bus cable will radiate. The MAX33041E has a
   slew-rate-limited mode selected by a 39.2 k resistor from its STBY pin
-  to ground (rising-edge slew 15 V/us instead of 120 V/us) at the cost of
-  the higher FD data rates; if an EMC test on a real harness shows a
+  to ground (rising-edge slew 15 V/us instead of 120 V/us, about 100 ns
+  edges). The datasheet states no data-rate restriction for it, but 100 ns
+  edges in a 200 ns bit would leave little margin at 5 Mbps, so expect it
+  to cost the highest FD rates; if an EMC test on a real harness shows a
   problem that is the first thing to try, and the board's STBY drive from
   the MCP2518FD's GPIO0 would need to accommodate it.
 * **What the board receives** from the adapter's transceiver is a slower,
@@ -370,8 +381,8 @@ Not measured with the scope: the SPI edges through the series resistors.
 * Signal integrity on a real harness: the measurements above are on a
   short two-node bus; stub reflections, ground offset between ECUs and
   emissions from the fast edges need the vehicle wiring or an EMC bench.
-* Crystal accuracy and drift. The ±2.5 % symmetric tolerance window bounds
-  the error to well under 0.5 %, but a frequency counter or a long-run
+* Crystal accuracy and drift. The tolerance test only resolves about
+  ±0.3 % relative to the adapter's clock; a frequency counter or a long-run
   timestamp comparison is needed for ppm figures, and temperature was not
   varied.
 * Propagation delay of the transceiver (for TDC settings on long buses);
