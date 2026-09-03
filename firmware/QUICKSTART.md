@@ -10,29 +10,47 @@ The fix enters SYSTEM OFF on cable removal, dropping quiescent draw to
 ~0.3 uA. On a battery-backed tracker that 2 mA is the difference between
 weeks and days of standby, so this step is not optional.
 
-The fix is now upstream - merged as
-<https://github.com/makerdiary/nrf9151-connectkit/pull/19>, so no patch is
-needed any more.
+The first part of the fix is upstream, merged as
+<https://github.com/makerdiary/nrf9151-connectkit/pull/19>. It is not
+complete on its own: #19 discovered that `sys_poweroff()` needs SEVONPEND
+cleared first or the nRF52820 spins at ~2 mA instead of powering down, but
+applied that only to the USB-unplug path. Two other power-off paths (the
+once-a-second charger poll and the shell `shutdown` command) still call the
+bare poweroff, and the charger poll can win the race after an unplug and hang
+the chip in exactly the state #19 was meant to cure. The follow-up that
+routes all three through one helper lives in
+`ifmcu/patches/0001-ifmcu-system-off-sevonpend.patch` until it is merged
+upstream; `ifmcu/build.sh` applies it automatically.
 
-**But it does not reach your board on its own.** The IF MCU firmware is not
+**None of this reaches your board on its own.** The IF MCU firmware is not
 updated automatically, and it is not touched by `./flash.sh` (which only
 programs the nRF9151). Every Connect Kit currently shipping - and every
 prebuilt image in the latest Makerdiary release, v2.0.0 - was built before
-the fix landed, so a new board always needs this done once, by hand.
+#19 landed, so a new board always needs this done once, by hand.
 
-Build the current upstream IF MCU firmware (requires NCS v3.4.0):
+Build the patched IF MCU firmware (requires NCS v3.4.0):
 
 ```bash
 ifmcu/build.sh
 ```
 
 `ifmcu/build.sh` clones `makerdiary/nrf9151-connectkit` into
-`ifmcu/.makerdiary-repo` on first run. If you already have that clone from
-before the merge, update it first:
+`ifmcu/.makerdiary-repo` on first run, applies `ifmcu/patches/*.patch` (each
+patch once; it refuses to build if a patch no longer applies), and builds.
+If you already have that clone from before #19 was merged, update it first:
 
 ```bash
 git -C ifmcu/.makerdiary-repo pull
 ```
+
+To apply the patch to your own checkout of the Makerdiary repo instead:
+
+```bash
+git -C /path/to/nrf9151-connectkit apply /path/to/firmware/ifmcu/patches/0001-ifmcu-system-off-sevonpend.patch
+```
+
+Once the follow-up is merged upstream, delete the patch file; `build.sh`
+will then build the clone unmodified.
 
 Flash via UF2 bootloader:
 

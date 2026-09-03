@@ -1,0 +1,182 @@
+diff --git a/applications/ifmcu_firmware/CMakeLists.txt b/applications/ifmcu_firmware/CMakeLists.txt
+index fc582cc..9884740 100644
+--- a/applications/ifmcu_firmware/CMakeLists.txt
++++ b/applications/ifmcu_firmware/CMakeLists.txt
+@@ -17,6 +17,7 @@ target_sources(app PRIVATE
+   src/main.c
+   src/bq25180.c
+   src/ifmcu_dap.c
++  src/ifmcu_power.c
+   src/ifmcu_shell.c
+   src/ifmcu_uart_bridge.c
+   src/led_state.c
+diff --git a/applications/ifmcu_firmware/src/bq25180.c b/applications/ifmcu_firmware/src/bq25180.c
+index 95bfe4c..8727674 100644
+--- a/applications/ifmcu_firmware/src/bq25180.c
++++ b/applications/ifmcu_firmware/src/bq25180.c
+@@ -9,9 +9,9 @@
+ #include <zephyr/device.h>
+ #include <zephyr/drivers/i2c.h>
+ #include <zephyr/drivers/charger.h>
+-#include <zephyr/sys/poweroff.h>
+ #include <zephyr/sys/util.h>
+ 
++#include "ifmcu_power.h"
+ #include "led_state.h"
+ #include "bq25180.h"
+ 
+@@ -263,9 +263,8 @@ static void charging_dwork_handler(struct k_work *work)
+ 	}
+ 
+ 	if (val0.online == CHARGER_ONLINE_OFFLINE) {
+-		set_all_leds_off();
+ 		/* Put the chip in SYSTEM OFF mode, to be rebooted when USB is connected. */
+-		sys_poweroff();
++		ifmcu_system_off();
+ 	} else {
+ 		set_pgood_led_state(LED_STATE_ON);
+ 		if (val1.status == CHARGER_STATUS_CHARGING) {
+diff --git a/applications/ifmcu_firmware/src/ifmcu_power.c b/applications/ifmcu_firmware/src/ifmcu_power.c
+new file mode 100644
+index 0000000..8ad3528
+--- /dev/null
++++ b/applications/ifmcu_firmware/src/ifmcu_power.c
+@@ -0,0 +1,25 @@
++/*
++ * Copyright (c) 2016-2026 Makerdiary <https://makerdiary.com>
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include <zephyr/kernel.h>
++#include <zephyr/sys/poweroff.h>
++#include <cmsis_core.h>
++
++#include "led_state.h"
++#include "ifmcu_power.h"
++
++void ifmcu_system_off(void)
++{
++	set_all_leds_off();
++
++	/* Zephyr sets SEVONPEND at boot.  With it set, any pending interrupt
++	 * makes the WFE inside nrf_power_system_off() return immediately, so
++	 * the CPU never sleeps and the SYSTEMOFF request never takes effect:
++	 * the chip spins at ~2 mA instead of powering down.  Clear it first. */
++	SCB->SCR &= ~SCB_SCR_SEVONPEND_Msk;
++	__DSB();
++	sys_poweroff();
++}
+diff --git a/applications/ifmcu_firmware/src/ifmcu_power.h b/applications/ifmcu_firmware/src/ifmcu_power.h
+new file mode 100644
+index 0000000..2a2adeb
+--- /dev/null
++++ b/applications/ifmcu_firmware/src/ifmcu_power.h
+@@ -0,0 +1,26 @@
++/*
++ * Copyright (c) 2016-2026 Makerdiary <https://makerdiary.com>
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#ifndef _IFMCU_POWER_H_
++#define _IFMCU_POWER_H_
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++/**
++ * @brief Turn every LED off and put the nRF52820 into SYSTEM OFF.
++ *
++ * VBUS detection or the DFU/RST button wakes the chip again, rebooting it
++ * with full functionality.  Never returns.
++ */
++void ifmcu_system_off(void);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* _IFMCU_POWER_H_ */
+diff --git a/applications/ifmcu_firmware/src/ifmcu_shell.c b/applications/ifmcu_firmware/src/ifmcu_shell.c
+index cdb05e2..242f2b1 100644
+--- a/applications/ifmcu_firmware/src/ifmcu_shell.c
++++ b/applications/ifmcu_firmware/src/ifmcu_shell.c
+@@ -8,7 +8,6 @@
+ #include <stdlib.h>
+ #include <zephyr/shell/shell.h>
+ #include <zephyr/sys/reboot.h>
+-#include <zephyr/sys/poweroff.h>
+ #include <zephyr/drivers/gpio.h>
+ #include <zephyr/drivers/sensor.h>
+ #include <zephyr/settings/settings.h>
+@@ -19,6 +18,7 @@
+ #include <ncs_commit.h>
+ 
+ #include "bq25180.h"
++#include "ifmcu_power.h"
+ #include "led_state.h"
+ 
+ #include <zephyr/logging/log.h>
+@@ -671,9 +671,8 @@ static int cmd_reset(const struct shell *sh, size_t argc, char **argv)
+ 
+ static int cmd_shutdown(const struct shell *sh, size_t argc, char **argv)
+ {
+-	set_all_leds_off();
+ 	/* Put the chip in SYSTEM OFF mode, to be rebooted when USB is connected. */
+-	sys_poweroff();
++	ifmcu_system_off();
+ 
+ 	return 0;
+ }
+diff --git a/applications/ifmcu_firmware/src/main.c b/applications/ifmcu_firmware/src/main.c
+index acd64a5..54678d0 100644
+--- a/applications/ifmcu_firmware/src/main.c
++++ b/applications/ifmcu_firmware/src/main.c
+@@ -15,7 +15,6 @@
+ #include <zephyr/sys/byteorder.h>
+ #include <zephyr/usb/bos.h>
+ #include <zephyr/usb/msos_desc.h>
+-#include <zephyr/sys/poweroff.h>
+ #include <hal/nrf_power.h>
+ #include <zephyr/dap/dap_link.h>
+ 
+@@ -25,16 +24,9 @@
+ #include <zephyr/logging/log.h>
+ LOG_MODULE_REGISTER(main);
+ 
+-#include "led_state.h"
++#include "ifmcu_power.h"
+ #include "msosv2.h"
+ 
+-static void enter_system_off(void)
+-{
+-	SCB->SCR &= ~SCB_SCR_SEVONPEND_Msk;
+-	__DSB();
+-	sys_poweroff();
+-}
+-
+ DAP_LINK_CONTEXT_DEFINE(ifmcu_dap_ctx, DEVICE_DT_GET_ONE(zephyr_swdp_gpio));
+ 
+ const struct device *const uart_bridge = DEVICE_DT_GET_ONE(zephyr_uart_bridge);
+@@ -56,8 +48,7 @@ static void ifmcu_usbd_msg_cb(struct usbd_context *const ctx, const struct usbd_
+ 		if (usbd_disable(ctx)) {
+ 			LOG_ERR("Failed to disable device support");
+ 		}
+-		set_all_leds_off();
+-		enter_system_off();
++		ifmcu_system_off();
+ 		break;
+ 
+ 	case USBD_MSG_RESUME:
+@@ -123,8 +114,7 @@ int main(void)
+ 	}
+ 
+ 	if (!nrf_power_usbregstatus_vbusdet_get(NRF_POWER)) {
+-		set_all_leds_off();
+-		enter_system_off();
++		ifmcu_system_off();
+ 	}
+ 
+ 	ret = usbd_enable(ifmcu_usbd);

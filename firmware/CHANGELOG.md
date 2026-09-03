@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### IF MCU: SEVONPEND fix on every power-off path (`ifmcu/patches/`)
+- makerdiary/nrf9151-connectkit#19 put the Connect Kit's nRF52820 into
+SYSTEM OFF on USB unplug and found that `sys_poweroff()` needs SEVONPEND
+cleared first, but applied that only to the unplug path. The charger poll
+and the shell `shutdown` still called the bare poweroff, and the poll can win
+the race after an unplug (the BQ25180 drops VIN-good at a higher voltage than
+the nRF52820's VBUS detect) and hang the chip at ~2 mA with the fixed path
+queued behind it on the same workqueue. `ifmcu/patches/0001-ifmcu-system-off-
+sevonpend.patch` routes all three sites through one helper; `ifmcu/build.sh`
+now applies `ifmcu/patches/*.patch` before building. Drop the patch once it is
+merged upstream. See QUICKSTART.md.
+
 ### K-line vehicle init at boot (`CONFIG_APP_KLINE_INIT_AT_BOOT`)
 - **`kline_vehicle_init()`** in `hw_kline.c`: opens a diagnostic session with
 the vehicle's ECU over K and reports the outcome on the console, then the
