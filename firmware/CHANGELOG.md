@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### K-line vehicle init at boot (`CONFIG_APP_KLINE_INIT_AT_BOOT`)
+- **`kline_vehicle_init()`** in `hw_kline.c`: opens a diagnostic session with
+the vehicle's ECU over K and reports the outcome on the console, then the
+tracker starts as normal.  Tries the ISO 9141-2 / ISO 14230-4 5-baud init
+first (address 0x33, sync byte, key bytes, acknowledge) and, if nothing
+answers, the ISO 14230-4 fast init (25 ms wake-up pulse plus one
+StartCommunication request) on the OBD functional address, then the same
+swept across every physical ECU address 0x01-0xFE for JDM ECUs that only
+answer the maker's tester, then the 5-baud init swept the same way.  No
+other request is sent; the session is left
+to time out on the ECU's side.  Bit-banged receive with start-bit detection,
+framing check and KWP2000 frame parsing (header formats with and without
+addresses, explicit length byte, checksum).  Every driven bit is read back
+through the transceiver so a non-driving transmitter is reported as an echo
+failure rather than mistaken for a silent ECU.  See ISO9141.md.
+
 ### LTE TX power / brown-out test mode (`src/lte_power_test.c`)
 - **New bench rig, `CONFIG_APP_LTE_POWER_TEST`** (build with
 `LTE_TEST=1 BUILD_SUBDIR=build_lte_test ./build.sh`). Replaces the tracker:

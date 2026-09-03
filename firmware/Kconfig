@@ -95,6 +95,25 @@ config APP_KLINE_TEST
 	  K-line to verify the two transceivers talk to each other across the
 	  wire.  Bench bring-up aid; leave off in production.
 
+config APP_KLINE_INIT_AT_BOOT
+	bool "Open an ISO-9141 / KWP2000 session with the vehicle at boot"
+	default n
+	depends on APP_BOARD_HAS_KLINE
+	help
+	  At startup, power the K-line transceiver and try to open a
+	  diagnostic session with the vehicle: first the ISO 9141-2 /
+	  ISO 14230-4 5-baud init (address 0x33, sync byte, key bytes), and
+	  if nothing answers, the ISO 14230-4 fast init (25 ms wake-up pulse
+	  plus one StartCommunication request), first on the OBD functional
+	  address and then swept across every physical ECU address, and
+	  finally the 5-baud init swept the same way.  No other request is
+	  sent;
+	  the result — which init worked, what protocol answered, or where
+	  the handshake stopped — is printed on the console, sent as an
+	  alert as soon as the modem is up (priority 1 if a session opened,
+	  0 otherwise), and the tracker then starts as normal.  In-vehicle bring-up aid; leave off in
+	  production.
+
 config APP_BOARD_TEST
 	bool "Run the interactive board bring-up test instead of the tracker"
 	default n

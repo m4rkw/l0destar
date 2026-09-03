@@ -793,6 +793,45 @@ static void do_ignition_sleep(void)
 /* ========================================================================= */
 /*  main                                                                     */
 /* ========================================================================= */
+#if IS_ENABLED(CONFIG_APP_KLINE_INIT_AT_BOOT)
+static int kline_boot_res = -ENODATA;
+static struct kline_session kline_boot_sess;
+
+/* Push the boot-time K-line result as an alert straight away — before the
+ * power-on FOTA check, which may well swap this image out and reboot.  The
+ * queue is RAM, so a queued-but-unsent alert would go with it. */
+static void kline_boot_alert(void)
+{
+    char msg[110];
+
+    if (kline_boot_res == 0) {
+        snprintf(msg, sizeof(msg),
+                 "K-line: session opened via %s, ECU 0x%02X KB %02X %02X (%s)",
+                 kline_boot_sess.how, kline_boot_sess.ecu,
+                 kline_boot_sess.kb1, kline_boot_sess.kb2,
+                 kline_boot_sess.protocol);
+        alert_enqueue(msg, 1);
+    } else {
+        snprintf(msg, sizeof(msg),
+                 "K-line: no ECU answered any init (slow/fast, functional + "
+                 "0x01-0xFE sweeps, %s) err %d",
+                 IS_ENABLED(CONFIG_APP_L_SEND_ENABLED) ? "K+L" : "K only",
+                 kline_boot_res);
+        alert_enqueue(msg, 0);
+    }
+    for (int i = 0; i < 5; i++) {
+        if (alert_send() == 1) {
+            LOG_INF("K-line result alert sent");
+            return;
+        }
+        LOG_WRN("K-line result alert not sent — retry %d/5 in 10 s", i + 1);
+        transport_close();
+        k_msleep(10000);
+    }
+    LOG_ERR("K-line result alert still queued — will ride the next send");
+}
+#endif
+
 int main(void)
 {
     LOG_INF("=== l0destar firmware boot (v%s, board %s) ===",
@@ -902,6 +941,14 @@ int main(void)
     for (;;) { k_msleep(10000); }
 #endif
 
+#if IS_ENABLED(CONFIG_APP_KLINE_INIT_AT_BOOT)
+    /* One full pass at opening a session with the vehicle (5-baud, fast
+     * init, both address sweeps — up to ~15 min), reported on the console
+     * now and as an alert once the modem is up.  The tracker then carries
+     * on as normal whatever the outcome. */
+    kline_boot_res = kline_vehicle_init_ex(&kline_boot_sess);
+#endif
+
     LOG_INF("ignition=%s battery=%.2fV",
             ignition_read() == 0 ? "ON" : "OFF",
             (double)battery_read_voltage());
@@ -932,6 +979,10 @@ int main(void)
         transport_open();
         transport_teardown();
     }
+
+#if IS_ENABLED(CONFIG_APP_KLINE_INIT_AT_BOOT)
+    kline_boot_alert();
+#endif
 
     gnss_start();
 

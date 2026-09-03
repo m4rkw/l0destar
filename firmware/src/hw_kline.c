@@ -195,6 +195,575 @@ static int kline_stream(const char *dir, uint8_t tx_pin, uint8_t rx_pin)
 	return (ok == n) ? 0 : -EIO;
 }
 
+/* -- ISO 9141-2 / ISO 14230-4 init -------------------------------------------
+ *
+ * Two ways to open a K-line session, tried in turn; neither sends a
+ * diagnostic request beyond what the init itself consists of.
+ *
+ * Slow (5-baud) init — ISO 9141-2 and ISO 14230-4: the tester sends the
+ * functional address 0x33 as one 8N1 byte at 5 baud (200 ms per bit, 2 s
+ * in all) on K, and on L where the board lets it.  The ECU answers at
+ * 10.4 kbaud with the sync byte 0x55 and two key bytes; the tester echoes
+ * the inverted second key byte and the ECU acknowledges with the inverted
+ * address (0xCC).
+ *
+ * Fast init — ISO 14230-4 only, and the only one most KWP2000 ECUs from
+ * about 2000 on (Toyota included) respond to: a 25 ms low / 25 ms high
+ * wake-up pulse on K, immediately followed by the StartCommunication
+ * request (C1 33 F1 81 66).  The ECU's positive response carries its
+ * address and the same two key bytes.  That one frame is unavoidable —
+ * it *is* the init — and nothing follows it: the session is left to time
+ * out on the ECU's side (P3max, 5 s) once the rails drop.
+ *
+ * Timing windows (ISO 9141-2 figure 2 / ISO 14230-2 tables 3 and 4):
+ *   W5    bus idle before the address            >= 300 ms
+ *   W1    end of address -> sync byte            60-300 ms
+ *   W2    sync -> KW1                            5-20 ms
+ *   W3    KW1 -> KW2                             0-20 ms
+ *   W4    KW2 -> ~KW2, and ~KW2 -> ~addr         25-50 ms
+ *   Tidle bus idle before a fast init            >= 300 ms (after a failed init)
+ *   Tinil wake-up low                            25 ms
+ *   Twup  wake-up start -> first request byte    50 ms
+ *   P4    tester inter-byte gap                  5-20 ms
+ *   P2    request end -> response start          25-50 ms
+ *   P1    ECU inter-byte gap                     0-20 ms
+ *
+ * Bit-banged like the rest of this file.  The TJA1027T (v3.0+) has no TXD
+ * dominant time-out, only an initial-TXD-low check on leaving sleep, so it
+ * will hold the bus down for the 200 ms address bits; the L9637D always did.
+ * RX mirrors the bus on both parts, so every bit we drive is read back and a
+ * transmitter that is not actually driving the wire shows up as an echo
+ * failure rather than as a silent ECU.  (The mirror is of the transceiver's
+ * own bus pin, though, which idles high off its internal pull-up — an open
+ * K wire is indistinguishable from an idle vehicle bus here.)
+ */
+
+#define KLINE_INIT_ADDR     0x33	/* OBD functional address */
+#define KLINE_TESTER_ADDR   0xF1
+#define KLINE_SLOW_BIT_MS   200
+#define KLINE_SYNC_BYTE     0x55
+#define KLINE_SID_START_COMM 0x81
+#define KLINE_FRAME_MAX     16		/* header + up to 12 data + checksum */
+
+/* Wait up to timeout_ms for a start bit, then clock in one 8N1 byte at the
+ * K-line bit rate.  -ETIMEDOUT if nothing arrived, -EBADMSG on a framing
+ * error (stop bit low).  The byte itself is written in either success case. */
+static int kline_rx_byte(uint32_t timeout_ms, uint8_t *out)
+{
+	int64_t deadline = k_uptime_get() + timeout_ms;
+
+	while (gpio_pin_get(hw_gpio0, PIN_K1_RX)) {
+		if (k_uptime_get() >= deadline) {
+			return -ETIMEDOUT;
+		}
+	}
+
+	unsigned int key = irq_lock();
+	uint8_t v = 0;
+
+	k_busy_wait(KLINE_BIT_US + KLINE_BIT_US / 2);	/* middle of bit 0 */
+	for (int i = 0; i < 8; i++) {
+		v |= (gpio_pin_get(hw_gpio0, PIN_K1_RX) & 1) << i;
+		k_busy_wait(KLINE_BIT_US);
+	}
+	int stop = gpio_pin_get(hw_gpio0, PIN_K1_RX);
+
+	irq_unlock(key);
+	*out = v;
+	return stop ? 0 : -EBADMSG;
+}
+
+/* Send one 8N1 byte at the K-line bit rate with interrupts held off for the
+ * ~1 ms it takes, and return what the bus echoed back. */
+static uint8_t kline_tx_byte(uint8_t tx)
+{
+	unsigned int key = irq_lock();
+	uint8_t rx = kline_tx_rx_byte(tx);
+
+	irq_unlock(key);
+	return rx;
+}
+
+/* Hold the line at `level` for one 5-baud bit and count the milliseconds
+ * the bus disagreed with it (after a 2 ms settle).  The L pulldown FET is
+ * asserted for a low bit when use_l is set. */
+static int kline_slow_bit(int level, bool use_l)
+{
+	int bad = 0;
+
+	gpio_pin_set(hw_gpio0, PIN_K1_TX, level);
+	if (use_l) {
+		kline_l_send(!level);
+	}
+	int64_t t0 = k_uptime_get();
+
+	for (int64_t t = 0; t < KLINE_SLOW_BIT_MS; t = k_uptime_get() - t0) {
+		k_msleep(1);
+		if (t >= 2 && (gpio_pin_get(hw_gpio0, PIN_K1_RX) & 1) != level) {
+			bad++;
+		}
+	}
+	return bad;
+}
+
+/* Send `addr` at 5 baud, LSB first, framed with start and stop bits.
+ * bad_low/bad_high receive the milliseconds where the bus did not follow
+ * TX, split by driven level. */
+static void kline_slow_addr(uint8_t addr, bool use_l, int *bad_low, int *bad_high)
+{
+	int lo = 0, hi = 0;
+
+	for (int i = 0; i < 10; i++) {
+		int level = (i == 0) ? 0 : (i == 9) ? 1 : (addr >> (i - 1)) & 1;
+		int bad = kline_slow_bit(level, use_l);
+
+		if (level) {
+			hi += bad;
+		} else {
+			lo += bad;
+		}
+	}
+	if (use_l) {
+		kline_l_send(false);
+	}
+	*bad_low = lo;
+	*bad_high = hi;
+}
+
+/* Key bytes as the ECU sends them: KB1 then KB2.  ISO 14230-4 fixes KB2 at
+ * 0x8F with KB1 describing the header formats supported; ISO 9141-2 uses
+ * 08 08 or 94 94. */
+static const char *kline_kw_name(uint8_t kb1, uint8_t kb2)
+{
+	if (kb1 == 0x08 && kb2 == 0x08) {
+		return "ISO 9141-2";
+	}
+	if (kb1 == 0x94 && kb2 == 0x94) {
+		return "ISO 9141-2 (KW 94 94)";
+	}
+	if (kb2 == 0x8F) {
+		return "ISO 14230-4 KWP2000";
+	}
+	return "unrecognised key bytes";
+}
+
+/* Confirm the bus sits high for `ms` and report how long it did not. */
+static int kline_wait_idle(int ms)
+{
+	int busy = 0;
+
+	for (int i = 0; i < ms; i++) {
+		if (!(gpio_pin_get(hw_gpio0, PIN_K1_RX) & 1)) {
+			busy++;
+		}
+		k_msleep(1);
+	}
+	return busy;
+}
+
+/* Whether the L line can be driven for the 5-baud address: the pulldown
+ * gate must be permitted on this board and, where the line can be sensed,
+ * must not be shorted. */
+static bool kline_can_use_l(void)
+{
+	if (PIN_L_SEND < 0 || kline_l_send(false) != 0) {
+		return false;
+	}
+	int p = kline_l_line_probe(NULL, NULL);
+
+	return p == 0 || p == -ENODEV;
+}
+
+/* 5-baud init to `addr`.  0 with the key bytes filled in, -ETIMEDOUT if
+ * nothing answered at all (the "try something else" case), other negative
+ * errno on a malformed handshake.  quiet suppresses everything but replies,
+ * for the address sweep. */
+static int kline_slow_init(uint8_t addr, bool use_l, bool quiet,
+			   uint8_t *kb1, uint8_t *kb2)
+{
+	if (!quiet) {
+		printk("slow init: address 0x%02X on %s\n",
+		       addr, use_l ? "K+L" : "K only");
+	}
+
+	/* The address, 2 s at 5 baud, watching the echo. */
+	int bad_low = 0, bad_high = 0;
+
+	kline_slow_addr(addr, use_l, &bad_low, &bad_high);
+	if (bad_low && !quiet) {
+		printk("  echo: bus stayed high for %d ms of the low bits — "
+		       "transceiver not driving K\n", bad_low);
+	}
+	if (bad_high && !quiet) {
+		printk("  echo: bus low for %d ms of the high bits — "
+		       "K held down externally\n", bad_high);
+	}
+
+	/* W1: sync byte.  The spec allows 300 ms; give it a little slack. */
+	uint8_t sync = 0, ack = 0;
+	int64_t t_addr = k_uptime_get();
+	int r = kline_rx_byte(400, &sync);
+	int64_t w1 = k_uptime_get() - t_addr;
+
+	if (r == -ETIMEDOUT) {
+		if (!quiet) {
+			printk("  no sync byte within %lld ms\n", w1);
+		}
+		return -ETIMEDOUT;
+	}
+	printk("  0x%02X: sync 0x%02X after %lld ms%s\n", addr, sync, w1,
+	       r == -EBADMSG ? " (framing error)" : "");
+	if (sync != KLINE_SYNC_BYTE) {
+		printk("  expected 0x%02X — baud rate mismatch or noise\n",
+		       KLINE_SYNC_BYTE);
+		return -EPROTO;
+	}
+
+	/* W2/W3: key bytes, each due within 20 ms. */
+	if (kline_rx_byte(50, kb1) == -ETIMEDOUT) {
+		printk("  no KB1 after sync\n");
+		return -EPROTO;
+	}
+	if (kline_rx_byte(50, kb2) == -ETIMEDOUT) {
+		printk("  no KB2 (KB1=0x%02X)\n", *kb1);
+		return -EPROTO;
+	}
+	printk("  key bytes: KB1=0x%02X KB2=0x%02X — %s\n",
+	       *kb1, *kb2, kline_kw_name(*kb1, *kb2));
+
+	/* W4: send back ~KB2 after 25-50 ms; the ECU answers with ~address. */
+	k_msleep(30);
+	uint8_t inv = (uint8_t)~*kb2;
+	uint8_t echo = kline_tx_byte(inv);
+
+	if (echo != inv) {
+		printk("  warning: ~KB2 0x%02X echoed as 0x%02X\n", inv, echo);
+	}
+	if (kline_rx_byte(60, &ack) == -ETIMEDOUT) {
+		printk("  no address acknowledge after ~KB2\n");
+		return -EPROTO;
+	}
+	printk("  ack: 0x%02X (expect 0x%02X)\n", ack, (uint8_t)~addr);
+	return ack == (uint8_t)~addr ? 0 : -EPROTO;
+}
+
+/* 5-baud sweep: the slow init to every address 0x01..0xFE bar our own and
+ * the functional one already tried, stopping at the first ECU that completes
+ * the handshake.  ~3 s per address, so up to 13 minutes.  Any reply at all
+ * is reported and the sweep carries on past a broken handshake. */
+static int kline_slow_init_scan(bool use_l, uint8_t *ecu, uint8_t *kb1,
+				uint8_t *kb2)
+{
+	int replies = 0;
+
+	printk("scan: 5-baud init 0x01..0xFE on %s\n", use_l ? "K+L" : "K only");
+	for (int t = 0x01; t <= 0xFE; t++) {
+		if (t == KLINE_INIT_ADDR || t == KLINE_TESTER_ADDR) {
+			continue;
+		}
+		if ((t & 0x0F) == 0) {
+			printk("  ...0x%02X\n", t);
+		}
+		/* W5 before each address. */
+		if (kline_wait_idle(300)) {
+			printk("  0x%02X: bus busy before init — waiting\n", t);
+			kline_wait_idle(300);
+		}
+
+		int r = kline_slow_init((uint8_t)t, use_l, true, kb1, kb2);
+
+		if (r == 0) {
+			*ecu = (uint8_t)t;
+			return 0;
+		}
+		if (r != -ETIMEDOUT) {
+			replies++;
+		}
+	}
+	printk("scan: no session opened (%d address%s replied)\n",
+	       replies, replies == 1 ? "" : "es");
+	return replies ? -EPROTO : -ETIMEDOUT;
+}
+
+/* Receive one KWP2000 frame: format byte, optional target/source, optional
+ * length byte, data, checksum.  Returns the number of bytes stored (header
+ * through checksum) or a negative errno.  first_ms bounds the wait for the
+ * first byte; later bytes must follow within P1max (20 ms, plus slack). */
+static int kline_rx_frame(uint8_t *buf, int max, uint32_t first_ms)
+{
+	int n = 0;
+
+	if (kline_rx_byte(first_ms, &buf[0]) == -ETIMEDOUT) {
+		return -ETIMEDOUT;
+	}
+	n = 1;
+
+	int hdr = 1 + ((buf[0] & 0xC0) ? 2 : 0);	/* target + source present? */
+	int len = buf[0] & 0x3F;
+
+	if (len == 0) {
+		hdr++;					/* explicit length byte */
+	}
+	while (n < hdr) {
+		if (n >= max) {
+			return -EMSGSIZE;
+		}
+		if (kline_rx_byte(40, &buf[n]) == -ETIMEDOUT) {
+			return -EPROTO;			/* frame stopped short */
+		}
+		n++;
+	}
+	if (len == 0) {
+		len = buf[hdr - 1];
+	}
+
+	int total = hdr + len + 1;			/* + checksum */
+
+	if (total > max) {
+		return -EMSGSIZE;
+	}
+	while (n < total) {
+		if (kline_rx_byte(40, &buf[n]) == -ETIMEDOUT) {
+			return -EPROTO;
+		}
+		n++;
+	}
+
+	uint8_t cs = 0;
+
+	for (int i = 0; i < total - 1; i++) {
+		cs += buf[i];
+	}
+	if (cs != buf[total - 1]) {
+		printk("  checksum 0x%02X, computed 0x%02X\n", buf[total - 1], cs);
+		return -EBADMSG;
+	}
+	return total;
+}
+
+/* Fast init: wake-up pulse plus StartCommunication to `target`, addressed
+ * functionally (fmt 0xC1, the OBD way) or physically (fmt 0x81, how Toyota's
+ * own tester talks to each ECU on the SIL line).  0 with the key bytes and
+ * the responding ECU's address filled in on a positive response.  quiet
+ * suppresses everything but replies, for the address scan. */
+static int kline_fast_init(uint8_t fmt, uint8_t target, uint32_t first_ms,
+			   bool quiet, uint8_t *ecu, uint8_t *kb1, uint8_t *kb2)
+{
+	const uint8_t req[] = {
+		fmt | 1,			/* 1 data byte */
+		target, KLINE_TESTER_ADDR,
+		KLINE_SID_START_COMM,
+	};
+	uint8_t cs = 0;
+
+	for (size_t i = 0; i < sizeof(req); i++) {
+		cs += req[i];
+	}
+	if (!quiet) {
+		printk("fast init: 25 ms wake-up then StartCommunication "
+		       "%02X %02X %02X %02X %02X (%s address 0x%02X)\n",
+		       req[0], req[1], req[2], req[3], cs,
+		       (fmt & 0xC0) == 0xC0 ? "functional" : "physical", target);
+	}
+
+	/* Tinil / Twup, then the request straight after the high half. */
+	int echo_bad = 0;
+
+	gpio_pin_set(hw_gpio0, PIN_K1_TX, 0);
+	k_busy_wait(25000);
+	echo_bad += gpio_pin_get(hw_gpio0, PIN_K1_RX) ? 1 : 0;
+	gpio_pin_set(hw_gpio0, PIN_K1_TX, 1);
+	k_busy_wait(25000);
+	echo_bad += gpio_pin_get(hw_gpio0, PIN_K1_RX) ? 0 : 1;
+	if (echo_bad && !quiet) {
+		printk("  echo: bus did not follow the wake-up pulse\n");
+	}
+
+	for (size_t i = 0; i <= sizeof(req); i++) {
+		uint8_t b = (i < sizeof(req)) ? req[i] : cs;
+		uint8_t e = kline_tx_byte(b);
+
+		if (e != b && !quiet) {
+			printk("  echo: sent 0x%02X read back 0x%02X\n", b, e);
+		}
+		if (i < sizeof(req)) {
+			k_msleep(5);				/* P4 */
+		}
+	}
+
+	/* P2: response starts within 50 ms.  Positive: 8x F1 <ecu> C1 KB1 KB2 CS. */
+	uint8_t rsp[KLINE_FRAME_MAX];
+	int64_t t_req = k_uptime_get();
+	int n = kline_rx_frame(rsp, sizeof(rsp), first_ms);
+	int64_t p2 = k_uptime_get() - t_req;
+
+	if (n == -ETIMEDOUT) {
+		if (!quiet) {
+			printk("  no response within %lld ms\n", p2);
+		}
+		return -ETIMEDOUT;
+	}
+	if (n < 0) {
+		printk("  0x%02X: malformed response (%d) after %lld ms\n",
+		       target, n, p2);
+		return n;
+	}
+
+	printk("  0x%02X: response after %lld ms:", target, p2);
+	for (int i = 0; i < n; i++) {
+		printk(" %02X", rsp[i]);
+	}
+	printk("\n");
+
+	int hdr = 1 + ((rsp[0] & 0xC0) ? 2 : 0) + ((rsp[0] & 0x3F) ? 0 : 1);
+	const uint8_t *data = &rsp[hdr];
+	int dlen = n - hdr - 1;
+
+	*ecu = (rsp[0] & 0xC0) ? rsp[2] : target;
+	if (dlen >= 1 && data[0] == 0x7F) {
+		printk("  negative response: service 0x%02X code 0x%02X\n",
+		       dlen >= 2 ? data[1] : 0, dlen >= 3 ? data[2] : 0);
+		return -EPROTO;
+	}
+	if (dlen < 3 || data[0] != (KLINE_SID_START_COMM | 0x40)) {
+		printk("  not a StartCommunication positive response\n");
+		return -EPROTO;
+	}
+	*kb1 = data[1];
+	*kb2 = data[2];
+	printk("  ECU address 0x%02X, key bytes: KB1=0x%02X KB2=0x%02X — %s\n",
+	       *ecu, *kb1, *kb2, kline_kw_name(*kb1, *kb2));
+	return 0;
+}
+
+/* Physical-address sweep: a fast init to every target 0x01..0xFE (bar our
+ * own address and the functional one already tried), stopping at the first
+ * ECU that opens a session.  ~0.5 s per address, so up to two minutes.
+ * Any reply at all — even a negative one — also proves the wire reaches
+ * an ECU, so those are reported and the sweep carries on past them. */
+static int kline_fast_init_scan(uint8_t *ecu, uint8_t *kb1, uint8_t *kb2)
+{
+	int replies = 0;
+
+	printk("scan: physical-address fast init 0x01..0xFE\n");
+	for (int t = 0x01; t <= 0xFE; t++) {
+		if (t == KLINE_INIT_ADDR || t == KLINE_TESTER_ADDR) {
+			continue;
+		}
+		if ((t & 0x0F) == 0) {
+			printk("  ...0x%02X\n", t);
+		}
+		/* Tidle after a failed init before the next wake-up pulse. */
+		if (kline_wait_idle(300)) {
+			printk("  0x%02X: bus busy before init — waiting\n", t);
+			kline_wait_idle(300);
+		}
+
+		int r = kline_fast_init(0x80, (uint8_t)t, 100, true,
+					ecu, kb1, kb2);
+
+		if (r == 0) {
+			return 0;
+		}
+		if (r != -ETIMEDOUT) {
+			replies++;
+		}
+	}
+	printk("scan: no session opened (%d address%s replied)\n",
+	       replies, replies == 1 ? "" : "es");
+	return replies ? -EPROTO : -ETIMEDOUT;
+}
+
+int kline_vehicle_init_ex(struct kline_session *out)
+{
+	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE) || PIN_K1_TX < 0) {
+		printk("K-line init skipped (no K-line on this board)\n");
+		return -ENODEV;
+	}
+
+	printk("\n*** K-LINE INIT ***\n");
+
+	int err = kline_init();
+
+	if (err) {
+		printk("K-line init aborted: rails did not come up (%d)\n", err);
+		return err;
+	}
+	printk("TX=P0.%d RX=P0.%d\n", PIN_K1_TX, PIN_K1_RX);
+
+	/* W5: the bus must sit idle (high) for at least 300 ms first.  A line
+	 * that is low here is either unpowered on the far side or held down
+	 * by something — either way there is no point sending anything. */
+	int idle = gpio_pin_get(hw_gpio0, PIN_K1_RX);
+	int busy = kline_wait_idle(300);
+
+	printk("bus idle: RX=%d, low for %d/300 ms\n", idle, busy);
+	if (busy > 0) {
+		printk("FAIL: K line not idle (held low / traffic present)\n");
+		err = -EBUSY;
+		goto out;
+	}
+
+	uint8_t ecu = KLINE_INIT_ADDR, kb1 = 0, kb2 = 0;
+	const char *how = "slow init";
+	bool use_l = kline_can_use_l();
+
+	err = kline_slow_init(KLINE_INIT_ADDR, use_l, false, &kb1, &kb2);
+	if (err == -ETIMEDOUT) {
+		/* Silence, not a bad handshake: try the KWP2000 fast init after
+		 * the bus has idled again. */
+		busy = kline_wait_idle(300);
+		if (busy > 0) {
+			printk("FAIL: K line not idle before fast init (%d ms low)\n",
+			       busy);
+			err = -EBUSY;
+			goto out;
+		}
+		how = "fast init";
+		err = kline_fast_init(0xC0, KLINE_INIT_ADDR, 300, false,
+				      &ecu, &kb1, &kb2);
+	}
+	if (err == -ETIMEDOUT) {
+		/* Still nothing on the OBD functional address.  An ECU that
+		 * only speaks to the maker's tester wants its own physical
+		 * address instead — find it. */
+		how = "physical-address fast init";
+		err = kline_fast_init_scan(&ecu, &kb1, &kb2);
+	}
+	if (err == -ETIMEDOUT) {
+		/* Last standard combination: the slow init also carries an
+		 * address, and some makers' ECUs only wake to their own. */
+		how = "physical-address 5-baud init";
+		err = kline_slow_init_scan(use_l, &ecu, &kb1, &kb2);
+	}
+
+out:
+	if (err) {
+		printk("FAIL: K-line init (%d)\n", err);
+	} else {
+		printk("PASS: K-line communication established via %s, "
+		       "ECU 0x%02X (%s)\n", how, ecu, kline_kw_name(kb1, kb2));
+		if (out) {
+			out->how = how;
+			out->protocol = kline_kw_name(kb1, kb2);
+			out->ecu = ecu;
+			out->kb1 = kb1;
+			out->kb2 = kb2;
+		}
+	}
+	printk("*** K-LINE INIT DONE ***\n\n");
+
+	/* Nothing more is sent; drop the rails and let the ECU time the
+	 * session out. */
+	kline_power_off();
+	return err;
+}
+
+int kline_vehicle_init(void)
+{
+	return kline_vehicle_init_ex(NULL);
+}
+
 /* -- L line: pulldown gate + sense (v3.3+) -----------------------------------
  *
  * L_SEND gates a 2N7002 that pulls the L wire to ground for the 5-baud

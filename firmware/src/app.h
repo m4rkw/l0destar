@@ -202,6 +202,17 @@ bool accel_available(void);
 int  kline_init(void);
 int  kline_self_test(void);
 int  kline_test(void);
+/* Open a diagnostic session with the vehicle over K (5-baud init, then
+ * KWP2000 fast init, then a physical-address sweep) and report how.  Sends
+ * nothing beyond the init itself. */
+struct kline_session {
+	const char *how;        /* which init worked */
+	const char *protocol;   /* decoded from the key bytes */
+	uint8_t ecu;            /* responding ECU address */
+	uint8_t kb1, kb2;
+};
+int  kline_vehicle_init(void);
+int  kline_vehicle_init_ex(struct kline_session *out);
 int  kline_power_on(void);
 void kline_power_off(void);
 uint8_t kline_tx_rx_byte(uint8_t tx);
