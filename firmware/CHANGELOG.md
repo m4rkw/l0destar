@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.16
 
 ### IF MCU: SEVONPEND fix on every power-off path (`ifmcu/patches/`)
 - makerdiary/nrf9151-connectkit#19 put the Connect Kit's nRF52820 into
