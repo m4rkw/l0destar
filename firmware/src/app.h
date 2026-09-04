@@ -202,14 +202,18 @@ bool accel_available(void);
 int  kline_init(void);
 int  kline_self_test(void);
 int  kline_test(void);
-/* Open a diagnostic session with the vehicle over K (5-baud init, then
- * KWP2000 fast init, then a physical-address sweep) and report how.  Sends
- * nothing beyond the init itself. */
+/* Open a KWP2000 (ISO 14230) session with the vehicle over K — 5-baud init,
+ * optionally the fast init and address sweeps — and report how.  Sends
+ * nothing beyond the init itself.  See KWIRE.md. */
 struct kline_session {
 	const char *how;        /* which init worked */
 	const char *protocol;   /* decoded from the key bytes */
 	uint8_t ecu;            /* responding ECU address */
 	uint8_t kb1, kb2;
+	int rx_edges;           /* K edges seen in the listen window, -1 if not run */
+	uint32_t baud;          /* ECU bit rate measured from its sync byte */
+	uint8_t addrs[8];       /* every address that completed a 5-baud handshake */
+	int n_addrs;
 };
 int  kline_vehicle_init(void);
 int  kline_vehicle_init_ex(struct kline_session *out);
@@ -217,7 +221,7 @@ int  kline_power_on(void);
 void kline_power_off(void);
 uint8_t kline_tx_rx_byte(uint8_t tx);
 
-/* ISO-9141 L line.  kline_l_send() is the only sanctioned way to drive the
+/* K-wire L line.  kline_l_send() is the only sanctioned way to drive the
  * pulldown FET: it returns -EPERM on the boards where doing so can destroy
  * the FET (and the nRF) if the wire is shorted to battery — see
  * APP_L_SEND_ENABLED.  The sense side (v3.3+) reads the wire back through

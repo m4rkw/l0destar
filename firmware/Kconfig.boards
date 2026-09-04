@@ -81,7 +81,7 @@ config APP_BOARD_BENCH
 	  defaults (including the makerdiary console re-park).
 
 config APP_BOARD_L0DESTAR_V2_1
-	bool "l0destar v2.1 (CAN + ISO-9141 + AIO)"
+	bool "l0destar v2.1 (CAN + K-wire + AIO)"
 
 config APP_BOARD_L0DESTAR_V2_1_MINI
 	bool "l0destar v2.1 mini (no OBD, 5 LEDs)"
@@ -90,7 +90,7 @@ config APP_BOARD_L0DESTAR_V2_5_CAN
 	bool "l0destar v2.5C (CAN)"
 
 config APP_BOARD_L0DESTAR_V2_5_KLINE
-	bool "l0destar v2.5K (ISO-9141 K-line)"
+	bool "l0destar v2.5K (K-wire)"
 
 config APP_BOARD_L0DESTAR_V2_5_MICRO
 	bool "l0destar v2.5M (micro, no OBD)"
@@ -99,7 +99,7 @@ config APP_BOARD_L0DESTAR_V2_6_CAN
 	bool "l0destar v2.6C (CAN)"
 
 config APP_BOARD_L0DESTAR_V2_6_KLINE
-	bool "l0destar v2.6K (ISO-9141 K-line)"
+	bool "l0destar v2.6K (K-wire)"
 
 config APP_BOARD_L0DESTAR_V2_6_MICRO
 	bool "l0destar v2.6M (micro, no OBD)"
@@ -161,7 +161,7 @@ config APP_BOARD_HAS_CAN
 	default n
 
 config APP_BOARD_HAS_KLINE
-	bool "ISO-9141 (K-line) interface fitted"
+	bool "K-wire (ISO 14230-1 K-line) interface fitted"
 	default y if (APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3) && \
 		     APP_OBD_MODE = 2
 	default y if APP_BOARD_BENCH || APP_BOARD_L0DESTAR_V2_1 || \
@@ -170,7 +170,7 @@ config APP_BOARD_HAS_KLINE
 	default n
 
 config APP_L_SEND_ENABLED
-	bool "Allow driving the ISO-9141 L line (L_SEND)"
+	bool "Allow driving the K-wire L line (L_SEND)"
 	default y if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_BENCH
 	default n
 	help
@@ -301,7 +301,7 @@ config APP_PIN_K2_RX
 	default 23
 
 config APP_PIN_L_SEND
-	int "ISO-9141 L-line send pin (gates the L pulldown FET)"
+	int "K-wire L-line send pin (gates the L pulldown FET)"
 	default 3  if APP_BOARD_L0DESTAR_V2_1
 	default 19 if APP_BOARD_L0DESTAR_V2_5_KLINE
 	default 17 if APP_BOARD_L0DESTAR_V2_6_KLINE
@@ -311,7 +311,7 @@ config APP_PIN_L_SEND
 	default -1
 
 config APP_PIN_L_SENSE
-	int "ISO-9141 L-line sense pin (v3.3+; must be an AIN pin, P0.13-P0.20)"
+	int "K-wire L-line sense pin (v3.3+; must be an AIN pin, P0.13-P0.20)"
 	default 14 if APP_BOARD_L0DESTAR_V3_3
 	default -1
 	help
@@ -330,7 +330,7 @@ config APP_PIN_L_SENSE
 	  the sense reporting unavailable.
 
 config APP_PIN_L_RECV
-	int "ISO-9141 L-line receive pin"
+	int "K-wire L-line receive pin"
 	default 6  if APP_BOARD_L0DESTAR_V2_1
 	default 31 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default -1
@@ -590,7 +590,7 @@ config APP_PIN_AIO6
 # --- L-line sense (v3.3+) ------------------------------------------------------
 
 config APP_BOARD_HAS_L_SENSE
-	bool "ISO-9141 L-line sense input fitted"
+	bool "K-wire L-line sense input fitted"
 	default y if APP_BOARD_L0DESTAR_V3_3
 	default n
 	select NRFX_SAADC

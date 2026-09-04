@@ -805,18 +805,42 @@ static void kline_boot_alert(void)
     char msg[110];
 
     if (kline_boot_res == 0) {
-        snprintf(msg, sizeof(msg),
-                 "K-line: session opened via %s, ECU 0x%02X KB %02X %02X (%s)",
-                 kline_boot_sess.how, kline_boot_sess.ecu,
-                 kline_boot_sess.kb1, kline_boot_sess.kb2,
-                 kline_boot_sess.protocol);
+        int n = snprintf(msg, sizeof(msg),
+                         "K-line: session via %s at %u baud, ECU 0x%02X KB %02X %02X (%s)",
+                         kline_boot_sess.how, kline_boot_sess.baud,
+                         kline_boot_sess.ecu, kline_boot_sess.kb1,
+                         kline_boot_sess.kb2, kline_boot_sess.protocol);
+        if (kline_boot_sess.n_addrs > 1 && n > 0 && n < (int)sizeof(msg)) {
+            n += snprintf(msg + n, sizeof(msg) - n, " +%d more:",
+                          kline_boot_sess.n_addrs - 1);
+            for (int i = 1; i < kline_boot_sess.n_addrs &&
+                 i < (int)ARRAY_SIZE(kline_boot_sess.addrs) &&
+                 n > 0 && n < (int)sizeof(msg); i++) {
+                n += snprintf(msg + n, sizeof(msg) - n, " %02X",
+                              kline_boot_sess.addrs[i]);
+            }
+        }
         alert_enqueue(msg, 1);
+    } else if (kline_boot_sess.n_addrs > 0) {
+        int n = snprintf(msg, sizeof(msg),
+                         "K-line: %d address%s replied at %u baud (unknown protocol):",
+                         kline_boot_sess.n_addrs,
+                         kline_boot_sess.n_addrs == 1 ? "" : "es",
+                         kline_boot_sess.baud);
+        for (int i = 0; i < kline_boot_sess.n_addrs &&
+             i < (int)ARRAY_SIZE(kline_boot_sess.addrs) &&
+             n > 0 && n < (int)sizeof(msg); i++) {
+            n += snprintf(msg + n, sizeof(msg) - n, " %02X",
+                          kline_boot_sess.addrs[i]);
+        }
+        alert_enqueue(msg, 0);
     } else {
         snprintf(msg, sizeof(msg),
-                 "K-line: no ECU answered any init (slow/fast, functional + "
-                 "0x01-0xFE sweeps, %s) err %d",
+                 "K-line: no ECU answered (%s%s, %s) err %d, listen edges %d",
+                 "slow+fast on 0x33",
+                 IS_ENABLED(CONFIG_APP_KLINE_INIT_SWEEP) ? " + sweeps" : "",
                  IS_ENABLED(CONFIG_APP_L_SEND_ENABLED) ? "K+L" : "K only",
-                 kline_boot_res);
+                 kline_boot_res, kline_boot_sess.rx_edges);
         alert_enqueue(msg, 0);
     }
     for (int i = 0; i < 5; i++) {

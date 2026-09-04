@@ -41,12 +41,12 @@ BOARDS=(
     "v3.1|l0destar v3.1  (combined CAN/K-line, rail sensing)|CONFIG_APP_BOARD_L0DESTAR_V3_1=y|obd"
     "v3.0|l0destar v3.0  (combined CAN/K-line, jumper-selected)|CONFIG_APP_BOARD_L0DESTAR_V3_0=y|"
     "v2.6c|l0destar v2.6C (CAN)|CONFIG_APP_BOARD_L0DESTAR_V2_6_CAN=y|"
-    "v2.6k|l0destar v2.6K (ISO-9141 K-line)|CONFIG_APP_BOARD_L0DESTAR_V2_6_KLINE=y|"
+    "v2.6k|l0destar v2.6K (K-wire)|CONFIG_APP_BOARD_L0DESTAR_V2_6_KLINE=y|"
     "v2.6m|l0destar v2.6M (micro, no OBD)|CONFIG_APP_BOARD_L0DESTAR_V2_6_MICRO=y|"
     "v2.5c|l0destar v2.5C (CAN)|CONFIG_APP_BOARD_L0DESTAR_V2_5_CAN=y|"
-    "v2.5k|l0destar v2.5K (ISO-9141 K-line)|CONFIG_APP_BOARD_L0DESTAR_V2_5_KLINE=y|"
+    "v2.5k|l0destar v2.5K (K-wire)|CONFIG_APP_BOARD_L0DESTAR_V2_5_KLINE=y|"
     "v2.5m|l0destar v2.5M (micro, no OBD)|CONFIG_APP_BOARD_L0DESTAR_V2_5_MICRO=y|"
-    "v2.1|l0destar v2.1  (CAN + ISO-9141 + AIO)|CONFIG_APP_BOARD_L0DESTAR_V2_1=y|"
+    "v2.1|l0destar v2.1  (CAN + K-wire + AIO)|CONFIG_APP_BOARD_L0DESTAR_V2_1=y|"
     "v2.1m|l0destar v2.1 mini (no OBD, 5 LEDs)|CONFIG_APP_BOARD_L0DESTAR_V2_1_MINI=y|"
     "bench|bench (DK / Connect Kit + breadboard)|CONFIG_APP_BOARD_BENCH=y|"
 )
@@ -127,13 +127,13 @@ if [[ "$BOARD_FLAGS" == *obd* ]]; then
     echo "OBD interface populated on this board:"
     echo "   1) none                 [default]"
     echo "   2) CAN"
-    echo "   3) K-line / ISO-9141"
+    echo "   3) K-wire (ISO 14230)"
     read -r -p "OBD [1]: " obd
     obd="${obd:-1}"
     case "$obd" in
         1) OBD_MODE=0; echo "  -> no OBD" ;;
         2) OBD_MODE=1; echo "  -> CAN" ;;
-        3) OBD_MODE=2; echo "  -> K-line / ISO-9141" ;;
+        3) OBD_MODE=2; echo "  -> K-wire (ISO 14230)" ;;
         *) echo "Invalid selection: $obd" >&2; exit 1 ;;
     esac
 elif [[ "$BOARD_ID" == "v3.0" ]]; then

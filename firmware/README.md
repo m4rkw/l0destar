@@ -19,7 +19,7 @@ deeply when the vehicle is parked, and wakes on movement, ignition, or a timer.
 | MCU / modem / GNSS | nRF9151 SiP (LTE-M, integrated GNSS receiver) |
 | IMU               | ASM330LHHX (automotive 6-axis, WHO_AM_I 0x6B) over bit-banged I²C - accel-only today: movement detection + hardware wake interrupt; gyro/MLC/FSM/FIFO unused |
 | Voltage monitor   | INA228 over the same I²C bus - battery / ignition-derived voltage |
-| Diagnostics       | K-line (ISO-9141) via L9637D, bit-banged UART |
+| Diagnostics       | K-wire (ISO 14230-1 K-line, KWP2000) via TJA1027T on v3.x (L9637D on v2.x); 5-baud address bit-banged, data bytes on UARTE1 — see KWIRE.md |
 | Ignition sense    | GPIO input (MOSFET-gated 3.3 V rail) |
 | Status LED        | board `led0` alias (LED1 on the nRF9151 DK) |
 

@@ -72,3 +72,15 @@ CONFIG_APP_APN=""
 # CONFIG_APP_GSM_ESCALATION_POWERCYCLE=3
 # CONFIG_APP_GSM_ESCALATION_SLEEP=5
 # CONFIG_APP_GSM_RECOVERY_SLEEP_INTERVAL=300
+
+# --- K-wire (ISO 14230-1) vehicle session init — in-car bring-up only ------
+# Opens a KWP2000 session at boot and reports the result on the console and
+# as an alert, then runs the tracker.  See KWIRE.md.  Values below are the
+# reference vehicle, a 2006 Toyota Harrier 2.4 (ACU30): its ECUs answer the
+# 5-baud init on their own addresses at 9600 baud, on K alone.
+# CONFIG_APP_KLINE_INIT_AT_BOOT=y
+# CONFIG_APP_KLINE_BAUD=9600
+# CONFIG_APP_KLINE_INIT_ADDRS="13,29,58,B4"
+# CONFIG_APP_KLINE_INIT_FAST=n
+# CONFIG_APP_KLINE_INIT_SWEEP=n
+# CONFIG_APP_KLINE_INIT_DIAG=n

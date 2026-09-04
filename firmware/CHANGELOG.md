@@ -16,19 +16,31 @@ merged upstream. See QUICKSTART.md.
 
 ### K-line vehicle init at boot (`CONFIG_APP_KLINE_INIT_AT_BOOT`)
 - **`kline_vehicle_init()`** in `hw_kline.c`: opens a diagnostic session with
-the vehicle's ECU over K and reports the outcome on the console, then the
-tracker starts as normal.  Tries the ISO 9141-2 / ISO 14230-4 5-baud init
-first (address 0x33, sync byte, key bytes, acknowledge) and, if nothing
-answers, the ISO 14230-4 fast init (25 ms wake-up pulse plus one
-StartCommunication request) on the OBD functional address, then the same
-swept across every physical ECU address 0x01-0xFE for JDM ECUs that only
-answer the maker's tester, then the 5-baud init swept the same way.  No
-other request is sent; the session is left
-to time out on the ECU's side.  Bit-banged receive with start-bit detection,
-framing check and KWP2000 frame parsing (header formats with and without
-addresses, explicit length byte, checksum).  Every driven bit is read back
-through the transceiver so a non-driving transmitter is reported as an echo
-failure rather than mistaken for a silent ECU.  See ISO9141.md.
+the vehicle's ECU over K and reports the outcome on the console and as an
+alert (priority 1 on success), then the tracker starts as normal.  Stages,
+each gated by its own Kconfig: the KWP2000 5-baud init (ISO 14230-2) on 0x33,
+the ISO 14230-4 fast init (`APP_KLINE_INIT_FAST`), the 5-baud handshake on a
+list of known addresses (`APP_KLINE_INIT_ADDRS`, with a raw capture of any
+address whose handshake breaks down), and full physical-address sweeps of
+both inits (`APP_KLINE_INIT_SWEEP`, ~15 min).  `APP_KLINE_INIT_DIAG` adds an
+L-hold and a listen window for meter-and-wire checks.  Nothing is sent over K
+beyond the init itself.  See KWIRE.md.
+- **10.4 k / 9600 data bytes go through UARTE1** via the nrf HAL (the Zephyr
+UART driver only knows a fixed list of rates); GPIO bit-banging is kept for
+the 5-baud address, the wake-up pulse, and the bench loopback.  The bit-bang
+receiver's few-percent rate error misread the last bit of a real ECU's key
+byte, which is what made the handshake fail.  `APP_KLINE_BAUD` sets the
+rate (default 10400); the slow init retries at the other of 9600/10400 when
+the sync byte does not decode.
+- **Result:** a 2006 Toyota Harrier 2.4 (ACU30) answers on ECU addresses
+0x13/0x29/0x58/0xB4 with KWP2000 key bytes E9 8F at 9600 baud, on K alone;
+the handshake completes on all four.
+- **Terminology:** the interface is now called the K-wire (ISO 14230-1
+K-line) throughout — Kconfig prompts, board_test.sh, console banners,
+comments.  "ISO-9141" was inaccurate: the physical layer is ISO 14230-1 and
+the protocol in use is KWP2000 (ISO 14230), not ISO 9141-2.  ISO9141.md is
+replaced by KWIRE.md, which covers the bench loopback test, the in-vehicle
+session init and the reference-vehicle configuration.
 
 ### LTE TX power / brown-out test mode (`src/lte_power_test.c`)
 - **New bench rig, `CONFIG_APP_LTE_POWER_TEST`** (build with
@@ -107,7 +119,7 @@ swap pins (P0.28 / P0.26), L_SENSE arrives on P0.14 (AIN1) and the PP3V3_GPS
 rail sense moves to P0.05 to free that AIN channel. Selectable from
 board_test.sh, where it is now the default entry.
 
-### ISO-9141 L line (`src/hw_kline.c`)
+### K-wire L line (`src/hw_kline.c`)
 - **Driving the L line is now off by default on every board before v3.3**
 (`APP_L_SEND_ENABLED`). Those boards switch the 2N7002 pulldown straight
 across the wire, and an L wire shorted to battery is indistinguishable from a

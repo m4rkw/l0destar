@@ -67,7 +67,7 @@ config APP_OBD_MODE
 	  rails to test and which protocol driver to start.
 	    0 = no OBD interface (S5R1-S5R4 all open)
 	    1 = CAN bus (S5R1 + S5R3; PP3V3_CAN via CAN_EN)
-	    2 = K-line / ISO-9141 (S5R2 + S5R4; PP3V3_K + PP12V_K via K_EN)
+	    2 = K-wire / ISO 14230 (S5R2 + S5R4; PP3V3_K + PP12V_K via K_EN)
 	  Ignored on boards other than v3.1+.
 
 config APP_CAN_TEST
@@ -88,7 +88,7 @@ config APP_CAN_BENCH
 	  never enable in a production image.
 
 config APP_KLINE_TEST
-	bool "Run the L9637D K-line bring-up test at boot"
+	bool "Run the K-wire transceiver loopback test at boot"
 	default n
 	help
 	  At startup, stream a run of bytes K1 -> K2 and K2 -> K1 over the shared
@@ -96,13 +96,14 @@ config APP_KLINE_TEST
 	  wire.  Bench bring-up aid; leave off in production.
 
 config APP_KLINE_INIT_AT_BOOT
-	bool "Open an ISO-9141 / KWP2000 session with the vehicle at boot"
+	bool "Open a KWP2000 (ISO 14230) session with the vehicle over K at boot"
 	default n
 	depends on APP_BOARD_HAS_KLINE
 	help
 	  At startup, power the K-line transceiver and try to open a
-	  diagnostic session with the vehicle: first the ISO 9141-2 /
-	  ISO 14230-4 5-baud init (address 0x33, sync byte, key bytes), and
+	  diagnostic session with the vehicle: first the 5-baud init
+	  (ISO 14230-2, the one ISO 9141-2 also uses: address 0x33, sync
+	  byte, key bytes), and
 	  if nothing answers, the ISO 14230-4 fast init (25 ms wake-up pulse
 	  plus one StartCommunication request), first on the OBD functional
 	  address and then swept across every physical ECU address, and
@@ -113,6 +114,73 @@ config APP_KLINE_INIT_AT_BOOT
 	  alert as soon as the modem is up (priority 1 if a session opened,
 	  0 otherwise), and the tracker then starts as normal.  In-vehicle bring-up aid; leave off in
 	  production.
+
+config APP_KLINE_BAUD
+	int "K-line data rate for the handshake and any session (bps)"
+	depends on APP_KLINE_INIT_AT_BOOT
+	default 10400
+	help
+	  ISO 14230-4 (and ISO 9141-2) fix this at 10400.  Some ECUs answer
+	  the 5-baud init at 9600 instead; the slow init retries at the
+	  other of the two automatically when the sync byte does not decode,
+	  so set this to whichever the vehicle turned out to use.
+
+config APP_KLINE_INIT_FAST
+	bool "Try the ISO 14230-4 fast init as well as the 5-baud init"
+	depends on APP_KLINE_INIT_AT_BOOT
+	default y
+	help
+	  After an unanswered 5-baud init on 0x33, send the KWP2000 fast
+	  init (wake-up pulse plus StartCommunication) on 0x33, once with
+	  the standard 5 ms inter-byte gap and once back to back, and — if
+	  APP_KLINE_INIT_SWEEP is on — sweep it across every physical
+	  address before the 5-baud sweep.  Turn off for an ECU already
+	  known to answer the 5-baud init: it skips ~2.5 minutes of pulses
+	  the ECU ignores.
+
+config APP_KLINE_INIT_ADDRS
+	string "5-baud addresses to capture from after 0x33 (hex, comma-separated)"
+	depends on APP_KLINE_INIT_AT_BOOT
+	default ""
+	help
+	  Addresses already known to answer the 5-baud init, e.g. "13,29,58,B4".
+	  Each is sent in turn and everything the ECU replies is recorded at
+	  the bit rate measured from its sync byte and dumped as hex with the
+	  inter-byte gaps, instead of being forced through the key-byte
+	  handshake.  For working out an unrecognised protocol.
+	  Empty = skip.
+
+config APP_KLINE_INIT_ACK
+	bool "Send the inverted second byte during capture"
+	depends on APP_KLINE_INIT_AT_BOOT
+	default y
+	help
+	  In capture mode, after the ECU's burst goes quiet, reply with the
+	  bitwise inverse of its second byte — what a 5-baud-init tester
+	  sends — and record what that provokes.  Turn off to observe the
+	  ECU without ever transmitting after the address.
+
+config APP_KLINE_INIT_SWEEP
+	bool "Sweep physical ECU addresses when 0x33 gets no answer"
+	depends on APP_KLINE_INIT_AT_BOOT
+	default y
+	help
+	  After the slow and fast inits on the OBD functional address 0x33
+	  both go unanswered, try the fast init and then the 5-baud init on
+	  every physical address 0x01-0xFE.  Up to ~15 minutes.  Turn off
+	  when the vehicle is known to answer a generic scanner, in which
+	  case 0x33 is the only address that matters.
+
+config APP_KLINE_INIT_DIAG
+	bool "Operator line diagnostics before the init (L hold + listen)"
+	depends on APP_KLINE_INIT_AT_BOOT
+	default n
+	help
+	  Before the init: hold the L pulldown on for 5 s so pin 15 can be
+	  metered (expect ~0 V), then listen on K for 20 s and count level
+	  changes — the operator grounds pin 7 to pin 4 by hand during the
+	  window.  Proves the two things the transceiver echo cannot: that L
+	  really goes low, and that a low on the wire reaches the receiver.
 
 config APP_BOARD_TEST
 	bool "Run the interactive board bring-up test instead of the tracker"
