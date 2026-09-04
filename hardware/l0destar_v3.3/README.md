@@ -136,7 +136,6 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 - 1uF caps were resized to 0603 - higher voltage ratings available, some of the
   1uF parts were right at the limit of suitability. Now standardised on 2.2uF
   25V 0603.
-- S11R4 resized to 0402, not really any good reason for it to be 0805 by itself.
 - Made S11C3 fitted by default, no good reason to have it be DNP by default.
 - Made the accelerometer bead fitted by default, same reason. Also switched the
   part number for availability reasons.
