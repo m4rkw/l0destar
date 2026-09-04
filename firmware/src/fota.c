@@ -333,6 +333,10 @@ static int download_image(void)
 
 void fota_request_check(void)
 {
+    if (IS_ENABLED(CONFIG_APP_FOTA_INHIBIT)) {
+        LOG_WRN("ignoring `fota` command — updates inhibited");
+        return;
+    }
     /* Manual `fota` command: check now, even inside a failure holdoff. */
     s_forced = true;
     s_next_check_ms = 0;
@@ -342,6 +346,10 @@ void fota_notify_available(const char *ver)
 {
     static uint32_t s_last_logged;
     uint32_t avail;
+
+    if (IS_ENABLED(CONFIG_APP_FOTA_INHIBIT)) {
+        return;   /* server advertises what it likes; we are not listening */
+    }
 
     if (version_parse(ver, &avail) != 0) {
         LOG_WRN("fota indication '%s' malformed", ver);
@@ -399,6 +407,20 @@ static void fail_backoff(void)
 int fota_check(enum fota_ctx ctx)
 {
     bool gnss_stopped = false;
+
+    if (IS_ENABLED(CONFIG_APP_FOTA_INHIBIT)) {
+        /* Bench build: the running image is the thing under test, so nothing
+         * is allowed to replace it.  Logged once so it is obvious from the
+         * console why a unit never updates. */
+        static bool said;
+
+        if (!said) {
+            said = true;
+            LOG_WRN("updates inhibited (APP_FOTA_INHIBIT) — running %s",
+                    APP_VERSION_STRING);
+        }
+        return 0;
+    }
 
     if (!s_forced && !s_boot_check) {
         return 0;   /* nothing pending — the common case, no traffic */

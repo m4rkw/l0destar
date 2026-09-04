@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 #include <hal/nrf_uarte.h>
@@ -15,6 +16,11 @@
 #include "pins.h"
 
 LOG_MODULE_REGISTER(hw_kline, CONFIG_APP_LOG_LEVEL);
+
+/* Discovery recording, defined further down but used by the probe helpers. */
+static struct kline_ecu *kline_ecu_slot(uint8_t addr);
+static void kline_record(struct kline_ecu *e, const uint8_t *req,
+			 const uint8_t *rsp, int n);
 
 #define KLINE_BIT_US 96			/* 10.4 kbaud: 96.15 us nominal */
 #define KLINE_BIT_NS 96154
@@ -64,7 +70,7 @@ static enum hw_domain kline_domain(void)
  *
  * note: this function must never be renamed
  */
-int kline_power_on(void)
+int proge_mode_on(void)
 {
 	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
 		return -ENODEV;
@@ -102,7 +108,7 @@ int kline_power_on(void)
  * note: this function must never be renamed
  */
 
-void kline_power_off(void)
+void proge_mode_off(void)
 {
 	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
 		return;
@@ -128,7 +134,7 @@ int kline_init(void)
 	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE) || PIN_K1_TX < 0) {
 		return -ENODEV;
 	}
-	int err = kline_power_on();
+	int err = proge_mode_on();
 	if (err) {
 		return err;
 	}
@@ -326,7 +332,7 @@ static int kline_stream(const char *dir, uint8_t tx_pin, uint8_t rx_pin)
 #define KLINE_SLOW_BIT_MS   200
 #define KLINE_SYNC_BYTE     0x55
 #define KLINE_SID_START_COMM 0x81
-#define KLINE_FRAME_MAX     16		/* header + up to 12 data + checksum */
+#define KLINE_FRAME_MAX     260		/* 4-byte header + 255 data + checksum */
 
 /* -- 10.4 kbaud via UARTE1 ----------------------------------------------------
  *
@@ -347,6 +353,12 @@ static int kline_stream(const char *dir, uint8_t tx_pin, uint8_t rx_pin)
 
 static bool s_uart;
 static uint32_t s_uart_baud;
+
+/* Frame-by-frame console tracing.  Indispensable while working out an
+ * unknown vehicle, ruinous in the runtime path: with CONFIG_LOG_MODE_IMMEDIATE
+ * every printk is synchronous console I/O, and the poll path runs a request
+ * about once a second forever.  Discovery turns it on around itself. */
+static bool s_req_trace;
 
 static uint32_t kline_baud_reg(uint32_t bps)
 {
@@ -790,6 +802,487 @@ static int kline_slow_capture(uint8_t addr, bool use_l)
 	return 0;
 }
 
+/* -- Identification (CONFIG_APP_KLINE_IDENT) ----------------------------------
+ *
+ * With a session open, ask the ECU who it is.  KWP2000 ReadEcuIdentification
+ * (0x1A) has sub-options for the VIN and the maker's hardware/software/
+ * system-name/serial strings; OBD-II mode 0x01 is answered only by an
+ * engine (or transmission) ECU, so RPM and coolant temperature single out
+ * the powertrain unit.  Everything is printed raw and decoded where the
+ * meaning is known; a negative response (7F sid code) says what the ECU
+ * refused.  StopCommunication (0x82) closes the session afterwards.
+ *
+ * Requests use the 3-byte header with target and source addresses and the
+ * length in the format byte (0x80 | len), which KB1 = 0xE9 advertises. */
+
+static int kline_rx_frame(uint8_t *buf, int max, uint32_t first_ms);
+
+#define KLINE_P3_MIN_MS   55		/* tester gap between request and next request */
+#define KLINE_P2_MAX_MS   1000		/* generous: extended timing sets allow ~1 s */
+/* Runtime polling wants a tight bound instead.  A PID the ECU advertises
+ * answers within P2max (50 ms); anything slower means the session has gone,
+ * and with a dozen PIDs per cycle a 1 s timeout each would stall the main
+ * loop for twelve seconds when the ECU stops answering — which is exactly
+ * what happens the moment the ignition is switched off mid-poll. */
+#define KLINE_P2_POLL_MS  250
+#define KLINE_RSP_PENDING 0x78
+
+struct kline_req {
+	const char *name;
+	uint8_t data[4];
+	uint8_t len;
+};
+
+static const struct kline_req kline_ident_reqs[] = {
+	{ "ReadEcuIdentification: data table",     { 0x1A, 0x80 }, 2 },
+	{ "ReadEcuIdentification: VIN",            { 0x1A, 0x90 }, 2 },
+	{ "ReadEcuIdentification: HW number",      { 0x1A, 0x91 }, 2 },
+	{ "ReadEcuIdentification: supplier HW",    { 0x1A, 0x92 }, 2 },
+	{ "ReadEcuIdentification: supplier SW",    { 0x1A, 0x94 }, 2 },
+	{ "ReadEcuIdentification: system name",    { 0x1A, 0x97 }, 2 },
+	{ "ReadEcuIdentification: serial number",  { 0x1A, 0x9F }, 2 },
+	{ "OBD mode 01: supported PIDs 01-20",     { 0x01, 0x00 }, 2 },
+	{ "OBD mode 01: MIL + stored DTC count",   { 0x01, 0x01 }, 2 },
+	{ "OBD mode 01: engine RPM",               { 0x01, 0x0C }, 2 },
+	{ "OBD mode 01: coolant temperature",      { 0x01, 0x05 }, 2 },
+	{ "OBD mode 09: VIN",                      { 0x09, 0x02 }, 2 },
+};
+
+static const char *kline_nrc_name(uint8_t code)
+{
+	switch (code) {
+	case 0x10: return "general reject";
+	case 0x11: return "service not supported";
+	case 0x12: return "sub-function not supported";
+	case 0x21: return "busy, repeat request";
+	case 0x22: return "conditions not correct";
+	case 0x31: return "request out of range";
+	case 0x33: return "security access denied";
+	case 0x78: return "response pending";
+	case 0x80: return "service not supported in active session";
+	default:   return "?";
+	}
+}
+
+/* Send one request to `target` and return the response frame length in
+ * rsp (header through checksum) or a negative errno.  "Response pending"
+ * negatives are waited through. */
+static int kline_request(uint8_t target, const uint8_t *data, int len,
+			 uint8_t *rsp, int max, uint32_t p2_ms)
+{
+	uint8_t frame[4 + 8];
+	uint8_t cs = 0;
+	int n = 0;
+
+	frame[n++] = 0x80 | len;
+	frame[n++] = target;
+	frame[n++] = KLINE_TESTER_ADDR;
+	for (int i = 0; i < len; i++) {
+		frame[n++] = data[i];
+	}
+	for (int i = 0; i < n; i++) {
+		cs += frame[i];
+	}
+	frame[n++] = cs;
+
+	if (s_req_trace) {
+		printk("  > ");
+		for (int i = 0; i < n; i++) {
+			printk("%02X ", frame[i]);
+		}
+		printk("\n");
+	}
+
+	for (int i = 0; i < n; i++) {
+		uint8_t e = kline_tx_byte(frame[i]);
+
+		if (e != frame[i] && s_req_trace) {
+			printk("    echo: sent %02X read back %02X\n", frame[i], e);
+		}
+		if (i < n - 1) {
+			k_msleep(5);				/* P4 */
+		}
+	}
+
+	for (int tries = 0; tries < 5; tries++) {
+		int r = kline_rx_frame(rsp, max, p2_ms);
+
+		if (r < 0) {
+			return r;
+		}
+		int hdr = 1 + ((rsp[0] & 0xC0) ? 2 : 0) + ((rsp[0] & 0x3F) ? 0 : 1);
+		int dlen = r - hdr - 1;
+
+		if (dlen >= 3 && rsp[hdr] == 0x7F && rsp[hdr + 2] == KLINE_RSP_PENDING) {
+			if (s_req_trace) {
+				printk("    (response pending)\n");
+			}
+			continue;
+		}
+		return r;
+	}
+	return -ETIMEDOUT;
+}
+
+/* Print a response: raw bytes, then whatever can be decoded. */
+static void kline_show_response(const uint8_t *req, const uint8_t *rsp, int n)
+{
+	int hdr = 1 + ((rsp[0] & 0xC0) ? 2 : 0) + ((rsp[0] & 0x3F) ? 0 : 1);
+	const uint8_t *d = &rsp[hdr];
+	int dlen = n - hdr - 1;
+
+	printk("  < ");
+	for (int i = 0; i < n; i++) {
+		printk("%02X ", rsp[i]);
+	}
+	printk("\n");
+	if (dlen < 1) {
+		return;
+	}
+
+	if (d[0] == 0x7F) {
+		printk("    negative: service %02X — %s (%02X)\n",
+		       dlen > 1 ? d[1] : 0, kline_nrc_name(dlen > 2 ? d[2] : 0),
+		       dlen > 2 ? d[2] : 0);
+		return;
+	}
+	if (d[0] != (req[0] | 0x40)) {
+		printk("    unexpected service id %02X\n", d[0]);
+		return;
+	}
+
+	switch (req[0]) {
+	case 0x1A:
+		/* option byte, then the record — usually ASCII */
+		if (dlen > 2) {
+			printk("    \"");
+			for (int i = 2; i < dlen; i++) {
+				printk("%c", (d[i] >= 0x20 && d[i] < 0x7F) ? d[i] : '.');
+			}
+			printk("\"\n");
+		}
+		break;
+	case 0x01:
+		if (dlen >= 6 && d[1] == 0x00) {
+			printk("    PID bitmap %02X %02X %02X %02X — an engine/"
+			       "powertrain ECU\n", d[2], d[3], d[4], d[5]);
+		} else if (dlen >= 3 && d[1] == 0x01) {
+			printk("    MIL %s, %d stored DTC%s\n",
+			       (d[2] & 0x80) ? "ON" : "off", d[2] & 0x7F,
+			       (d[2] & 0x7F) == 1 ? "" : "s");
+		} else if (dlen >= 4 && d[1] == 0x0C) {
+			printk("    RPM %d — engine ECU\n", (d[2] * 256 + d[3]) / 4);
+		} else if (dlen >= 3 && d[1] == 0x05) {
+			printk("    coolant %d C — engine ECU\n", d[2] - 40);
+		}
+		break;
+	case 0x09:
+		if (dlen > 2) {
+			printk("    \"");
+			for (int i = 2; i < dlen; i++) {
+				printk("%c", (d[i] >= 0x20 && d[i] < 0x7F) ? d[i] : '.');
+			}
+			printk("\"\n");
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+/* -- Stored fault codes -------------------------------------------------------
+ *
+ * OBD-II mode 03 lists confirmed DTCs, 07 the pending ones from the current
+ * or last drive cycle, 0A the permanent ones (2010+ ECUs only).  All three
+ * are read-only; mode 04, which erases them, is deliberately not implemented
+ * anywhere in this firmware.
+ *
+ * A DTC is two bytes: the top two bits pick the system letter (P, C, B, U),
+ * the next two the first digit, and the remaining twelve bits are three hex
+ * digits.  0x0133 is therefore P0133.  Over K the ECU may answer with
+ * several response frames, up to three codes in each, so keep reading until
+ * the line goes quiet.  All-zero pairs are padding. */
+
+static void kline_dtc_str(uint16_t v, char *out)
+{
+	static const char sys[] = "PCBU";
+	static const char hex[] = "0123456789ABCDEF";
+
+	out[0] = sys[(v >> 14) & 3];
+	out[1] = (char)('0' + ((v >> 12) & 3));
+	out[2] = hex[(v >> 8) & 0xF];
+	out[3] = hex[(v >> 4) & 0xF];
+	out[4] = hex[v & 0xF];
+	out[5] = '\0';
+}
+
+/* Decode the codes in one response frame.  Returns the count, or -1 if the
+ * frame is not a positive response to `mode`. */
+static int kline_dtc_frame(const uint8_t *rsp, int n, uint8_t mode)
+{
+	int hdr = 1 + ((rsp[0] & 0xC0) ? 2 : 0) + ((rsp[0] & 0x3F) ? 0 : 1);
+	const uint8_t *d = &rsp[hdr];
+	int dlen = n - hdr - 1;
+	int found = 0;
+
+	if (dlen < 1) {
+		return -1;
+	}
+	if (d[0] == 0x7F) {
+		printk("    negative: service %02X — %s (%02X)\n",
+		       dlen > 1 ? d[1] : 0, kline_nrc_name(dlen > 2 ? d[2] : 0),
+		       dlen > 2 ? d[2] : 0);
+		return -1;
+	}
+	if (d[0] != (mode | 0x40)) {
+		printk("    unexpected service id %02X\n", d[0]);
+		return -1;
+	}
+	for (int i = 1; i + 1 < dlen; i += 2) {
+		uint16_t v = (uint16_t)((d[i] << 8) | d[i + 1]);
+		char code[6];
+
+		if (v == 0) {
+			continue;			/* padding */
+		}
+		kline_dtc_str(v, code);
+		printk("    %s\n", code);
+		found++;
+	}
+	return found;
+}
+
+static void kline_read_dtcs(uint8_t addr, uint8_t mode, const char *what,
+			    uint8_t *rsp, int max, struct kline_ecu *e)
+{
+	uint8_t req[1] = { mode };
+
+	k_msleep(KLINE_P3_MIN_MS);
+	printk("  %s\n", what);
+
+	int n = kline_request(addr, req, 1, rsp, max, KLINE_P2_MAX_MS);
+
+	if (n == -ETIMEDOUT) {
+		printk("  < (no response)\n");
+		return;
+	}
+	if (n < 0) {
+		printk("  < (malformed response %d)\n", n);
+		return;
+	}
+
+	int total = 0;
+
+	for (int frame = 0; frame < 16; frame++) {
+		printk("  < ");
+		for (int i = 0; i < n; i++) {
+			printk("%02X ", rsp[i]);
+		}
+		printk("\n");
+
+		int f = kline_dtc_frame(rsp, n, mode);
+
+		if (f < 0) {
+			return;
+		}
+		if (e) {
+			e->responds = true;
+			switch (mode) {
+			case 0x03: e->mode03 = true; break;
+			case 0x07: e->mode07 = true; break;
+			case 0x0A: e->mode0a = true; break;
+			default: break;
+			}
+		}
+		total += f;
+
+		/* More frames?  They follow within P2; silence ends the set. */
+		n = kline_rx_frame(rsp, max, 300);
+		if (n < 0) {
+			break;
+		}
+	}
+	printk("    %d code%s reported\n", total, total == 1 ? "" : "s");
+}
+
+/* Positive response to a request?  d[0] == service | 0x40. */
+static bool kline_positive(const uint8_t *req, const uint8_t *rsp, int n)
+{
+	int hdr = 1 + ((rsp[0] & 0xC0) ? 2 : 0) + ((rsp[0] & 0x3F) ? 0 : 1);
+
+	return (n - hdr - 1) >= 1 && rsp[hdr] == (req[0] | 0x40);
+}
+
+/* Data services stay locked on many KWP2000 ECUs until a diagnostic session
+ * is started (ReadEcuIdentification is silently ignored, but the always-on
+ * StopCommunication still answers — exactly what 0x13 did).  Try a few
+ * StartDiagnosticSession modes and report the first the ECU accepts. */
+static bool kline_start_session(uint8_t addr, uint8_t *rsp, int max)
+{
+	static const uint8_t modes[] = { 0x81, 0x85, 0x86, 0x89, 0xC0 };
+
+	for (size_t i = 0; i < ARRAY_SIZE(modes); i++) {
+		uint8_t req[2] = { 0x10, modes[i] };
+
+		k_msleep(KLINE_P3_MIN_MS);
+		printk("  StartDiagnosticSession mode %02X\n", modes[i]);
+		int n = kline_request(addr, req, 2, rsp, max, KLINE_P2_MAX_MS);
+
+		if (n > 0) {
+			kline_show_response(req, rsp, n);
+			kline_record(kline_ecu_slot(addr), req, rsp, n);
+			if (kline_positive(req, rsp, n)) {
+				return true;
+			}
+		} else {
+			printk("  < (no response)\n");
+		}
+	}
+	return false;
+}
+
+/* Discovery record being filled in, if a discovery run is in progress. */
+static struct kline_discovery *s_disc;
+
+/* The record for `addr`, created on first use.  NULL outside discovery or
+ * once the table is full. */
+static struct kline_ecu *kline_ecu_slot(uint8_t addr)
+{
+	if (!s_disc) {
+		return NULL;
+	}
+	for (int i = 0; i < s_disc->n_ecu; i++) {
+		if (s_disc->ecu[i].addr == addr) {
+			return &s_disc->ecu[i];
+		}
+	}
+	if (s_disc->n_ecu >= (int)ARRAY_SIZE(s_disc->ecu)) {
+		return NULL;
+	}
+	struct kline_ecu *e = &s_disc->ecu[s_disc->n_ecu++];
+
+	memset(e, 0, sizeof(*e));
+	e->addr = addr;
+	return e;
+}
+
+/* Note what a positive response tells us about the ECU. */
+static void kline_record(struct kline_ecu *e, const uint8_t *req,
+			 const uint8_t *rsp, int n)
+{
+	if (!e) {
+		return;
+	}
+
+	int hdr = 1 + ((rsp[0] & 0xC0) ? 2 : 0) + ((rsp[0] & 0x3F) ? 0 : 1);
+	const uint8_t *d = &rsp[hdr];
+	int dlen = n - hdr - 1;
+
+	if (dlen < 1 || d[0] == 0x7F || d[0] != (req[0] | 0x40)) {
+		return;			/* negative or malformed: tells us nothing */
+	}
+	e->responds = true;
+
+	switch (req[0]) {
+	case 0x10:
+		e->session = true;
+		break;
+	case 0x1A:
+		e->ident = true;
+		break;
+	case 0x09:
+		e->vin = true;
+		break;
+	case 0x01:
+		e->obd = true;
+		if (dlen >= 6 && d[1] == 0x00) {
+			memcpy(e->pids, &d[2], 4);
+			e->pids_valid = true;
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+/* Open a session with `addr` (5-baud, at the configured rate), start a
+ * diagnostic session, run the identification requests, close it.  0 if the
+ * handshake completed. */
+static int kline_identify(uint8_t addr, bool use_l, uint8_t *kb1, uint8_t *kb2)
+{
+	int r = kline_slow_init_at(addr, use_l, false, CONFIG_APP_KLINE_BAUD,
+				   kb1, kb2);
+
+	if (r) {
+		kline_uart_close();
+		return r;
+	}
+
+	uint8_t rsp[KLINE_FRAME_MAX];
+	struct kline_ecu *e = kline_ecu_slot(addr);
+	int answered = 0;
+
+	printk("identify 0x%02X:\n", addr);
+
+	bool session = kline_start_session(addr, rsp, sizeof(rsp));
+
+	if (!session) {
+		printk("  (no diagnostic session — trying data services anyway)\n");
+	}
+
+	/* Run every request; a locked or unsupported service just times out
+	 * or returns a negative, and the next one is independent.  No early
+	 * abort — 0x13 proved the session survives a string of silences. */
+	for (size_t i = 0; i < ARRAY_SIZE(kline_ident_reqs); i++) {
+		const struct kline_req *q = &kline_ident_reqs[i];
+
+		k_msleep(KLINE_P3_MIN_MS);
+		printk("  %s\n", q->name);
+
+		int n = kline_request(addr, q->data, q->len, rsp, sizeof(rsp),
+				      KLINE_P2_MAX_MS);
+
+		if (n == -ETIMEDOUT) {
+			printk("  < (no response)\n");
+			continue;
+		}
+		if (n < 0) {
+			printk("  < (malformed response %d)\n", n);
+			continue;
+		}
+		answered++;
+		kline_show_response(q->data, rsp, n);
+		kline_record(e, q->data, rsp, n);
+	}
+
+	if (IS_ENABLED(CONFIG_APP_KLINE_DTC)) {
+		kline_read_dtcs(addr, 0x03, "OBD mode 03: stored DTCs",
+				rsp, sizeof(rsp), e);
+		kline_read_dtcs(addr, 0x07, "OBD mode 07: pending DTCs",
+				rsp, sizeof(rsp), e);
+		kline_read_dtcs(addr, 0x0A, "OBD mode 0A: permanent DTCs",
+				rsp, sizeof(rsp), e);
+	}
+
+	/* StopCommunication, expect C2. */
+	static const uint8_t stop[] = { 0x82 };
+
+	k_msleep(KLINE_P3_MIN_MS);
+	printk("  StopCommunication\n");
+	int n = kline_request(addr, stop, 1, rsp, sizeof(rsp), KLINE_P2_MAX_MS);
+
+	if (n > 0) {
+		kline_show_response(stop, rsp, n);
+	} else {
+		printk("  < (no response)\n");
+	}
+	printk("identify 0x%02X: %d of %d requests answered\n", addr, answered,
+	       (int)ARRAY_SIZE(kline_ident_reqs));
+
+	kline_uart_close();
+	return 0;
+}
+
 /* Parse "13,29,58,B4" into bytes; returns the count. */
 static int kline_addr_list(const char *str, uint8_t *out, int max)
 {
@@ -1154,6 +1647,8 @@ int kline_vehicle_init_ex(struct kline_session *out)
 		return -ENODEV;
 	}
 
+	s_req_trace = true;		/* discovery: show every frame */
+
 	printk("\n*** K-LINE INIT ***\n");
 
 	int err = kline_init();
@@ -1238,7 +1733,9 @@ int kline_vehicle_init_ex(struct kline_session *out)
 			}
 			/* The proper handshake first; only if that breaks down
 			 * fall back to recording whatever the ECU actually says. */
-			int r = kline_slow_init(addrs[i], use_l, false, &k1, &k2);
+			int r = IS_ENABLED(CONFIG_APP_KLINE_IDENT)
+				? kline_identify(addrs[i], use_l, &k1, &k2)
+				: kline_slow_init(addrs[i], use_l, false, &k1, &k2);
 
 			if (r == 0) {
 				if (opened == 0) {
@@ -1300,16 +1797,323 @@ out:
 		}
 	}
 	printk("*** K-LINE INIT DONE ***\n\n");
+	s_req_trace = false;
 
 	/* Nothing more is sent; drop the rails and let the ECU time the
 	 * session out. */
-	kline_power_off();
+	proge_mode_off();
 	return err;
 }
 
 int kline_vehicle_init(void)
 {
 	return kline_vehicle_init_ex(NULL);
+}
+
+/* -- discovery summary --------------------------------------------------------
+ *
+ * Discovery is a one-shot investigation of an unknown vehicle: it probes
+ * every protocol, rate and address it knows about, which takes minutes and
+ * fills the console.  The point of the summary is that nobody should have to
+ * read that log twice — it ends with the local.conf block that makes the
+ * runtime path talk to this car directly, with no probing at all.
+ */
+
+static bool kline_pid_ok(const uint8_t *pids, uint8_t pid)
+{
+	if (pid < 1 || pid > 32) {
+		return false;
+	}
+
+	int i = pid - 1;
+
+	return (pids[i / 8] & (0x80 >> (i % 8))) != 0;
+}
+
+static void kline_print_summary(const struct kline_discovery *d)
+{
+	const struct kline_ecu *eng = (d->engine >= 0) ? &d->ecu[d->engine] : NULL;
+
+	printk("\n=== K-WIRE DISCOVERY SUMMARY ===\n");
+
+	if (!d->ok) {
+		printk("  no ECU opened a session — nothing to configure\n");
+		printk("=== END ===\n\n");
+		return;
+	}
+
+	printk("  protocol       %s, %s\n", d->protocol ? d->protocol : "?",
+	       d->how ? d->how : "?");
+	printk("  data rate      %u baud\n", d->baud);
+	printk("  L wire         %s\n", d->use_l ? "driven" : "not needed");
+	printk("  addresses      ");
+	for (int i = 0; i < d->n_ecu; i++) {
+		printk("%02X ", d->ecu[i].addr);
+	}
+	printk("\n");
+
+	if (eng) {
+		printk("  engine ECU     0x%02X\n", eng->addr);
+	} else {
+		printk("  engine ECU     none answered OBD mode 01\n");
+	}
+
+	/* Addresses that handshake but never answer a request are worth
+	 * naming: they are what the runtime config should leave out. */
+	int inert = 0;
+
+	for (int i = 0; i < d->n_ecu; i++) {
+		if (!d->ecu[i].responds) {
+			if (!inert++) {
+				printk("  inert          ");
+			}
+			printk("%02X ", d->ecu[i].addr);
+		}
+	}
+	if (inert) {
+		printk("(handshake only, no service answered)\n");
+	}
+
+	if (eng && eng->pids_valid) {
+		printk("  mode 01 PIDs   ");
+		for (int pid = 1; pid <= 32; pid++) {
+			if (kline_pid_ok(eng->pids, (uint8_t)pid)) {
+				printk("%02X ", pid);
+			}
+		}
+		printk("\n");
+		printk("  engine RPM     %s (PID 0C)\n",
+		       kline_pid_ok(eng->pids, 0x0C) ? "yes" : "NOT SUPPORTED");
+		printk("  vehicle speed  %s (PID 0D)\n",
+		       kline_pid_ok(eng->pids, 0x0D) ? "yes" : "NOT SUPPORTED");
+		printk("  more PIDs      %s\n",
+		       kline_pid_ok(eng->pids, 0x20) ? "yes, above 0x20" :
+		       "no, nothing above 0x15");
+	}
+	if (eng) {
+		printk("  fault codes    mode 03 %s, mode 07 %s, mode 0A %s\n",
+		       eng->mode03 ? "yes" : "silent",
+		       eng->mode07 ? "yes" : "silent",
+		       eng->mode0a ? "yes" : "silent");
+		printk("  identification %s\n",
+		       eng->ident ? "ReadEcuIdentification supported" :
+		       eng->vin ? "mode 09 VIN only" :
+		       "none (no 0x1A, no mode 09 VIN)");
+		printk("  diag session   %s\n",
+		       eng->session ? "StartDiagnosticSession accepted" :
+		       "not needed / not accepted");
+	}
+
+	printk("\n  Suggested local.conf:\n");
+	printk("    CONFIG_APP_KLINE_BAUD=%u\n", d->baud);
+	if (eng) {
+		printk("    CONFIG_APP_KLINE_ECU_ADDR=0x%02X\n", eng->addr);
+		printk("    CONFIG_APP_KLINE_INIT_ADDRS=\"%02X\"\n", eng->addr);
+	}
+	if (d->use_l) {
+		printk("    CONFIG_APP_L_SEND_ENABLED=y\n");
+	}
+	printk("    CONFIG_APP_KLINE_INIT_FAST=n\n");
+	printk("    CONFIG_APP_KLINE_INIT_SWEEP=n\n");
+	printk("    CONFIG_APP_KLINE_DISCOVER=n\n");
+	printk("=== END ===\n\n");
+}
+
+int kline_discover(struct kline_discovery *out)
+{
+	struct kline_discovery local;
+	struct kline_discovery *d = out ? out : &local;
+	struct kline_session sess = { 0 };
+
+	memset(d, 0, sizeof(*d));
+	d->engine = -1;
+
+	s_disc = d;
+	int r = kline_vehicle_init_ex(&sess);
+
+	s_disc = NULL;
+
+	d->ok       = (r == 0);
+	d->how      = sess.how;
+	d->protocol = sess.protocol;
+	d->baud     = sess.baud ? sess.baud : CONFIG_APP_KLINE_BAUD;
+	d->use_l    = IS_ENABLED(CONFIG_APP_L_SEND_ENABLED);
+
+	/* The engine ECU is whichever one answered OBD mode 01; nothing else
+	 * on a K line does. */
+	for (int i = 0; i < d->n_ecu; i++) {
+		if (d->ecu[i].obd) {
+			d->engine = i;
+			break;
+		}
+	}
+
+	kline_print_summary(d);
+	return r;
+}
+
+/* -- runtime session ----------------------------------------------------------
+ *
+ * The polling path, kept deliberately free of everything above: no address
+ * hunting, no rate retry, no capability probing.  It opens at the address
+ * and rate discovery settled on and does nothing else, so a poll costs one
+ * initialisation and then one exchange per PID.
+ */
+
+int kline_session_open(void)
+{
+	uint8_t kb1 = 0, kb2 = 0;
+
+	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE) || PIN_K1_TX < 0) {
+		return -ENODEV;
+	}
+
+	int err = kline_init();
+
+	if (err) {
+		return err;
+	}
+	kline_calibrate();		/* the 5-baud address is still bit-banged */
+
+	if (kline_wait_idle(300)) {
+		LOG_WRN("K line busy — not opening a session");
+		proge_mode_off();
+		return -EBUSY;
+	}
+
+	err = kline_slow_init((uint8_t)CONFIG_APP_KLINE_ECU_ADDR, false, true,
+			      &kb1, &kb2);
+	if (err) {
+		proge_mode_off();
+		return err;
+	}
+
+	/* Requests need the UART; kline_slow_init() closed it on the way out. */
+	kline_uart_open(CONFIG_APP_KLINE_BAUD);
+	return 0;
+}
+
+/* Drop the session without the StopCommunication courtesy.  Used when the
+ * ignition has gone off: the ECU is unpowered, so waiting for it to answer
+ * only costs time on a bus that is no longer listening. */
+void kline_session_abort(void)
+{
+	if (s_uart) {
+		kline_uart_close();
+	}
+	proge_mode_off();
+}
+
+void kline_session_close(void)
+{
+	if (s_uart) {
+		static const uint8_t stop[] = { 0x82 };
+		uint8_t rsp[KLINE_FRAME_MAX];
+
+		k_msleep(KLINE_P3_MIN_MS);
+		kline_request((uint8_t)CONFIG_APP_KLINE_ECU_ADDR, stop, 1,
+			      rsp, sizeof(rsp), KLINE_P2_POLL_MS);
+		kline_uart_close();
+	}
+	proge_mode_off();
+}
+
+/* One OBD mode 01 request.  Returns the number of data bytes written to buf
+ * (the PID's value, without the 41 xx echo) or a negative errno. */
+int kline_obd_pid(uint8_t pid, uint8_t *buf, int max)
+{
+	uint8_t req[2] = { 0x01, pid };
+	uint8_t rsp[KLINE_FRAME_MAX];
+
+	if (!s_uart) {
+		return -ENOTCONN;
+	}
+
+	int n = kline_request((uint8_t)CONFIG_APP_KLINE_ECU_ADDR, req, 2,
+			      rsp, sizeof(rsp), KLINE_P2_POLL_MS);
+
+	if (n < 0) {
+		return n;
+	}
+
+	int hdr = 1 + ((rsp[0] & 0xC0) ? 2 : 0) + ((rsp[0] & 0x3F) ? 0 : 1);
+	const uint8_t *d = &rsp[hdr];
+	int dlen = n - hdr - 1;
+
+	if (dlen < 2 || d[0] != 0x41 || d[1] != pid) {
+		return -EPROTO;
+	}
+	dlen -= 2;
+	if (dlen > max) {
+		dlen = max;
+	}
+	memcpy(buf, &d[2], dlen);
+	return dlen;
+}
+
+/* Read the stored (mode 0x03) or pending (0x07) fault codes into `codes` as
+ * raw 16-bit values, following the multi-frame response until the bus goes
+ * quiet.  Returns the number stored, or a negative errno.
+ *
+ * A silent ECU is reported as zero codes rather than an error: an ECU with
+ * nothing stored may answer with an all-zero frame or may not answer at all,
+ * and both mean the same thing.  -ENOTCONN if no session is open. */
+int kline_obd_dtcs(uint8_t mode, uint16_t *codes, int max)
+{
+	uint8_t req[1] = { mode };
+	uint8_t rsp[KLINE_FRAME_MAX];
+	int found = 0;
+
+	if (!s_uart) {
+		return -ENOTCONN;
+	}
+
+	int n = kline_request((uint8_t)CONFIG_APP_KLINE_ECU_ADDR, req, 1,
+			      rsp, sizeof(rsp), KLINE_P2_MAX_MS);
+
+	/* Silence is NOT "no codes stored".  The caller turns a zero return
+	 * into an empty report, and the server treats an empty report as the
+	 * device's complete current set — so mapping a timeout to zero here
+	 * would clear every live fault on the server the first time the ECU
+	 * failed to answer.  Only a positive response means zero. */
+	if (n < 0) {
+		return n;
+	}
+
+	for (int frame = 0; frame < 16; frame++) {
+		int hdr = 1 + ((rsp[0] & 0xC0) ? 2 : 0) + ((rsp[0] & 0x3F) ? 0 : 1);
+		const uint8_t *d = &rsp[hdr];
+		int dlen = n - hdr - 1;
+
+		if (dlen < 1 || d[0] != (mode | 0x40)) {
+			/* A negative or unrelated first frame is a failed read,
+			 * not an empty one; only report zero if the ECU
+			 * actually answered the service we asked for. */
+			if (frame == 0) {
+				return -EPROTO;
+			}
+			break;
+		}
+		for (int i = 1; i + 1 < dlen && found < max; i += 2) {
+			uint16_t v = (uint16_t)((d[i] << 8) | d[i + 1]);
+
+			if (v) {			/* all-zero pairs are padding */
+				codes[found++] = v;
+			}
+		}
+
+		n = kline_rx_frame(rsp, sizeof(rsp), 300);
+		if (n < 0) {
+			break;
+		}
+	}
+	return found;
+}
+
+/* "P0133" for 0x0133.  `out` needs 6 bytes. */
+void kline_dtc_string(uint16_t v, char *out)
+{
+	kline_dtc_str(v, out);
 }
 
 /* -- L line: pulldown gate + sense (v3.3+) -----------------------------------
@@ -1528,7 +2332,7 @@ int kline_test(void)
 
 	printk("\n*** K-WIRE TEST ***\n");
 
-	if (kline_power_on()) {
+	if (proge_mode_on()) {
 		printk("K-line test aborted: rails did not come up\n");
 		return -EIO;
 	}
@@ -1628,6 +2432,6 @@ int kline_test(void)
 
 	printk("*** K-WIRE TEST DONE ***\n\n");
 
-	kline_power_off();
+	proge_mode_off();
 	return err;
 }

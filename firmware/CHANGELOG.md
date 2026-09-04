@@ -14,7 +14,22 @@ sevonpend.patch` routes all three sites through one helper; `ifmcu/build.sh`
 now applies `ifmcu/patches/*.patch` before building. Drop the patch once it is
 merged upstream. See QUICKSTART.md.
 
-### K-line vehicle init at boot (`CONFIG_APP_KLINE_INIT_AT_BOOT`)
+### Update inhibit for bench builds (`CONFIG_APP_FOTA_INHIBIT`)
+- **New flag, default off.** Leaves the update machinery compiled in but never
+uses it: no manifest fetch at power-on, no download, and a server advertising
+a newer version or sending a manual `fota` command is ignored.  The power-on
+check is unconditional, so without this a local build — version 0.4.0, below
+whatever the fleet is on — is swapped out within seconds of booting and the
+change under test never runs.
+- **Deliberately not `APP_FOTA=n`**, which also stubs out
+`fota_confirm_image()`.  An image installed over the air boots on probation
+and MCUboot reverts it on the next boot unless that call runs, so disabling
+the whole subsystem would make a test build delivered by FOTA roll straight
+back.  With the inhibit the image is still confirmed.
+- Logged once as a warning so it is obvious from the console why a unit is
+not updating.
+
+### K-line vehicle init at boot (`CONFIG_APP_KLINE_DISCOVER`)
 - **`kline_vehicle_init()`** in `hw_kline.c`: opens a diagnostic session with
 the vehicle's ECU over K and reports the outcome on the console and as an
 alert (priority 1 on success), then the tracker starts as normal.  Stages,
@@ -35,6 +50,111 @@ the sync byte does not decode.
 - **Result:** a 2006 Toyota Harrier 2.4 (ACU30) answers on ECU addresses
 0x13/0x29/0x58/0xB4 with KWP2000 key bytes E9 8F at 9600 baud, on K alone;
 the handshake completes on all four.
+- **OBD-II telemetry over the K wire** (`APP_KLINE_TELEMETRY`, default off):
+each telemetry record carries the mode 01 PIDs the ECU supports — RPM, speed,
+coolant and intake temperature, load, throttle, MAF, timing advance, fuel
+trims, the malfunction lamp and the stored-code count — polled at the moment
+the record is built.  The support bitmap is read once per session and only
+advertised PIDs are requested.  The session is opened once and held for the
+drive rather than per record, since a 5-baud init holds the bus dominant for
+2.4 s; a request that times out reopens it once.  Values travel as scaled
+integers so the packet needs no float formatting.  New `obd_*` columns on the
+server's `log` table.
+- **Fault-code reporting** (`APP_KLINE_DTC_REPORT`, default off): stored codes
+are read after ignition-on and whenever the stored-code count in mode 01
+PID 01 changes — that byte is already read by every telemetry poll, so a code
+appearing or clearing mid-drive is caught immediately with no extra bus
+traffic, and there is no periodic re-read.  There is no ignition-off read:
+sleep is only entered with the ignition off and the ECU unpowered, so it
+could only ever time out.  Codes are sent as a standalone
+`D,<code>,...` line carrying the complete current set.  The server reconciles
+it against a new `dtc` table (device, code, `raised_at`, `cleared_at`,
+`active`), alerting at priority 1 on codes appearing and 0 on codes clearing,
+and keeping every occurrence as history.  A failed read sends nothing rather
+than an empty set, which would wrongly clear live faults.  Read-only.
+- **Review fixes** before any of this ran on a vehicle: a silent ECU was being
+reported as "no fault codes", which would have cleared every live fault on the
+server (a timeout now returns an error, and the session is dropped at
+ignition-off so a stale one cannot be mistaken for a working one); the
+mid-drive fault-code trigger was hung off `STATE_IDLE`, which a drive never
+enters with `BATCH_SIZE` 1, so it could not fire until the next key-on; the
+RPM accumulator's minimum started at zero and so never moved; `obd_close()`
+cleared the abort flag one line after it was set; and the per-frame request
+tracing written for discovery was running in the poll path, which with
+`CONFIG_LOG_MODE_IMMEDIATE` is synchronous console I/O about once a second
+forever.
+- **A silent mode 03 is disambiguated by the stored-code count.**  Treating
+silence as a failure is right in general, but ECUs that never answer mode 03
+when they hold no codes — the reference Toyota among them — then never report
+at all and retry forever.  Mode 01 PID 01 carries the count independently, so
+silence is read as an empty set only when that count is zero.  Failed reads
+now back off for 30 s instead of retrying every loop iteration.
+- **Fault-code reporting retries until a report lands.**  The count watch only
+fires on a change, so a failed ignition-on read would otherwise mean codes the
+ECU already had were never reported at all.
+- **Fault-code alerts are batched**: one notification per event listing the
+codes, not one per code — a single root fault routinely raises three or four.
+- **`obd_speed` is stored in mph**, converted server-side with the same
+constant and in the same function as GNSS speed, so the two speed columns are
+directly comparable.  The wire stays km/h, which is what both sources natively
+produce, and firmware-internal use stays km/h because the coast-to-stop
+threshold is expressed that way.  The column changed from an integer to
+`decimal(5,2)` to match `speed`.
+- **The ECU's own figures now drive the tracker's movement and engine-state
+logic**, with automatic fallback when it is not answering.  Vehicle speed
+(PID 0x0D, km/h by J1979 on any market's vehicle) replaces GNSS speed for
+"are we moving": across 106 stationary records the ECU read 0 km/h throughout
+while GNSS averaged 0.66 mph and peaked at 5.11 mph.  Engine RPM (PID 0x0C)
+replaces the 13 V charging-voltage proxy for `engine_running`, which was
+mis-reading a running engine as stopped and dropping the tracker to its 30 s
+engine-off cadence mid-drive.  Both are refreshed every 3 s by the keep-alive
+rather than only when a record is built, since records are 30 s apart in the
+engine-off state.
+- **The diagnostic session is kept alive across a whole cycle.**  P3max is 5 s
+and a tracker cycle does not naturally stay inside it: the OBD poll happens
+after the GPS fix, so the send and idle that follow are unprotected and a slow
+send alone can exceed it.  The RPM sampler covers the fix wait; a new
+`obd_keepalive()` on the main loop covers the rest, firing only after 3 s of
+silence and reading mode 01 PID 01 — which is also the stored-code watch, so
+it costs nothing extra.  Reopening is rate limited to two per minute, after
+which the firmware stands off for a minute rather than re-initialising the
+bus every cycle.
+- **Engine RPM is sampled ~1 Hz**, not once per record, from a new
+`gnss_set_tick()` callback on the GNSS fix wait — the thread is otherwise
+asleep on a semaphore there, and running on it means no locking against the
+rest of the K-wire code.  Reported as `obd_rpm_min` / `_max` / `_avg`
+alongside the instantaneous value.  The sampler never opens a session.
+- **Ignition-off is handled throughout the K-wire runtime path.**  Every entry
+point checks it, a poll in flight abandons its remaining PIDs on the first
+timeout with the ignition gone instead of burning one per PID, runtime
+requests use a 250 ms timeout against discovery's 1 s, and the session is
+closed without StopCommunication when the ECU is already unpowered.
+- **`src/kline_obd.c`** holds the application layer — which PIDs to ask for,
+unit conversion, record formatting — while `hw_kline.c` keeps the wire and
+the discovery.
+- **Discovery and the runtime session are now separate operations.**
+`APP_KLINE_INIT_AT_BOOT` is renamed `APP_KLINE_DISCOVER`: a one-shot
+investigation of an unknown vehicle that hunts protocol, rate and addresses,
+asks each responder what it supports, and ends with a summary plus the
+`local.conf` block that configures the runtime path — so the log only has to
+be read once.  Addresses that handshake but answer nothing are listed as
+inert.  Alongside it, `kline_session_open()` / `kline_obd_pid()` /
+`kline_session_close()` are the polling path: no address hunting, no rate
+retry, no capability probing, opening at `APP_KLINE_ECU_ADDR` (new, default
+0x33) and `APP_KLINE_BAUD`.
+- **ECU identification and fault codes** (`APP_KLINE_IDENT`, `APP_KLINE_DTC`,
+both default off): with a session open, ask each address who it is —
+StartDiagnosticSession, ReadEcuIdentification, OBD mode 01 supported-PIDs /
+MIL and DTC count / RPM / coolant, mode 09 VIN — then read stored, pending and
+permanent DTCs (modes 03/07/0A), decoding each to its P/C/B/U form and
+following multi-frame responses.  Every request is read-only; mode 04, which
+erases codes and the readiness data with them, is deliberately not
+implemented.  On the reference vehicle 0x13 is the engine ECU (PID bitmap
+BE 1F B8 00, live RPM and coolant, speed on PID 0D); it supports no PID above
+0x15 and ignores every non-OBD service, so no VIN is available over K.
+- **`APP_KLINE_BAUD` and `APP_KLINE_INIT_ADDRS` are now unconditional.**  They
+had `depends on APP_KLINE_DISCOVER`, but `hw_kline.c` is compiled for every
+board and reads both as values, so turning the boot init off broke the build.
 - **Terminology:** the interface is now called the K-wire (ISO 14230-1
 K-line) throughout — Kconfig prompts, board_test.sh, console banners,
 comments.  "ISO-9141" was inaccurate: the physical layer is ISO 14230-1 and

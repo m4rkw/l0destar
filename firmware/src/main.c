@@ -276,9 +276,115 @@ static bool should_send_data(void)
 /* ========================================================================= */
 /*  STATE_SLEEP — low-power loop with timer / accel / ignition wake          */
 /* ========================================================================= */
+/* Vehicle speed for the tracker's own movement decisions.
+ *
+ * The ECU's figure comes from the wheel speed sensors and reads exactly zero
+ * at a standstill.  GNSS speed is Doppler-derived and does not: across 106
+ * stationary records it averaged 0.66 mph and peaked at 5.11 mph, which is
+ * enough to look like creeping motion.  So prefer the ECU when it is
+ * answering and fall back to GNSS when it is not.
+ *
+ * The ECU figure is not better in every respect — vehicle speed sensors
+ * typically over-read by a couple of percent and are affected by tyre size —
+ * but for "are we moving or not" the zero is what matters. */
+static float vehicle_speed_kmh(void)
+{
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+    int obd = obd_speed_kmh();
+
+    if (obd >= 0) {
+        return (float)obd;
+    }
+#endif
+    return g_gnss.speed_kmh;
+}
+
+/* Is the engine running?
+ *
+ * RPM is a direct measurement; charging voltage is only a proxy, and a poor
+ * one — a tired battery or a low alternator output reads as "engine off" and
+ * drops the tracker to its 30 s engine-off cadence while the car is being
+ * driven.  Fall back to voltage only when the ECU is not answering. */
+/* obd_rpm() for the log lines, without needing the guard at every call site:
+ * -1 on a build with no K wire, which prints as "-1 rpm" and reads correctly
+ * as "no ECU figure". */
+static int engine_rpm_or_na(void)
+{
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+    return obd_rpm();
+#else
+    return -1;
+#endif
+}
+
+static bool engine_is_running(void)
+{
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+    int rpm = obd_rpm();
+
+    if (rpm >= 0) {
+        return rpm > 0;
+    }
+#endif
+    return battery_v >= ENGINE_RUNNING_VOLTAGE;
+}
+
+#if IS_ENABLED(CONFIG_APP_KLINE_DTC_REPORT)
+/* Ignition as the fault-code reader last saw it, so the ignition-on read
+ * fires exactly once per key turn.  -1 until the first observation. */
+static int8_t s_dtc_last_ign = -1;
+
+/* Read the ECU's stored fault codes and send them to the server, which diffs
+ * the set against what it holds and alerts on codes appearing and clearing.
+ * Sent as its own "D," line rather than folded into a telemetry record,
+ * because the server treats it as the device's complete current set and must
+ * not infer one from a record that happens to lack the field.
+ *
+ * A failed read sends nothing at all: an empty report means "no codes
+ * stored", so reporting one after a timeout would clear faults that are
+ * still there. */
+static void kline_report_dtcs(const char *when)
+{
+    char line[128];
+    int len = obd_dtc_report(line, sizeof(line));
+
+    if (len < 0) {
+        LOG_WRN("DTC read at %s failed (%d) — reporting nothing", when, len);
+        return;
+    }
+    LOG_INF("DTC read at %s: %s", when, line);
+    data_send_line(line);
+}
+#endif
+
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+/* Everything the K-wire runtime needs done regularly, independent of which
+ * state the tracker is in.  Called from every loop that can run for a while:
+ * the main one and the ignition-sleep one.
+ *
+ * It must not live inside a single state.  With BATCH_SIZE 1 a drive cycles
+ * STATE_GPS_COLLECT and STATE_SEND and never reaches STATE_IDLE, so anything
+ * hung off idle would not run at all between key-on and key-off — which is
+ * the entire window the fault-code watch exists to cover. */
+static void obd_service(void)
+{
+    obd_keepalive();
+#if IS_ENABLED(CONFIG_APP_KLINE_DTC_REPORT)
+    if (obd_dtc_pending()) {
+        kline_report_dtcs("code count changed");
+    }
+#endif
+}
+#endif
+
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
+    /* No fault-code read here: sleep is only ever entered with the ignition
+     * off, and the engine ECU is unpowered then, so the read would time out
+     * and an empty report would wrongly clear live faults.  Codes raised
+     * during a drive are caught while it is still running, by the stored-code
+     * count in mode 01 PID 01 (see obd_dtc_pending). */
     crash_irq_disable();
     led_sleep_enter();
     LOG_INF("sleep: GNSS stop");
@@ -290,7 +396,10 @@ static void do_sleep(void)
     LOG_INF("sleep: CAN power off");
     hw_can_power_off();
     LOG_INF("sleep: K-line power off");
-    kline_power_off();
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+    obd_close();        /* StopCommunication before the rails go */
+#endif
+    proge_mode_off();
     LOG_INF("sleep: aux power off");
     hw_aux_power_off();
     LOG_INF("sleep: INA228 shutdown");
@@ -721,6 +830,11 @@ static void do_ignition_sleep(void)
     for (;;) {
         watchdog_kick();
         crash_check();
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+        /* Ignition on with the engine off: the ECU is still powered, so the
+         * session and the fault-code watch stay live here too. */
+        obd_service();
+#endif
 
         ignition = (char)ignition_read();
         if (ignition != 0) {
@@ -746,9 +860,10 @@ static void do_ignition_sleep(void)
         int64_t now = k_uptime_get();
         if (now - last_voltage_ms >= VOLTAGE_POLL_INTERVAL * 1000) {
             battery_v = battery_read_voltage();
-            if (battery_v >= ENGINE_RUNNING_VOLTAGE) {
+            if (engine_is_running()) {
                 engine_running = true;
-                LOG_INF("engine started (%.2fV)", (double)battery_v);
+                LOG_INF("engine started (%d rpm, %.2fV)",
+                        engine_rpm_or_na(), (double)battery_v);
                 s_state = STATE_IDLE;
                 return;
             }
@@ -793,67 +908,21 @@ static void do_ignition_sleep(void)
 /* ========================================================================= */
 /*  main                                                                     */
 /* ========================================================================= */
-#if IS_ENABLED(CONFIG_APP_KLINE_INIT_AT_BOOT)
+#if IS_ENABLED(CONFIG_APP_KLINE_DISCOVER)
 static int kline_boot_res = -ENODATA;
-static struct kline_session kline_boot_sess;
+static struct kline_discovery kline_boot_disc;
+#endif
 
-/* Push the boot-time K-line result as an alert straight away — before the
- * power-on FOTA check, which may well swap this image out and reboot.  The
- * queue is RAM, so a queued-but-unsent alert would go with it. */
-static void kline_boot_alert(void)
-{
-    char msg[110];
-
-    if (kline_boot_res == 0) {
-        int n = snprintf(msg, sizeof(msg),
-                         "K-line: session via %s at %u baud, ECU 0x%02X KB %02X %02X (%s)",
-                         kline_boot_sess.how, kline_boot_sess.baud,
-                         kline_boot_sess.ecu, kline_boot_sess.kb1,
-                         kline_boot_sess.kb2, kline_boot_sess.protocol);
-        if (kline_boot_sess.n_addrs > 1 && n > 0 && n < (int)sizeof(msg)) {
-            n += snprintf(msg + n, sizeof(msg) - n, " +%d more:",
-                          kline_boot_sess.n_addrs - 1);
-            for (int i = 1; i < kline_boot_sess.n_addrs &&
-                 i < (int)ARRAY_SIZE(kline_boot_sess.addrs) &&
-                 n > 0 && n < (int)sizeof(msg); i++) {
-                n += snprintf(msg + n, sizeof(msg) - n, " %02X",
-                              kline_boot_sess.addrs[i]);
-            }
-        }
-        alert_enqueue(msg, 1);
-    } else if (kline_boot_sess.n_addrs > 0) {
-        int n = snprintf(msg, sizeof(msg),
-                         "K-line: %d address%s replied at %u baud (unknown protocol):",
-                         kline_boot_sess.n_addrs,
-                         kline_boot_sess.n_addrs == 1 ? "" : "es",
-                         kline_boot_sess.baud);
-        for (int i = 0; i < kline_boot_sess.n_addrs &&
-             i < (int)ARRAY_SIZE(kline_boot_sess.addrs) &&
-             n > 0 && n < (int)sizeof(msg); i++) {
-            n += snprintf(msg + n, sizeof(msg) - n, " %02X",
-                          kline_boot_sess.addrs[i]);
-        }
-        alert_enqueue(msg, 0);
-    } else {
-        snprintf(msg, sizeof(msg),
-                 "K-line: no ECU answered (%s%s, %s) err %d, listen edges %d",
-                 "slow+fast on 0x33",
-                 IS_ENABLED(CONFIG_APP_KLINE_INIT_SWEEP) ? " + sweeps" : "",
-                 IS_ENABLED(CONFIG_APP_L_SEND_ENABLED) ? "K+L" : "K only",
-                 kline_boot_res, kline_boot_sess.rx_edges);
-        alert_enqueue(msg, 0);
-    }
-    for (int i = 0; i < 5; i++) {
-        if (alert_send() == 1) {
-            LOG_INF("K-line result alert sent");
-            return;
-        }
-        LOG_WRN("K-line result alert not sent — retry %d/5 in 10 s", i + 1);
-        transport_close();
-        k_msleep(10000);
-    }
-    LOG_ERR("K-line result alert still queued — will ride the next send");
-}
+#if IS_ENABLED(CONFIG_APP_KLINE_DTC_REPORT)
+/* Read the ECU's stored fault codes and queue them for the server, which
+ * diffs the set against what it holds and alerts on codes appearing and
+ * clearing.  Sent as its own "D," line rather than folded into a telemetry
+ * record, because the server treats it as the device's complete current set
+ * and must not infer one from a record that happens to lack the field.
+ *
+ * A failed read sends nothing at all: an empty report means "no codes
+ * stored", so reporting one after a timeout would wrongly clear faults that
+ * are still there. */
 #endif
 
 int main(void)
@@ -965,12 +1034,19 @@ int main(void)
     for (;;) { k_msleep(10000); }
 #endif
 
-#if IS_ENABLED(CONFIG_APP_KLINE_INIT_AT_BOOT)
-    /* One full pass at opening a session with the vehicle (5-baud, fast
-     * init, both address sweeps — up to ~15 min), reported on the console
-     * now and as an alert once the modem is up.  The tracker then carries
-     * on as normal whatever the outcome. */
-    kline_boot_res = kline_vehicle_init_ex(&kline_boot_sess);
+#if IS_ENABLED(CONFIG_APP_KLINE_DISCOVER)
+    /* One-shot investigation of an unknown vehicle: hunt the protocol,
+     * rate and ECU addresses, ask each responder what it supports, and
+     * finish with a summary and a suggested local.conf.  Slow and noisy by
+     * design — run it once per vehicle, then configure the runtime path
+     * from what it prints.  Parks afterwards so the console log survives:
+     * going on to the modem would let the power-on FOTA check swap this
+     * image out mid-investigation. */
+    kline_boot_res = kline_discover(&kline_boot_disc);
+
+    while (1) {
+        status_delay(1000);
+    }
 #endif
 
     LOG_INF("ignition=%s battery=%.2fV",
@@ -1004,11 +1080,14 @@ int main(void)
         transport_teardown();
     }
 
-#if IS_ENABLED(CONFIG_APP_KLINE_INIT_AT_BOOT)
-    kline_boot_alert();
-#endif
-
     gnss_start();
+
+#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
+    /* Sample engine RPM about once a second while waiting for a fix, which
+     * is where most of a cycle goes.  One reading per record would say
+     * nothing about how the car was driven. */
+    gnss_set_tick(obd_sample_tick);
+#endif
 
     crash_irq_enable();
 
@@ -1034,6 +1113,13 @@ int main(void)
         watchdog_kick();
         crash_check();
         handle_ignition_state();
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+        /* The RPM sampler covers the GPS fix wait; this covers everything
+         * else in a cycle — the send and the idle — so the diagnostic
+         * session is not dropped and re-initialised every time round, and it
+         * is where a fault code raised mid-drive gets reported. */
+        obd_service();
+#endif
 
         if (power_reboot) {
             reboot_now();
@@ -1055,14 +1141,17 @@ int main(void)
             }
 
             battery_v = battery_read_voltage();
-            if (ignition == 0 && !engine_running &&
-                battery_v >= ENGINE_RUNNING_VOLTAGE) {
+
+            bool running_now = engine_is_running();
+
+            if (ignition == 0 && !engine_running && running_now) {
                 engine_running = true;
-                LOG_INF("engine started (%.2fV)", (double)battery_v);
-            } else if (engine_running &&
-                       battery_v < ENGINE_RUNNING_VOLTAGE) {
+                LOG_INF("engine started (%d rpm, %.2fV)",
+                        engine_rpm_or_na(), (double)battery_v);
+            } else if (engine_running && !running_now) {
                 engine_running = false;
-                LOG_INF("engine stopped (%.2fV)", (double)battery_v);
+                LOG_INF("engine stopped (%d rpm, %.2fV)",
+                        engine_rpm_or_na(), (double)battery_v);
             }
 
             if (ignition == 0 && previous_ignition != 0 &&
@@ -1078,6 +1167,25 @@ int main(void)
                 s_last_send_ms = k_uptime_get();
                 previous_ignition = ignition;
             }
+
+#if IS_ENABLED(CONFIG_APP_KLINE_DTC_REPORT)
+            /* Ignition-on: read what the ECU has persisted from earlier
+             * drives.  Deliberately after the cached-position send above,
+             * not before it: this costs the ECU's boot delay plus a session
+             * open, and the position is the time-sensitive part.
+             *
+             * Latched on its own state, not previous_ignition, which is only
+             * advanced when a position actually goes out — keying off it
+             * would repeat the read every second until a fix appeared. */
+            if (ignition == 0 && s_dtc_last_ign != 0) {
+                s_dtc_last_ign = 0;
+                k_msleep(CONFIG_APP_KLINE_DTC_ON_DELAY_MS);
+                watchdog_kick();
+                kline_report_dtcs("ignition on");
+            } else if (ignition != 0) {
+                s_dtc_last_ign = ignition;
+            }
+#endif
 
             /* Server-indicated update (fota=<ver> in a response), manual
              * `fota` command, or a power-on check that hit a dead link and
@@ -1151,7 +1259,7 @@ int main(void)
                 (previous_ignition == -1
                  || previous_ignition != ignition
                  || ignition != 0
-                 || g_gnss.speed_kmh < 0.005f);
+                 || vehicle_speed_kmh() < 0.005f);
 
             LOG_INF("sending %d records", s_buffered_records);
             led_sending();
@@ -1180,17 +1288,17 @@ int main(void)
             if (!s_coasting &&
                 previous_ignition == 0 && ignition != 0 &&
                 g_gnss.valid &&
-                g_gnss.speed_kmh > COAST_STOP_SPEED_KMH) {
+                vehicle_speed_kmh() > COAST_STOP_SPEED_KMH) {
                 s_coasting = true;
                 s_coast_iters = 0;
                 LOG_INF("coast-to-stop started");
             }
             if (s_coasting) {
                 s_coast_iters++;
-                if (g_gnss.speed_kmh <= COAST_STOP_SPEED_KMH ||
+                if (vehicle_speed_kmh() <= COAST_STOP_SPEED_KMH ||
                     s_coast_iters >= COAST_MAX_ITERATIONS) {
                     LOG_INF("coast-to-stop ended (spd=%.1f iter=%d)",
-                            (double)g_gnss.speed_kmh, s_coast_iters);
+                            (double)vehicle_speed_kmh(), s_coast_iters);
                     s_coasting = false;
                 }
             }

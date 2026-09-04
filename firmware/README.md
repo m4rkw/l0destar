@@ -19,7 +19,7 @@ deeply when the vehicle is parked, and wakes on movement, ignition, or a timer.
 | MCU / modem / GNSS | nRF9151 SiP (LTE-M, integrated GNSS receiver) |
 | IMU               | ASM330LHHX (automotive 6-axis, WHO_AM_I 0x6B) over bit-banged I²C - accel-only today: movement detection + hardware wake interrupt; gyro/MLC/FSM/FIFO unused |
 | Voltage monitor   | INA228 over the same I²C bus - battery / ignition-derived voltage |
-| Diagnostics       | K-wire (ISO 14230-1 K-line, KWP2000) via TJA1027T on v3.x (L9637D on v2.x); 5-baud address bit-banged, data bytes on UARTE1 — see KWIRE.md |
+| Diagnostics       | K-wire (ISO 14230-1 K-line, KWP2000) via TJA1027T on v3.x (L9637D on v2.x); 5-baud address bit-banged, data bytes on UARTE1 — see [KWIRE.md](KWIRE.md) |
 | Ignition sense    | GPIO input (MOSFET-gated 3.3 V rail) |
 | Status LED        | board `led0` alias (LED1 on the nRF9151 DK) |
 
@@ -119,7 +119,8 @@ at ±250 dps.
 | `hw_power.c`  | INA228 voltage, ignition read, INA shutdown/wake, AUX domain wrappers |
 | `hw_can.c`    | MCP2518FD power/domain handling, sleep mode + transceiver standby (XSTBY) |
 | `hw_accel.c`  | ASM330LHHX IMU (accel path): polling + hardware wake interrupt |
-| `hw_kline.c`  | K-line bit-bang UART (L9637D) |
+| `hw_kline.c`  | K wire: 5-baud init bit-banged, data bytes on UARTE1; vehicle discovery and the runtime session ([KWIRE.md](KWIRE.md), [KWIRE_QUICKSTART.md](KWIRE_QUICKSTART.md)) |
+| `kline_obd.c` | OBD-II over the K wire: PID polling into telemetry, fault codes, engine/speed for the tracker's own logic |
 | `fota.c`      | Over-the-air updates: manifest check, battery gate, MCUboot image download ([FOTA.md](FOTA.md)) |
 | `led.c` · `watchdog.c` · `reboot.c` | Status LED · 32 s task watchdog (HW fallback) · reboot helper |
 | `config.h` · `pins.h` · `app.h` · `ca_cert.h` | Compile-time defaults · pins · shared API/state · server CA cert |

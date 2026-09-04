@@ -201,6 +201,19 @@ int gnss_resume(void)
     return err;
 }
 
+/* Optional callback run about once a second while gnss_collect() waits.
+ * The GPS wait is most of a telemetry cycle and the thread is otherwise
+ * asleep on a semaphore, so it is the one place a second subsystem can be
+ * sampled at a useful rate without a thread of its own — and being called
+ * from this thread, it needs no locking against the code that runs before
+ * and after the wait.  Keep whatever runs here short. */
+static void (*s_tick_cb)(void);
+
+void gnss_set_tick(void (*cb)(void))
+{
+	s_tick_cb = cb;
+}
+
 int gnss_collect(int timeout_ms, struct gnss_fix *out)
 {
     bool cold = !s_have_fix;
@@ -222,8 +235,10 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     int remaining = timeout_ms;
     int err = -EAGAIN;
     int since_prio = 0;
+    const int tick = s_tick_cb ? 1000 : 10000;
+
     while (remaining > 0) {
-        int chunk = (remaining > 10000) ? 10000 : remaining;
+        int chunk = (remaining > tick) ? tick : remaining;
         err = k_sem_take(&s_fix_sem, K_MSEC(chunk));
         if (err == 0) {
             break;
@@ -231,6 +246,10 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
         remaining -= chunk;
         since_prio += chunk;
         watchdog_kick();
+
+        if (s_tick_cb) {
+            s_tick_cb();
+        }
 
         if (cold && since_prio >= 30000) {
             nrf_modem_gnss_prio_mode_enable();

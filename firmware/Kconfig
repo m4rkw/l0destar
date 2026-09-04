@@ -95,8 +95,8 @@ config APP_KLINE_TEST
 	  K-line to verify the two transceivers talk to each other across the
 	  wire.  Bench bring-up aid; leave off in production.
 
-config APP_KLINE_INIT_AT_BOOT
-	bool "Open a KWP2000 (ISO 14230) session with the vehicle over K at boot"
+config APP_KLINE_DISCOVER
+	bool "Run the one-shot K-wire vehicle discovery at boot"
 	default n
 	depends on APP_BOARD_HAS_KLINE
 	help
@@ -110,24 +110,41 @@ config APP_KLINE_INIT_AT_BOOT
 	  finally the 5-baud init swept the same way.  No other request is
 	  sent;
 	  the result — which init worked, what protocol answered, or where
-	  the handshake stopped — is printed on the console, sent as an
-	  alert as soon as the modem is up (priority 1 if a session opened,
-	  0 otherwise), and the tracker then starts as normal.  In-vehicle bring-up aid; leave off in
-	  production.
+	  the handshake stopped — is printed on the console and sent as an
+	  alert once the modem is up.  The run ends with a summary and the
+	  local.conf block that makes the runtime path talk to this vehicle
+	  with no probing at all.
+
+	  This is discovery, not operation: it is slow, noisy and only worth
+	  running once per vehicle.  Polling uses APP_KLINE_ECU_ADDR and
+	  APP_KLINE_BAUD and does none of it.  Leave off in production.
 
 config APP_KLINE_BAUD
 	int "K-line data rate for the handshake and any session (bps)"
-	depends on APP_KLINE_INIT_AT_BOOT
 	default 10400
 	help
 	  ISO 14230-4 (and ISO 9141-2) fix this at 10400.  Some ECUs answer
 	  the 5-baud init at 9600 instead; the slow init retries at the
 	  other of the two automatically when the sync byte does not decode,
-	  so set this to whichever the vehicle turned out to use.
+	  so set this to whichever the vehicle turned out to use.  Defined
+	  unconditionally: hw_kline.c reads it on every board, so it must
+	  have a value even when APP_KLINE_DISCOVER is off.
+
+config APP_KLINE_ECU_ADDR
+	hex "ECU address the runtime session opens (5-baud init)"
+	default 0x33
+	range 0x01 0xfe
+	help
+	  The address kline_session_open() sends, and the target of every
+	  runtime request.  0x33 is the OBD functional address, which most
+	  vehicles answer; some, including the reference Toyota, only answer
+	  on their own physical ECU addresses.  Run the discovery once and
+	  use the value its summary suggests.  Defined unconditionally:
+	  hw_kline.c reads it on every board.
 
 config APP_KLINE_INIT_FAST
 	bool "Try the ISO 14230-4 fast init as well as the 5-baud init"
-	depends on APP_KLINE_INIT_AT_BOOT
+	depends on APP_KLINE_DISCOVER
 	default y
 	help
 	  After an unanswered 5-baud init on 0x33, send the KWP2000 fast
@@ -140,7 +157,6 @@ config APP_KLINE_INIT_FAST
 
 config APP_KLINE_INIT_ADDRS
 	string "5-baud addresses to capture from after 0x33 (hex, comma-separated)"
-	depends on APP_KLINE_INIT_AT_BOOT
 	default ""
 	help
 	  Addresses already known to answer the 5-baud init, e.g. "13,29,58,B4".
@@ -150,9 +166,35 @@ config APP_KLINE_INIT_ADDRS
 	  handshake.  For working out an unrecognised protocol.
 	  Empty = skip.
 
+config APP_KLINE_IDENT
+	bool "Ask each known address to identify itself once its session is open"
+	depends on APP_KLINE_DISCOVER
+	default n
+	help
+	  For every address in APP_KLINE_INIT_ADDRS whose 5-baud handshake
+	  completes, send KWP2000 ReadEcuIdentification (0x1A) for the VIN,
+	  hardware/software numbers, system name and serial number, then OBD
+	  mode 01 supported-PIDs, RPM and coolant temperature (only an engine
+	  ECU answers those) and mode 09 VIN, print every response decoded,
+	  and close the session with StopCommunication.  This is the one
+	  option under APP_KLINE_DISCOVER that sends requests beyond the
+	  init itself.
+
+config APP_KLINE_DTC
+	bool "Read stored fault codes from each identified ECU"
+	depends on APP_KLINE_IDENT
+	default n
+	help
+	  After the identification requests, ask for OBD-II mode 03 (stored
+	  DTCs), mode 07 (pending) and mode 0A (permanent), decode each code
+	  to its P/C/B/U form and print it.  Multi-frame responses are read
+	  until the bus goes quiet.  Read-only: mode 04, which erases stored
+	  codes and the emissions readiness data with them, is not
+	  implemented anywhere in this firmware and must not be added.
+
 config APP_KLINE_INIT_ACK
 	bool "Send the inverted second byte during capture"
-	depends on APP_KLINE_INIT_AT_BOOT
+	depends on APP_KLINE_DISCOVER
 	default y
 	help
 	  In capture mode, after the ECU's burst goes quiet, reply with the
@@ -162,7 +204,7 @@ config APP_KLINE_INIT_ACK
 
 config APP_KLINE_INIT_SWEEP
 	bool "Sweep physical ECU addresses when 0x33 gets no answer"
-	depends on APP_KLINE_INIT_AT_BOOT
+	depends on APP_KLINE_DISCOVER
 	default y
 	help
 	  After the slow and fast inits on the OBD functional address 0x33
@@ -173,7 +215,7 @@ config APP_KLINE_INIT_SWEEP
 
 config APP_KLINE_INIT_DIAG
 	bool "Operator line diagnostics before the init (L hold + listen)"
-	depends on APP_KLINE_INIT_AT_BOOT
+	depends on APP_KLINE_DISCOVER
 	default n
 	help
 	  Before the init: hold the L pulldown on for 5 s so pin 15 can be
@@ -181,6 +223,61 @@ config APP_KLINE_INIT_DIAG
 	  changes — the operator grounds pin 7 to pin 4 by hand during the
 	  window.  Proves the two things the transceiver echo cannot: that L
 	  really goes low, and that a low on the wire reaches the receiver.
+
+config APP_KLINE_TELEMETRY
+	bool "Report OBD-II data from the K wire with each telemetry record"
+	depends on APP_BOARD_HAS_KLINE
+	default n
+	help
+	  Each time a telemetry record is built, read the mode 01 PIDs the
+	  ECU supports (engine RPM, vehicle speed, coolant and intake
+	  temperature, load, throttle, MAF, timing advance, fuel trims, the
+	  malfunction lamp and the stored-code count) and append them to the
+	  record.  Only PIDs the ECU advertises are asked for.
+
+	  The diagnostic session is opened once and held for the drive, not
+	  per record: a 5-baud init holds the bus dominant for 2.4 s, so
+	  re-initialising every cycle would be far more disruptive than the
+	  polling itself.  Any request resets the ECU's 5 s P3 timer, so a
+	  normal cycle keeps the session alive on its own; if it does expire
+	  the next request times out and the session is reopened once.
+
+	  Needs APP_KLINE_ECU_ADDR and APP_KLINE_BAUD to match the vehicle —
+	  run APP_KLINE_DISCOVER once to find them.
+
+config APP_KLINE_DTC_REPORT
+	bool "Read and report stored fault codes at ignition transitions"
+	depends on APP_BOARD_HAS_KLINE
+	default n
+	help
+	  Read the stored diagnostic trouble codes (OBD-II mode 03) shortly
+	  after ignition-on and again when ignition goes off, and send the
+	  complete current set to the server, which diffs it against what it
+	  already holds and alerts on codes appearing and clearing.
+
+	  Ignition-on captures what the ECU has persisted; ignition-off
+	  captures anything raised during the drive.  Nothing is read while
+	  driving, so a fault raised mid-drive is reported when the engine
+	  stops rather than immediately — codes persist, so nothing is lost,
+	  and the bus stays quiet.
+
+	  Read-only.  Mode 04, which erases codes and the emissions readiness
+	  data with them, is not implemented anywhere in this firmware.
+
+config APP_KLINE_OBD
+	bool
+	default y if APP_KLINE_TELEMETRY || APP_KLINE_DTC_REPORT
+	help
+	  Hidden: builds src/kline_obd.c when anything needs it.
+
+config APP_KLINE_DTC_ON_DELAY_MS
+	int "Delay after ignition-on before reading fault codes (ms)"
+	depends on APP_KLINE_DTC_REPORT
+	default 5000
+	range 0 30000
+	help
+	  The engine ECU needs a moment to boot and start answering after the
+	  key turns.  Reading too early just times out and costs a session.
 
 config APP_BOARD_TEST
 	bool "Run the interactive board bring-up test instead of the tracker"
@@ -288,6 +385,29 @@ menuconfig APP_FOTA
 	  the next boot.  See FOTA.md.
 
 if APP_FOTA
+
+config APP_FOTA_INHIBIT
+	bool "Never check for or install updates (bench/test builds)"
+	default n
+	help
+	  Leaves the update machinery compiled in but never uses it: no
+	  manifest fetch at power-on, no download, and a server that
+	  advertises a newer version or sends a manual `fota` command is
+	  ignored.
+
+	  This is what a build under test needs.  The power-on check is
+	  unconditional, so a bench build whose version is lower than the
+	  fleet's is otherwise replaced within seconds of booting and the
+	  thing you wanted to test never runs.
+
+	  Prefer this to APP_FOTA=n, which also stubs out
+	  fota_confirm_image(): an image installed over the air boots on
+	  probation, and without that call MCUboot reverts it on the next
+	  boot.  With APP_FOTA_INHIBIT the running image is still confirmed,
+	  so a test build can safely be delivered by FOTA as well as by SWD.
+
+	  Never set this in a production image — the unit would never take
+	  another update.
 
 config APP_FOTA_HOST
 	string "Update server hostname"

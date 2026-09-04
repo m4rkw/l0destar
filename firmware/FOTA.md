@@ -20,6 +20,26 @@ image expects, so an image for the wrong unit installs cleanly and then
 misbehaves. `remote.conf` describes the fleet by IMEI; `push_fw.sh` builds one
 image per device from it and never layers `local.conf` into a published image.
 
+## Disabling updates on a bench build
+
+`CONFIG_APP_FOTA_INHIBIT=y` leaves the update machinery compiled in but never
+uses it: no manifest fetch at power-on, no download, and a server advertising
+a newer version or sending a manual `fota` command is ignored.
+
+A bench build needs it.  The power-on check is unconditional and a local build
+carries no patch number, so it reports a version below whatever the fleet is
+running and is replaced within seconds of booting — the change under test
+never gets to run.
+
+Use this rather than `CONFIG_APP_FOTA=n`.  Turning the subsystem off also
+stubs out `fota_confirm_image()`, and an image installed over the air boots on
+probation: without that call MCUboot reverts it on the next boot.  A test
+build delivered by FOTA would roll straight back.  With the inhibit the
+running image is still confirmed.
+
+Never set it in a production image; the unit would never take another update.
+
+
 ## When it checks
 
 | Trigger | Where |

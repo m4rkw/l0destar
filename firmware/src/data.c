@@ -210,6 +210,23 @@ int collect_data(int ignitionState)
         g_cell.dirty = false;
     }
 
+    /* OBD-II data over the K wire.  Polled here so the values belong to the
+     * same instant as the position they ride with.  A failed poll is not an
+     * error: the vehicle may have no K interface, the engine may be off, or
+     * the session may be reopening — the record simply carries no o* fields
+     * and the server leaves those columns null. */
+#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
+    if (ignitionState == 0) {           /* active-low: 0 = ignition on */
+        struct obd_snapshot obd;
+
+        if (obd_poll(&obd) == 0) {
+            n = obd_append(&data_current[data_index],
+                           DATA_LIMIT - data_index - 1, &obd);
+            if (n > 0) data_index += n;
+        }
+    }
+#endif
+
     /* Uptime */
     n = snprintf(&data_current[data_index],
                  DATA_LIMIT - data_index - 1,
@@ -262,6 +279,17 @@ int collect_data(int ignitionState)
     }
 
     return 1;
+}
+
+/* Send one pre-formatted line as its own datagram — used for the "D,"
+ * fault-code report.  Deliberately not routed through the telemetry buffer:
+ * that buffer is discarded when a collection finds no fix, and a fault-code
+ * report must not be lost that way.  The server splits datagrams on newlines
+ * and dispatches each line by prefix, so a lone line is a valid packet. */
+int data_send_line(const char *line)
+{
+    LOG_INF("send: %s", line);
+    return transport_send((const uint8_t *)line, strlen(line));
 }
 
 /* -- send ----------------------------------------------------------------- */

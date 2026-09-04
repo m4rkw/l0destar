@@ -78,7 +78,7 @@ CONFIG_APP_APN=""
 # as an alert, then runs the tracker.  See KWIRE.md.  Values below are the
 # reference vehicle, a 2006 Toyota Harrier 2.4 (ACU30): its ECUs answer the
 # 5-baud init on their own addresses at 9600 baud, on K alone.
-# CONFIG_APP_KLINE_INIT_AT_BOOT=y
+# CONFIG_APP_KLINE_DISCOVER=y
 # CONFIG_APP_KLINE_BAUD=9600
 # CONFIG_APP_KLINE_INIT_ADDRS="13,29,58,B4"
 # CONFIG_APP_KLINE_INIT_FAST=n

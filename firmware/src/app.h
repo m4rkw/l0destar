@@ -110,6 +110,10 @@ int  gnss_init(void);
 int  gnss_start(void);
 int  gnss_stop(void);
 int  gnss_collect(int timeout_ms, struct gnss_fix *out);  /* blocking with timeout */
+/* Register a callback run roughly once a second while gnss_collect() waits.
+ * NULL to unregister.  Runs on the caller's thread, so it needs no locking
+ * against code that runs outside the wait. */
+void gnss_set_tick(void (*cb)(void));
 int  gnss_resume(void);   /* restart without resetting fix state (warm) */
 
 #ifdef CONFIG_APP_DEMO_MODE
@@ -132,6 +136,7 @@ int  transport_send(const uint8_t *plaintext, size_t pt_len);
 int  transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms);
 
 int  collect_data(int ignition_state);
+int  data_send_line(const char *line);   /* one raw line as its own datagram */
 void data_reset(void);
 int  send_data(void);
 
@@ -217,8 +222,104 @@ struct kline_session {
 };
 int  kline_vehicle_init(void);
 int  kline_vehicle_init_ex(struct kline_session *out);
-int  kline_power_on(void);
-void kline_power_off(void);
+
+/* -- discovery: a one-shot investigation of an unknown vehicle --------------
+ * Hunts for the protocol, data rate and ECU addresses, asks each responder
+ * what it supports, and prints a summary ending in a suggested local.conf.
+ * Separate from the runtime path below, which does no probing at all. */
+struct kline_ecu {
+	uint8_t addr;
+	bool responds;          /* answered at least one request */
+	bool session;           /* accepted StartDiagnosticSession */
+	bool obd;               /* answered OBD mode 01 */
+	bool ident;             /* answered ReadEcuIdentification (0x1A) */
+	bool vin;               /* answered OBD mode 09 */
+	bool mode03, mode07, mode0a;
+	uint8_t pids[4];        /* mode 01 PID 00 support bitmap */
+	bool pids_valid;
+};
+
+struct kline_discovery {
+	bool ok;
+	const char *how;        /* which init worked */
+	const char *protocol;   /* decoded from the key bytes */
+	uint32_t baud;
+	bool use_l;
+	struct kline_ecu ecu[8];
+	int n_ecu;
+	int engine;             /* index into ecu[], or -1 if none found */
+};
+
+int  kline_discover(struct kline_discovery *out);
+
+/* -- runtime session: what polling uses ------------------------------------
+ * No probing, no sweeps, no address hunting.  Opens at the address and rate
+ * discovery settled on (APP_KLINE_ECU_ADDR, APP_KLINE_BAUD), exchanges OBD
+ * mode 01 requests, closes.  Any request resets the 5 s P3 timer, so polling
+ * at 1 Hz keeps the session alive without a separate TesterPresent. */
+int  kline_session_open(void);
+void kline_session_close(void);
+void kline_session_abort(void);   /* no StopCommunication: ECU already gone */
+int  kline_obd_pid(uint8_t pid, uint8_t *buf, int max);
+int  kline_obd_dtcs(uint8_t mode, uint16_t *codes, int max);
+void kline_dtc_string(uint16_t v, char *out);   /* 6 bytes: "P0133" + NUL */
+
+/* -- OBD-II telemetry and fault codes (src/kline_obd.c) --------------------
+ * The application layer over the runtime session.  Every field is an integer
+ * with a fixed scale so the telemetry packet needs no float formatting;
+ * OBD_NOT_AVAILABLE marks a PID this ECU does not support or did not answer.
+ * The server unscales them (OBD_FIELDS in main.py). */
+#define OBD_NOT_AVAILABLE INT32_MIN
+
+struct obd_snapshot {
+	bool valid;
+	int32_t rpm;            /* rpm            */
+	int32_t speed;          /* km/h           */
+	int32_t coolant;        /* deg C          */
+	int32_t intake;         /* deg C          */
+	int32_t load;           /* %      x10     */
+	int32_t throttle;       /* %      x10     */
+	int32_t maf;            /* g/s    x100    */
+	int32_t timing;         /* deg    x10     */
+	int32_t stft, ltft;     /* %      x10     */
+	int32_t rpm_min;        /* rpm, over the cycle */
+	int32_t rpm_max;
+	int32_t rpm_avg;
+	int32_t fuel_status;    /* raw bitmap     */
+	int32_t mil;            /* 0 / 1          */
+	int32_t dtc_count;      /* stored codes   */
+};
+
+int  obd_poll(struct obd_snapshot *s);
+int  obd_append(char *buf, int max, const struct obd_snapshot *s);
+int  obd_dtc_report(char *buf, int max);
+void obd_close(void);
+
+/* Sampled ~1 Hz from the GNSS fix wait (see gnss_set_tick) so engine RPM has
+ * useful resolution instead of one snapshot per telemetry record. */
+void obd_sample_tick(void);
+
+/* Bridge the gaps where nothing else is talking to the ECU (the send and the
+ * idle between cycles), so the session is not dropped and re-initialised on
+ * every cycle.  Cheap and self-throttling: a no-op unless the line has been
+ * idle for 3 s. */
+void obd_keepalive(void);
+
+/* Engine RPM and vehicle speed as the ECU reports them, for the tracker's own
+ * decisions rather than for the record.  Negative when the ECU is not
+ * answering or the last reading has gone stale, so callers fall back to the
+ * GNSS and battery-voltage proxies.  Speed is km/h: SAE J1979 defines PID
+ * 0x0D that way regardless of what the dashboard displays. */
+int  obd_rpm(void);
+int  obd_speed_kmh(void);
+
+/* The stored-code count rides in mode 01 PID 01, which every poll already
+ * reads, so a code appearing or clearing mid-drive is visible for free.  That
+ * is what triggers a mode 03 read; there is no periodic re-read. */
+bool obd_dtc_pending(void);
+int  obd_watch_dtc_count(void);   /* light PID 01 read, when telemetry is off */
+int  proge_mode_on(void);
+void proge_mode_off(void);
 uint8_t kline_tx_rx_byte(uint8_t tx);
 
 /* K-wire L line.  kline_l_send() is the only sanctioned way to drive the
