@@ -34,7 +34,9 @@ moved into the [archive](archive/).
   protection that disconnects the module supply within microseconds of a
   regulator fault (self-recovering, no firmware dependency, <3 µA), and I2C
   bus hardening against LTE TX bursts (stronger pull-ups, 100pF filter caps
-  on SDA/SCL, series jumper/ferrite on the accelerometer supply). Not tested.
+  on SDA/SCL, series jumper/ferrite on the accelerometer supply).
+
+  Tested successfully: <a href="https://www.youtube.com/watch?v=6-iVvQPaaeg">OVP scope test</a>
 
 ### v3.3 - L-line defect fix
 

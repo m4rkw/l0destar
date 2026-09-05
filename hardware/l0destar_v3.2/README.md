@@ -73,27 +73,27 @@ connect the L wire of a vehicle to this board.</strong>
 
 | Item | Test | Result | Notes |
 |---------|------|--------|-------|
-| Input stage | 12V input reverse polarity | NOT TESTED | |
-| Input stage | 12V ignition input reverse polarity | NOT TESTED | |
-| INA228 | Voltage reading function | NOT TESTED |
-| Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
-| LT8609#1 | 4.2V output | NOT TESTED | |
-| MCU OVP | 4.2V passes through at nominal voltage | NOT TESTED | S11Q1 on, S12TP6 ≈ S12TP7 |
-| MCU OVP | Cuts off when S12TP7 is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
-| MCU OVP | Fault injection via S11TP1 | NOT TESTED | Short S11TP1 to the unprotected rail, PP4V2 should drop |
-| MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | NOT TESTED | |
-| GPS auxillary 3.3V rail | Switches on enable signal | NOT TESTED | |
-| CAN auxillary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
-| K-line auxillary 3.3V rail | Switches on K-enable signal | NOT TESTED | |
-| K-line auxillary 12V rail | Switches on K-enable signal | NOT TESTED | |
-| Accelerometer | Operates while awake | NOT TESTED | |
-| Accelerometer | Wake on motion | NOT TESTED | |
-| GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
-| ISO-9141 | K-wire connectivity | NOT TESTED | |
-| ISO-9141 | L-line pulldown | NOT TESTED | |
-| CAN | Connectivity | NOT TESTED | |
-| CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 123 µA (OVP stage adds ~2.5 µA) |
+| Input stage | 12V input reverse polarity | PASSED | |
+| Input stage | 12V ignition input reverse polarity | PASSED | |
+| INA228 | Voltage reading function | PASSED |
+| Ignition presence | Ignition sense 3.3v signal | PASSED | |
+| LT8609#1 | 4.2V output | PASSED | |
+| MCU OVP | 4.2V passes through at nominal voltage | PASSED | S11Q1 on, S12TP6 ≈ S12TP7 |
+| MCU OVP | Cuts off when S12TP7 is driven above ~5V | PASSED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
+| MCU OVP | Fault injection via S11TP1 | PASSED | <a href="https://www.youtube.com/watch?v=6-iVvQPaaeg">OVP scope test</a> |
+| MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | PASSED | <a href="https://www.youtube.com/watch?v=6-iVvQPaaeg">OVP scope test</a> |
+| GPS auxillary 3.3V rail | Switches on enable signal | PASSED | |
+| CAN auxillary 3.3V rail | Switches on CAN-enable signal | PASSED | |
+| K-line auxillary 3.3V rail | Switches on K-enable signal | PASSED | |
+| K-line auxillary 12V rail | Switches on K-enable signal | PASSED | |
+| Accelerometer | Operates while awake | PASSED | |
+| Accelerometer | Wake on motion | PASSED | |
+| GPS antenna bias tee | Obtains GPS signal | PASSEWD | |
+| ISO-9141 | K-wire connectivity | PASSED | |
+| ISO-9141 | L-line pulldown | PASSED | |
+| CAN | Connectivity | PASSED | |
+| CAN standby via XSTBY signal | Low standby current | PASSED | |
+| Board | Quiescent current | ~130µA | OVP stage adds ~10 µA |
 
 ## Features
 
