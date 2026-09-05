@@ -7,7 +7,7 @@ It makes use of the [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/prod
 functions.
 
 This is the same as the regular [l0destar v2.1](https://github.com/m4rkw/l0destar/tree/master/hardware/prototype2.1) prototype but with the CAN
-interface, ISO-9141 interface and general-purpose AIO pins on the main connector
+interface, K-wire interface and general-purpose AIO pins on the main connector
 removed in favour of a smaller footprint and simpler construction.
 
 Features:

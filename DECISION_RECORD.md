@@ -17,7 +17,7 @@ A log of key decisions made during the project and the reasoning behind them.
 
 - Higher peak voltage tolerance than the TJA1051T-3, more robust in the face of automotive transients
 
-## 04/08/2026 - Switched to TJA1027T/20 for ISO-9141 (K-line)
+## 04/08/2026 - Switched to TJA1027T/20 for the K-wire (ISO 14230-1 K-line) interface
 
 - Uses 3.3v logic - massively simplifies the PCB, no longer need a second 5V buck converter or the level shifter
 

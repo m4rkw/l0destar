@@ -16,7 +16,7 @@ Features:
    12V ignition
  - INA228 voltage reading
  - CAN interface
- - ISO-9141 interface
+ - K-wire interface
  - Dual buck converters with high efficiency
  - Auxillary 3.3V, 5V and 12V power rails that can be turned off to save power
  - ASM330LHHXG1TR 6-axis IMU gyro/accelerometer
@@ -97,12 +97,12 @@ power.
 | [NUP2105L](https://uk.farnell.com/diotec/nup2105l/tvs-diode-bidir-44v-sot-23-350w/dp/4574509) | NUP2105L, CAN protector | 1 |
 | [MCP2518FD](https://uk.farnell.com/microchip/mcp2518fdt-e-sl/can-controller-aec-q100-40to125deg/dp/3796956) | MCP2518FD, CAN FD controller | 1 |
 | [TXS0104ED](https://uk.farnell.com/texas-instruments/txs0104edr/volt-level-translator-4-bit-soic/dp/3120986) | TXS0104ED, level shifter | 1 |
-| [L9637D](https://uk.farnell.com/stmicroelectronics/e-l9637d/monolithic-bus-driver-40-to-150deg/dp/3129892) | L9637D ISO-9141 K-line interface | 1 |
+| [L9637D](https://uk.farnell.com/stmicroelectronics/e-l9637d/monolithic-bus-driver-40-to-150deg/dp/3129892) | L9637D K-line transceiver | 1 |
 
 ## Notes
 
 - If you don't care about CAN the CAN components and crystal can be omited
-- If you don't care about the K-line / ISO-9141 interface the chip for it can be omited
+- If you don't care about the K-wire interface the chip for it can be omited
 - The breakouts can either be soldered directly or mounted on PCB pin headers, I
   would suggest the latter for ease of re-use
 - Never plug or unplug anything into the Nordic dev board while anything is

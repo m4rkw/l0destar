@@ -1,9 +1,9 @@
 # l0destar v2.6K (K-line version)
 
 > [!CAUTION]
-> **DO NOT USE THE L wire on the ISO-9141 (K-LINE) INTERFACE ON THIS VERSION.**
+> **DO NOT USE THE L wire on the K-WIRE INTERFACE ON THIS VERSION.**
 >
-> The ISO-9141 L line circuit has a fault condition that can destroy the
+> The L line circuit has a fault condition that can destroy the
 > nRF9151 Connect Kit if the L wire is ever shorted to 12V. It is
 > strongly recommended not to connect the L wire to this board.
 > See [Known defects](#known-defects) below. Fixed in v3.3.
@@ -73,8 +73,8 @@ connect the L wire of a vehicle to this board.</strong>
 | Accelerometer | Operates while awake | PASSED | |
 | Accelerometer | Wake on motion | PASSED | |
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
-| ISO-9141 | K-wire connectivity | PASSED | |
-| ISO-9141 | L-line pulldown | PASSED | |
+| K-wire | K wire connectivity | PASSED | |
+| K-wire | L-line pulldown | PASSED | |
 | Board | Quiescent current | 120 µA | |
 
 ## Features
@@ -87,7 +87,9 @@ connect the L wire of a vehicle to this board.</strong>
  - ASM330LHHXG1TR 6-axis IMU gyro/accelerometer
  - USB-C can be connected and disconnected for programming without any power
    disruption
- - ISO-9141 (K-line) interface with L and K connections for full functionality
+ - K-wire (ISO 14230-1 K-line) interface with L and K connections for
+   full functionality - the wire carries KWP2000 (ISO 14230-4), the older
+   ISO 9141-2, and manufacturer-specific pre-OBD protocols such as VAG KW1281
 
 ## Changes from v2.5
 

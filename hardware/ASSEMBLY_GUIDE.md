@@ -82,7 +82,7 @@ measure the voltage at pin 1 of the S6U2 footprint, it should be 4.2V. If it's
 solder them.
 
 4. Solder the configuration pads according to the configuration of the board,
-this can be either CAN, K-line or no OBD comms.
+this can be either CAN, K-wire (K-line) or no OBD comms.
 
 5. Once all the SMD components are placed, next do the Molex collector. General
 rule of assembly for through-hole components is in order of vertical height.

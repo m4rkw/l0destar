@@ -1,9 +1,9 @@
 # l0destar v2.5K (K-line version)
 
 > [!CAUTION]
-> **DO NOT USE THE L wire on the ISO-9141 (K-LINE) INTERFACE ON THIS VERSION.**
+> **DO NOT USE THE L wire on the K-WIRE INTERFACE ON THIS VERSION.**
 >
-> The ISO-9141 L line circuit has a fault condition that can destroy the
+> The L line circuit has a fault condition that can destroy the
 > nRF9151 Connect Kit if the L wire is ever shorted to 12V. It is
 > strongly recommended not to connect the L wire to this board.
 > See [Known defects](#known-defects) below. Fixed in v3.3.
@@ -73,8 +73,8 @@ connect the L wire of a vehicle to this board.</strong>
 | Accelerometer | Operates while awake | PASSED | |
 | Accelerometer | Wake on motion | PASSED | |
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
-| ISO-9141 | K-wire connectivity | PASSED | |
-| ISO-9141 | L-line pulldown | NOT TESTED | Missing pullup on initial PCB version |
+| K-wire | K wire connectivity | PASSED | |
+| K-wire | L-line pulldown | NOT TESTED | Missing pullup on initial PCB version |
 | Board | Quiescent current | ~~300 µA~~ 120 µA | reduced to 120 µA with this firmware change: https://github.com/m4rkw/l0destar/commit/e978881df25eb1239fddc0f996daa8788794e178 |
 
 ## Features
@@ -87,13 +87,15 @@ connect the L wire of a vehicle to this board.</strong>
  - ASM330LHHXG1TR 6-axis IMU gyro/accelerometer
  - USB-C can be connected and disconnected for programming without any power
    disruption
- - ISO-9141 (K-line) interface with L and K connections for full functionality
+ - K-wire (ISO 14230-1 K-line) interface with L and K connections for
+   full functionality - the wire carries KWP2000 (ISO 14230-4), the older
+   ISO 9141-2, and manufacturer-specific pre-OBD protocols such as VAG KW1281
 
 ## Changes from the v1.1 prototype
 
  - Dramatically smaller PCB footprint
  - Switched to a 4-layer stackup for simpler routing (especially useful on the
-   other two variants that have CAN and ISO-9141 circuits)
+   other two variants that have CAN and K-wire circuits)
  - Components were resized from a default of 0805 to a new default of 0402 and
    only bumped to 0603 or 0805 where necessary for specification
  - The large aluminium polymer caps were removed

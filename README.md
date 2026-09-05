@@ -13,7 +13,7 @@ board's README. v3.2 is designed but untested, pending arrival of the first
 batch of boards and v3.3 is an initial draft and may change slightly before
 the boards are ordered.
 
-<strong>All boards before v3.3 have a serious defect in the ISO-9141 circuit
+<strong>All boards before v3.3 have a serious defect in the K-wire circuit
 if the L wire is connected. If any of these prototypes are built the L wire
 should not be connected to the vehicle as if it was ever externally shorted
 to the 12V rail the l0destar device would be damaged.</strong> Luckily very

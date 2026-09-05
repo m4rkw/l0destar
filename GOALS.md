@@ -15,4 +15,5 @@
 - High quality low-power LTE-M/NB-IoT modem.
 - Accelerometer for engine-off movement detection.
 - CAN interface with full software support.
-- ISO-9141 K-Line interface with full software support.
+- K-wire (ISO 14230-1 K-line) interface with full software support, covering
+  KWP2000 (ISO 14230-4) and ISO 9141-2.

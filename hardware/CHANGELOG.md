@@ -3,6 +3,24 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 05/09/2026
+
+- Renamed the OBD serial interface from "ISO-9141" to **K-wire** throughout the
+  hardware tree. ISO-9141 was the wrong name for it: the K wire is a physical
+  layer (ISO 14230-1) and ISO 9141-2 is only one of the protocols that runs
+  over it, alongside KWP2000 (ISO 14230-4) and manufacturer-specific pre-OBD
+  protocols such as VAG KW1281. This matches the firmware, which made the same
+  correction.
+- In v3.1, v3.2 and v3.3 this renames design data as well as prose:
+  `iso-9141_interface.kicad_sch` -> `k-wire_interface.kicad_sch`, the sheet
+  name to "K-wire interface", and the nets `ISO9141_K`/`ISO9141_L` (and
+  `CAN_H_ISO9141_K`/`CAN_L_ISO9141_L`) to `KLINE_K`/`KLINE_L` (and
+  `CAN_H_KLINE_K`/`CAN_L_KLINE_L`). No electrical change - schematics, PCB and
+  netclass patterns were all updated together, so any board already built is
+  unaffected.
+- Archived board designs keep their original net and sheet names; only their
+  READMEs use the corrected terminology.
+
 ## 01/09/2026
 
 - VNA measured signal attenuation on a v3.1 board at -2.4dB which isn't great.
@@ -97,7 +115,7 @@ Type: Single Ended (Non coplanar). Result: trace width 14.12 mil = 0.359 mm.
 
 - Added **l0destar v3.0** - the CAN and K-line variants consolidated onto a
   single PCB. Changes from v2.6:
-  - Both the CAN and ISO-9141 (K-line) circuits are on the one board; either,
+  - Both the CAN and K-wire (ISO 14230-1 K-line) circuits are on the one board; either,
     neither or both can be populated, with the external connector pins and OBD
     power rails selected by shorting jumper pads (which double as power rail
     test points to save board space)
@@ -154,7 +172,7 @@ Type: Single Ended (Non coplanar). Result: trace width 14.12 mil = 0.359 mm.
   - Component vias dogleg-routed deliberately to keep fabrication cost down
 - Fixed the input TVS part on v2.5 micro: PTVS30VS1UTR → PTVS33VS1UTR
 - Fixed reference designators in the v2.5 micro schematics
-- Added **l0destar v2.5K** - K-line variant of v2.5 with the ISO-9141
+- Added **l0destar v2.5K** - K-wire variant of v2.5 with the K-line
   interface (L9637D), a second LT8609 providing a switchable 5V rail, a
   switchable auxiliary 12V rail on the k-enable signal, and L-line pulldown
 - Added **l0destar v2.5C** - CAN-bus variant of v2.5 with a CAN interface
@@ -168,25 +186,25 @@ Type: Single Ended (Non coplanar). Result: trace width 14.12 mil = 0.359 mm.
 
 - Added **l0destar v2.1** and **l0destar v2.1 mini** (developed from
   prototype v2.0):
-  - v2.1: CAN + ISO-9141 interfaces, dual buck converters, switchable
+  - v2.1: CAN + K-wire interfaces, dual buck converters, switchable
     auxiliary 3.3V/5V/12V rails, six general-purpose 0-30V AIO pins
-  - v2.1 mini: same board with the CAN, ISO-9141 and AIO circuitry removed
+  - v2.1 mini: same board with the CAN, K-wire and AIO circuitry removed
     for a smaller footprint and simpler construction; later bench-tested with
     ~1 mA sleep current
 - Removed earlier prototypes that were either failed or non-viable:
-  **prototype v1.0**, **v1.1 ISO-9141 handsolder**, **v1.1 CAN handsolder**
+  **prototype v1.0**, **v1.1 K-wire handsolder**, **v1.1 CAN handsolder**
   and **prototype v2.0**
 
 ## 15/07/2026
 
 - Added **prototype v2.0** - first fully integrated standalone design (no
   breakout modules): onboard GPS antenna bias tee with SMA/u.FL connectors,
-  AIO pins, integrated CAN and ISO-9141 circuits, status LED and test points.
+  AIO pins, integrated CAN and K-wire circuits, status LED and test points.
   Superseded by v2.1 four days later.
 
 ## 25/06/2026
 
-- Documented known issues found while testing the v1.1 ISO-9141 handsolder
+- Documented known issues found while testing the v1.1 K-wire handsolder
   board:
   - With AUX_SW low the +5V_AUX rail reads ~2.8V due to 12V backfeeding
     through the L9637D into the rail
@@ -206,7 +224,7 @@ Type: Single Ended (Non coplanar). Result: trace width 14.12 mil = 0.359 mm.
   off
 - Added **bench_test_can** - CAN version of the bench board with MikroBUS
   headers for the MIKROE-2379 CAN-FD Click
-- Added **prototype v1.1 ISO-9141 handsolder** - first standalone
+- Added **prototype v1.1 K-wire handsolder** - first standalone
   hand-buildable tracker using the Makerdiary nRF9151 Connect Kit: 4.2V buck
   into the battery connector (USB-C usable without removing power), 12V
   live/ignition inputs with TVS and reverse polarity protection, relay-based

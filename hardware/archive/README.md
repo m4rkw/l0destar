@@ -26,7 +26,7 @@ Development boards designed for the nRF9151 Dev Kit. Pin headers connect to the
 DK; a 3V relay gates all power rails behind the DK's 3.3V supply so nothing is
 live when the DK is off.
 
-- **[bench_test_iso9141](bench_test_iso9141/)** - ISO-9141 (K-line) version
+- **[bench_test_iso9141](bench_test_iso9141/)** - K-wire (ISO 14230-1 K-line) version
   with dual L9637D transceivers and level shifters
 - **[bench_test_can](bench_test_can/)** - CAN version with MikroBUS headers
   for the MIKROE-2379 CAN-FD Click board
@@ -39,7 +39,7 @@ Designed to be hand-built and installed in a vehicle. Powered via 4.2V buck into
 the battery connector so USB-C can be connected for firmware updates without
 removing power. Include TVS/reverse-polarity protection.
 
-- **[l0destar v2.1](prototype2.1/)** - supports CAN and ISO-9141, dual buck
+- **[l0destar v2.1](prototype2.1/)** - supports CAN and K-wire, dual buck
   converters, switchable auxiliary 3.3V/5V/12V rails, six 0-30V AIO pins,
   2200uF bulk cap. 0805 passives.
 - **[l0destar v2.1 mini](prototype2.1_mini/)** - mini version with no OBD
@@ -78,8 +78,9 @@ Same as v2.5 with a stacked 47uF ceramic bulk cap (2220, 50V X7R) added on the
 > wire on these versions. Fixed in v3.3. See the
 > [v3.2 README](l0destar_v3.2/README.md#known-defects) for the full analysis.
 > The firmware will refuse to drive L\_SEND on affected boards, the odds of
-> anyone actually having this problem are miniscule given how rare ISO-9141 is
-> and how rare using the L wire is even within ISO-9141 but it bears mentioning
+> anyone actually having this problem are miniscule given how rare the K-wire
+> interface is and how rare using the L wire is even on K-wire vehicles, but
+> it bears mentioning
 > because the failure mode is severe.
 
 - **[l0destar v3.0](l0destar_v3.0/)** - CAN and K-line circuits on a single

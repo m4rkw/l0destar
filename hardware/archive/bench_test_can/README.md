@@ -16,7 +16,7 @@ the dev kit:
  - INA228 voltage monitoring
  - Manual switch to simulate the ignition signal
  - Relay power source switching
- - 5V buck converter for the ISO-9141
+ - 5V buck converter for the K-wire interface
  - Auxillary power rails controlled by the AUX_SW signal
  - Accelerometer (pin headers to accept the STEVAL-MKI212V1 accelerometer eval
    board

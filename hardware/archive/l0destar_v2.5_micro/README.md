@@ -53,7 +53,7 @@ yourself rather than taking them on trust.
 
  - Dramatically smaller PCB footprint
  - Switched to a 4-layer stackup for simpler routing (especially useful on the
-   other two variants that have CAN and ISO-9141 circuits)
+   other two variants that have CAN and K-wire circuits)
  - Components were resized from a default of 0805 to a new default of 0402 and
    only bumped to 0603 or 0805 where necessary for specification
  - The large aluminium polymer caps were removed

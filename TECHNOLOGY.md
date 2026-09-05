@@ -46,10 +46,16 @@ instead of floating.
 - Controller sleep drives the transceiver standby pin via `IOCON.XSTBYEN`, leaving the block at roughly 10 µA.
 - Splitting controller and transceiver allows the transceiver to be chosen for bus robustness independently of the controller.
 
-## ISO-9141 K-Line: NXP TJA1027T
+## K-wire (ISO 14230-1 K-line): NXP TJA1027T
 
-The L9637D is a dedicated K-Line transceiver for ISO-9141 / ISO 14230
-(KWP2000) diagnostics and is what v2.5K and v2.6K fit. From v3.0 it was
-replaced by a TJA1027T LIN transceiver, which dramatically simplifies the
-circuit - the separate 5 V buck converter and level shifter are no longer
-needed.
+The K-wire is the single-wire bidirectional diagnostic line on OBD pin 7, with
+the optional L wire on pin 15. Its physical layer is ISO 14230-1, and the
+diagnostic protocols that run over it are KWP2000 (ISO 14230-4), the older ISO
+9141-2, and manufacturer-specific pre-OBD variants such as VAG KW1281. Earlier
+documentation here called the whole interface "ISO-9141", which was inaccurate
+- ISO 9141-2 is just one of the protocols that shares the wire.
+
+The L9637D is a dedicated K-line transceiver and is what v2.5K and v2.6K fit.
+From v3.0 it was replaced by a TJA1027T LIN transceiver, which dramatically
+simplifies the circuit - the separate 5 V buck converter and level shifter are
+no longer needed.

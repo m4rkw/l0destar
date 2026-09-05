@@ -225,7 +225,7 @@ ignition divider.
 
 ## The L line pull-down: current-limited in v3.3
 
-Up to v3.2 the ISO-9141 L line was pulled down by a bare 2N7002 (S10Q1) with
+Up to v3.2 the L line was pulled down by a bare 2N7002 (S10Q1) with
 its gate wired straight to the L_SEND GPIO. If the external L wire was shorted
 to battery while the firmware drove a 5-baud init, the FET was switched hard
 into that short. A 2N7002 at Vgs 3.3 V saturates somewhere between about
