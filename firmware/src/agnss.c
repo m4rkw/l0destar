@@ -163,7 +163,28 @@ int agnss_fetch(void *agnss_request)
 
 	LOG_INF("requesting A-GNSS data from nRF Cloud...");
 
+	/* GNSS and LTE share one RF front-end on the nRF91, so they cannot both
+	 * have the radio.  A cold GNSS search wants long uninterrupted windows,
+	 * which leaves a TLS handshake plus a multi-kilobyte download very
+	 * little airtime — that is how this ends up timing out at 30 s and
+	 * returning HTTP 0, having never reached the server at all.
+	 *
+	 * So hand the radio to LTE for the download.  gnss_stop() only reports
+	 * success if the receiver was actually running, which is how the
+	 * boot-time call (GNSS not started yet) knows to leave it alone.
+	 * gnss_resume() rather than gnss_start(): the latter clears the
+	 * have-fix state, which would turn a warm receiver cold. */
+	bool paused = (gnss_stop() == 0);
+
+	if (paused) {
+		LOG_INF("GNSS paused for the download (shared RF front-end)");
+	}
+
 	err = nrf_cloud_rest_agnss_data_get(&rest_ctx, &req, &result);
+
+	if (paused) {
+		gnss_resume();
+	}
 	if (err) {
 		LOG_ERR("agnss_data_get: %d (HTTP %d)", err, rest_ctx.status);
 		return err;

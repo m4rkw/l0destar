@@ -706,6 +706,36 @@ config APP_ACCEL_ALERT_PRIORITY
 	  command-reply alerts keep their own priorities.  Note the server
 	  already demotes priority 2 to 0 for a device marked as garaged.
 
+config APP_ACCEL_ALERT_BACKOFF_S
+	int "Downgrade further accel alerts for this many seconds (0 = never)"
+	default 300
+	range 0 86400
+	help
+	  Impact, tilt/tow and movement all raise the same high-priority
+	  alert, and one physical event routinely trips several of them —
+	  opening a glovebox the tracker lives in gives a movement alert,
+	  then a tilt alert, then another movement alert.  Waking someone
+	  once for that is useful; waking them four times teaches them to
+	  ignore the alerts, which is worse than sending none.
+
+	  The first alert goes out at APP_ACCEL_ALERT_PRIORITY and opens a
+	  window.  Anything inside the window is sent at
+	  APP_ACCEL_ALERT_BACKOFF_PRIORITY instead: still delivered, still
+	  logged, just not urgent.
+
+	  The window is fixed rather than sliding, so once it expires the
+	  next event is urgent again and sustained interference still raises
+	  one high-priority alert per window instead of being silenced
+	  indefinitely by its own persistence.
+
+config APP_ACCEL_ALERT_BACKOFF_PRIORITY
+	int "Priority for accel alerts inside the backoff window"
+	default 0
+	range -2 2
+	help
+	  Pushover's scale: -2 log only, -1 quiet, 0 normal, 1 high,
+	  2 emergency.  0 keeps the alert visible without a siren.
+
 config APP_LED_ACCEL_WAKE
 	bool "Blink the status LEDs on accelerometer wakes"
 	default n

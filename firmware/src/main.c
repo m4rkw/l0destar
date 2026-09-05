@@ -188,6 +188,45 @@ static void crash_irq_disable(void)
     accel_fifo_disable();
 }
 
+/* -- accelerometer alert priority backoff ----------------------------------
+ *
+ * Impact, tilt/tow and movement all raise the same high-priority alert, and
+ * one physical event routinely trips several of them: opening the glovebox a
+ * tracker lives in produces a movement alert, then a tilt alert, then another
+ * movement alert.  Waking someone once for that is useful.  Waking them four
+ * times teaches them to ignore the alerts entirely, which is worse than not
+ * sending any.
+ *
+ * So the first alert goes out at full priority and opens a window.  Anything
+ * inside the window is reported at APP_ACCEL_ALERT_BACKOFF_PRIORITY instead:
+ * still sent, still logged, still in the history — just not urgent.
+ *
+ * The window is fixed rather than sliding.  Once it expires the next event is
+ * urgent again, so sustained interference keeps producing high-priority
+ * alerts at one per window, rather than being silenced indefinitely by its
+ * own persistence.
+ */
+static int64_t s_accel_alert_window_end;
+
+static int accel_alert_priority(void)
+{
+    if (ACCEL_ALERT_BACKOFF_S <= 0) {
+        return ACCEL_ALERT_PRIORITY;          /* backoff disabled */
+    }
+
+    int64_t now = k_uptime_get();
+
+    if (s_accel_alert_window_end && now < s_accel_alert_window_end) {
+        LOG_INF("accel alert downgraded to priority %d (%lld s of backoff left)",
+                ACCEL_ALERT_BACKOFF_PRIORITY,
+                (s_accel_alert_window_end - now) / 1000);
+        return ACCEL_ALERT_BACKOFF_PRIORITY;
+    }
+
+    s_accel_alert_window_end = now + (int64_t)ACCEL_ALERT_BACKOFF_S * 1000;
+    return ACCEL_ALERT_PRIORITY;
+}
+
 /* Called from the awake loops.  The FIFO ring holds ~9 s of accel+gyro
  * history, so the impact profile is intact even with loop-cadence latency. */
 static void crash_check(void)
@@ -215,7 +254,7 @@ static void crash_check(void)
                  src, ax, ay, az, (double)g_gnss.speed_kmh);
     }
     LOG_WRN("%s", msg);
-    alert_enqueue(msg, ACCEL_ALERT_PRIORITY);
+    alert_enqueue(msg, accel_alert_priority());
     alert_send();
 }
 
@@ -494,7 +533,7 @@ static void do_sleep(void)
                     snprintf(msg, sizeof(msg),
                              "tilt %d.%ddeg - possible tow/jack",
                              tilt / 10, tilt % 10);
-                    alert_enqueue(msg, ACCEL_ALERT_PRIORITY);
+                    alert_enqueue(msg, accel_alert_priority());
                     watchdog_kick();
                     int reg = modem_get_network_status();
                     if (reg != 1 && reg != 5) {
@@ -534,7 +573,7 @@ static void do_sleep(void)
                 tamper_alerted = true;
                 LOG_WRN("tamper: orientation changed (D6D_SRC=0x%02x)", d6d);
                 alert_enqueue("tamper: orientation changed",
-                              ACCEL_ALERT_PRIORITY);
+                              accel_alert_priority());
                 watchdog_kick();
                 int reg = modem_get_network_status();
                 if (reg != 1 && reg != 5) {
@@ -619,7 +658,7 @@ static void do_sleep(void)
                 char msg[64];
                 snprintf(msg, sizeof(msg), "parked impact %d.%02dg (%dms)",
                          peak / 1000, (peak % 1000) / 10, imp.over_ms);
-                alert_enqueue(msg, ACCEL_ALERT_PRIORITY);
+                alert_enqueue(msg, accel_alert_priority());
                 watchdog_kick();
                 int reg = modem_get_network_status();
                 if (reg != 1 && reg != 5) {
@@ -643,7 +682,7 @@ static void do_sleep(void)
                         char msg[48];
                         snprintf(msg, sizeof(msg), "parked impact %d.%02dg",
                                  peak / 1000, (peak % 1000) / 10);
-                        alert_enqueue(msg, ACCEL_ALERT_PRIORITY);
+                        alert_enqueue(msg, accel_alert_priority());
                         watchdog_kick();
                         int reg = modem_get_network_status();
                         if (reg != 1 && reg != 5) {
@@ -680,7 +719,7 @@ static void do_sleep(void)
                 snprintf(msg, sizeof(msg),
                          "movement: %d.%ddeg tilt, %dmg",
                          tilt / 10, tilt % 10, delta);
-                alert_enqueue(msg, ACCEL_ALERT_PRIORITY);
+                alert_enqueue(msg, accel_alert_priority());
 
                 watchdog_kick();
                 int reg = modem_get_network_status();
@@ -1078,6 +1117,20 @@ int main(void)
         }
         transport_open();
         transport_teardown();
+    }
+
+    /* Fetch assistance while the radio is entirely LTE's.  GNSS and LTE
+     * share one RF front-end, so doing this during a cold search — which is
+     * where it used to happen, from inside gnss_collect() — starves the TLS
+     * handshake and times out.  Full assistance rather than a targeted
+     * request, because the receiver has not started yet and so has not asked
+     * for anything specific. */
+    if (modem_is_registered()) {
+        if (agnss_fetch(NULL)) {
+            LOG_WRN("A-GNSS fetch failed — first fix will take longer");
+        }
+    } else {
+        LOG_INF("no network yet — skipping A-GNSS, GNSS will ask later");
     }
 
     gnss_start();

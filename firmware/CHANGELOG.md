@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+### A-GNSS no longer competes with the GNSS search it is meant to help
+- **Assistance is fetched before GNSS starts**, while the radio is entirely
+LTE's.  It used to run from inside `gnss_collect()` during a cold search, and
+GNSS and LTE share one RF front-end on the nRF91: a cold search wants long
+uninterrupted windows, leaving a TLS handshake plus a multi-kilobyte download
+almost no airtime.  That is the `-116` (`ETIMEDOUT`) with `HTTP 0` — the
+request never reached the server at all, so it was never a credentials or API
+problem.  The boot-time call asks for full assistance rather than a targeted
+request, since the receiver has not started and so has not asked for anything
+specific yet.
+- **The remaining in-search path yields the radio.**  `agnss_fetch()` now
+pauses GNSS around the download and resumes it afterwards, using
+`gnss_resume()` rather than `gnss_start()` so a warm receiver is not turned
+cold.  `gnss_stop()` only reports success when the receiver was actually
+running, which is how the boot-time call knows to leave it alone.
+- **A failed fetch is retried.**  `gnss_collect()` cleared the pending request
+*before* attempting the fetch, so one timeout cost the assistance for the
+whole cold start with no retry until the receiver independently asked again.
+The request is now only cleared once the fetch succeeds.
+
+### Accelerometer alert priority backoff (`APP_ACCEL_ALERT_BACKOFF_S`)
+- **One physical event no longer produces a string of urgent alerts.** Impact,
+tilt/tow and movement all raise the same high-priority alert and routinely
+trip together — opening a glovebox the tracker lives in gives a movement
+alert, then a tilt alert, then another movement alert. The first now goes out
+at `APP_ACCEL_ALERT_PRIORITY` and opens a window; anything inside it is sent
+at `APP_ACCEL_ALERT_BACKOFF_PRIORITY` (default 0, normal) instead. Nothing is
+suppressed — every alert is still delivered and logged, just not urgent.
+- **The window is fixed, not sliding** (default 300 s), so once it expires the
+next event is urgent again. Sustained interference still raises one
+high-priority alert per window rather than silencing itself by persisting.
+- Applies to all six accelerometer-derived alert sites: awake and parked
+impact, tilt/tow, tamper orientation change, and movement.
+
 ### Unsendable telemetry is held instead of discarded (`src/databuf.c`)
 - **A record whose send fails is now buffered rather than thrown away.**
 `data_reset()` runs unconditionally after a send attempt, so an outage used to

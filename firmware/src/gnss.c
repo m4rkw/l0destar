@@ -224,8 +224,16 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     }
 
     if (cold && s_agnss_needed) {
-        s_agnss_needed = false;
-        agnss_fetch(&s_agnss_req);
+        /* Fallback path: the receiver asked for something specific after
+         * the boot-time fetch.  The request is only cleared once the fetch
+         * actually succeeds — clearing it first meant one timeout cost the
+         * assistance for the whole cold start, with no retry until the
+         * receiver happened to ask again. */
+        if (agnss_fetch(&s_agnss_req) == 0) {
+            s_agnss_needed = false;
+        } else {
+            LOG_WRN("A-GNSS fetch failed — request kept for a retry");
+        }
     }
 
     if (cold) {

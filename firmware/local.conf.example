@@ -85,3 +85,10 @@ CONFIG_APP_APN=""
 # CONFIG_APP_KLINE_INIT_FAST=n
 # CONFIG_APP_KLINE_INIT_SWEEP=n
 # CONFIG_APP_KLINE_INIT_DIAG=n
+
+# --- accelerometer alert backoff -------------------------------------------
+# After a high-priority impact/tilt/movement alert, downgrade further ones for
+# this long so a single event (opening the glovebox the tracker sits in) does
+# not produce a string of urgent notifications.
+# CONFIG_APP_ACCEL_ALERT_BACKOFF_S=300
+# CONFIG_APP_ACCEL_ALERT_BACKOFF_PRIORITY=0
