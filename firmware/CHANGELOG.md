@@ -1,5 +1,59 @@
 # Changelog
 
+## Unreleased
+
+### Unsendable telemetry is held instead of discarded (`src/databuf.c`)
+- **A record whose send fails is now buffered rather than thrown away.**
+`data_reset()` runs unconditionally after a send attempt, so an outage used to
+cost the position data for its whole duration — a twelve-minute coverage drop
+on 2026-09-05 left a hundred-mile drive with no track at all for those twelve
+minutes, even though the device was up throughout and the data existed.
+- **Statically allocated, so the risk is a link-time one.**
+`APP_DATABUF_SLOTS` (32) x `APP_DATABUF_REC_MAX` (512) is ~16 KB of BSS; a
+size that does not fit fails the build rather than the device, and there is no
+allocation to fail in a tunnel. Application RAM went from 66,416 to 84,024
+bytes of a 154,264 byte region, leaving ~70 KB free.
+- **A full buffer is thinned by half, not truncated.** Dropping the newest
+loses the recovery and dropping the oldest loses the start of the outage, so
+instead every second record is discarded and the sample interval doubles. 32
+slots then cover 2.7 minutes at 5 s, or 21 minutes at 40 s after three
+thinnings — a complete track at coarser resolution rather than a truncated
+one. That 12-minute gap would have come back at about 20 s spacing.
+- **Draining never delays live telemetry**: `APP_DATABUF_FLUSH_PER_CYCLE` (2)
+datagrams ride alongside the current record, each packed to stay inside the
+transport's packet limit, kicking the watchdog and asking for no reply.
+- Ring, decimation, packing and refusal of oversized records are covered by a
+host-compiled test (FIFO order under capacity, order and span preserved across
+three thinnings, nothing lost when the link is down, oversized records refused
+rather than truncated, multi-record buffers split correctly).
+
+### Modem recovery no longer tears the radio down (`src/modem.c`)
+- **Losing coverage is now left to the modem**, which handles registration,
+cell reselection and RAT reselection autonomously — the same way a phone does.
+Previously three consecutive failed sends triggered `lte_lc_offline()`, which
+deregisters, and five triggered a full modem-library shutdown. At a five
+second cadence that is roughly fifteen and twenty-five seconds of trouble, so
+a motorway tunnel was enough to fire it. Both paths discard everything the
+modem knows about local cells and force a full band scan afterwards, which on
+LTE-M and NB-IoT takes minutes — making the outage substantially longer than
+doing nothing, and risking the 3GPP backoff timers on top.
+- **Escalation is now time-based and only counts time spent registered but
+unable to send**, which is the contradictory state actually worth acting on
+(usually a PDP context the network has silently deactivated).
+`APP_MODEM_STUCK_CFUN_S` (default 600) and `APP_MODEM_STUCK_RESET_S` (default
+1800) replace `APP_GSM_ESCALATION_POWERCYCLE`, `APP_GSM_ESCALATION_SLEEP` and
+`APP_GSM_RECOVERY_SLEEP_INTERVAL`. Time spent unregistered is not counted.
+- **Send failures while unregistered no longer count.** Registration state
+comes from the LTE event handler rather than being inferred from a failed UDP
+datagram, which carries almost no information about the radio.
+- **GNSS is never stopped for a modem problem.** The old recovery called
+`gnss_stop()`, so a radio outage also lost position for its whole duration —
+the difference between a gap in the telemetry and a gap in the journey. A
+12-minute hole in a drive on 2026-09-05, ending on NB-IoT with no position
+data at all, is what that looked like.
+- `modem_recover()` lost its failure-count parameter; `modem_is_registered()`
+and `modem_send_ok()` are new.
+
 ## 0.4.16
 
 ### IF MCU: SEVONPEND fix on every power-off path (`ifmcu/patches/`)

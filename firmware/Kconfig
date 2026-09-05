@@ -761,16 +761,62 @@ config APP_COAST_MAX_ITERATIONS
 
 # --- error escalation ------------------------------------------------------
 
-config APP_GSM_ESCALATION_POWERCYCLE
-	int "Send failures before modem powercycle"
-	default 3
+config APP_DATABUF_SLOTS
+	int "Telemetry records held when the link is down"
+	default 32
+	range 0 512
+	help
+	  Statically allocated, so this is a link-time cost: SLOTS x
+	  APP_DATABUF_REC_MAX bytes of BSS.  At the defaults that is ~15 KB
+	  against ~87 KB free, and a size that does not fit fails the build
+	  rather than the device.  0 disables buffering entirely.
 
-config APP_GSM_ESCALATION_SLEEP
-	int "Send failures before sleep"
-	default 5
+	  A full buffer is thinned by half rather than truncated, so this sets
+	  the resolution a long outage comes back at, not how long an outage
+	  can be covered.  32 slots hold 2.7 minutes at a 5 s cadence, or 21
+	  minutes at 40 s after three thinnings.
 
-config APP_GSM_RECOVERY_SLEEP_INTERVAL
-	int "Recovery sleep interval (seconds)"
-	default 300
+config APP_DATABUF_REC_MAX
+	int "Longest telemetry record the backlog can hold (bytes)"
+	default 512
+	range 128 1024
+	help
+	  Must exceed the longest record the firmware builds.  A record is
+	  around 300 bytes typically and about 470 with every OBD-II field
+	  present; anything longer is logged as an error and dropped, since
+	  silently truncating a record would corrupt it.
+
+config APP_DATABUF_FLUSH_PER_CYCLE
+	int "Backlog datagrams to send per telemetry cycle"
+	default 2
+	range 1 16
+	help
+	  The backlog must not delay live telemetry, so it drains alongside
+	  the current record rather than in one burst.  Two datagrams a cycle
+	  clears a full buffer in about a minute at a 5 s cadence.
+
+config APP_MODEM_STUCK_CFUN_S
+	int "Registered but unable to send for this long before a CFUN cycle"
+	default 600
+	help
+	  Only counted while the network says we are registered.  That is the
+	  contradictory state worth acting on — usually a PDP context the
+	  network has silently deactivated — and reopening the socket, which
+	  the transport does by itself, fixes most of it before this fires.
+
+	  Do not shorten this to seconds.  A CFUN cycle deregisters, and
+	  re-attaching on LTE-M or NB-IoT can take minutes, so reacting to a
+	  tunnel or a rural dip by tearing the registration down makes the
+	  outage longer than leaving it alone.  Time spent unregistered is not
+	  counted at all: the modem handles coverage loss on its own.
+
+config APP_MODEM_STUCK_RESET_S
+	int "Registered but unable to send for this long before a modem restart"
+	default 1800
+	help
+	  Last resort for a genuinely wedged modem.  Restarts the modem
+	  library, which discards everything it knows about local cells and
+	  forces a full band scan afterwards, so it should almost never
+	  happen.
 
 source "Kconfig.zephyr"

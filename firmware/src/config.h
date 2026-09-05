@@ -64,9 +64,8 @@
 #define ACCEL_ALERT_PRIORITY        CONFIG_APP_ACCEL_ALERT_PRIORITY
 
 /* -- error escalation ------------------------------------------------------ */
-#define GSM_ESCALATION_POWERCYCLE   CONFIG_APP_GSM_ESCALATION_POWERCYCLE
-#define GSM_ESCALATION_SLEEP        CONFIG_APP_GSM_ESCALATION_SLEEP
-#define GSM_RECOVERY_SLEEP_INTERVAL CONFIG_APP_GSM_RECOVERY_SLEEP_INTERVAL
+#define MODEM_STUCK_CFUN_S          CONFIG_APP_MODEM_STUCK_CFUN_S
+#define MODEM_STUCK_RESET_S         CONFIG_APP_MODEM_STUCK_RESET_S
 
 /* -- buffers --------------------------------------------------------------- */
 #define DATA_LIMIT                  2500

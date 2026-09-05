@@ -100,7 +100,9 @@ int  modem_get_imei(char *out, size_t out_len);
 int  modem_get_network_status(void);   /* 1=home, 5=roaming */
 void modem_set_apn(const char *apn);
 int  modem_at(const char *cmd, char *resp, size_t resp_len);
-int  modem_recover(int failure_count);
+int  modem_recover(void);               /* policy lives in modem.c */
+bool modem_is_registered(void);         /* from the LTE event handler, not inferred */
+void modem_send_ok(void);               /* a send got through: clear the stuck timer */
 int  modem_update_cell_info(void);
 const char *modem_rat(void);           /* "CATM1" / "NBIOT" / "UNKNOWN" */
 bool modem_is_nbiot(void);
@@ -137,6 +139,17 @@ int  transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms
 
 int  collect_data(int ignition_state);
 int  data_send_line(const char *line);   /* one raw line as its own datagram */
+
+/* -- backlog buffer (src/databuf.c) ----------------------------------------
+ * Holds records that could not be sent, so a radio outage delays the track
+ * instead of losing it.  Statically sized: see APP_DATABUF_SLOTS.  A full
+ * buffer is thinned by half rather than truncated, so a long outage comes
+ * back at coarser resolution instead of stopping partway. */
+int      databuf_push_lines(const char *buf, size_t len);
+int      databuf_flush(int max_datagrams);   /* returns records sent */
+int      databuf_count(void);
+uint32_t databuf_dropped(void);
+void     databuf_reset(void);
 void data_reset(void);
 int  send_data(void);
 

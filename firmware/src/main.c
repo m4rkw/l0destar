@@ -760,7 +760,7 @@ static void do_sleep(void)
                     pending_server_cmd[0] = '\0';
                     if (alert_count > 0) alert_send();
                 }
-                if (!last_send_ok) modem_recover(gsm_send_failures);
+                if (!last_send_ok) modem_recover();
             }
             data_reset();
 
@@ -890,7 +890,7 @@ static void do_ignition_sleep(void)
                     pending_server_cmd[0] = '\0';
                     if (alert_count > 0) alert_send();
                 }
-                if (!last_send_ok) modem_recover(gsm_send_failures);
+                if (!last_send_ok) modem_recover();
                 gnss_resume();
 
                 /* The response just processed may have advertised a newer
@@ -1280,7 +1280,7 @@ int main(void)
 
             /* network error recovery */
             if (!last_send_ok) {
-                modem_recover(gsm_send_failures);
+                modem_recover();
                 s_coasting = false;
             }
 

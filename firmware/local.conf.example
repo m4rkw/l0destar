@@ -69,9 +69,10 @@ CONFIG_APP_APN=""
 # CONFIG_APP_COAST_MAX_ITERATIONS=60
 
 # --- error escalation ------------------------------------------------------
-# CONFIG_APP_GSM_ESCALATION_POWERCYCLE=3
-# CONFIG_APP_GSM_ESCALATION_SLEEP=5
-# CONFIG_APP_GSM_RECOVERY_SLEEP_INTERVAL=300
+# Modem recovery is time-based and only counts time spent *registered but
+# unable to send*.  Coverage loss is left to the modem, which handles it.
+# CONFIG_APP_MODEM_STUCK_CFUN_S=600
+# CONFIG_APP_MODEM_STUCK_RESET_S=1800
 
 # --- K-wire (ISO 14230-1) vehicle session init — in-car bring-up only ------
 # Opens a KWP2000 session at boot and reports the result on the console and

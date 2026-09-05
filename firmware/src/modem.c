@@ -394,22 +394,101 @@ int modem_read_vbat(int *mv)
     return 0;
 }
 
-int modem_recover(int failure_count)
+/* -- recovery ---------------------------------------------------------------
+ *
+ * A failed datagram says very little about the radio.  These are UDP sends
+ * with no delivery guarantee, and the ordinary cause is simply that there is
+ * no registration at that instant — which the LTE event handler already knows
+ * accurately and asynchronously, without having to infer it.
+ *
+ * The modem's own firmware handles coverage loss, cell reselection and RAT
+ * reselection on its own, exactly as a phone does.  Losing signal is a normal
+ * condition it is built to ride out, so the right response to "no signal" is
+ * to wait for it.
+ *
+ * Tearing the modem down is worse than doing nothing.  lte_lc_offline()
+ * deregisters, and shutting the modem library down discards everything the
+ * modem had learned about local cells, so recovery afterwards needs a full
+ * band scan — minutes on LTE-M and NB-IoT, at the exact moment conditions are
+ * already bad.  Repeated forced attaches can also trip the 3GPP backoff
+ * timers (T3346/T3402) and earn a longer exclusion than the original outage.
+ * A 12-minute hole in a drive on 2026-09-05, ending on NB-IoT, is what that
+ * looks like from the outside.
+ *
+ * So the policy here is:
+ *
+ *   not registered      do nothing.  Drop the socket so a stale one is not
+ *                       reused, and let the modem get on with it.
+ *   registered, failing  the interesting case: the network says we are
+ *                       attached but datagrams are not leaving.  Usually a
+ *                       PDP context the network has silently deactivated.
+ *                       Reopening the socket (which the transport does by
+ *                       itself) fixes most of it.
+ *   registered, failing  a CFUN cycle, then as a genuine last resort a
+ *   for a long time     library restart.  Minutes, not seconds.
+ *
+ * GNSS is never touched.  It has no relationship to the radio, and stopping
+ * it during a modem problem loses position for the whole outage — which is
+ * the difference between a gap in the telemetry and a gap in the journey.
+ */
+
+/* When registered but unable to send, how long before escalating. */
+#define MODEM_STUCK_CFUN_MS  ((int64_t)MODEM_STUCK_CFUN_S * 1000)
+#define MODEM_STUCK_RESET_MS ((int64_t)MODEM_STUCK_RESET_S * 1000)
+
+static int64_t s_failing_since;   /* first failure while registered, 0 = none */
+static int64_t s_last_escalation; /* so escalations cannot repeat immediately */
+
+bool modem_is_registered(void)
 {
+    return s_connected;
+}
+
+int modem_recover(void)
+{
+    /* Always drop the socket: it is cheap, it is local, and a stale one is
+     * the single most likely reason a send fails while the link is fine. */
     transport_teardown();
 
-    if (failure_count >= GSM_ESCALATION_SLEEP) {
-        LOG_WRN("modem power cycle (failures=%d)", failure_count);
-        gnss_stop();
+    if (!modem_is_registered()) {
+        if (s_failing_since) {
+            LOG_INF("send failing because we are not registered — waiting");
+            s_failing_since = 0;
+        }
+        return 0;
+    }
+
+    int64_t now = k_uptime_get();
+
+    if (!s_failing_since) {
+        s_failing_since = now;
+        LOG_INF("registered but send failed — socket reopened");
+        return 0;
+    }
+
+    int64_t failing_ms = now - s_failing_since;
+
+    /* Do not escalate twice in quick succession: an attach takes time, and
+     * the failures that arrive during it are not new information. */
+    if (s_last_escalation && (now - s_last_escalation) < MODEM_STUCK_CFUN_MS) {
+        return 0;
+    }
+
+    if (failing_ms >= MODEM_STUCK_RESET_MS) {
+        LOG_WRN("registered but unable to send for %lld s — modem restart",
+                failing_ms / 1000);
+        s_last_escalation = now;
+        s_failing_since = 0;
         nrf_modem_lib_shutdown();
         k_msleep(1000);
+
         int err = nrf_modem_lib_init();
+
         if (err && err != -EALREADY) {
             LOG_ERR("modem reinit: %d", err);
             return err;
         }
         lte_lc_register_handler(lte_handler);
-        gnss_init();
         modem_set_apn(g_settings.apn);
         watchdog_kick();
         err = lte_lc_connect();
@@ -417,27 +496,35 @@ int modem_recover(int failure_count)
             LOG_ERR("reconnect: %d", err);
             return err;
         }
-        gnss_start();
-        network_ready = true;
         g_cell.dirty = true;
         return 0;
     }
 
-    if (failure_count >= GSM_ESCALATION_POWERCYCLE) {
-        LOG_WRN("PDP reset (failures=%d)", failure_count);
+    if (failing_ms >= MODEM_STUCK_CFUN_MS) {
+        LOG_WRN("registered but unable to send for %lld s — CFUN cycle",
+                failing_ms / 1000);
+        s_last_escalation = now;
         lte_lc_offline();
         k_msleep(2000);
         modem_set_apn(g_settings.apn);
         watchdog_kick();
+
         int err = lte_lc_connect();
+
         if (err) {
             LOG_ERR("reconnect: %d", err);
             return err;
         }
-        network_ready = true;
         g_cell.dirty = true;
         return 0;
     }
 
     return 0;
+}
+
+/* Called on a successful send: the link is working, so the stuck timer starts
+ * again from nothing. */
+void modem_send_ok(void)
+{
+    s_failing_since = 0;
 }

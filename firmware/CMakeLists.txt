@@ -37,6 +37,9 @@ target_sources_ifdef(CONFIG_APP_CAN_BENCH app PRIVATE src/can_bench.c)
 # LTE TX power / brown-out rig — bench builds only.
 target_sources_ifdef(CONFIG_APP_LTE_POWER_TEST app PRIVATE src/lte_power_test.c)
 
+# Backlog buffer for records that could not be sent.
+target_sources(app PRIVATE src/databuf.c)
+
 # OBD-II telemetry / fault codes over the K wire.
 target_sources_ifdef(CONFIG_APP_KLINE_OBD app PRIVATE src/kline_obd.c)
 

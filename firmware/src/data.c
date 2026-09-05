@@ -321,12 +321,31 @@ int send_data(void)
                              (size_t)data_index);
     if (err) {
         last_send_ok = false;
-        gsm_send_failures++;
+        /* Only count a failure that means something.  With no registration
+         * the send was never going to succeed and the modem is already
+         * dealing with it; counting those is what used to escalate a tunnel
+         * into a modem teardown. */
+        if (modem_is_registered()) {
+            gsm_send_failures++;
+        }
+        /* Keep the record rather than discard it.  The caller resets the
+         * send buffer either way, so without this the position is gone for
+         * good and an outage costs a hole in the journey, not just late
+         * telemetry. */
+        databuf_push_lines(data_current, (size_t)data_index);
         return 0;
     }
     last_send_ok = true;
     gsm_send_failures = 0;
+    modem_send_ok();
     powered_on = false;
+
+    /* The link is working, so drain a little of whatever the last outage
+     * left behind.  Bounded per cycle so a backlog never delays the live
+     * position. */
+    if (databuf_count() > 0) {
+        databuf_flush(CONFIG_APP_DATABUF_FLUSH_PER_CYCLE);
+    }
 
     /* Server response, if requested */
     if (read_udp_response) {
