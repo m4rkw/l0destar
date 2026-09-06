@@ -127,7 +127,7 @@ features:
     label: "GPS antenna, SMA\n3.3 V bias tee for active antennas"
     side: right
   - refs: [S15J1]
-    label: "GPS antenna, U.FL\nalternative to the SMA"
+    label: "GPS antenna, U.FL\nconnection to the Makerdiary board"
     side: right
   - refs: [S15D2]
     label: "GPS ESD protection\nTPD1E05U06"
@@ -136,7 +136,7 @@ features:
     label: "LTE antenna, SMA"
     side: right
   - refs: [S15J3]
-    label: "LTE antenna, U.FL\nalternative to the SMA"
+    label: "LTE antenna, U.FL\nconnection to the Makerdiary board"
     side: right
   - refs: [S15D1]
     label: "LTE ESD protection\nTPD1E05U06"
