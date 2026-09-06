@@ -62,6 +62,8 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `omaf` | mass air flow, g/s × 100 | per-packet |
 | `otim`, `ostft`, `oltft` | timing advance and fuel trims, × 10 | per-packet |
 | `ofs`, `omil`, `odtc` | fuel system status bitmap, MIL lamp, stored code count | per-packet |
+| `tm` | 1 = built in track mode: GNSS off, position is the last fix, speed the ECU's | per-packet |
+| `acc` | IMU burst: `ax/ay/az/gx/gy/gz` per sample, samples joined by `:`, oldest first, 26 Hz; accel milli-g, gyro raw LSB | per-packet |
 
 "Carried forward" means the device sends the field only when it changes or on
 the first record after a wake, and the server copies the previous row's value
@@ -137,7 +139,7 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>[,<movement_alarm>][,<commands>][,fota=<version>]
+1,<interval>[,<movement_alarm>][,<commands>][,fota=<version>][,track=<0|1>]
 ```
 
 The leading `1` is the ack the firmware checks before clearing its send

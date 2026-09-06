@@ -70,6 +70,8 @@ EXTRA_KEYS = {
     'it':  'imu_temp',           # degrees C
     'vs':  'vsys',               # SiP supply rail, volts (not vehicle battery)
     'dr':  'dead_reckoning',
+    'tm':  'track_mode',         # 1 = built in track mode (GNSS off, fast poll)
+    'acc': 'imu_burst',          # IMU samples since the previous record
 }
 
 # Config the device may report back, mirrored onto the `device` row so the
@@ -86,6 +88,14 @@ PER_PACKET_KEYS = (
     'mcu_temp', 'imu_temp', 'uptime', 'waketime', 'dead_reckoning', 'vsys',
     'cell_location',
 )
+
+# Track mode (firmware TRACK_MODE.md).  A record built with GNSS off carries
+# tm=1 and acc=<burst>: one ax/ay/az/gx/gy/gz group per IMU sample, groups
+# joined by ':', oldest first, 26 Hz — accel in milli-g, gyro in raw LSB.
+# The burst is stored verbatim and unpacked on the way out (devices.py); it
+# is validated against this shape so nothing but integers reaches the row.
+IMU_BURST_RE = re.compile(r'^-?\d+(/-?\d+){5}(:-?\d+(/-?\d+){5})*$')
+IMU_BURST_MAX = 4000
 
 KM_PER_HOUR_TO_MPH = 0.6213712
 
@@ -131,7 +141,9 @@ LOG_COLUMNS = [
     'mcc', 'mnc', 'lac', 'cid', 'cell_location', 'rat',
     'accel_x', 'accel_y', 'accel_z', 'gyro_x', 'gyro_y', 'gyro_z',
     'waketime', 'uptime', 'mcu_temp', 'imu_temp', 'dead_reckoning', 'vsys',
-] + [column for column, _, _ in OBD_FIELDS.values()] + ['combined_speed']
+] + [column for column, _, _ in OBD_FIELDS.values()] + [
+    'combined_speed', 'track_mode', 'imu_burst',
+]
 
 _TIMESTAMP_RE = re.compile(
     r'^(\d+)/(\d+)/(\d+),(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?([+-])(\d+)$'
@@ -232,6 +244,15 @@ def _build_entry(data, device, ip, previous):
     for key in PER_PACKET_KEYS:
         if key in data:
             entry[key] = data[key]
+
+    if 'track_mode' in data:
+        try:
+            entry['track_mode'] = 1 if int(data['track_mode']) else 0
+        except (TypeError, ValueError):
+            pass
+    burst = data.get('imu_burst')
+    if burst and len(burst) <= IMU_BURST_MAX and IMU_BURST_RE.match(burst):
+        entry['imu_burst'] = burst
 
     # OBD-II data read over the K wire.  Only present when the vehicle has a
     # K interface and the firmware is configured to poll it, and only for the
@@ -576,7 +597,7 @@ def _handle_alert(line, device, database, log):
 def build_response(device, database, log, firmware_version=None):
     """Build the reply the device reads after a successful send.
 
-    Format: ``1,<interval>[,<movement_alarm>][,<commands>]``.
+    Format: ``1,<interval>[,<movement_alarm>][,<commands>][,fota=<v>][,track=<0|1>]``.
 
     The leading ``1`` is the ack the firmware checks before clearing its send
     buffer.  Commands are appended as a comma-separated list and deleted as
@@ -608,6 +629,12 @@ def build_response(device, database, log, firmware_version=None):
     # has no command field — cannot carry it.
     if firmware_version and not config.SLIM_RESPONSE:
         response += ',fota=%s' % firmware_version
+
+    # Track mode rides the same way, on every response, so a device that
+    # rebooted or missed a reply converges on the setting.  The firmware
+    # acts only on a change, so the repeat costs nothing but the bytes.
+    if not config.SLIM_RESPONSE:
+        response += ',track=%d' % (1 if device.get('track_mode') else 0)
 
     return response
 

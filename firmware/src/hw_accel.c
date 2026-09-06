@@ -531,6 +531,75 @@ int accel_fifo_disable(void)
 	return 0;
 }
 
+/* Track mode: hand the ring's contents over as samples rather than as
+ * impact statistics.  Reads every word batched since the last drain, so
+ * calling it once a cycle turns the FIFO into a 26 Hz stream with no thread
+ * of its own and no interrupt.  The impact drain above still works between
+ * calls — it just sees the samples since this last ran, which, with the
+ * crash check made at the top of every cycle, is the cycle the hit was in.
+ *
+ * With more samples than `max` the pick is evenly spaced across the whole
+ * interval rather than the newest N, so a slow cycle thins the stream
+ * instead of leaving a hole at its start.  Gyro words are paired with accel
+ * words by arrival order; both are batched at the same rate. */
+int accel_fifo_drain_samples(struct accel_sample *out, int max)
+{
+	if (!s_ok || !out || max <= 0) return -1;
+
+	uint8_t s1 = 0, s2 = 0;
+	if (!bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_STATUS1, &s1, 1) ||
+	    !bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_STATUS2, &s2, 1)) {
+		return -EIO;
+	}
+	int words = (((int)(s2 & 0x03)) << 8) | s1;
+
+	int nxl = 0, ngy = 0;
+	for (int i = 0; i < words; i++) {
+		uint8_t w[7];
+		if (!bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_DATA_TAG, w, 7))
+			break;
+		uint8_t tag = w[0] >> 3;
+		int16_t x = (int16_t)((w[2] << 8) | w[1]);
+		int16_t y = (int16_t)((w[4] << 8) | w[3]);
+		int16_t z = (int16_t)((w[6] << 8) | w[5]);
+		if (tag == 0x02 && nxl < FIFO_MAX_SAMPLES) {
+			s_fifo_xl[nxl][0] = x;
+			s_fifo_xl[nxl][1] = y;
+			s_fifo_xl[nxl][2] = z;
+			nxl++;
+		} else if (tag == 0x01 && ngy < FIFO_MAX_SAMPLES) {
+			s_fifo_gy[ngy][0] = x;
+			s_fifo_gy[ngy][1] = y;
+			s_fifo_gy[ngy][2] = z;
+			ngy++;
+		}
+		if ((i & 0x3F) == 0) watchdog_kick();
+	}
+	if (nxl == 0) {
+		return 0;
+	}
+
+	int count = nxl < max ? nxl : max;
+	float mg = s_mg_per_lsb;
+
+	for (int k = 0; k < count; k++) {
+		int i = (int)(((int64_t)k * nxl) / count);   /* evenly spaced */
+		int j = i < ngy ? i : ngy - 1;
+
+		out[k].ax = (int16_t)(s_fifo_xl[i][0] * mg);
+		out[k].ay = (int16_t)(s_fifo_xl[i][1] * mg);
+		out[k].az = (int16_t)(s_fifo_xl[i][2] * mg);
+		if (j >= 0) {
+			out[k].gx = (int16_t)(s_fifo_gy[j][0] - s_gyro_bias_x);
+			out[k].gy = (int16_t)(s_fifo_gy[j][1] - s_gyro_bias_y);
+			out[k].gz = (int16_t)(s_fifo_gy[j][2] - s_gyro_bias_z);
+		} else {
+			out[k].gx = out[k].gy = out[k].gz = 0;
+		}
+	}
+	return count;
+}
+
 int accel_fifo_drain_impact(struct accel_impact *out)
 {
 	if (!s_ok || !out) return -1;

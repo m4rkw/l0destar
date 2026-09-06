@@ -28,6 +28,10 @@ bool  last_record_stale;
 bool  last_send_ok;
 
 static int  s_battery_warning_status;
+/* Uptime at which the ignition was last seen going off, for the warning's
+ * settle time.  -1 until a record has been built with it off. */
+static int64_t s_ign_off_ms = -1;
+static int8_t  s_ign_last = -1;
 /* Cleared once a packet carrying fw= has actually left the device, so a
  * failed first send doesn't lose the version until the next reboot. */
 static bool s_fw_pending = true;
@@ -91,6 +95,69 @@ static float battery_sample_with_engine_check(void)
 
 /* -- data collection ------------------------------------------------------ */
 
+/* The fields every record type ends with. */
+static void append_sync_fields(void)
+{
+    int n;
+
+    /* Settings sync */
+    if (send_int_to_server) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1,
+                     ",int=%d;ma=%d",
+                     g_settings.loop_interval,
+                     (int)g_settings.movement_alarm);
+        if (n > 0) data_index += n;
+    }
+
+    /* Firmware version.  send_int_to_server is only ever set by a settings
+     * command from the server, so gating fw= on it alone meant a unit whose
+     * settings never change never reported its build.  Emit it on the first
+     * packet after every boot as well — including the one after a FOTA swap —
+     * and the server carries it forward onto subsequent rows.  Still not on
+     * every record: ~10 bytes that cannot change without a reboot. */
+    if (send_int_to_server || s_fw_pending) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1,
+                     ",fw=%s", fota_version());
+        if (n > 0) data_index += n;
+    }
+
+    /* Why this boot happened, once.  Rides with fw= on the first record
+     * after every restart so a gap in telemetry can be told apart from a
+     * reboot: the server files both in its debug log. */
+    if (s_fw_pending) {
+        const char *rst = dbglog_reset_cause();
+
+        if (rst != NULL) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1,
+                         ",rst=%s", rst);
+            if (n > 0) data_index += n;
+        }
+    }
+}
+
+/* Wall-clock timestamp in the record's format, from the modem clock, or the
+ * last fix's time, or the epoch placeholder when neither exists yet. */
+static const char *clock_timestamp(char *buf, size_t len)
+{
+    struct timespec tp;
+
+    if (clock_gettime(CLOCK_REALTIME, &tp) == 0 && tp.tv_sec > 1000000000) {
+        struct tm tm;
+        gmtime_r(&tp.tv_sec, &tm);
+        snprintf(buf, len,
+                 "%02d/%02d/%02d,%02d:%02d:%02d.%06ld+00",
+                 tm.tm_mday, tm.tm_mon + 1, tm.tm_year % 100,
+                 tm.tm_hour, tm.tm_min, tm.tm_sec,
+                 tp.tv_nsec / 1000);
+        return buf;
+    }
+    return g_gnss.time_iso[0] ? g_gnss.time_iso
+                              : "01/01/00,00:00:00.000000+00";
+}
+
 int collect_data(int ignitionState)
 {
     int have_fix = 0;
@@ -149,20 +216,7 @@ int collect_data(int ignitionState)
     if (!use_cached_gps && g_gnss.time_iso[0]) {
         ts = g_gnss.time_iso;
     } else {
-        struct timespec tp;
-        if (clock_gettime(CLOCK_REALTIME, &tp) == 0 && tp.tv_sec > 1000000000) {
-            struct tm tm;
-            gmtime_r(&tp.tv_sec, &tm);
-            snprintf(now_iso, sizeof(now_iso),
-                     "%02d/%02d/%02d,%02d:%02d:%02d.%06ld+00",
-                     tm.tm_mday, tm.tm_mon + 1, tm.tm_year % 100,
-                     tm.tm_hour, tm.tm_min, tm.tm_sec,
-                     tp.tv_nsec / 1000);
-            ts = now_iso;
-        } else {
-            ts = g_gnss.time_iso[0] ? g_gnss.time_iso
-                                     : "01/01/00,00:00:00.000000+00";
-        }
+        ts = clock_timestamp(now_iso, sizeof(now_iso));
     }
 
     /* Both describe a fix we don't have.  A stale speed would also read as
@@ -273,43 +327,7 @@ int collect_data(int ignitionState)
                  ",up=%lld", k_uptime_get() / 1000);
     if (n > 0) data_index += n;
 
-    /* Settings sync */
-    if (send_int_to_server) {
-        n = snprintf(&data_current[data_index],
-                     DATA_LIMIT - data_index - 1,
-                     ",int=%d;ma=%d",
-                     g_settings.loop_interval,
-                     (int)g_settings.movement_alarm);
-        if (n > 0) data_index += n;
-    }
-
-    /* Firmware version.  send_int_to_server is only ever set by a settings
-     * command from the server, so gating fw= on it alone meant a unit whose
-     * settings never change never reported its build.  Emit it on the first
-     * packet after every boot as well — including the one after a FOTA swap —
-     * and the server carries it forward onto subsequent rows.  Still not on
-     * every record: ~10 bytes that cannot change without a reboot. */
-    if (send_int_to_server || s_fw_pending) {
-        n = snprintf(&data_current[data_index],
-                     DATA_LIMIT - data_index - 1,
-                     ",fw=%s", fota_version());
-        if (n > 0) data_index += n;
-    }
-
-    /* Why this boot happened, once.  Rides with fw= on the first record
-     * after every restart so a gap in telemetry can be told apart from a
-     * reboot: the server files both in its debug log. */
-    if (s_fw_pending) {
-        const char *rst = dbglog_reset_cause();
-
-        if (rst != NULL) {
-            n = snprintf(&data_current[data_index],
-                         DATA_LIMIT - data_index - 1,
-                         ",rst=%s", rst);
-            if (n > 0) data_index += n;
-        }
-    }
-
+    append_sync_fields();
     data_current[data_index] = '\0';
 
     /* Battery warning - only meaningful with the engine off. While the engine
@@ -319,13 +337,28 @@ int collect_data(int ignitionState)
      * battery health. Gate on ignition-off (ignitionState != 0; the sense is
      * active-low) and skip implausible readings (sensor absent/broken). Normal
      * priority: a resting low battery is informational, not an emergency. */
+    if (ignitionState != 0 && (s_ign_last == 0 || s_ign_last == -1)) {
+        s_ign_off_ms = k_uptime_get();      /* just went off (or first seen off) */
+    }
+    s_ign_last = (ignitionState == 0) ? 0 : 1;
+
     if (ignitionState != 0 && v >= IMPLAUSIBLE_VOLTAGE) {
         if (v < BATTERY_WARNING_LEVEL) {
-            if (s_battery_warning_status == 0) {
+            /* Not within the settle time of the ignition going off, and not
+             * if the line already reads on again: both are what a crank
+             * looks like from here — see BATTERY_WARN_SETTLE_S. */
+            bool settled = s_ign_off_ms >= 0 &&
+                           k_uptime_get() - s_ign_off_ms >=
+                               (int64_t)BATTERY_WARN_SETTLE_S * 1000;
+            if (s_battery_warning_status == 0 && settled &&
+                ignition_read() != 0) {
                 char msg[24];
                 snprintf(msg, sizeof(msg), "low battery: %.2fV", (double)v);
                 alert_enqueue(msg, 0);
                 s_battery_warning_status = 1;
+            } else if (!settled) {
+                LOG_INF("battery %.2fV within %ds of ignition off — not alerting",
+                        (double)v, BATTERY_WARN_SETTLE_S);
             }
         } else {
             s_battery_warning_status = 0;
@@ -334,6 +367,132 @@ int collect_data(int ignitionState)
 
     return 1;
 }
+
+#if IS_ENABLED(CONFIG_APP_TRACK_MODE)
+/* Track-mode record.  Same CSV head as collect_data() so the server needs
+ * no second parser, but nothing here waits: the position is the last fix
+ * before GNSS was stopped (or 0,0 on a unit that never had one — the page
+ * hides the map in this mode), the speed is the ECU's, and the time is the
+ * modem clock.  The extras carry tm=1 to mark the row, the fast OBD poll,
+ * and acc=<burst>: the IMU samples batched since the previous record, one
+ * ax/ay/az/gx/gy/gz group per sample separated by ':'.
+ *
+ * Skipped on purpose versus the normal record: the modem temperature and
+ * VSYS reads (AT commands that cost tens of milliseconds and change on a
+ * timescale of minutes) and the cell fields except on their normal dirty
+ * flag.  Always returns 1: this mode's whole point is a record every cycle. */
+int collect_track_data(void)
+{
+    float v = battery_sample_with_engine_check();
+    char now_iso[40];
+    int n;
+
+    if (data_index > 0 && data_index < DATA_LIMIT - 1) {
+        data_current[data_index++] = '\n';
+    }
+
+    const char *lat = g_gnss.lat_str[0] ? g_gnss.lat_str : "0.000000";
+    const char *lon = g_gnss.lon_str[0] ? g_gnss.lon_str : "0.000000";
+    float speed = 0.0f;
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+    int obd_kmh = obd_speed_kmh();
+    if (obd_kmh >= 0) speed = (float)obd_kmh;
+#endif
+
+    n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+        "%s,%s,%s,%.2f,%.2f,%.2f,%ld,%ld,%.2f,%d,%lld,%d",
+        clock_timestamp(now_iso, sizeof(now_iso)), lat, lon,
+        (double)speed, (double)g_gnss.altitude_m,
+        (double)g_gnss.heading_deg,
+        0L, 0L,
+        (double)v,
+        1,                                  /* ignition is on by definition */
+        k_uptime_get() / 1000,
+        powered_on ? 1 : 0);
+    if (n > 0 && n < DATA_LIMIT - data_index - 1) data_index += n;
+
+    /* Instantaneous IMU reading, as on every record, so the page's slow
+     * panels keep working unchanged. */
+    int ax, ay, az;
+    if (accel_read(&ax, &ay, &az) == 0) {
+        n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+                     ",ax=%d;ay=%d;az=%d", ax, ay, az);
+        if (n > 0) data_index += n;
+    }
+    int gx, gy, gz;
+    if (accel_read_gyro(&gx, &gy, &gz) == 0) {
+        n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+                     ",gx=%d;gy=%d;gz=%d", gx, gy, gz);
+        if (n > 0) data_index += n;
+    }
+    float imu_temp;
+    if (accel_read_temp(&imu_temp) == 0) {
+        n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+                     ",it=%.1f", (double)imu_temp);
+        if (n > 0) data_index += n;
+    }
+
+    if (g_cell.valid && g_cell.dirty) {
+        n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+                     ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=0;rat=%s",
+                     g_cell.mcc, g_cell.mnc, g_cell.tac, g_cell.cid,
+                     modem_rat());
+        if (n > 0) data_index += n;
+        g_cell.dirty = false;
+    }
+
+    n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+                 ",tm=1");
+    if (n > 0) data_index += n;
+
+#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
+    struct obd_snapshot obd;
+
+    if (obd_poll_track(&obd) == 0) {
+        n = obd_append(&data_current[data_index],
+                       DATA_LIMIT - data_index - 1, &obd);
+        if (n > 0) data_index += n;
+    }
+#endif
+
+    /* The IMU burst.  Bounded by what the datagram has room for as well as
+     * by the sample cap: the envelope and a margin for the fields after
+     * this one are reserved first, and the burst stops at the last sample
+     * that fits rather than being cut mid-number. */
+#if CONFIG_APP_TRACK_IMU_SAMPLES > 0
+    struct accel_sample smp[CONFIG_APP_TRACK_IMU_SAMPLES];
+    int cnt = accel_fifo_drain_samples(smp, CONFIG_APP_TRACK_IMU_SAMPLES);
+
+    if (cnt > 0) {
+        int limit = UDP_PACKET_SIZE - 64 - 96;      /* envelope + tail */
+        if (limit > DATA_LIMIT - 1) limit = DATA_LIMIT - 1;
+
+        int start = data_index;
+        for (int i = 0; i < cnt; i++) {
+            n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+                         "%s%d/%d/%d/%d/%d/%d", i ? ":" : ",acc=",
+                         smp[i].ax, smp[i].ay, smp[i].az,
+                         smp[i].gx, smp[i].gy, smp[i].gz);
+            if (n <= 0 || data_index + n >= limit) {
+                data_current[data_index] = '\0';
+                if (i == 0) data_index = start;
+                break;
+            }
+            data_index += n;
+        }
+    }
+#endif
+
+    n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+                 ",up=%lld", k_uptime_get() / 1000);
+    if (n > 0) data_index += n;
+
+    append_sync_fields();
+    data_current[data_index] = '\0';
+    last_record_stale = !g_gnss.valid;
+    return 1;
+}
+#endif /* CONFIG_APP_TRACK_MODE */
 
 /* Send one pre-formatted line as its own datagram — used for the "D,"
  * fault-code report.  Deliberately not routed through the telemetry buffer:

@@ -120,7 +120,7 @@ at ±250 dps.
 | `hw_can.c`    | MCP2518FD power/domain handling, sleep mode + transceiver standby (XSTBY) |
 | `hw_accel.c`  | ASM330LHHX IMU (accel path): polling + hardware wake interrupt |
 | `hw_kline.c`  | K wire: 5-baud init bit-banged, data bytes on UARTE1; vehicle discovery and the runtime session ([KWIRE.md](KWIRE.md), [KWIRE_QUICKSTART.md](KWIRE_QUICKSTART.md)) |
-| `kline_obd.c` | OBD-II over the K wire: PID polling into telemetry, fault codes, engine/speed for the tracker's own logic |
+| `kline_obd.c` | OBD-II over the K wire: PID polling into telemetry, fault codes, engine/speed for the tracker's own logic; the fast rotating poll for track mode ([TRACK_MODE.md](TRACK_MODE.md)) |
 | `fota.c`      | Over-the-air updates: manifest check, battery gate, MCUboot image download ([FOTA.md](FOTA.md)) |
 | `led.c` · `watchdog.c` · `reboot.c` | Status LED · 32 s task watchdog (HW fallback) · reboot helper |
 | `config.h` · `pins.h` · `app.h` · `ca_cert.h` | Compile-time defaults · pins · shared API/state · server CA cert |

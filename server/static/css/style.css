@@ -65,29 +65,6 @@ div.ignition {
   width: 10em;
 }
 
-#accel-gauge {
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 8px;
-  width: 80px;
-  position: relative;
-}
-
-#accel-bar {
-  display: inline-block;
-  height: 18px;
-  vertical-align: middle;
-  border-radius: 2px;
-  min-width: 0;
-  transition: width 0.1s, background 0.1s;
-}
-
-#accel-value {
-  font-size: 12px;
-  margin-left: 4px;
-  vertical-align: middle;
-}
-
 #history-popup {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -229,4 +206,226 @@ div.ignition {
   height: 1.4em;
   display: inline-block;
   margin-top: 0.2em;
+}
+
+/* ECU and IMU readings panels, under the speed line */
+div#obd, div#imu {
+  width: 24.5em;
+  margin-top: 0.3em;
+  padding-top: 0.3em;
+  border-top: 1px solid #ddd;
+}
+
+.obd-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  row-gap: 0.3em;
+}
+
+.obd-cell {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.obd-label {
+  font-size: 10px;
+  color: #888;
+}
+
+.obd-value {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.obd-value.empty {
+  color: #bbb;
+}
+
+.obd-value.warn {
+  color: #e53935;
+}
+
+#obd-mil {
+  margin-top: 0.3em;
+  font-size: 12px;
+  color: #e53935;
+  font-weight: bold;
+}
+
+.obd-value.accel {
+  color: #43a047;
+}
+
+.obd-value.brake {
+  color: #e53935;
+}
+
+/* Horizontal g as a bar: full width at 0.5 g, green accelerating, red
+   braking, so a glance at the phone says how hard the car is being driven. */
+#imu-bar {
+  margin-top: 0.3em;
+  height: 4px;
+  background: #eee;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+#imu-bar-fill {
+  height: 100%;
+  width: 0;
+  background: #43a047;
+  transition: width 0.15s, background 0.15s;
+}
+
+/* -- Track mode dashboard ------------------------------------------------- */
+a#track-link.on {
+  color: #e53935;
+  font-weight: bold;
+}
+
+body.track-on { background: #111; }
+body.track-on div#data { background: #fff; padding-bottom: 4px; }
+
+#track {
+  background: #111;
+  color: #eee;
+  font-family: courier;
+  padding: 10px 12px 16px;
+  box-sizing: border-box;
+  min-height: 60%;
+}
+
+.tk-row {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tk-big    { grid-template-columns: 2fr 1fr; }
+.tk-bars   { grid-template-columns: 1fr 1fr; }
+.tk-charts { grid-template-columns: 200px 1fr; }
+.tk-tiles  { grid-template-columns: repeat(6, 1fr); gap: 8px; }
+
+@media (max-width: 520px) {
+  .tk-charts { grid-template-columns: 1fr; }
+  .tk-tiles  { grid-template-columns: repeat(4, 1fr); }
+}
+
+.tk-gauge {
+  background: #1c1c1c;
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.tk-label {
+  font-size: 11px;
+  color: #999;
+  text-transform: lowercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tk-inline {
+  color: #eee;
+  font-size: 13px;
+  margin-left: 4px;
+}
+
+.tk-note {
+  color: #e6a23c;
+  margin-left: 6px;
+}
+
+.tk-value {
+  font-size: 48px;
+  font-weight: bold;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.tk-rpm .tk-value.warn, .tk-value.warn { color: #e53935; }
+
+.tk-sub {
+  font-size: 11px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.tk-bar {
+  position: relative;
+  height: 10px;
+  background: #2a2a2a;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.tk-bar-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #43a047 0%, #e6a23c 70%, #e53935 100%);
+  transition: width 0.12s linear;
+}
+
+.tk-bar-fill.tk-green { background: #43a047; }
+.tk-bar-fill.tk-blue  { background: #4285F4; }
+
+.tk-redline {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: #e53935;
+  left: 92%;
+}
+
+.tk-gg canvas, .tk-trace canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-left: auto;
+  margin-right: auto;
+  background: #161616;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+.tk-gg canvas { max-width: 260px; margin-left: auto; margin-right: auto; }
+
+.tk-key { padding: 0 3px; border-radius: 2px; color: #111; }
+.tk-key-rpm { background: #e6a23c; }
+.tk-key-thr { background: #43a047; }
+.tk-key-g   { background: #4fc3f7; }
+
+.tk-tile {
+  background: #1c1c1c;
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tk-tv {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tk-tv.warn { color: #e53935; }
+.tk-tv.empty { color: #555; }
+
+#tk-mil {
+  margin-top: 4px;
+  color: #e53935;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+#tk-waiting {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #999;
 }

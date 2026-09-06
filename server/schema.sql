@@ -29,6 +29,7 @@ CREATE TABLE `device` (
   -- Settings the device syncs and applies.
   `int`           INT UNSIGNED NOT NULL DEFAULT 0  COMMENT 'reporting interval, seconds',
   `movement_alarm` TINYINT(1)  NOT NULL DEFAULT 1  COMMENT 'wake and report on accelerometer trigger',
+  `track_mode`    TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'GNSS off, ECU+IMU streamed fast; sent as track=<0|1> on every response',
 
   -- Settings the server acts on; these never reach the device.
   `alarm`         TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'notify on ignition on',
@@ -120,6 +121,11 @@ CREATE TABLE `log` (
 
   -- What the interface shows: the ECU's road speed when reported, else GNSS.
   `combined_speed`  DECIMAL(6,2) DEFAULT NULL COMMENT 'mph',
+
+  -- Track mode (firmware TRACK_MODE.md): the record was built with GNSS
+  -- off, and carries the IMU samples batched since the previous one.
+  `track_mode`      TINYINT(1)   DEFAULT NULL COMMENT '1 when built in track mode (tm=1)',
+  `imu_burst`       TEXT         DEFAULT NULL COMMENT 'acc=: ax/ay/az/gx/gy/gz per sample at 26 Hz, samples joined by :',
 
   PRIMARY KEY (`id`),
   -- The read paths are "latest row for a device" and "rows between two ids

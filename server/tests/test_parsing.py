@@ -189,3 +189,62 @@ def test_dtc_pattern():
     assert not telemetry.DTC_RE.match('P4000')
     assert not telemetry.DTC_RE.match('X0133')
     assert not telemetry.DTC_RE.match('P01334')
+
+
+# -- track mode --------------------------------------------------------------
+
+BURST = '12/-30/998/114/0/-3:15/-28/1001/100/2/-4'
+
+
+def test_track_mode_keys_map_to_columns():
+    d = telemetry.parse_csv_line(FULL + ',tm=1,acc=' + BURST)
+    assert d['track_mode'] == '1'
+    assert d['imu_burst'] == BURST
+
+
+def test_track_mode_record_is_flagged_and_burst_kept_verbatim():
+    d = telemetry.parse_csv_line(FULL + ',tm=1,acc=' + BURST)
+    e = telemetry._build_entry(d, {'id': 1}, '1.2.3.4', None)
+    assert e['track_mode'] == 1
+    assert e['imu_burst'] == BURST
+
+
+def test_malformed_burst_is_dropped_not_stored():
+    d = telemetry.parse_csv_line(FULL + ',tm=1,acc=1/2/3;drop')
+    e = telemetry._build_entry(d, {'id': 1}, '1.2.3.4', None)
+    assert 'imu_burst' not in e
+    d = telemetry.parse_csv_line(FULL + ',acc=' + 'x' * 5000)
+    e = telemetry._build_entry(d, {'id': 1}, '1.2.3.4', None)
+    assert 'imu_burst' not in e
+
+
+def test_burst_unpacks_with_gyro_in_dps():
+    from tracker.web import devices
+    samples = devices.imu_burst(BURST)
+    assert samples == [[12, -30, 998, 1.0, 0.0, -0.03],
+                       [15, -28, 1001, 0.88, 0.02, -0.04]]
+    assert devices.imu_burst(None) is None
+    assert devices.imu_burst('') is None
+
+
+class _NoCommands:
+    def all(self, *args):
+        return []
+
+    def query(self, *args):
+        raise AssertionError('nothing to delete')
+
+
+class _Quiet:
+    def info(self, *args):
+        pass
+
+
+def test_response_carries_track_switch():
+    off = telemetry.build_response({'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1},
+                                   _NoCommands(), _Quiet())
+    on = telemetry.build_response({'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1,
+                                   'track_mode': 1}, _NoCommands(), _Quiet(),
+                                  firmware_version='0.4.22')
+    assert off.endswith(',track=0')
+    assert on.endswith(',fota=0.4.22,track=1')

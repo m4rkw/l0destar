@@ -17,6 +17,7 @@ from .. import db, logs
 from . import devices, sock
 
 POLL_INTERVAL = 1.0
+TRACK_POLL_INTERVAL = 0.25
 PING_INTERVAL = 10.0
 
 
@@ -39,25 +40,49 @@ def carpos(ws):
 
     try:
         while ws.connected:
-            row = handle.one(
-                'SELECT * FROM `log` WHERE `device_id` = %s AND `id` > %s '
-                'ORDER BY `id` DESC LIMIT 1',
-                (device['id'], last_id),
-            )
+            # The track-mode switch, read fresh on every pass — a primary-key
+            # lookup, four times a second at most — so a row is never stamped
+            # with a value the page has already moved on from.
+            switch = handle.one(
+                'SELECT `track_mode` FROM `device` WHERE `id` = %s', (device['id'],))
+            track_mode = 1 if switch and switch.get('track_mode') else 0
 
-            if row:
+            # Every row since the last one, oldest first.  Track mode writes
+            # two a second, each with its own IMU burst, so skipping to the
+            # newest would drop samples.  On first connect only the newest
+            # row is wanted.
+            if last_id == 0:
+                rows = handle.all(
+                    'SELECT * FROM `log` WHERE `device_id` = %s '
+                    'ORDER BY `id` DESC LIMIT 1',
+                    (device['id'],),
+                )
+            else:
+                rows = handle.all(
+                    'SELECT * FROM `log` WHERE `device_id` = %s AND `id` > %s '
+                    'ORDER BY `id` ASC LIMIT 20',
+                    (device['id'], last_id),
+                )
+
+            for row in rows:
                 last_id = row['id']
-                ws.send(json.dumps(devices.position(row, database=handle),
-                                   separators=(',', ':')))
+                ws.send(json.dumps(
+                    devices.position(row, database=handle, track_mode=track_mode),
+                    separators=(',', ':')))
                 last_send = time.time()
-            elif time.time() - last_send >= PING_INTERVAL:
+            if not rows and time.time() - last_send >= PING_INTERVAL:
                 # The client drops and reconnects if it hears nothing for a
                 # while, which is how it recovers from a proxy silently
-                # dropping an idle connection.  Keep it fed.
-                ws.send('{"ping":true}')
+                # dropping an idle connection.  Keep it fed.  The switch
+                # rides on the ping too, so a toggled page with a silent
+                # device still changes view.
+                ws.send(json.dumps({'ping': True, 'track_mode': track_mode},
+                                   separators=(',', ':')))
                 last_send = time.time()
 
-            time.sleep(POLL_INTERVAL)
+            # Track-mode records arrive twice a second; a quarter-second
+            # poll keeps the page within a frame of them.
+            time.sleep(TRACK_POLL_INTERVAL if track_mode else POLL_INTERVAL)
     except Exception:
         logs.app.debug('websocket closed', exc_info=True)
     finally:

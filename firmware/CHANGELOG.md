@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.4.24 - track mode and minor bugfix
+
+### Track mode (`APP_TRACK_MODE`, [TRACK_MODE.md](TRACK_MODE.md))
+- **A server-side switch that turns the tracker into a live data logger.**
+While it is on and the ignition is on, GNSS is stopped and a record goes
+out every ~500 ms with the ECU's fast PIDs (RPM, speed, throttle, load every
+cycle, the slow ones one per cycle in rotation, so the K wire sees four or
+five exchanges a cycle rather than thirteen) and a burst of up to sixteen
+IMU samples drained from the sensor's 26 Hz FIFO (`acc=`).  The transport
+holds the socket and keeps the RRC connection up between sends
+(`RAI_ONGOING`) instead of releasing the radio after each one.  Key-off
+ends it with the usual final record; a switch-off from the server resumes
+GNSS and the normal state machine.
+- **The switch rides on every server response** as `track=<0|1>` beside
+`fota=`, so a rebooted device converges on it.  The firmware acts only on a
+change.  Records built in the mode carry `tm=1`.
+- **Driving devices now read a server reply at least every
+`APP_RESP_POLL_S` (30 s).**  Before, a send while moving never waited for
+one, so a setting changed on the server did not reach the device until it
+stopped.
+- Server: `device.track_mode`, `log.track_mode`, `log.imu_burst`
+(migration in `remote_tracker/sql/`), `/api/1.0/trackmode`, the live
+stream sends every row and polls at 250 ms in the mode.  The tracking page
+gains a **track** toggle and, while on, replaces the map with a dashboard:
+RPM and redline, speed, throttle and load bars, a friction circle with a
+learnt forward axis, a 60 s strip chart, and the slow values as tiles.
+
+### No low-battery alert from a crank
+- **The low-battery warning waits for the ignition to have been off for
+`BATTERY_WARN_SETTLE_S` (60 s) and re-checks the line before alerting.**
+Cranking pulls the rail to 9-10 V for a second or two, and the ignition
+sense can read "off" for a moment inside that sag; the firmware then built
+an ignition-off record at the bottom of it and raised "low battery: 9.8V"
+on a healthy car.  A flat battery is still flat a minute later, so nothing
+real is delayed by more than that.
+
 ## 0.4.22
 
 ### Warnings and errors reach the server (`src/dbglog.c`, `APP_DEBUG_LOG`)

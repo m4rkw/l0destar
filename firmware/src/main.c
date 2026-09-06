@@ -54,6 +54,10 @@ enum main_state {
 static enum main_state s_state = STATE_IDLE;
 static int64_t s_last_send_ms;
 static int     s_buffered_records;
+/* When a server reply was last read.  While moving, sends normally do not
+ * wait for one; this is what bounds how long a setting changed on the
+ * server (track mode, interval) takes to reach a driving device. */
+static int64_t s_last_resp_ms;
 
 /* -- ignition wake interrupt ----------------------------------------------- */
 static K_SEM_DEFINE(s_wake_sem, 0, 1);
@@ -918,6 +922,12 @@ static void do_ignition_sleep(void)
                  * firmware (fota=<ver>); no-op otherwise.  GNSS was resumed
                  * above, so the awake variant puts it back on failure. */
                 fota_check(FOTA_CTX_AWAKE);
+
+                /* Or switched track mode on: the main loop picks it up. */
+                if (IS_ENABLED(CONFIG_APP_TRACK_MODE) && g_settings.track_mode) {
+                    s_state = STATE_IDLE;
+                    return;
+                }
             }
             last_send_ms = k_uptime_get();
         }
@@ -925,6 +935,120 @@ static void do_ignition_sleep(void)
         status_delay(1000);
     }
 }
+
+/* ========================================================================= */
+/*  Track mode — GNSS off, ECU + IMU streamed at a fast cadence              */
+/* ========================================================================= */
+#if IS_ENABLED(CONFIG_APP_TRACK_MODE)
+/* Entered from the main loop whenever the server has switched track mode on
+ * and the ignition is on; runs until either changes.
+ *
+ * The receiver is stopped for the duration: the position is not what this
+ * mode is for, and with GNSS out of the way the radio is LTE's outright, so
+ * the socket is held and the RRC connection kept up between sends instead
+ * of being released after each one (transport_set_streaming).  Each cycle
+ * builds one record — last fix, the fast OBD poll, an IMU burst — sends it,
+ * and idles out the rest of APP_TRACK_PERIOD_MS.  The K-wire poll is the
+ * bulk of a cycle at ~400-500 ms; the send is tens of milliseconds.
+ *
+ * Only every APP_TRACK_RESP_INTERVAL_S is the server's reply waited for,
+ * which costs a round trip and is how track=0 gets back to the device.
+ *
+ * Key-off ends it the way the other awake loops end: one final record from
+ * the cached position with the ignition state, then sleep.  A switch-off
+ * from the server hands back to the normal state machine with GNSS
+ * resumed, and the next cycle re-acquires. */
+static void do_track(void)
+{
+    const int64_t period_ms = CONFIG_APP_TRACK_PERIOD_MS;
+    const int64_t resp_ms   = (int64_t)CONFIG_APP_TRACK_RESP_INTERVAL_S * 1000;
+    int64_t last_resp = k_uptime_get() - resp_ms;   /* read the first reply */
+    int64_t last_log = 0;
+    int sent = 0;
+
+    LOG_INF("track mode: GNSS off, one record per %lld ms", period_ms);
+    gnss_stop();
+    transport_set_streaming(true);
+    led_idle();
+    if (g_cell.mcc == 0) modem_update_cell_info();
+
+    while (g_settings.track_mode) {
+        int64_t t0 = k_uptime_get();
+
+        watchdog_kick();
+        crash_check();
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+        obd_service();
+#endif
+        if (power_reboot) {
+            reboot_now();
+        }
+
+        ignition = (char)ignition_read();
+        if (ignition != 0) {
+            LOG_INF("track mode: ignition OFF — sending final position");
+            transport_set_streaming(false);
+            use_cached_gps = true;
+            read_udp_response = false;
+            force_record = true;
+            int have_record = collect_data(ignition);
+            force_record = false;
+            if (have_record > 0) {
+                send_data();
+            }
+            transport_close();
+            data_reset();
+            previous_ignition = ignition;
+            engine_running = false;
+            s_state = STATE_SLEEP;
+            return;
+        }
+
+        bool want_resp = (t0 - last_resp) >= resp_ms;
+
+        read_udp_response = want_resp;
+        if (collect_track_data() > 0) {
+            send_data();
+            if (last_send_ok) {
+                previous_ignition = ignition;
+                s_last_send_ms = k_uptime_get();
+                sent++;
+            }
+            if (want_resp) {
+                last_resp = k_uptime_get();
+                s_last_resp_ms = last_resp;
+                if (pending_server_cmd[0] != '\0') {
+                    cmd_run(pending_server_cmd);
+                    pending_server_cmd[0] = '\0';
+                    if (alert_count > 0) alert_send();
+                }
+            }
+            if (!last_send_ok) {
+                modem_recover();
+            }
+        }
+        data_reset();
+
+        if (k_uptime_get() - last_log >= 30000) {
+            LOG_INF("track: %d records, %d rpm, %.1f km/h, %.2fV, cycle %lld ms",
+                    sent, engine_rpm_or_na(), (double)vehicle_speed_kmh(),
+                    (double)battery_v, k_uptime_get() - t0);
+            last_log = k_uptime_get();
+        }
+
+        int64_t spent = k_uptime_get() - t0;
+        if (spent < period_ms) {
+            status_delay((long)(period_ms - spent));
+        }
+    }
+
+    LOG_INF("track mode off — resuming GNSS");
+    transport_set_streaming(false);
+    transport_close();
+    gnss_resume();
+    s_state = STATE_IDLE;
+}
+#endif /* CONFIG_APP_TRACK_MODE */
 
 /* ========================================================================= */
 /*  main                                                                     */
@@ -1160,6 +1284,18 @@ int main(void)
             reboot_now();
         }
 
+#if IS_ENABLED(CONFIG_APP_TRACK_MODE)
+        /* Track mode takes over every awake state.  Not STATE_SEND: a record
+         * is buffered there and goes out first, and with BATCH_SIZE 1 the
+         * loop is back here a moment later. */
+        if (g_settings.track_mode && ignition == 0 && network_ready &&
+            (s_state == STATE_IDLE || s_state == STATE_GPS_COLLECT ||
+             s_state == STATE_IGNITION_SLEEP)) {
+            do_track();
+            continue;
+        }
+#endif
+
         switch (s_state) {
         case STATE_IDLE:
 
@@ -1294,7 +1430,10 @@ int main(void)
                 (previous_ignition == -1
                  || previous_ignition != ignition
                  || ignition != 0
-                 || vehicle_speed_kmh() < 0.005f);
+                 || vehicle_speed_kmh() < 0.005f
+                 || (CONFIG_APP_RESP_POLL_S > 0 &&
+                     k_uptime_get() - s_last_resp_ms >=
+                         (int64_t)CONFIG_APP_RESP_POLL_S * 1000));
 
             LOG_INF("sending %d records", s_buffered_records);
             led_sending();
@@ -1307,6 +1446,9 @@ int main(void)
             s_buffered_records = 0;
             data_reset();
 
+            if (read_udp_response && last_send_ok) {
+                s_last_resp_ms = k_uptime_get();
+            }
             if (pending_server_cmd[0] != '\0' && read_udp_response) {
                 cmd_run(pending_server_cmd);
                 pending_server_cmd[0] = '\0';

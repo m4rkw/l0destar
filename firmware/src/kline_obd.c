@@ -360,13 +360,49 @@ static void obd_get(uint8_t pid, int32_t *out)
 	}
 }
 
-int obd_poll(struct obd_snapshot *s)
+static void obd_snapshot_clear(struct obd_snapshot *s)
 {
 	memset(s, 0, sizeof(*s));
 	s->rpm = s->speed = s->coolant = s->intake = OBD_NA;
 	s->load = s->throttle = s->timing = s->stft = s->ltft = OBD_NA;
 	s->maf = s->fuel_status = s->mil = s->dtc_count = OBD_NA;
 	s->rpm_min = s->rpm_max = s->rpm_avg = OBD_NA;
+}
+
+/* PID 01 packs the malfunction lamp into bit 7 and the stored-code count
+ * into the low seven bits of the same byte. */
+static void obd_note_status(int32_t status, struct obd_snapshot *s)
+{
+	if (status == OBD_NA) {
+		return;
+	}
+	s->mil       = (status & 0x80) ? 1 : 0;
+	s->dtc_count = status & 0x7F;
+
+	/* This is the fault-code trigger.  The count is already in hand on
+	 * every poll, so a code appearing or clearing mid-drive is visible
+	 * immediately and for free — which is why there is no periodic mode
+	 * 03 re-read.  Only a change fires; the first reading of a session
+	 * just establishes the baseline. */
+	if (s_dtc_seen >= 0 && s->dtc_count != s_dtc_seen) {
+		LOG_INF("stored DTC count %d -> %d — reading codes",
+			s_dtc_seen, s->dtc_count);
+		s_dtc_pending = true;
+	}
+	s_dtc_seen = s->dtc_count;
+
+	/* If the ignition-on read never got through — ECU still booting,
+	 * session refused — nothing else would ever report the codes it
+	 * already had, because the count watch only fires on a *change*.
+	 * Keep asking until one lands. */
+	if (IS_ENABLED(CONFIG_APP_KLINE_DTC_REPORT) && !s_dtc_reported) {
+		s_dtc_pending = true;
+	}
+}
+
+int obd_poll(struct obd_snapshot *s)
+{
+	obd_snapshot_clear(s);
 
 	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
 		return -ENODEV;
@@ -401,32 +437,7 @@ int obd_poll(struct obd_snapshot *s)
 	obd_get(PID_FUEL_SYS, &s->fuel_status);
 	obd_get(PID_STATUS,   &status);
 
-	/* PID 01 packs the malfunction lamp into bit 7 and the stored-code
-	 * count into the low seven bits of the same byte. */
-	if (status != OBD_NA) {
-		s->mil       = (status & 0x80) ? 1 : 0;
-		s->dtc_count = status & 0x7F;
-
-		/* This is the fault-code trigger.  The count is already in hand
-		 * on every poll, so a code appearing or clearing mid-drive is
-		 * visible immediately and for free — which is why there is no
-		 * periodic mode 03 re-read.  Only a change fires; the first
-		 * reading of a session just establishes the baseline. */
-		if (s_dtc_seen >= 0 && s->dtc_count != s_dtc_seen) {
-			LOG_INF("stored DTC count %d -> %d — reading codes",
-				s_dtc_seen, s->dtc_count);
-			s_dtc_pending = true;
-		}
-		s_dtc_seen = s->dtc_count;
-
-		/* If the ignition-on read never got through — ECU still
-		 * booting, session refused — nothing else would ever report
-		 * the codes it already had, because the count watch only
-		 * fires on a *change*.  Keep asking until one lands. */
-		if (IS_ENABLED(CONFIG_APP_KLINE_DTC_REPORT) && !s_dtc_reported) {
-			s_dtc_pending = true;
-		}
-	}
+	obd_note_status(status, s);
 
 	/* Only a poll that never had to reopen proves the session is healthy.
 	 * Clearing the count on any successful poll would defeat the limiter
@@ -449,6 +460,81 @@ int obd_poll(struct obd_snapshot *s)
 
 	s->valid = (s->rpm != OBD_NA) || (s->speed != OBD_NA) ||
 		   (s->coolant != OBD_NA);
+	return s->valid ? 0 : -ENODATA;
+}
+
+/* Track mode.  The bus is asked twice a second here, so what is asked for
+ * matters: the four PIDs that move on a timescale a driver can see are read
+ * every call, and the eight that move over seconds or minutes take one slot
+ * each in turn — coolant on one record, intake on the next, and so on, so
+ * each refreshes about every four seconds.  Unsupported PIDs do not use a
+ * slot.  The per-cycle RPM min/max/avg accumulator is not reported: at this
+ * cadence the instantaneous figure is the resolution. */
+int obd_poll_track(struct obd_snapshot *s)
+{
+	static const uint8_t slow[] = {
+		PID_COOLANT, PID_INTAKE, PID_MAF, PID_TIMING,
+		PID_STFT, PID_LTFT, PID_FUEL_SYS, PID_STATUS,
+	};
+	static unsigned int s_slow_idx;
+
+	obd_snapshot_clear(s);
+
+	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
+		return -ENODEV;
+	}
+	if (!obd_ignition_on()) {
+		obd_close();
+		return -ESHUTDOWN;
+	}
+
+	s_abort = false;
+	s_reopened_this_poll = false;
+
+	int err = obd_ensure_session();
+
+	if (err) {
+		return err;
+	}
+
+	obd_get(PID_RPM,      &s->rpm);
+	obd_get(PID_SPEED,    &s->speed);
+	obd_note_state(s->rpm, s->speed);
+	obd_get(PID_THROTTLE, &s->throttle);
+	obd_get(PID_LOAD,     &s->load);
+
+	for (unsigned int tries = 0; tries < ARRAY_SIZE(slow) && !s_abort; tries++) {
+		uint8_t pid = slow[s_slow_idx];
+
+		s_slow_idx = (s_slow_idx + 1) % ARRAY_SIZE(slow);
+		if (!pid_supported(pid)) {
+			continue;
+		}
+
+		int32_t v;
+
+		obd_get(pid, &v);
+		switch (pid) {
+		case PID_COOLANT:  s->coolant = v;     break;
+		case PID_INTAKE:   s->intake = v;      break;
+		case PID_MAF:      s->maf = v;         break;
+		case PID_TIMING:   s->timing = v;      break;
+		case PID_STFT:     s->stft = v;        break;
+		case PID_LTFT:     s->ltft = v;        break;
+		case PID_FUEL_SYS: s->fuel_status = v; break;
+		case PID_STATUS:   obd_note_status(v, s); break;
+		default: break;
+		}
+		break;
+	}
+
+	if (!s_abort && !s_reopened_this_poll) {
+		s_reopen_count = 0;
+	}
+	obd_rpm_reset();
+
+	s->valid = (s->rpm != OBD_NA) || (s->speed != OBD_NA) ||
+		   (s->throttle != OBD_NA);
 	return s->valid ? 0 : -ENODATA;
 }
 

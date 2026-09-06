@@ -36,6 +36,34 @@ static int s_sock = -1;
 static struct sockaddr_in s_server;
 static bool s_resolved;
 static uint8_t s_req_nonce[NONCE_LEN];
+/* Track mode: hold the socket and the RRC connection between sends. */
+static bool s_streaming;
+
+void transport_set_streaming(bool on)
+{
+    s_streaming = on;
+}
+
+/* Streaming keeps the socket open, and the server answers every datagram
+ * whether or not this side waits for the reply, so between reads the
+ * replies to the sends that were not waited for queue up in the modem.  The
+ * first recv would then return the oldest of them — authenticated against
+ * an earlier request's nonce, so it fails the tag check — and the reply
+ * actually wanted would sit behind it.  Discard whatever is queued before a
+ * request goes out; with the socket closed after each send, as it is when
+ * not streaming, there is never anything to discard. */
+static void transport_drain(void)
+{
+    uint8_t buf[UDP_PACKET_SIZE];
+    int dropped = 0;
+
+    while (zsock_recv(s_sock, buf, sizeof(buf), ZSOCK_MSG_DONTWAIT) > 0) {
+        dropped++;
+    }
+    if (dropped) {
+        LOG_DBG("drained %d unread replies", dropped);
+    }
+}
 
 static int transport_resolve(void)
 {
@@ -148,8 +176,16 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
 
     size_t total = hdr_len + ct_len;
 
-    int rai = read_udp_response ? RAI_ONE_RESP : RAI_LAST;
+    /* Release-assistance hint.  Normally the radio is let go as soon as
+     * this datagram (and, if wanted, its reply) is done, so GNSS gets the
+     * antenna back.  Streaming keeps the connection up for the next one. */
+    int rai = s_streaming      ? RAI_ONGOING
+            : read_udp_response ? RAI_ONE_RESP : RAI_LAST;
     zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+
+    if (s_streaming) {
+        transport_drain();
+    }
 
     if (zsock_send(s_sock, buf, total, 0) < 0) {
         LOG_WRN("send failed (%d), reconnecting", errno);
@@ -179,37 +215,56 @@ int transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms)
     };
     zsock_setsockopt(s_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    uint8_t buf[UDP_PACKET_SIZE];
-    int n = zsock_recv(s_sock, buf, sizeof(buf), 0);
-    if (n < 0) {
-        if (errno != EAGAIN) LOG_WRN("recv: %d", errno);
-        transport_close();
-        return -errno;
-    }
-
-    transport_close();
-
-    if (n < NONCE_LEN + TAG_LEN) {
-        LOG_WRN("response too short: %d", n);
-        return -EPROTO;
-    }
-
     /* Response: [12 nonce][ct + 16 tag], AAD = IMEI || request_nonce */
     size_t imei_len = strlen(g_settings.imei);
     uint8_t aad[20 + NONCE_LEN];
     memcpy(aad, g_settings.imei, imei_len);
     memcpy(aad + imei_len, s_req_nonce, NONCE_LEN);
 
-    size_t pt_len;
-    int err = crypto_decrypt(buf + NONCE_LEN, n - NONCE_LEN,
-                             aad, imei_len + NONCE_LEN,
-                             buf,
-                             (uint8_t *)out_plaintext, out_len - 1, &pt_len);
-    if (err) {
-        LOG_WRN("response decrypt failed: %d", err);
-        return -EPROTO;
-    }
+    uint8_t buf[UDP_PACKET_SIZE];
+    int64_t deadline = k_uptime_get() + timeout_ms;
 
-    out_plaintext[pt_len] = '\0';
-    return (int)pt_len;
+    for (;;) {
+        int n = zsock_recv(s_sock, buf, sizeof(buf), 0);
+        if (n < 0) {
+            if (errno != EAGAIN) LOG_WRN("recv: %d", errno);
+            /* A missed reply is routine when streaming; keep the socket. */
+            if (!s_streaming || errno != EAGAIN) {
+                transport_close();
+            }
+            return -errno;
+        }
+
+        if (n < NONCE_LEN + TAG_LEN) {
+            LOG_WRN("response too short: %d", n);
+            if (!s_streaming) transport_close();
+            return -EPROTO;
+        }
+
+        size_t pt_len;
+        int err = crypto_decrypt(buf + NONCE_LEN, n - NONCE_LEN,
+                                 aad, imei_len + NONCE_LEN,
+                                 buf,
+                                 (uint8_t *)out_plaintext, out_len - 1,
+                                 &pt_len);
+        if (err == 0) {
+            if (!s_streaming) transport_close();
+            out_plaintext[pt_len] = '\0';
+            return (int)pt_len;
+        }
+
+        /* When streaming, a reply that fails the tag check is one to a
+         * previous send that was still in flight when the drain ran.  The
+         * wanted one is behind it: keep reading until the deadline. */
+        int64_t left = deadline - k_uptime_get();
+        if (!s_streaming || left <= 0) {
+            LOG_WRN("response decrypt failed: %d", err);
+            if (!s_streaming) transport_close();
+            return -EPROTO;
+        }
+        LOG_DBG("stale reply skipped (%d), %lld ms left", err, left);
+        tv.tv_sec  = left / 1000;
+        tv.tv_usec = (left % 1000) * 1000;
+        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    }
 }

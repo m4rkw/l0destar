@@ -22,6 +22,9 @@ struct app_settings {
     char    imei[20];
     int     loop_interval;
     int8_t  movement_alarm;
+    /* Set from the server's response (track=<0|1>); never persisted.  See
+     * do_track() in main.c and APP_TRACK_MODE. */
+    int8_t  track_mode;
     uint8_t psk[32];
 };
 
@@ -137,12 +140,19 @@ int  agnss_fetch(void *agnss_request);  /* NULL = request all; else nrf_modem_gn
 
 int  transport_open(void);
 void transport_close(void);
+/* Streaming: keep the socket and the RRC connection up between sends
+ * (RAI_ONGOING) instead of releasing the radio after each one.  Only
+ * sensible with GNSS stopped, since the radio is then LTE's anyway. */
+void transport_set_streaming(bool on);
 void transport_teardown(void);
 int  transport_send(const uint8_t *plaintext, size_t pt_len);
 int  transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms);
 
 int  collect_data(int ignition_state);
 int  data_send_line(const char *line);   /* one raw line as its own datagram */
+/* Track-mode record: no GNSS wait, last known position, the fast OBD poll and
+ * an IMU burst (tm=1, acc=...).  Returns 1 with a record in data_current. */
+int  collect_track_data(void);
 
 /* -- backlog buffer (src/databuf.c) ----------------------------------------
  * Holds records that could not be sent, so a radio outage delays the track
@@ -324,6 +334,10 @@ struct obd_snapshot {
 };
 
 int  obd_poll(struct obd_snapshot *s);
+/* Track-mode poll: RPM, speed, throttle and load every call, plus one of the
+ * slow-moving PIDs in rotation.  Four or five exchanges instead of thirteen,
+ * so the bus can be asked about twice a second without being flooded. */
+int  obd_poll_track(struct obd_snapshot *s);
 int  obd_append(char *buf, int max, const struct obd_snapshot *s);
 int  obd_dtc_report(char *buf, int max);
 void obd_close(void);
@@ -411,6 +425,19 @@ struct accel_impact {
 int  accel_fifo_enable(void);
 int  accel_fifo_disable(void);
 int  accel_fifo_drain_impact(struct accel_impact *out);
+
+/* One IMU sample out of the FIFO ring: accel in milli-g at the current
+ * full-scale, gyro as bias-corrected raw LSB at +/-250 dps — the same units
+ * as accel_read() / accel_read_gyro(), so the server scales them alike. */
+struct accel_sample {
+    int16_t ax, ay, az;
+    int16_t gx, gy, gz;
+};
+/* Drain everything batched since the last drain and return up to `max`
+ * samples, evenly spaced across the interval when there were more.  Returns
+ * the count written, or negative.  Samples arrive at 26 Hz (FIFO_SAMPLE_MS). */
+int  accel_fifo_drain_samples(struct accel_sample *out, int max);
+#define ACCEL_FIFO_SAMPLE_MS 38
 
 int  accel_read_baseline(void);
 int  accel_confirm_movement(void);

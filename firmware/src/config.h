@@ -45,6 +45,13 @@
 #define ENGINE_RUNNING_VOLTAGE      (CONFIG_APP_ENGINE_RUNNING_MV / 1000.0f)
 #define IMPLAUSIBLE_VOLTAGE         5.0f
 #define ENGINE_STOPPED_COUNT        10
+/* A low reading only counts as a low battery once the ignition has been off
+ * this long.  Cranking pulls the rail to 9-10 V for a second or two, and the
+ * sense line can read "off" for a moment inside that, which used to yield an
+ * ignition-off record built at the bottom of the sag and a "low battery:
+ * 9.8V" alert on every cold start.  A genuinely flat battery is still flat a
+ * minute later. */
+#define BATTERY_WARN_SETTLE_S       60
 
 /* -- battery voltage sampling ---------------------------------------------- */
 /* One INA228 conversion is not a trustworthy figure in a car: alternator

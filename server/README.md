@@ -105,6 +105,15 @@ This writes `certs/ca.{key,crt}`, `certs/server.{key,crt}` and a
 `src/ca_cert.h` for the firmware build. The server key never leaves the
 server. Certificates are gitignored.
 
+## Migrations
+
+`schema.sql` is the full current schema for a new database.  An existing one
+takes the ALTER statements in `migrations/`, oldest first, each applied once:
+
+```
+mysql -u root -p tracker < migrations/2026-09-06_track_mode.sql
+```
+
 ## Operating
 
 ```sh
@@ -137,6 +146,7 @@ anything holding one can queue a command, so treat one as console-equivalent.
 | `GET /api/1.0/journey/<id>/points` | session | one journey's track |
 | `GET /api/1.0/devices` | session | enrolled devices |
 | `GET /api/1.0/status` | session | settings, firmware, last seen |
+| `GET,POST /api/1.0/trackmode` | session | read or set the track-mode switch (`{"on": 1}`) |
 | `GET /ws/carpos` | session | live position stream |
 | `GET /api/1.0/track` | bearer | redirect to a map at the last fix |
 | `GET,POST /api/1.0/config` | bearer | read and write device settings |

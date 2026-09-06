@@ -74,7 +74,32 @@ def carpos():
     row = devices.latest_log(device)
     if not row:
         return error('no records for device')
-    return ok({'position': devices.position(row)})
+    return ok({
+        'position': devices.position(row, track_mode=device.get('track_mode')),
+        'accel_baseline': devices.accel_baseline(device),
+        'track_mode': 1 if device.get('track_mode') else 0,
+    })
+
+
+@bp.route('/trackmode', methods=['GET', 'POST'])
+@login_required
+def trackmode():
+    """The track-mode switch (firmware TRACK_MODE.md).
+
+    POST ``{"on": 0|1}`` sets it; the device picks it up from its next reply,
+    which while driving is at most APP_RESP_POLL_S away and in the mode at
+    most APP_TRACK_RESP_INTERVAL_S.  GET reads it.
+    """
+    device = devices.from_request()
+    if not device:
+        return error('device not found')
+    if request.method == 'POST':
+        data = request.get_json(silent=True) or {}
+        on = 1 if data.get('on') else 0
+        db.web.query('UPDATE `device` SET `track_mode` = %s WHERE `id` = %s',
+                     (on, device['id']))
+        device['track_mode'] = on
+    return ok({'track_mode': 1 if device.get('track_mode') else 0})
 
 
 @bp.route('/journeys', methods=['GET'])
@@ -122,7 +147,10 @@ def journey_points(journey_id):
     rows = db.web.all(
         'SELECT `latitude`, `longitude`, `speed`, `combined_speed`, `altitude`, '
         '`heading`, `timestamp`, `ignition_state`, `battery_level`, `mcc`, '
-        '`mnc`, `rat`, `cell_location`, `obd_rpm` FROM `log` '
+        '`mnc`, `rat`, `cell_location`, `track_mode`, '
+        + ', '.join('`%s`' % c for c in
+                    devices.OBD_LIVE_COLUMNS + devices.IMU_LIVE_COLUMNS)
+        + ' FROM `log` '
         'WHERE `device_id` = %s AND `id` >= %s '
         'AND `id` <= %s ORDER BY `id`',
         (journey['device_id'], journey['start_log_id'], journey['end_log_id']),

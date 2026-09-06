@@ -279,6 +279,69 @@ config APP_KLINE_DTC_ON_DELAY_MS
 	  The engine ECU needs a moment to boot and start answering after the
 	  key turns.  Reading too early just times out and costs a session.
 
+menu "Track mode"
+
+config APP_TRACK_MODE
+	bool "Track mode: GNSS off, ECU and IMU streamed fast on server request"
+	default y
+	help
+	  A mode the server switches on and off (track=1 / track=0 in its
+	  response) for track days and bench runs.  While it is on and the
+	  ignition is on, the tracker stops the GNSS receiver and instead
+	  builds a record every APP_TRACK_PERIOD_MS carrying the last known
+	  position, the ECU's fast-moving PIDs, and a burst of IMU samples
+	  drained from the sensor's FIFO.  The radio is kept in connected
+	  mode between sends rather than released after each one.
+
+	  The K wire is not asked for more than it can give: engine RPM,
+	  vehicle speed, throttle and load are read every record and the
+	  slow-moving PIDs (temperatures, MAF, timing, trims, fuel status,
+	  lamp) one per record in rotation, so a cycle is four or five
+	  exchanges instead of thirteen.
+
+config APP_TRACK_PERIOD_MS
+	int "Track mode record period (ms)"
+	depends on APP_TRACK_MODE
+	default 500
+	range 200 5000
+	help
+	  Lower bound on the time between records.  The K-wire poll itself
+	  takes ~400-500 ms, so values below that only remove the idle gap.
+
+config APP_TRACK_IMU_SAMPLES
+	int "IMU samples carried per track record"
+	depends on APP_TRACK_MODE
+	default 16
+	range 0 32
+	help
+	  The IMU batches accel and gyro at 26 Hz into its FIFO; each track
+	  record drains it and carries up to this many samples, evenly
+	  spaced across the interval when there are more.  About 30 bytes a
+	  sample.  0 sends only the instantaneous reading.
+
+config APP_TRACK_RESP_INTERVAL_S
+	int "Seconds between server response reads in track mode"
+	depends on APP_TRACK_MODE
+	default 10
+	range 1 120
+	help
+	  Every record is sent, but only every this-many seconds does the
+	  device wait for the server's reply — which is how it learns that
+	  track mode has been switched off again.
+
+config APP_RESP_POLL_S
+	int "Seconds between server response reads while driving"
+	default 30
+	range 0 600
+	help
+	  While moving the device normally sends without waiting for a
+	  reply, so the radio is released for GNSS as fast as possible.  A
+	  setting changed on the server (track mode, interval) would then
+	  not reach the device until it stopped.  Read a reply at least this
+	  often regardless.  0 keeps the old behaviour.
+
+endmenu
+
 config APP_BOARD_TEST
 	bool "Run the interactive board bring-up test instead of the tracker"
 	default n

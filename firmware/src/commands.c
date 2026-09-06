@@ -44,6 +44,19 @@ void cmd_run(char *cmd)
                       0);
     }
 
+    /* Track mode.  The server puts track=<0|1> on every response so the
+     * device converges on its setting after a reboot or a missed reply;
+     * only a change is acted on, so the routine repeat is silent. */
+    tmp = strstr(cmd, "track=");
+    if (tmp) {
+        int8_t want = atoi(tmp + strlen("track=")) ? 1 : 0;
+        if (want != g_settings.track_mode) {
+            g_settings.track_mode = want;
+            LOG_INF("track mode %s", want ? "ON" : "OFF");
+            alert_enqueue(want ? "track mode ON" : "track mode OFF", 0);
+        }
+    }
+
     if (strstr(cmd, "movereset")) {
         movement_reset();
         alert_enqueue("movement alarm reset", 0);
@@ -107,10 +120,11 @@ void cmd_run(char *cmd)
     if (strstr(cmd, "config")) {
         char msg[160];
         snprintf(msg, sizeof(msg),
-                 "fw=%s int=%d ma=%d bat=%.1fV ign=%s up=%llus",
+                 "fw=%s int=%d ma=%d tm=%d bat=%.1fV ign=%s up=%llus",
                  fota_version(),
                  g_settings.loop_interval,
                  (int)g_settings.movement_alarm,
+                 (int)g_settings.track_mode,
                  (double)battery_v,
                  (ignition == 0) ? "on" : "off",
                  k_uptime_get() / 1000);
