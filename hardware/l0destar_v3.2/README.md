@@ -93,7 +93,7 @@ connect the L wire of a vehicle to this board.</strong>
 | K-wire | L-line pulldown | PASSED | |
 | CAN | Connectivity | PASSED | |
 | CAN standby via XSTBY signal | Low standby current | PASSED | |
-| Board | Quiescent current | ~130µA | OVP stage adds ~10 µA |
+| Board | Quiescent current | ~140.8µA | OVP stage adds ~10 µA |
 
 ## Features
 

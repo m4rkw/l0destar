@@ -79,7 +79,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 | K-wire | L-line sensing via L_SENSE | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 132 µA (enable divider adds around ~9 µA) |
+| Board | Quiescent current | NOT TESTED | Estimated at around 150 µA (enable divider adds around ~9 µA) |
 
 ## Features
 
