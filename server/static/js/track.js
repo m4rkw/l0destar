@@ -1,5 +1,14 @@
 var map = null;
 var pos = null;
+
+// The speed to show: the ECU's road speed when the device reported one, else
+// GNSS.  The server sends it as combined_speed; points from before that
+// column existed only carry the GNSS figure.
+function speedOf(d) {
+  var v = d['combined_speed'];
+  if (v === undefined || v === null || v === '') v = d['speed'];
+  return parseFloat(v);
+}
 var marker = null;
 var accuracyCircle = null;
 var engineRunning = false;
@@ -57,18 +66,26 @@ function applyPosition(data) {
   marker.setPosition(pos);
   map.setCenter(pos);
   $('a.gps-link').attr('href', 'https://maps.google.co.uk/maps/place/' + data['latitude'] + ',' + data['longitude'] + '/');
-  $('span.speed').text(Math.round(parseFloat(data['speed'])));
+  $('span.speed').text(Math.round(speedOf(data)));
   $('span.altitude').text(data['altitude']);
   $('span.heading').text(data['heading']);
 
   var engine_running_voltage = parseFloat($('input#engine_running_voltage').val());
   var engine_stopped_count = parseInt($('input#engine_stopped_count').val());
 
-  // Hysteresis: require engine_stopped_count consecutive below-threshold
-  // readings before transitioning from engine on to ignition on
+  // Engine RPM from the ECU, when the device reports one, settles it
+  // outright: charging voltage is only a proxy, and a noisy or load-shed
+  // rail reads below the threshold on a car that is being driven.
+  // Hysteresis applies to the voltage fallback only: require
+  // engine_stopped_count consecutive below-threshold readings before
+  // transitioning from engine on to ignition on.
+  var rpm = data['obd_rpm'];
   if (data['ignition_state'] != 1) {
       engineRunning = false;
       belowVoltageCount = engine_stopped_count;
+  } else if (rpm !== undefined && rpm !== null && rpm !== '') {
+      engineRunning = parseInt(rpm) > 0;
+      belowVoltageCount = engineRunning ? 0 : engine_stopped_count;
   } else if (parseFloat(data['battery_level']) >= engine_running_voltage) {
       belowVoltageCount = 0;
       engineRunning = true;
@@ -89,7 +106,7 @@ function applyPosition(data) {
   $('span.voltage').text(parseFloat(data['battery_level']).toFixed(2) + 'v');
 
   /* possible alternator failure — only flag when engine is genuinely not running */
-  if (data['speed'] >= 1 && data['ignition_state'] == 1 && !engineRunning) {
+  if (speedOf(data) >= 1 && data['ignition_state'] == 1 && !engineRunning) {
       $('span.voltage').addClass('red');
   } else {
       $('span.voltage').removeClass('red');
@@ -170,7 +187,7 @@ function computeBaseline(points) {
   for (var i = 0; i < points.length; i++) {
     var p = points[i];
     if (p.accel_x === null) continue;
-    if (p.speed < 1) {
+    if (speedOf(p) < 1) {
       sx += p.accel_x;
       sy += p.accel_y;
       sz += p.accel_z;
@@ -203,7 +220,7 @@ function updateAccelGauge(pt, prevPt) {
   // determine braking vs acceleration from speed delta
   var braking = false;
   if (prevPt) {
-    braking = pt.speed < prevPt.speed;
+    braking = speedOf(pt) < speedOf(prevPt);
   }
 
   // scale: 0g = 0px, 0.5g = full width (80px)
@@ -368,7 +385,7 @@ function showReplayPoint(idx) {
   var pt = replayPoints[idx];
   applyPosition(pt);
   $('#replay-status').text((idx + 1) + '/' + replayPoints.length +
-    ' — ' + pt.speed.toFixed(0) + ' mph — ' + pt.timestamp);
+    ' — ' + speedOf(pt).toFixed(0) + ' mph — ' + pt.timestamp);
   $('#replay-progress').val(idx);
 }
 

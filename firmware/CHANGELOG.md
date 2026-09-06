@@ -1,6 +1,63 @@
 # Changelog
 
-## Unreleased
+## 0.4.22
+
+### Warnings and errors reach the server (`src/dbglog.c`, `APP_DEBUG_LOG`)
+- **Every WRN/ERR log line is kept in RAM and sent with the next telemetry
+record that gets through.**  A deployed unit has no console, so until now a
+stall in telemetry left nothing to read but the gap.  A second log backend
+captures the lines (4 KB static: a 1 KB head that keeps the onset of an
+incident and a 3 KB tail that keeps its most recent lines, evictions
+counted), and `send_data()` appends as many as fit beside the record as
+`L,<uptime_ms>,<E|W>,<module>: <text>` lines, at most
+`APP_DEBUG_LOG_PER_RECORD` bytes per record.  They are freed only once the
+datagram has left, so an outage's lines wait it out and arrive with the
+first record after recovery.  Consecutive identical lines are collapsed into
+one plus a "repeated N times" marker.  Nothing goes on the air while the log
+is quiet.
+- **The reset cause is reported on the first record after boot** as
+`rst=<cause>` (`wdt`, `sw`, `pin`, `por`, `bor`, `lockup`, ...), read from
+RESETREAS and then cleared so each boot reports only its own.  The server
+already understood the field; the firmware never sent it.
+- **Known-benign lines are not sent.**  `GNSS blocked by LTE` and the
+A-GNSS `JWT needs modem time` wait were logged at WRN but are routine, and
+now log at INF.  Lines the firmware does not own are excluded by a short
+table in `dbglog.c` (module name plus message prefix): nrf_cloud's
+once-a-second `Modem does not have valid date/time` during that wait, and
+the modem's ERROR reply to `AT%REL14FEAT` on every boot.  The console still
+shows all of them.
+- Server: `L,` lines are appended on receipt to `/var/log/tracker/device.log`,
+each stamped with the wall-clock time the device logged it (derived from the
+`up=` field of the record they arrived with, or the receipt time marked
+`(rx)` when there is none) plus the raw device uptime.
+
+### An update announces itself before the download, not only after it
+- **`fota: x -> y available, downloading` is sent as the transfer starts**,
+standalone, once every gate (version, board, battery, NB-IoT) has passed.  A
+multi-minute download followed by a reboot was otherwise a silent gap in
+telemetry, and one that never completed showed nothing until the failure
+alert.  Raised once per advertised version, like that failure alert, so a
+download retried on later wakes does not repeat it.  The socket the send
+brings up is closed again before the download opens its own.
+
+### Battery voltage is averaged, and the ECU's RPM decides "engine running"
+- **Every battery read now averages 8 INA228 conversions** 3 ms apart instead
+of trusting one.  Alternator ripple and ignition noise on the 12 V rail can
+drop a single ~1 ms conversion a volt or so low, which is how a car with no
+charging fault reported 12.01 V while being driven — and the engine-running
+logic took that at face value.  Bus and shunt conversions run back to back
+(~2.1 ms per cycle), so the spacing guarantees each sample is a fresh
+conversion.  A NACK drops that sample rather than failing the read; a read
+only returns -1 when no sample succeeded.  When the samples span 0.5 V or
+more the min, max and average are logged (`VBUS noisy: ...`) as evidence.
+- **A fresh RPM figure from the ECU now overrides the voltage proxy
+everywhere.**  The main loop already preferred `obd_rpm()`; the telemetry
+builder in `data.c` still set `engine_running` from voltage alone every
+record, so on K-wire builds the two disagreed whenever the rail dipped.
+`engine_is_running()` has moved to `data.c` and is exported, and the
+per-record check follows the same precedence: RPM > 0 is running, RPM 0 is
+stopped, and only with no fresh RPM (no K wire, no session, stale reading)
+does the 13 V threshold with its 10-reading hysteresis apply.
 
 ### A-GNSS no longer competes with the GNSS search it is meant to help
 - **Assistance is fetched before GNSS starts**, while the radio is entirely

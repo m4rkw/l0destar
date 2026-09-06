@@ -46,6 +46,54 @@ def test_speed_is_converted_to_mph(device, database):
     assert str(last_log(database)['speed']) == '29.83'
 
 
+def test_obd_fields_are_stored_scaled(device, database):
+    send(device, record(0, 51.5, -0.1, 1, speed=40.0,
+                        extras=',orpm=850;ospd=48;ocl=87;old=235;omaf=1234'))
+    row = last_log(database)
+    assert row['obd_rpm'] == 850
+    assert str(row['obd_speed']) == '29.83'
+    assert row['obd_coolant'] == 87
+    assert str(row['obd_load']) == '23.5'
+    assert str(row['obd_maf']) == '12.34'
+    assert str(row['combined_speed']) == '29.83'   # the ECU's figure, not GNSS
+
+
+def test_obd_fields_do_not_carry_forward(device, database):
+    send(device, record(0, 51.5, -0.1, 1, extras=',orpm=850'))
+    send(device, record(1, 51.5, -0.1, 1))
+    row = last_log(database)
+    assert row['obd_rpm'] is None
+    assert str(row['combined_speed']) == str(row['speed'])
+
+
+# -- fault codes -------------------------------------------------------------
+
+def active_codes(database):
+    return sorted(r['code'] for r in database.all(
+        'SELECT `code` FROM `dtc` WHERE `active` = 1'))
+
+
+def test_dtc_report_raises_and_clears(device, database):
+    send(device, 'D,P0133,P0420')
+    assert active_codes(database) == ['P0133', 'P0420']
+
+    # The report is the complete set, so a missing code has cleared.
+    send(device, 'D,P0420')
+    assert active_codes(database) == ['P0420']
+    cleared = database.one("SELECT * FROM `dtc` WHERE `code` = 'P0133'")
+    assert cleared['active'] == 0 and cleared['cleared_at'] is not None
+
+    # "D," alone means no stored codes.  Rows are kept as history.
+    send(device, 'D,')
+    assert active_codes(database) == []
+    assert database.one('SELECT COUNT(*) AS n FROM `dtc`')['n'] == 2
+
+
+def test_dtc_report_drops_junk_codes(device, database):
+    send(device, 'D,P0133,bogus,X9999')
+    assert active_codes(database) == ['P0133']
+
+
 def test_sticky_fields_carry_forward(device, database):
     # The device sends these only when they change; every row still has to be
     # self-describing or a query over history is full of holes.

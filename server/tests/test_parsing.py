@@ -121,3 +121,71 @@ def test_device_config_preserves_explicit_zero():
     assert telemetry.device_config(
         {'int': 900, 'movement_alarm': 0}
     ) == {'int': 900, 'ma': 0}
+
+
+# -- firmware log lines -------------------------------------------------------
+
+def test_device_log_line_is_dated_from_record_uptime():
+    import datetime
+    now = datetime.datetime(2026, 9, 6, 12, 0, 0)
+    batch = [FULL, 'L,86395500,E,transport: send failed: -116']
+    boot = telemetry.boot_wall_time(batch, now=now)
+    # FULL says up=86400, so the device booted a day before `now` and the
+    # line, at 86395.5 s of uptime, was logged 4.5 s before the record.
+    assert boot == now - datetime.timedelta(seconds=86400)
+    out = telemetry.format_device_log(batch[1], '355025936386877', boot)
+    assert out == ('2026-09-06 11:59:55 IMEI=355025936386877 up=86395.500 '
+                   'E transport: send failed: -116')
+
+
+def test_device_log_text_keeps_its_commas():
+    import datetime
+    rx = datetime.datetime(2026, 9, 6, 12, 0, 0)
+    out = telemetry.format_device_log('L,12345,W,modem: +CEREG: 2,0', 'x', None, now=rx)
+    assert out == '2026-09-06 12:00:00(rx) IMEI=x up=12.345 W modem: +CEREG: 2,0'
+
+
+def test_device_log_rejects_junk():
+    with pytest.raises(ValueError):
+        telemetry.format_device_log('L,abc,W', 'x', None)
+
+
+def test_boot_wall_time_needs_a_record():
+    assert telemetry.boot_wall_time(['L,1,E,x', 'A,0,hello']) is None
+
+
+# -- OBD-II extras --------------------------------------------------------------
+
+def test_obd_keys_map_to_columns():
+    d = telemetry.parse_csv_line(FULL + ',orpm=850;ospd=48;old=235;omaf=1234;omil=0')
+    assert d['obd_rpm'] == '850'
+    assert d['obd_speed'] == '48'
+    assert d['obd_load'] == '235'
+    assert d['obd_maf'] == '1234'
+    assert d['obd_mil'] == '0'
+
+
+def test_obd_values_are_unscaled_and_speed_converted():
+    d = telemetry.parse_csv_line(FULL + ',orpm=850;ospd=48;old=235;omaf=1234')
+    e = telemetry._build_entry(d, {'id': 1}, '203.0.113.7', None)
+    assert e['obd_rpm'] == 850
+    assert e['obd_speed'] == 29.83          # 48 km/h
+    assert e['obd_load'] == 23.5
+    assert e['obd_maf'] == 12.34
+    # The ECU's road speed is what the interface shows when it exists.
+    assert e['combined_speed'] == 29.83
+
+
+def test_combined_speed_falls_back_to_gnss():
+    e = telemetry._build_entry(telemetry.parse_csv_line(FULL), {'id': 1},
+                               '203.0.113.7', None)
+    assert 'obd_speed' not in e
+    assert e['combined_speed'] == e['speed']
+
+
+def test_dtc_pattern():
+    assert telemetry.DTC_RE.match('P0133')
+    assert telemetry.DTC_RE.match('U3FFF')
+    assert not telemetry.DTC_RE.match('P4000')
+    assert not telemetry.DTC_RE.match('X0133')
+    assert not telemetry.DTC_RE.match('P01334')

@@ -60,6 +60,18 @@ def to_float(value, default=0.0):
         return default
 
 
+def combined_speed(row):
+    """The speed the interface shows, as a float in mph.
+
+    Rows written since the column existed carry it directly; older rows fall
+    back to the GNSS speed so history still replays.
+    """
+    value = row.get('combined_speed')
+    if value is None:
+        value = row.get('speed')
+    return to_float(value)
+
+
 def position(row, database=None):
     """Serialise a log row into the shape the map understands.
 
@@ -71,6 +83,8 @@ def position(row, database=None):
         'latitude': to_float(row.get('latitude')),
         'longitude': to_float(row.get('longitude')),
         'speed': to_float(row.get('speed')),
+        # ECU road speed when the device reported one, else GNSS.
+        'combined_speed': combined_speed(row),
         'altitude': to_float(row.get('altitude')),
         'heading': to_float(row.get('heading')),
         'timestamp': stamp.strftime('%d.%m.%Y %H:%M:%S') if stamp else '',
@@ -80,20 +94,32 @@ def position(row, database=None):
                                        database=database) or '',
         'rat': row.get('rat') or '',
         'cell_location': row.get('cell_location') or 0,
+        # Engine RPM from the ECU on K-wire builds; null when the device has
+        # none.  The map uses it ahead of voltage to call the engine running.
+        'obd_rpm': row.get('obd_rpm'),
     }
 
 
 def engine_running(device, log, database=None):
-    """Whether the engine appears to be running, with hysteresis.
+    """Whether the engine appears to be running.
 
-    Ignition state cannot tell "key on, engine off" from "running".  A charging
-    alternator holds the bus above the threshold, so any reading above it in
-    the recent window counts as running — smart and regenerative charging
-    systems deliberately let the bus sag, and without the window the display
-    would flicker between states on a perfectly healthy car.
+    Ignition state cannot tell "key on, engine off" from "running".  When the
+    device reports engine RPM from the ECU (a K-wire build) that is a direct
+    measurement and settles it outright.  Otherwise fall back to voltage with
+    hysteresis: a charging alternator holds the bus above the threshold, so
+    any reading above it in the recent window counts as running — smart and
+    regenerative charging systems deliberately let the bus sag, and a noisy
+    rail can put a single reading a volt low, so without the window the
+    display would flicker between states on a perfectly healthy car.
     """
     if not log or log.get('ignition_state') != 1:
         return False
+    rpm = log.get('obd_rpm')
+    if rpm is not None:
+        try:
+            return int(rpm) > 0
+        except (TypeError, ValueError):
+            pass
     database = database or db.web
     recent = database.all(
         'SELECT `battery_level` FROM `log` WHERE `device_id` = %s '

@@ -22,7 +22,10 @@ change or on the first record after a wake, and the server carries the last
 known value forward so every row is still self-describing.
 
 A line beginning ``A,`` is an alert rather than a position record:
-``A,<priority>,<message>``.
+``A,<priority>,<message>``.  ``D,<code>,<code>...`` is the vehicle's complete
+set of stored fault codes (``D,`` alone means none), and
+``L,<uptime_ms>,<E|W>,<text>`` is a warning or error the firmware captured
+between sends.
 """
 
 import datetime
@@ -84,6 +87,42 @@ PER_PACKET_KEYS = (
     'cell_location',
 )
 
+KM_PER_HOUR_TO_MPH = 0.6213712
+
+# OBD-II values read over the K wire.  The device sends integers only, with
+# these scale factors applied, so the packet never carries a decimal point.
+# Each entry is (column, divisor, unit factor): the stored value is
+# int(v) / divisor * factor.  Keys are the short forms the firmware emits in
+# the trailing k=v;k=v extras.
+#
+# The ECU reports speed in km/h (SAE J1979 PID 0x0D, on any market's
+# vehicle).  It is converted here, with the same constant and in the same
+# place as the GNSS speed, so both speed columns are mph and directly
+# comparable.
+OBD_FIELDS = {
+    'orpm':  ('obd_rpm',         1,   1),
+    'ormin': ('obd_rpm_min',     1,   1),
+    'ormax': ('obd_rpm_max',     1,   1),
+    'oravg': ('obd_rpm_avg',     1,   1),
+    'ospd':  ('obd_speed',       1,   KM_PER_HOUR_TO_MPH),
+    'ocl':   ('obd_coolant',     1,   1),
+    'oit':   ('obd_intake',      1,   1),
+    'old':   ('obd_load',       10,   1),
+    'oth':   ('obd_throttle',   10,   1),
+    'omaf':  ('obd_maf',       100,   1),
+    'otim':  ('obd_timing',     10,   1),
+    'ostft': ('obd_stft',       10,   1),
+    'oltft': ('obd_ltft',       10,   1),
+    'ofs':   ('obd_fuel_status', 1,   1),
+    'omil':  ('obd_mil',         1,   1),
+    'odtc':  ('obd_dtc_count',   1,   1),
+}
+
+# A diagnostic trouble code as the device reports it: P/C/B/U, then a digit
+# 0-3, then three hex digits.  Anything else is a firmware or bus fault and
+# is dropped rather than stored.
+DTC_RE = re.compile(r'^[PCBU][0-3][0-9A-F]{3}$')
+
 LOG_COLUMNS = [
     'device_id', 'ip', 'timestamp', 'gsm_timestamp', 'gsm_timestamp_offset',
     'latitude', 'longitude', 'altitude', 'speed', 'heading', 'hdop',
@@ -92,13 +131,11 @@ LOG_COLUMNS = [
     'mcc', 'mnc', 'lac', 'cid', 'cell_location', 'rat',
     'accel_x', 'accel_y', 'accel_z', 'gyro_x', 'gyro_y', 'gyro_z',
     'waketime', 'uptime', 'mcu_temp', 'imu_temp', 'dead_reckoning', 'vsys',
-]
+] + [column for column, _, _ in OBD_FIELDS.values()] + ['combined_speed']
 
 _TIMESTAMP_RE = re.compile(
     r'^(\d+)/(\d+)/(\d+),(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?([+-])(\d+)$'
 )
-
-KM_PER_HOUR_TO_MPH = 0.6213712
 
 
 # -- parsing -----------------------------------------------------------------
@@ -138,6 +175,8 @@ def parse_csv_line(line):
             column = EXTRA_KEYS.get(key)
             if column:
                 data[column] = value
+            elif key in OBD_FIELDS:
+                data[OBD_FIELDS[key][0]] = value
 
     return data
 
@@ -193,6 +232,32 @@ def _build_entry(data, device, ip, previous):
     for key in PER_PACKET_KEYS:
         if key in data:
             entry[key] = data[key]
+
+    # OBD-II data read over the K wire.  Only present when the vehicle has a
+    # K interface and the firmware is configured to poll it, and only for the
+    # PIDs that ECU actually supports — so every field is independently
+    # optional and nothing is carried forward from the previous row.
+    for column, scale, factor in OBD_FIELDS.values():
+        if column not in data:
+            continue
+        try:
+            value = int(data[column])
+        except (TypeError, ValueError):
+            continue
+        if scale == 1 and factor == 1:
+            entry[column] = value
+        else:
+            entry[column] = round(value / scale * factor, 2)
+
+    # The speed the interface shows.  The ECU's road speed, when the device
+    # reports one, is the vehicle's own figure: it does not wander with a poor
+    # fix and reads a clean zero when stationary.  Without it, the GNSS speed.
+    # Both are mph by this point.  Stored rather than derived on read so
+    # queries and exports see one column.
+    if entry.get('obd_speed') is not None:
+        entry['combined_speed'] = entry['obd_speed']
+    else:
+        entry['combined_speed'] = entry['speed']
 
     return entry
 
@@ -394,6 +459,80 @@ def device_config(device):
     }
 
 
+# -- fault codes -------------------------------------------------------------
+
+def process_dtc_report(device, codes, database, log):
+    """Reconcile a reported set of fault codes against the `dtc` table.
+
+    The device always reports its complete current set, so this is a set
+    difference rather than an append: a code present in the report but not
+    already active is newly raised, and a code active in the table but absent
+    from the report has been cleared — by a garage, a battery disconnect, or
+    the ECU itself once the fault stopped recurring.  Rows are never deleted,
+    so the table is a history of when each fault appeared and disappeared.
+
+    An empty report is meaningful and clears everything; that is how a device
+    says "no stored codes".  Returns (raised, cleared) counts.
+    """
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+
+    reported = []
+    for code in codes:
+        code = code.strip().upper()
+        if not code:
+            continue
+        if not DTC_RE.match(code):
+            log.warning('ignoring malformed DTC %r from %s', code, device['imei'])
+            continue
+        if code not in reported:
+            reported.append(code)
+
+    active = database.all(
+        'SELECT `id`, `code` FROM `dtc` WHERE `device_id` = %s AND `active` = 1',
+        (device['id'],),
+    ) or []
+    active_codes = {row['code'] for row in active}
+
+    raised = [c for c in reported if c not in active_codes]
+    cleared = [row for row in active if row['code'] not in reported]
+
+    for code in raised:
+        database.query(
+            'INSERT INTO `dtc` (`device_id`, `code`, `raised_at`, `active`) '
+            'VALUES (%s, %s, %s, 1)',
+            (device['id'], code, now),
+        )
+    if cleared:
+        ids = [row['id'] for row in cleared]
+        placeholders = ', '.join(['%s'] * len(ids))
+        database.query(
+            'UPDATE `dtc` SET `active` = 0, `cleared_at` = %%s '
+            'WHERE `id` IN (%s)' % placeholders,
+            [now] + ids,
+        )
+
+    if raised or cleared:
+        log.info('DTC %s: raised=%s cleared=%s', device['imei'],
+                 ','.join(raised) or '-',
+                 ','.join(row['code'] for row in cleared) or '-')
+
+    # One notification per event, not per code.  A single root fault
+    # routinely raises three or four codes at once, and four separate pushes
+    # for one problem is how people learn to ignore the alerts.  A new fault
+    # is worth waking someone for; one going away is not.
+    name = device.get('name') or device.get('imei')
+    if raised:
+        word = 'fault code' if len(raised) == 1 else 'fault codes'
+        notify.send('%s: %s %s raised' % (name, word, ', '.join(raised)),
+                    priority=1)
+    if cleared:
+        names = ', '.join(row['code'] for row in cleared)
+        word = 'fault code' if len(cleared) == 1 else 'fault codes'
+        notify.send('%s: %s %s cleared' % (name, word, names), priority=0)
+
+    return len(raised), len(cleared)
+
+
 # -- alerts ------------------------------------------------------------------
 
 def _handle_alert(line, device, database, log):
@@ -473,6 +612,69 @@ def build_response(device, database, log, firmware_version=None):
     return response
 
 
+_UPTIME_RE = re.compile(r'(?:^|[,;])up=(\d+)(?:[,;]|$)')
+
+
+def boot_wall_time(lines, now=None, device=None, database=None):
+    """Estimate when the device booted, as a datetime, or None.
+
+    Firmware log lines are stamped with uptime, which only means something
+    against a boot time.  The telemetry record in the same batch carries up=
+    (seconds since boot as of moments before the send), so now minus that is
+    the boot time to within a few seconds.  With no record in the batch, fall
+    back to the last stored row's uptime and receipt time; that is wrong if
+    the device rebooted since, but the line's own uptime is printed too, so
+    the reader can tell.
+    """
+    now = now or datetime.datetime.now()
+    for line in lines:
+        if line[:2] in ('A,', 'D,', 'L,'):
+            continue
+        m = _UPTIME_RE.search(line)
+        if m:
+            return now - datetime.timedelta(seconds=int(m.group(1)))
+
+    if device is None or database is None:
+        return None
+    try:
+        row = database.one(
+            'SELECT `timestamp`, `uptime` FROM `log` '
+            'WHERE `device_id` = %s ORDER BY `id` DESC LIMIT 1',
+            (device['id'],),
+        )
+    except Exception:
+        logs.app.exception('failed to read last uptime for %s', device.get('imei'))
+        return None
+    if not row or row.get('uptime') is None or not row.get('timestamp'):
+        return None
+    stamp = row['timestamp']
+    if isinstance(stamp, str):
+        try:
+            stamp = datetime.datetime.strptime(stamp, '%Y-%m-%d %H:%M:%S.%f')
+        except ValueError:
+            stamp = datetime.datetime.strptime(stamp, '%Y-%m-%d %H:%M:%S')
+    return stamp - datetime.timedelta(seconds=int(float(row['uptime'])))
+
+
+def format_device_log(line, imei, boot_wall, now=None):
+    """Render one "L,<uptime_ms>,<E|W>,<module>: <text>" record for the
+    device log.  Stamped with the time the device logged it; with no boot
+    reference, the receipt time marked "(rx)".  Raises ValueError on a
+    malformed line."""
+    parts = line.split(',', 3)
+    if len(parts) < 4 or not parts[1].isdigit():
+        raise ValueError('malformed firmware log line: %r' % line[:80])
+    _, ms, level, text = parts
+    up_ms = int(ms)
+    if boot_wall is not None:
+        when = (boot_wall + datetime.timedelta(milliseconds=up_ms)) \
+            .strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        when = (now or datetime.datetime.now()).strftime('%Y-%m-%d %H:%M:%S') + '(rx)'
+    return '%s IMEI=%s up=%d.%03d %s %s' % (
+        when, imei, up_ms // 1000, up_ms % 1000, level, text)
+
+
 def process_lines(device, lines, ip, database, log):
     """Process a batch of plaintext lines and return the response string.
 
@@ -484,10 +686,23 @@ def process_lines(device, lines, ip, database, log):
     from . import firmware
 
     processed = 0
+    boot_wall = None      # worked out on the first L, line, if any
     for line in lines:
         try:
             if line.startswith('A,'):
                 _handle_alert(line, device, database, log)
+            elif line.startswith('D,'):
+                # Complete current set of stored fault codes; "D," alone means
+                # the ECU reported none, which clears anything still active.
+                process_dtc_report(device, line[2:].split(','), database, log)
+            elif line.startswith('L,'):
+                # A warning or error the firmware logged since its last
+                # successful send.  File it; nothing to store or act on.
+                if boot_wall is None:
+                    boot_wall = boot_wall_time(lines, device=device,
+                                               database=database)
+                logs.device.info('%s', format_device_log(
+                    line, device['imei'], boot_wall))
             else:
                 process_record(parse_csv_line(line), device, ip, database=database)
             processed += 1

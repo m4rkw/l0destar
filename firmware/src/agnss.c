@@ -121,7 +121,9 @@ int agnss_fetch(void *agnss_request)
 	 * to NTP, and pushes the result to the modem via AT+CCLK. */
 	int err = nrf_cloud_jwt_generate(0, jwt_buf, sizeof(jwt_buf));
 	if (err) {
-		LOG_WRN("JWT needs modem time; waiting for NTP fallback...");
+		/* Expected once per boot: the clock is not set until NITZ or
+		 * NTP has run, and the retry below covers it. */
+		LOG_INF("JWT needs modem time; waiting for NTP fallback...");
 		for (int i = 0; i < 15; i++) {
 			k_msleep(1000);
 			err = nrf_cloud_jwt_generate(0, jwt_buf, sizeof(jwt_buf));

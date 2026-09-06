@@ -240,14 +240,19 @@ A unit reports its running version to the server as `fw=` on the first
 telemetry record after each boot, on any settings-sync record, and in the reply
 to the `config` command; the server stores it on every `log` row by carrying
 the last value forward. The
-update itself is visible as two alerts: `fota: x -> y, rebooting` before the
-swap and `fota: updated to y` from the new image after it confirms.
+update itself is visible as three alerts: `fota: x -> y available, downloading`
+as the transfer starts, `fota: x -> y, rebooting` before the swap and
+`fota: updated to y` from the new image after it confirms. The first is raised
+once per advertised version, so a download that has to be retried on a later
+wake does not repeat it; a download that fails every attempt in a wake raises
+`fota: x -> y failed after N attempts`, also once per version.
 
 ## What happens on the device
 
 1. Manifest fetched, version compared, battery gate checked.
-2. GNSS is stopped (it shares the antenna path with LTE) and the image streams
-   into `mcuboot_secondary`. The watchdog is fed throughout;
+2. A `fota: x -> y available, downloading` alert is sent. GNSS is stopped (it
+   shares the antenna path with LTE) and the image streams into
+   `mcuboot_secondary`. The watchdog is fed throughout;
    `CONFIG_APP_FOTA_DOWNLOAD_TIMEOUT_S` (20 min) bounds the whole transfer.
 3. `dfu_target` marks the slot `BOOT_UPGRADE_TEST`.
 4. A `fota: x -> y, rebooting` alert is sent, the radio is powered down, and the

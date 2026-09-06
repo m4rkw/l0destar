@@ -338,12 +338,6 @@ static float vehicle_speed_kmh(void)
     return g_gnss.speed_kmh;
 }
 
-/* Is the engine running?
- *
- * RPM is a direct measurement; charging voltage is only a proxy, and a poor
- * one — a tired battery or a low alternator output reads as "engine off" and
- * drops the tracker to its 30 s engine-off cadence while the car is being
- * driven.  Fall back to voltage only when the ECU is not answering. */
 /* obd_rpm() for the log lines, without needing the guard at every call site:
  * -1 on a build with no K wire, which prints as "-1 rpm" and reads correctly
  * as "no ECU figure". */
@@ -354,18 +348,6 @@ static int engine_rpm_or_na(void)
 #else
     return -1;
 #endif
-}
-
-static bool engine_is_running(void)
-{
-#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
-    int rpm = obd_rpm();
-
-    if (rpm >= 0) {
-        return rpm > 0;
-    }
-#endif
-    return battery_v >= ENGINE_RUNNING_VOLTAGE;
 }
 
 #if IS_ENABLED(CONFIG_APP_KLINE_DTC_REPORT)

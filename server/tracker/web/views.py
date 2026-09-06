@@ -28,6 +28,7 @@ def track():
                                google_maps_api_key=config.MAPS_API_KEY)
 
     log = devices.latest_log(device) or {}
+    log['combined_speed'] = devices.combined_speed(log)
 
     stamp = log.get('timestamp')
     log['display_date'] = stamp.strftime('%d.%m.%Y') if stamp else ''

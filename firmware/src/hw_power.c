@@ -91,12 +91,49 @@ float battery_read_voltage(void)
 	return CONFIG_APP_DEBUG_BATTERY_MV / 1000.0f;
 #else
 	if (!s_ok) return -1.0f;
-	uint8_t buf[3];
-	if (!bb_read_regs(&ina_bus, INA228_ADDR, 0x05, buf, 3)) {
+
+	/* Average several conversions rather than trust one.  Alternator
+	 * ripple and ignition noise on the vehicle rail reach the INA228's bus
+	 * input, and a single ~1 ms conversion can land around a volt low —
+	 * seen as ~12 V readings mid-drive on a car with no charging fault,
+	 * which the engine-running logic then took at face value.  ADC_CONFIG
+	 * runs bus and shunt conversions back to back (~1.05 ms each), so
+	 * BATTERY_SAMPLE_GAP_MS apart each read sees a fresh conversion, not
+	 * the same register contents again.  A NACK drops that sample; the
+	 * read only fails outright when none succeeded. */
+	float sum = 0.0f, lo = 0.0f, hi = 0.0f;
+	int   n = 0;
+
+	for (int i = 0; i < BATTERY_SAMPLES; i++) {
+		if (i > 0) {
+			k_msleep(BATTERY_SAMPLE_GAP_MS);
+		}
+		uint8_t buf[3];
+		if (!bb_read_regs(&ina_bus, INA228_ADDR, 0x05, buf, 3)) {
+			continue;
+		}
+		uint32_t raw = ((uint32_t)buf[0] << 16 |
+				(uint32_t)buf[1] << 8 | buf[2]) >> 4;
+		float v = (float)raw * 195.3125e-6f;
+
+		if (n == 0 || v < lo) lo = v;
+		if (n == 0 || v > hi) hi = v;
+		sum += v;
+		n++;
+	}
+	if (n == 0) {
 		return -1.0f;
 	}
-	uint32_t raw = ((uint32_t)buf[0] << 16 | (uint32_t)buf[1] << 8 | buf[2]) >> 4;
-	return (float)raw * 195.3125e-6f;
+
+	float avg = sum / (float)n;
+
+	/* Evidence for the noise theory, and a hint that the average itself
+	 * may still be pulled down, without spamming the log on a quiet rail. */
+	if (hi - lo >= BATTERY_SPREAD_WARN_V) {
+		LOG_WRN("VBUS noisy: %.2f..%.2f V across %d samples, using %.2f V",
+			(double)lo, (double)hi, n, (double)avg);
+	}
+	return avg;
 #endif
 }
 

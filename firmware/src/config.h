@@ -46,6 +46,16 @@
 #define IMPLAUSIBLE_VOLTAGE         5.0f
 #define ENGINE_STOPPED_COUNT        10
 
+/* -- battery voltage sampling ---------------------------------------------- */
+/* One INA228 conversion is not a trustworthy figure in a car: alternator
+ * ripple and ignition noise on the 12 V rail can drop a single ~1 ms
+ * conversion a volt or so low, which reads as "12.0 V, engine running".
+ * Every battery_read_voltage() averages this many conversions instead. */
+#define BATTERY_SAMPLES             8     /* conversions averaged per read   */
+#define BATTERY_SAMPLE_GAP_MS       3     /* > one bus+shunt cycle (2.1 ms), */
+                                          /* so each read is a new conversion */
+#define BATTERY_SPREAD_WARN_V       0.5f  /* log min..max when wider than this */
+
 /* -- accelerometer --------------------------------------------------------- */
 #define ACC_MOVEMENT_THRESHOLD      CONFIG_APP_ACC_MOVEMENT_THRESHOLD
 #define MOVEMENT_INACTIVITY_RESET   CONFIG_APP_MOVEMENT_INACTIVITY_RESET

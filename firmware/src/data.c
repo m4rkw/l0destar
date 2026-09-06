@@ -14,6 +14,12 @@
 
 LOG_MODULE_REGISTER(data, CONFIG_APP_LOG_LEVEL);
 
+/* The per-record cap only exists in Kconfig while APP_DEBUG_LOG is on; with
+ * it off there is nothing to append and dbglog_take() is a stub anyway. */
+#ifndef CONFIG_APP_DEBUG_LOG_PER_RECORD
+#define CONFIG_APP_DEBUG_LOG_PER_RECORD 0
+#endif
+
 char  data_current[DATA_LIMIT];
 int   data_index;
 bool  send_int_to_server;
@@ -33,10 +39,44 @@ void data_reset(void)
     data_index = 0;
 }
 
+/* Is the engine running?
+ *
+ * RPM from the ECU is a direct measurement and settles it whenever a fresh
+ * figure exists.  Charging voltage is only a proxy, and a poor one: a tired
+ * battery, a smart alternator shedding load, or a noisy INA228 read all put
+ * the rail below ENGINE_RUNNING_VOLTAGE while the car is being driven, and
+ * that used to drop the tracker to its engine-off cadence mid-journey.  Fall
+ * back to voltage only when the ECU is not answering — no K wire on this
+ * build, no session, or a reading that has gone stale. */
+bool engine_is_running(void)
+{
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+    int rpm = obd_rpm();
+
+    if (rpm >= 0) {
+        return rpm > 0;
+    }
+#endif
+    return battery_v >= ENGINE_RUNNING_VOLTAGE;
+}
+
 static float battery_sample_with_engine_check(void)
 {
     float v = battery_read_voltage();
     battery_v = v;
+
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+    /* Same precedence as engine_is_running(): a fresh RPM figure wins over
+     * whatever the rail reads.  The voltage hysteresis below is reset so
+     * that losing the ECU later falls back to it from a clean slate. */
+    int rpm = obd_rpm();
+
+    if (rpm >= 0) {
+        s_below_voltage_count = 0;
+        engine_running = rpm > 0;
+        return v;
+    }
+#endif
     if (v >= ENGINE_RUNNING_VOLTAGE) {
         s_below_voltage_count = 0;
         engine_running = true;
@@ -256,6 +296,20 @@ int collect_data(int ignitionState)
         if (n > 0) data_index += n;
     }
 
+    /* Why this boot happened, once.  Rides with fw= on the first record
+     * after every restart so a gap in telemetry can be told apart from a
+     * reboot: the server files both in its debug log. */
+    if (s_fw_pending) {
+        const char *rst = dbglog_reset_cause();
+
+        if (rst != NULL) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1,
+                         ",rst=%s", rst);
+            if (n > 0) data_index += n;
+        }
+    }
+
     data_current[data_index] = '\0';
 
     /* Battery warning - only meaningful with the engine off. While the engine
@@ -317,10 +371,43 @@ int send_data(void)
         p += len + 1;
     }
 
+    /* Captured warnings/errors ride along as "L," lines after the record,
+     * within what the datagram has room for and a per-record cap so a busy
+     * log never crowds out the position.  They are appended only to the
+     * live send, never to a record bound for the backlog: the backlog's
+     * slots are sized for a record alone, and the lines are kept here
+     * until a datagram carrying them actually gets through. */
+    int rec_end = data_index;
+    int added = 0;
+    int room = (UDP_PACKET_SIZE - 64) - data_index;   /* transport envelope */
+
+    if (room > DATA_LIMIT - 1 - data_index) {
+        room = DATA_LIMIT - 1 - data_index;
+    }
+    if (room > CONFIG_APP_DEBUG_LOG_PER_RECORD) {
+        room = CONFIG_APP_DEBUG_LOG_PER_RECORD;
+    }
+    if (room > 0) {
+        size_t pending = dbglog_pending();
+
+        added = dbglog_take(&data_current[data_index], (size_t)room);
+        if (added > 0) {
+            data_index += added;
+            data_current[data_index] = '\0';
+            LOG_INF("log: sending %d of %u pending bytes", added,
+                    (unsigned)pending);
+        }
+    }
+
     int err = transport_send((const uint8_t *)data_current,
                              (size_t)data_index);
     if (err) {
         last_send_ok = false;
+        /* Put the record back the way it was: the log lines stay in their
+         * buffer for the next attempt and must not be pushed as records. */
+        data_index = rec_end;
+        data_current[data_index] = '\0';
+        dbglog_ack(false);
         /* Only count a failure that means something.  With no registration
          * the send was never going to succeed and the modem is already
          * dealing with it; counting those is what used to escalate a tunnel
@@ -339,6 +426,7 @@ int send_data(void)
     gsm_send_failures = 0;
     modem_send_ok();
     powered_on = false;
+    dbglog_ack(true);
 
     /* The link is working, so drain a little of whatever the last outage
      * left behind.  Bounded per cycle so a backlog never delays the live

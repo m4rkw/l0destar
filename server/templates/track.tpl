@@ -40,7 +40,7 @@
         <div class="bigline">
             <span class="timestamp">{{ log.get('display_timestamp', '') }}</span>
             <div class="speed">
-                <span class="speed">{{ (log.get('speed') or 0) | round(0) | int }}</span> mph
+                <span class="speed">{{ (log.get('combined_speed') or 0) | round(0) | int }}</span> mph
             </div>
             <div class="ignition">{% if engine_running %}engine on{% elif log.get('ignition_state') == 1 %}ignition on{% else %}ignition off{% endif %}</div>
         </div>

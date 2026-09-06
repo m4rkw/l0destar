@@ -120,9 +120,10 @@ def journey_points(journey_id):
     # journey opened and closed, so this cannot drift on clock skew or on a
     # record whose device timestamp lands outside the window.
     rows = db.web.all(
-        'SELECT `latitude`, `longitude`, `speed`, `altitude`, `heading`, '
-        '`timestamp`, `ignition_state`, `battery_level`, `mcc`, `mnc`, `rat`, '
-        '`cell_location` FROM `log` WHERE `device_id` = %s AND `id` >= %s '
+        'SELECT `latitude`, `longitude`, `speed`, `combined_speed`, `altitude`, '
+        '`heading`, `timestamp`, `ignition_state`, `battery_level`, `mcc`, '
+        '`mnc`, `rat`, `cell_location`, `obd_rpm` FROM `log` '
+        'WHERE `device_id` = %s AND `id` >= %s '
         'AND `id` <= %s ORDER BY `id`',
         (journey['device_id'], journey['start_log_id'], journey['end_log_id']),
     )

@@ -20,8 +20,11 @@ def _handler(name, fmt):
     return handler
 
 
-def _channel(name, filename, console=False, propagate=False):
-    fmt = logging.Formatter('%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+def _channel(name, filename, console=False, propagate=False, stamped=True):
+    if stamped:
+        fmt = logging.Formatter('%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+        fmt = logging.Formatter('%(message)s')
     log = logging.getLogger(name)
     log.setLevel(logging.INFO)
     log.propagate = propagate
@@ -47,5 +50,10 @@ udp = _channel('tracker.udp', 'udp.log', console=True)
 tls = _channel('tracker.tls', 'tls.log', console=True)
 dtls = _channel('tracker.dtls', 'dtls.log', console=True)
 debug = _channel('tracker.debug', 'debug.log')
+# Warnings and errors the firmware captured between sends ("L," records),
+# appended on receipt so an outage can be read back afterwards.  Each line
+# carries the time the device logged it, so the channel adds no stamp of
+# its own.
+device = _channel('tracker.device', 'device.log', stamped=False)
 
 AUDIT_PATH = os.path.join(config.LOG_DIR, 'audit.log')

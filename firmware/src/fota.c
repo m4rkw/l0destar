@@ -129,6 +129,7 @@ static bool    s_forced;
 static bool    s_boot_check = true;   /* the one unconditional power-on check */
 static bool    s_dl_init_done;
 static uint32_t s_alerted_ver;    /* version we've already reported stuck */
+static uint32_t s_announced_ver;  /* version we've already said we're fetching */
 static int     s_nbiot_defers;    /* consecutive checks deferred off NB-IoT */
 
 /* -- download completion --------------------------------------------------- */
@@ -552,6 +553,25 @@ int fota_check(enum fota_ctx ctx)
     }
     transport_close();
     led_sending();
+
+    /* Say so before the transfer starts, not only after it lands.  A
+     * multi-minute download followed by a reboot is otherwise a silent gap
+     * in telemetry, and one that never completes leaves only the failure
+     * alert below.  Sent now rather than queued: the queue's next outing is
+     * the reboot alert.  Once per advertised version, like the failure
+     * alert — the check re-runs every wake while the server keeps
+     * advertising, and "downloading" every hour would be noise.  The socket
+     * the send brings up is closed again so the download's own connection
+     * has the modem to itself. */
+    if (s_announced_ver != available) {
+        s_announced_ver = available;
+        char msg[64];
+        snprintf(msg, sizeof(msg), "fota: %s -> %s available, downloading",
+                 APP_VERSION_STRING, ver_str);
+        alert_enqueue(msg, 0);
+        alert_send_standalone();
+        transport_close();
+    }
 
     /* One dropped connection should not cost the whole wake.  The image comes
      * down as ~140 sequential ranged GETs on a single TLS connection with no

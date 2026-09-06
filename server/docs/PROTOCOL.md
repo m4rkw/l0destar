@@ -55,6 +55,13 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `dr` | dead-reckoning flag | per-packet |
 | `dbg` | debug counters — only after a fault | per-packet |
 | `rst` | reset cause — only after a reset | per-packet |
+| `orpm`, `ormin`, `ormax`, `oravg` | engine RPM, and its min/max/mean over the cycle | per-packet |
+| `ospd` | ECU road speed, km/h | per-packet |
+| `ocl`, `oit` | coolant and intake temperature, °C | per-packet |
+| `old`, `oth` | engine load and throttle, % × 10 | per-packet |
+| `omaf` | mass air flow, g/s × 100 | per-packet |
+| `otim`, `ostft`, `oltft` | timing advance and fuel trims, × 10 | per-packet |
+| `ofs`, `omil`, `odtc` | fuel system status bitmap, MIL lamp, stored code count | per-packet |
 
 "Carried forward" means the device sends the field only when it changes or on
 the first record after a wake, and the server copies the previous row's value
@@ -67,6 +74,45 @@ than split like the others, and a trailing `;rst=` is separated off.
 
 IMU readings are stored as raw LSB, unscaled. A change of full-scale range in
 firmware would otherwise silently reinterpret every historical row.
+
+The `o*` keys are OBD-II values read over the K wire, present only on vehicles
+with a K interface and only for the PIDs that ECU supports. The device sends
+integers with the scale factors above so a packet never carries a decimal
+point; the server unscales them, converts the ECU's km/h to mph, and stores a
+`combined_speed` column that is the ECU's road speed when reported and the
+GNSS speed otherwise. That is what the interface shows: the vehicle's own
+figure does not wander with a poor fix and reads a clean zero when stationary.
+
+### Fault codes
+
+A line beginning `D,` is the vehicle's complete set of stored diagnostic
+trouble codes:
+
+```
+D,P0133,P0420
+```
+
+Because it is always the complete set, the server reconciles it against the
+`dtc` table as a set difference: a code not already active is newly raised, and
+an active code missing from the report has cleared. `D,` alone means "no
+stored codes" and clears everything. Rows are never deleted, so the table is a
+history of when each fault appeared and disappeared. One notification goes out
+per report, not per code.
+
+### Captured log lines
+
+A datagram may carry, after the record, lines beginning `L,`:
+
+```
+L,<uptime_ms>,<E|W>,<module>: <text>
+```
+
+Each is a warning or error the firmware logged since its last successful send,
+held in RAM until a datagram carrying it gets through. They are not stored;
+each is appended to `device.log` on receipt, stamped with the wall-clock time
+the device logged it, worked out from the `up=` field of the record it arrived
+with. A line that arrives with no record to anchor it is stamped with the
+receipt time, marked `(rx)`.
 
 ### Alerts
 

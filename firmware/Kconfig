@@ -825,6 +825,63 @@ config APP_DATABUF_FLUSH_PER_CYCLE
 	  the current record rather than in one burst.  Two datagrams a cycle
 	  clears a full buffer in about a minute at a 5 s cadence.
 
+# --- captured warnings/errors ----------------------------------------------
+
+config APP_DEBUG_LOG
+	bool "Send captured warnings and errors with telemetry"
+	default y
+	depends on LOG
+	select HWINFO
+	help
+	  Keeps every WRN and ERR log line in RAM and appends them to the next
+	  telemetry record that gets through, as "L," lines the server files
+	  in its device log.  A unit in the field has no console, so this is
+	  how an outage or a stall is read back afterwards.  Also reports the
+	  cause of each reset (rst=) on the first record after boot.
+
+	  Costs APP_DEBUG_LOG_HEAD + APP_DEBUG_LOG_TAIL bytes of BSS and
+	  nothing on the air while the log is quiet.
+
+config APP_DEBUG_LOG_HEAD
+	int "Bytes kept from the start of an incident"
+	depends on APP_DEBUG_LOG
+	default 1024
+	range 256 8192
+	help
+	  Append-only: once full, later lines go to the tail.  Holds the
+	  first errors after the last successful drain, which are usually the
+	  ones that explain what happened.  About 12-15 lines.
+
+config APP_DEBUG_LOG_TAIL
+	int "Bytes kept from the most recent lines"
+	depends on APP_DEBUG_LOG
+	default 3072
+	range 256 16384
+	help
+	  A ring: the oldest line is evicted when it fills, and evictions
+	  are counted and reported.  Holds the run-up to recovery.  A repeated
+	  line is collapsed into one plus a count, so a link that fails the
+	  same way every cycle does not fill this with copies.
+
+config APP_DEBUG_LOG_LINE_MAX
+	int "Longest line kept (bytes)"
+	depends on APP_DEBUG_LOG
+	default 160
+	range 64 255
+	help
+	  Longer lines are cut.  Includes the uptime, level and module
+	  prefix, about 20 bytes.
+
+config APP_DEBUG_LOG_PER_RECORD
+	int "Most log bytes appended to one telemetry record"
+	depends on APP_DEBUG_LOG
+	default 600
+	range 0 1000
+	help
+	  Whatever is left waits for the next record, so a long backlog
+	  drains over a few cycles rather than delaying the position.  Also
+	  bounded by what fits in the datagram beside the record itself.
+
 config APP_MODEM_STUCK_CFUN_S
 	int "Registered but unable to send for this long before a CFUN cycle"
 	default 600

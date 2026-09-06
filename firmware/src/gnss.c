@@ -142,7 +142,8 @@ static void on_gnss_event(int event)
         break;
     }
     case NRF_MODEM_GNSS_EVT_BLOCKED:
-        LOG_WRN("GNSS blocked by LTE");
+        /* Routine: the radio is LTE's for the length of every send. */
+        LOG_INF("GNSS blocked by LTE");
         s_blocked = true;
         break;
     case NRF_MODEM_GNSS_EVT_UNBLOCKED:

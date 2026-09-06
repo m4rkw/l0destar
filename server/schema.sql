@@ -98,11 +98,51 @@ CREATE TABLE `log` (
   `dbg`           VARCHAR(255) DEFAULT NULL COMMENT 'debug counters, only after a fault',
   `rst`           VARCHAR(64)  DEFAULT NULL COMMENT 'reset cause, only after a reset',
 
+  -- OBD-II over the K wire.  Only on vehicles with a K interface and only
+  -- for the PIDs the ECU supports, so every column is independently NULL and
+  -- nothing is carried forward.  Scaled on receipt; see OBD_FIELDS.
+  `obd_rpm`         SMALLINT UNSIGNED DEFAULT NULL,
+  `obd_rpm_min`     SMALLINT UNSIGNED DEFAULT NULL COMMENT 'over the reporting cycle',
+  `obd_rpm_max`     SMALLINT UNSIGNED DEFAULT NULL,
+  `obd_rpm_avg`     SMALLINT UNSIGNED DEFAULT NULL,
+  `obd_speed`       DECIMAL(6,2) DEFAULT NULL COMMENT 'mph, from the ECU',
+  `obd_coolant`     SMALLINT     DEFAULT NULL COMMENT 'degrees C',
+  `obd_intake`      SMALLINT     DEFAULT NULL COMMENT 'degrees C',
+  `obd_load`        DECIMAL(5,1) DEFAULT NULL COMMENT 'percent',
+  `obd_throttle`    DECIMAL(5,1) DEFAULT NULL COMMENT 'percent',
+  `obd_maf`         DECIMAL(7,2) DEFAULT NULL COMMENT 'g/s',
+  `obd_timing`      DECIMAL(5,1) DEFAULT NULL COMMENT 'degrees advance',
+  `obd_stft`        DECIMAL(5,1) DEFAULT NULL COMMENT 'short-term fuel trim, percent',
+  `obd_ltft`        DECIMAL(5,1) DEFAULT NULL COMMENT 'long-term fuel trim, percent',
+  `obd_fuel_status` SMALLINT UNSIGNED DEFAULT NULL COMMENT 'raw PID 03 bitmap',
+  `obd_mil`         TINYINT(1)   DEFAULT NULL,
+  `obd_dtc_count`   TINYINT UNSIGNED DEFAULT NULL COMMENT 'stored codes',
+
+  -- What the interface shows: the ECU's road speed when reported, else GNSS.
+  `combined_speed`  DECIMAL(6,2) DEFAULT NULL COMMENT 'mph',
+
   PRIMARY KEY (`id`),
   -- The read paths are "latest row for a device" and "rows between two ids
   -- for a device", both served by this one index.
   KEY `device_id` (`device_id`, `id`),
   CONSTRAINT `log_device` FOREIGN KEY (`device_id`) REFERENCES `device` (`id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- Stored fault codes as the ECU reports them over the K wire.  Rows are never
+-- deleted: a code that goes away is marked inactive with the time it cleared,
+-- so the table is a history of when each fault appeared and disappeared.
+CREATE TABLE `dtc` (
+  `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `device_id`     INT UNSIGNED NOT NULL,
+  `code`          CHAR(5)      NOT NULL COMMENT 'P0133 etc.',
+  `raised_at`     DATETIME(6)  NOT NULL,
+  `cleared_at`    DATETIME(6)  DEFAULT NULL,
+  `active`        TINYINT(1)   NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `device_active` (`device_id`, `active`),
+  CONSTRAINT `dtc_device` FOREIGN KEY (`device_id`) REFERENCES `device` (`id`)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

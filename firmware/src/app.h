@@ -76,6 +76,10 @@ extern char  ignition;
 extern int8_t previous_ignition;
 extern bool  engine_running;
 extern float battery_v;
+/* Live verdict from the ECU's RPM when a fresh figure exists, else from
+ * battery_v against ENGINE_RUNNING_VOLTAGE.  Callers deciding cadence or
+ * state should use this rather than test battery_v themselves. */
+bool engine_is_running(void);
 
 /* -- module init / lifecycle ----------------------------------------------- */
 int  crypto_init(void);
@@ -152,6 +156,22 @@ uint32_t databuf_dropped(void);
 void     databuf_reset(void);
 void data_reset(void);
 int  send_data(void);
+
+/* -- captured warnings/errors (src/dbglog.c) --------------------------------
+ * A log backend keeps WRN/ERR lines in RAM; send_data() appends them to the
+ * outgoing record as "L,<uptime_ms>,<E|W>,<module>: <text>" lines and frees
+ * them only once the datagram has left.  See dbglog.c for the policy. */
+#if IS_ENABLED(CONFIG_APP_DEBUG_LOG)
+size_t      dbglog_pending(void);              /* bytes waiting */
+int         dbglog_take(char *out, size_t max);/* append lines; bytes added */
+void        dbglog_ack(bool sent);             /* free (or keep) what was taken */
+const char *dbglog_reset_cause(void);          /* "wdt", "sw+pin", ... or NULL */
+#else
+static inline size_t      dbglog_pending(void) { return 0; }
+static inline int         dbglog_take(char *out, size_t max) { return 0; }
+static inline void        dbglog_ack(bool sent) { }
+static inline const char *dbglog_reset_cause(void) { return NULL; }
+#endif
 
 void cmd_run(char *cmd);
 
