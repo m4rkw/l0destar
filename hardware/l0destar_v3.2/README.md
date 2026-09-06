@@ -508,6 +508,11 @@ on which interfaces are fitted. Quantities are per board.
 
 ## Images
 
+![l0destar board features](images/features.png)
+
+The features image is generated from the photo and the KiCad layout by
+[`../tools/board_features.py`](../tools/README.md) using `features.yaml`.
+
 ![l0destar board](images/pcb0.png)
 ![l0destar board](images/pcb1.png)
 ![l0destar board](images/pcb2.png)

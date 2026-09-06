@@ -1,0 +1,151 @@
+# Feature callouts for the board photo. Render with:
+#   python3 ../tools/board_features.py features.yaml --check
+#
+# Each feature: refs (designators, grouped into one callout), label (first line
+# bold, "\n" for a second line), optional side (left/right/top/bottom), optional
+# offset [dx_mm, dy_mm] to nudge the anchor, or at [x_mm, y_mm] to place it by
+# hand in PCB coordinates.
+
+pcb: l0destar.kicad_pcb
+photo: images/pcb0.png
+output: images/features.png
+title: l0destar v3.2
+subtitle: LTE-M / NB-IoT vehicle tracker carrier board for the nRF9151 Connect Kit
+auto_sides: [left, right, top, bottom]
+crop_pad_mm: 3
+crop_max_mm: {left: 5, right: 14, top: 3, bottom: 3}
+
+style:
+  board_width: 2000
+  font_size: 26
+  accent: "#ff6a00"
+
+features:
+  # ---- power input (left) ----
+  - refs: [S1J1]
+    label: "Main connector\n6-pin Molex Micro-Fit 3.0\n12 V, ignition, GND, CAN H/L or K/L"
+    side: left
+  - refs: [S2F1, S2F2]
+    label: "2 A fuses\n12 V live and ignition inputs"
+    side: left
+  - refs: [S2D2, S2D4, S10D2, S10D4]
+    label: "TVS transient protection\nPTVS33VS1U, sized for ISO 7637-2 pulse 2a"
+    side: left
+  - refs: [S5R1, S5R2, S5R3, S5R4]
+    label: "CAN / K-line select pads\nsolder-bridge S5R1–S5R4, see README"
+    side: top
+  - refs: [S2Q2]
+    label: "Reverse polarity protection\nSQJ457EP P-channel MOSFET"
+    side: left
+  - refs: [S2C1, S2C2]
+    label: "47 µF input capacitors\n2220 X7R, 50 V"
+    side: bottom
+  - refs: [S6U1]
+    label: "LT8609 buck converter\n12 V to 4.2 V for the Connect Kit"
+    side: bottom
+  - refs: [S6L1]
+    label: "2.2 µH inductor\nCoilcraft XFL4020"
+    side: left
+  - refs: [S11Q1, S11U1]
+    label: "4.2 V rail protection\nLM66100 ideal diode + over-voltage cut-off MOSFET"
+    side: left
+  - refs: [S11TP1, S12TP6]
+    label: "OVP test points\nfault injection / 4.2 V protected"
+    side: left
+  - refs: [S12TP7]
+    label: "4.2 V unprotected test point"
+    side: left
+  - refs: [S1J4]
+    label: "4.2 V power out\n1.27 mm header to the Connect Kit battery input"
+    side: left
+
+  # ---- Connect Kit ----
+  - refs: [S1J3]
+    label: "nRF9151 Connect Kit socket\npins 21–40, 2.54 mm"
+    side: left
+    offset: [-16, 0]
+  - refs: [S1J2]
+    label: "nRF9151 Connect Kit socket\npins 1–20, 2.54 mm"
+    side: bottom
+    offset: [-16, 0]
+
+  # ---- sensing ----
+  - refs: [S3U1]
+    label: "INA228\nbattery voltage monitor, I²C"
+    side: bottom
+  - refs: [S8U1]
+    label: "ASM330LHH 6-axis IMU\nwake-on-motion accelerometer + gyro"
+    side: bottom
+
+  # ---- CAN ----
+  - refs: [S9J1]
+    label: "CAN termination jumper\n120 Ω across CAN H/L"
+    side: top
+  - refs: [S9U1]
+    label: "MAX33041 CAN transceiver"
+    side: top
+  - refs: [S9U2, S9Y1]
+    label: "MCP2518FD CAN FD controller\nSPI to the nRF9151, 40 MHz crystal"
+    side: top
+  - refs: [S9FL1]
+    label: "CAN common-mode choke\nACT1210-101 (optional)"
+    side: top
+  - refs: [S7U2]
+    label: "CAN 3.3 V load switch"
+    side: top
+
+  # ---- K-line ----
+  - refs: [S7U3]
+    label: "ITS4060 12 V load switch\nswitched supply for the K-line transceiver"
+    side: bottom
+  - refs: [S10U1]
+    label: "TJA1027 K-line transceiver\nKWP2000, ISO 9141-2, KW1281"
+    side: bottom
+  - refs: [S10R3, S10R4]
+    label: "K / L pull-ups\n510 Ω, 1 W"
+    side: bottom
+
+  # ---- rails / test pads ----
+  - refs: [S12TP1, S12TP2, S12TP4, S12TP5]
+    label: "Rail test pads\n3.3 V, 3.3 V GPS, 3.3 V CAN, 3.3 V K"
+    side: top
+  - refs: [S12TP3]
+    label: "12 V protected test point"
+    side: bottom
+  - refs: [S12TP8]
+    label: "GND test pad"
+    side: top
+  - refs: [S12TP9]
+    label: "GND test pad"
+    side: bottom
+  - refs: [S7U1]
+    label: "GPS 3.3 V load switch\nfeeds the antenna bias tee"
+    side: top
+
+  # ---- RF ----
+  - refs: [S15J2]
+    label: "GPS antenna, SMA\n3.3 V bias tee for active antennas"
+    side: right
+  - refs: [S15J1]
+    label: "GPS antenna, U.FL\nalternative to the SMA"
+    side: right
+  - refs: [S15D2]
+    label: "GPS ESD protection\nTPD1E05U06"
+    side: right
+  - refs: [S15J4]
+    label: "LTE antenna, SMA"
+    side: right
+  - refs: [S15J3]
+    label: "LTE antenna, U.FL\nalternative to the SMA"
+    side: right
+  - refs: [S15D1]
+    label: "LTE ESD protection\nTPD1E05U06"
+    side: right
+
+  # ---- misc ----
+  - refs: [S13D1, S13D2, S13D3]
+    label: "Status LEDs\n3 x red 0603"
+    side: bottom
+  - refs: [H4]
+    label: "M2 mounting holes\n4 places"
+    side: right
