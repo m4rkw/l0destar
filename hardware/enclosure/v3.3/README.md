@@ -58,15 +58,6 @@ https://link.amazon/B01C41sjy
    over-tighten; the inserts will pull out of the plastic long before the
    screw strips.
 
-## Images
-
-![enclosure](images/enclosure0.png)
-![enclosure](images/enclosure1.png)
-![enclosure](images/enclosure2.png)
-![enclosure](images/enclosure3.png)
-![enclosure](images/enclosure4.png)
-![enclosure](images/enclosure5.png)
-
 ## Disclaimer
 
 This enclosure is a hobby-project prototype. It has not been tested for
