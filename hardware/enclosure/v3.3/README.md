@@ -10,6 +10,15 @@ tracker. Compatible with the **l0destar v3.2** and **l0destar v3.3** boards.
 IN-VEHICLE USE, THERMAL PERFORMANCE, INGRESS PROTECTION, FLAMMABILITY OR
 ANYTHING ELSE. USE ENTIRELY AT YOUR OWN RISK.**
 
+## Status
+
+This has been ordered as a prototype, evaluated and found to be acceptable for
+my personal use. Note that the ordered prototype had slightly different screw
+positions (~1-2mm difference) from the enclosure here but that's a fairly
+trivial difference.
+
+The enclosure here will fit v3.2 and v3.3 boards.
+
 ## Variants
 
 Two variants are provided. They are dimensionally identical; the only
