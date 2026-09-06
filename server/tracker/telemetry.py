@@ -78,6 +78,12 @@ EXTRA_KEYS = {
 # server's view of a unit's settings tracks what the unit actually applied.
 DEVICE_SYNC_KEYS = ['int', 'movement_alarm']
 
+# Track mode ends with the drive: the switch is cleared by the ignition-off
+# record, and — for a device that never sent one — once nothing has been
+# heard for this long.  Otherwise a switch left on by a page that was never
+# revisited would put the next drive, or a rebooted device, into the mode.
+TRACK_MODE_IDLE_SECONDS = 3600
+
 # Fields that describe a slowly-changing condition rather than this instant.
 # When absent, the previous row's value is carried forward.
 STICKY_KEYS = ('mcc', 'mnc', 'lac', 'cid', 'rat', 'fw')
@@ -456,6 +462,10 @@ def process_record(data, device, ip, database=None):
     except Exception:
         logs.app.exception('journey update failed for %s', device.get('imei'))
 
+    # Ignition off ends track mode; see TRACK_MODE_IDLE_SECONDS.
+    if entry['ignition_state'] == 0 and device.get('track_mode'):
+        clear_track_mode(device, database, 'ignition off')
+
     # Mirror config the device reported back onto its row.
     updates = [(key, int(data[key])) for key in DEVICE_SYNC_KEYS if key in data]
     if updates:
@@ -469,6 +479,39 @@ def process_record(data, device, ip, database=None):
         return device_config(device)
 
     return None
+
+
+def clear_track_mode(device, database, why):
+    database.query('UPDATE `device` SET `track_mode` = 0 WHERE `id` = %s',
+                   (device['id'],))
+    device['track_mode'] = 0
+    logs.app.info('track mode off for %s: %s', device.get('imei'), why)
+
+
+def expire_track_mode(device, database):
+    """Clear a switch left on for a device that has gone quiet.
+
+    The ignition-off record is the normal end; this catches a device that
+    lost power or coverage before sending one, so the switch does not wait
+    for the next drive to be found still on."""
+    if not device.get('track_mode'):
+        return
+    row = database.one(
+        'SELECT `timestamp` FROM `log` WHERE `device_id` = %s '
+        'ORDER BY `id` DESC LIMIT 1',
+        (device['id'],),
+    )
+    stamp = row.get('timestamp') if row else None
+    if isinstance(stamp, str):
+        try:
+            stamp = datetime.datetime.strptime(stamp, '%Y-%m-%d %H:%M:%S.%f')
+        except ValueError:
+            stamp = datetime.datetime.strptime(stamp, '%Y-%m-%d %H:%M:%S')
+    if stamp is None:
+        return
+    idle = (datetime.datetime.now() - stamp).total_seconds()
+    if idle > TRACK_MODE_IDLE_SECONDS:
+        clear_track_mode(device, database, 'idle %d s' % int(idle))
 
 
 def device_config(device):
@@ -711,6 +754,14 @@ def process_lines(device, lines, ip, database, log):
     worse outcome.
     """
     from . import firmware
+
+    # A device heard from after a long silence with the switch still on.
+    # Checked before the batch is stored, since the batch is what ends the
+    # silence.
+    try:
+        expire_track_mode(device, database)
+    except Exception:
+        log.exception('track mode expiry failed for %s', device.get('imei'))
 
     processed = 0
     boot_wall = None      # worked out on the first L, line, if any

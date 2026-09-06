@@ -28,6 +28,22 @@ alert ("track mode ON"/"OFF") when it does.  Nothing is persisted on the
 device; it starts every boot with the mode off and learns the setting from
 the first reply.
 
+**The mode ends with the drive.**  Nobody remembers to switch it off on
+the page afterwards, and a switch left on would put the next drive — or a
+device rebooting after a firmware update — straight back into it.  So:
+
+- The server clears the switch when it stores an ignition-off record for
+  the device, which is the final record every key-off sends.
+- A device that never sent one (lost power or coverage first) has the
+  switch cleared the next time it is heard from after
+  `TRACK_MODE_IDLE_SECONDS` (an hour) of silence.
+- The firmware drops the mode itself on ignition-off, and ignores a
+  `track=1` that arrives with the ignition off rather than adopting or
+  announcing it.  With the ignition on it is adopted as before.
+
+The switch is therefore something to turn on at the start of a session,
+not a setting to leave configured.
+
 How long the switch takes to reach the device depends on when it next reads
 a reply:
 

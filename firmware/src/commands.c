@@ -50,7 +50,15 @@ void cmd_run(char *cmd)
     tmp = strstr(cmd, "track=");
     if (tmp) {
         int8_t want = atoi(tmp + strlen("track=")) ? 1 : 0;
-        if (want != g_settings.track_mode) {
+        if (want && ignition != 0) {
+            /* Track mode is meaningless with the ignition off, and the
+             * server clears its switch at key-off anyway; a track=1 seen
+             * now is stale (a reply to the final record, or a switch left
+             * on by a page that was never revisited).  Not adopted, so a
+             * key-on does not start in the mode before the server has had
+             * a chance to say otherwise, and not announced. */
+            LOG_INF("track=1 with ignition off — ignored");
+        } else if (want != g_settings.track_mode) {
             g_settings.track_mode = want;
             LOG_INF("track mode %s", want ? "ON" : "OFF");
             alert_enqueue(want ? "track mode ON" : "track mode OFF", 0);

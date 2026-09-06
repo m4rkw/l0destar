@@ -248,3 +248,44 @@ def test_response_carries_track_switch():
                                   firmware_version='0.4.22')
     assert off.endswith(',track=0')
     assert on.endswith(',fota=0.4.22,track=1')
+
+
+class _SwitchDB:
+    """Enough of a database for the track-mode clearing paths."""
+
+    def __init__(self, latest_stamp=None):
+        self.latest_stamp = latest_stamp
+        self.updates = []
+
+    def one(self, sql, params=None):
+        if 'FROM `log`' in sql:
+            return {'timestamp': self.latest_stamp} if self.latest_stamp else None
+        return None
+
+    def all(self, sql, params=None):
+        return []
+
+    def query(self, sql, params=None):
+        self.updates.append((sql, params))
+        return 1
+
+
+def test_track_mode_expires_after_silence():
+    import datetime
+    device = {'id': 7, 'imei': 'x', 'track_mode': 1}
+    fresh = _SwitchDB(datetime.datetime.now() - datetime.timedelta(minutes=5))
+    telemetry.expire_track_mode(device, fresh)
+    assert device['track_mode'] == 1 and not fresh.updates
+
+    stale = _SwitchDB(datetime.datetime.now() - datetime.timedelta(hours=2))
+    telemetry.expire_track_mode(device, stale)
+    assert device['track_mode'] == 0
+    assert 'track_mode` = 0' in stale.updates[0][0]
+
+
+def test_track_mode_expiry_leaves_an_off_switch_alone():
+    import datetime
+    device = {'id': 7, 'imei': 'x', 'track_mode': 0}
+    stale = _SwitchDB(datetime.datetime.now() - datetime.timedelta(hours=2))
+    telemetry.expire_track_mode(device, stale)
+    assert not stale.updates

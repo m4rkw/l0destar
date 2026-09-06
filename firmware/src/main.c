@@ -405,6 +405,14 @@ static void obd_service(void)
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
+    /* Track mode ends with the drive.  The server drops its switch on the
+     * ignition-off record, so this only keeps the two in step: without it
+     * the next key-on would start in the mode and stay there until the
+     * first reply (up to APP_TRACK_RESP_INTERVAL_S) said otherwise. */
+    if (g_settings.track_mode) {
+        LOG_INF("track mode off: ignition off");
+        g_settings.track_mode = 0;
+    }
     /* No fault-code read here: sleep is only ever entered with the ignition
      * off, and the engine ECU is unpowered then, so the read would time out
      * and an empty report would wrongly clear live faults.  Codes raised

@@ -16,6 +16,12 @@ GNSS and the normal state machine.
 - **The switch rides on every server response** as `track=<0|1>` beside
 `fota=`, so a rebooted device converges on it.  The firmware acts only on a
 change.  Records built in the mode carry `tm=1`.
+- **The mode ends with the drive.**  The server clears the switch on the
+ignition-off record, and after an hour of silence from a device that never
+sent one; the firmware drops the mode on ignition-off and ignores a
+`track=1` that arrives with the ignition off.  A switch left on by a page
+that was never revisited no longer puts the next drive, or a device
+rebooting after an update, into the mode.
 - **Driving devices now read a server reply at least every
 `APP_RESP_POLL_S` (30 s).**  Before, a send while moving never waited for
 one, so a setting changed on the server did not reach the device until it
