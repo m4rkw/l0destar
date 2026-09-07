@@ -93,7 +93,7 @@ connect the L wire of a vehicle to this board.</strong>
 | K-wire | L-line pulldown | PASSED | |
 | CAN | Connectivity | PASSED | |
 | CAN standby via XSTBY signal | Low standby current | PASSED | |
-| Board | Quiescent current | ~140.8µA | Measured across a 10K series resistor (the earlier ~130 µA reading across 10R used a flawed method); OVP stage adds ~10 µA |
+| Board | Quiescent current | ~134µA | Measured across a 10K series resistor with firmware 0.4.26, which moved the sleep wake interrupts off the GPIOTE IN channels (~140.8µA on earlier firmware; the earlier ~130 µA reading across 10R used a flawed method); OVP stage adds ~10 µA |
 
 ## Features
 

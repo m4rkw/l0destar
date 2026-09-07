@@ -38,6 +38,8 @@ callback while the level persists, so both ISRs now disarm themselves and
 the sleep loop re-arms the ignition wake before each wait (after the
 semaphore reset, so a level already present is not swallowed).  The
 awake-side impact trigger keeps its edge configuration.
+- Measured on a v3.2 board across a 10K series resistor: sleep current down
+from ~140.8 µA to 134 µA.
 
 ## 0.4.24 - track mode and minor bugfix
 

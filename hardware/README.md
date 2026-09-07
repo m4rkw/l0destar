@@ -36,7 +36,9 @@ moved into the [archive](archive/).
   bus hardening against LTE TX bursts (stronger pull-ups, 100pF filter caps
   on SDA/SCL, series jumper/ferrite on the accelerometer supply).
 
-  Tested successfully: <a href="https://www.youtube.com/watch?v=6-iVvQPaaeg">OVP scope test</a>
+  Tested successfully: <a href="https://www.youtube.com/watch?v=6-iVvQPaaeg">OVP scope test</a>.
+  134 µA quiescent with firmware 0.4.26 (140.8 µA before it moved the sleep
+  wake interrupts off the GPIOTE channels).
 
 ### v3.3 - L-line defect fix
 
@@ -45,4 +47,4 @@ moved into the [archive](archive/).
   AL5809-90, gate-fault current into the nRF limited) and adds L-line fault
   sensing so a 12V short can be detected. Buck converter tuned to shut off
   cleanly below ~4.3V and restart only above ~5.6V to avoid flapping. Not
-  tested; quiescent estimated ~150 µA.
+  tested; quiescent estimated ~143 µA.
