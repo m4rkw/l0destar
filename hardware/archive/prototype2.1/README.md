@@ -18,7 +18,7 @@ Features:
  - CAN interface
  - K-wire interface
  - Dual buck converters with high efficiency
- - Auxillary 3.3V, 5V and 12V power rails that can be turned off to save power
+ - Auxiliary 3.3V, 5V and 12V power rails that can be turned off to save power
  - ASM330LHHXG1TR 6-axis IMU gyro/accelerometer
  - 2200uF bulk cap on the 12V supply to keep it alive during turnover
  - Six general-purpose digital AIO pins capable of handling 0-30V

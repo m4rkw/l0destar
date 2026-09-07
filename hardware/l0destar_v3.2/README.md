@@ -10,7 +10,7 @@
 
 ## Overview
 
-**NOTE: THIS HAS NOT YET BEEN TESTED, USE AT YOUR OWN RISK**
+**NOTE: THIS HAS NOT BEEN INDEPENDENTLY TESTED, USE AT YOUR OWN RISK**
 
 - This is a prototype l0destar vehicle tracker PCB designed to be
   hand-solderable (hot air required)
@@ -35,7 +35,7 @@ yourself rather than taking them on trust.
 
 - Hardware overvoltage protection that disconnects the module supply within
   microseconds of a regulator fault. Self-recovering, zero firmware dependency,
-  and drawing under 3 µA in normal operation.
+  and drawing around 10 µA in normal operation (measured).
 - I2C bus hardening against LTE TX bursts: stronger pull-ups, 100pF filter caps
   on SDA/SCL and a series jumper/ferrite on the accelerometer supply
 
@@ -82,10 +82,10 @@ connect the L wire of a vehicle to this board.</strong>
 | MCU OVP | Cuts off when S12TP7 is driven above ~5V | PASSED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
 | MCU OVP | Fault injection via S11TP1 | PASSED | <a href="https://www.youtube.com/watch?v=6-iVvQPaaeg">OVP scope test</a> |
 | MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | PASSED | <a href="https://www.youtube.com/watch?v=6-iVvQPaaeg">OVP scope test</a> |
-| GPS auxillary 3.3V rail | Switches on enable signal | PASSED | |
-| CAN auxillary 3.3V rail | Switches on CAN-enable signal | PASSED | |
-| K-line auxillary 3.3V rail | Switches on K-enable signal | PASSED | |
-| K-line auxillary 12V rail | Switches on K-enable signal | PASSED | |
+| GPS auxiliary 3.3V rail | Switches on enable signal | PASSED | |
+| CAN auxiliary 3.3V rail | Switches on CAN-enable signal | PASSED | |
+| K-line auxiliary 3.3V rail | Switches on K-enable signal | PASSED | |
+| K-line auxiliary 12V rail | Switches on K-enable signal | PASSED | |
 | Accelerometer | Operates while awake | PASSED | |
 | Accelerometer | Wake on motion | PASSED | |
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
@@ -93,7 +93,7 @@ connect the L wire of a vehicle to this board.</strong>
 | K-wire | L-line pulldown | PASSED | |
 | CAN | Connectivity | PASSED | |
 | CAN standby via XSTBY signal | Low standby current | PASSED | |
-| Board | Quiescent current | ~140.8µA | OVP stage adds ~10 µA |
+| Board | Quiescent current | ~140.8µA | Measured across a 10K series resistor (the earlier ~130 µA reading across 10R used a flawed method); OVP stage adds ~10 µA |
 
 ## Features
 
@@ -104,7 +104,7 @@ connect the L wire of a vehicle to this board.</strong>
  - Ignition presence sensing
  - INA228 voltage reading
  - High efficiency buck converter
- - Auxillary 3.3V rail for the GPS antenna bias tee
+ - Auxiliary 3.3V rail for the GPS antenna bias tee
  - ASM330LHHXTR 6-axis IMU gyro/accelerometer
  - USB-C can be connected and disconnected for programming without any power
    disruption
@@ -113,7 +113,7 @@ connect the L wire of a vehicle to this board.</strong>
    full functionality - the wire carries KWP2000 (ISO 14230-4), the older
    ISO 9141-2, and manufacturer-specific pre-OBD protocols such as VAG KW1281
  - CAN/K-wire switchable via jumper pads
- - Auxillary rail sensing/fault detection
+ - Auxiliary rail sensing/fault detection
  - MCU over-voltage protection on the 4.2V rail with fault-injection test point
  - I2C bus filtering against LTE TX bursts
 
@@ -130,7 +130,8 @@ connect the L wire of a vehicle to this board.</strong>
   optional 3.3pF cap as a filter option to mitigate nuisance latching and a test
   point was added to bypass the buck in order to test the circuit. The new
   protection circuit was designed carefully to not add anything significant to
-  the quiescent current draw in sleep mode, estimated around ~2.5µA difference.
+  the quiescent current draw in sleep mode, estimated around ~2.5µA difference
+  (measured at about 10 µA).
 
 - S5R5 added to the configuration pads: an 0402 0R that bypasses the OVP
   MOSFET in case someone wants to build the board without it. Not recommended

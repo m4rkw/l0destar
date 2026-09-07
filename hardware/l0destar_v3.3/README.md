@@ -45,7 +45,7 @@ current into the nRF and S10D5/S10R8 adding fault detection on L\_SENSE.
 
 ### Suboptimal RF tuning
 
-A VNA sweep of the v3.2 GNSS feed showed about 2.4 dB of insertion loss,
+A VNA sweep of the v3.1 GNSS feed showed about 1.4 dB of insertion loss,
 caused by shunt capacitance from the through-hole SMA centre pin against
 the In.1/In.2 ground planes. v3.3 modifies the SMA footprint to remove the
 centre pin's inner-layer pads and add a 4 mm copper keepout on In.1 and
@@ -66,10 +66,10 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 | MCU OVP | Cuts off when S12TP7 is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
 | MCU OVP | Fault injection via S11TP1 | NOT TESTED | Short S11TP1 to the unprotected rail, PP4V2 should drop |
 | MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | NOT TESTED | |
-| GPS auxillary 3.3V rail | Switches on enable signal | NOT TESTED | |
-| CAN auxillary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
-| K-line auxillary 3.3V rail | Switches on K-enable signal | NOT TESTED | |
-| K-line auxillary 12V rail | Switches on K-enable signal | NOT TESTED | |
+| GPS auxiliary 3.3V rail | Switches on enable signal | NOT TESTED | |
+| CAN auxiliary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
+| K-line auxiliary 3.3V rail | Switches on K-enable signal | NOT TESTED | |
+| K-line auxiliary 12V rail | Switches on K-enable signal | NOT TESTED | |
 | Accelerometer | Operates while awake | NOT TESTED | |
 | Accelerometer | Wake on motion | NOT TESTED | |
 | GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
@@ -90,7 +90,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
  - Ignition presence sensing
  - INA228 voltage reading
  - High efficiency buck converter
- - Auxillary 3.3V rail for the GPS antenna bias tee
+ - Auxiliary 3.3V rail for the GPS antenna bias tee
  - ASM330LHHXTR 6-axis IMU gyro/accelerometer
  - USB-C can be connected and disconnected for programming without any power
    disruption
@@ -99,13 +99,13 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
    full functionality - the wire carries KWP2000 (ISO 14230-4), the older
    ISO 9141-2, and manufacturer-specific pre-OBD protocols such as VAG KW1281
  - CAN/K-wire switchable via jumper pads
- - Auxillary rail sensing/fault detection
+ - Auxiliary rail sensing/fault detection
  - MCU over-voltage protection on the 4.2V rail with fault-injection test point
  - I2C bus filtering against LTE TX bursts
 
 ## Changes from v3.2
 
-- VNA measured signal attenuation pre-v3.3 boards at -2.4dB which isn't great.
+- VNA measured signal attenuation pre-v3.3 boards at -1.4dB which isn't great.
   Suspect it's because the SMA connectors are through-hole. in v3.3 I edited the
   footprint for the SMA and set the centre pins to connect to F.cu and B.cu only
   and put a keepout around them excluding In.1 and In.2.

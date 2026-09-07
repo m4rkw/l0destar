@@ -17,7 +17,7 @@ the dev kit:
  - Manual switch to simulate the ignition signal
  - Relay power source switching
  - 5V buck converter for the K-wire interface
- - Auxillary power rails controlled by the AUX_SW signal
+ - Auxiliary power rails controlled by the AUX_SW signal
  - Accelerometer (pin headers to accept the STEVAL-MKI212V1 accelerometer eval
    board
  - Dual L9637D chips on DIP adapters to simulate K-line communications

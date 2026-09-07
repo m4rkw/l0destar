@@ -23,7 +23,7 @@ tree are noted where they were removed.
 
 ## 01/09/2026
 
-- VNA measured signal attenuation on a v3.1 board at -2.4dB which isn't great.
+- VNA measured signal attenuation on a v3.1 board at -1.4dB which isn't great.
   Suspect it's because the SMA connectors are through-hole. in v3.3 I edited the
   footprint for the SMA and set the centre pins to connect to F.cu and B.cu only
   and put a keepout around them excluding In.1 and In.2.
@@ -67,8 +67,8 @@ Type: Single Ended (Non coplanar). Result: trace width 14.12 mil = 0.359 mm.
 - Added v3.3 with a fix for an L-line defect that could brick the MCU on earlier
   boards if L_SEND was used while the external L wire had been shorted to 12V.
   Also added a sensing capability for the L wire so this condition can be
-  detected and also tuned the buck to turn off cleanly below ~3.5v and turn on
-  at 4.6V.
+  detected and also tuned the buck to turn off cleanly below ~4.3V and turn on
+  again only above ~5.6V.
 
 ## 23/08/2026
 
@@ -81,7 +81,7 @@ Type: Single Ended (Non coplanar). Result: trace width 14.12 mil = 0.359 mm.
 
 ## 16/08/2026
 
-- Added v3.1 board with more robust input protection, auxillary power rail
+- Added v3.1 board with more robust input protection, auxiliary power rail
   sensing/fault detection and a hardened antenna feed with 15R series resistance
   and ESD protection.
 - Fixed bias tee cap placement order on all v2.5, v2.6 and v3.0 boards.

@@ -79,9 +79,9 @@ connect the L wire of a vehicle to this board.</strong>
 | INA228 | Voltage reading function | PASSED |
 | Ignition presence | Ignition sense 3.3v signal | PASSED | |
 | LT8609#1 | 4.2V output | PASSED | |
-| GPS auxillary 3.3V rail | Switches on enable signal | PASSED | |
-| OBD auxillary 3.3V rail | Switches on OBD-enable signal | PASSED | |
-| OBD Auxillary 12V rail | Switches on OBD-enable signal | PASSED | |
+| GPS auxiliary 3.3V rail | Switches on enable signal | PASSED | |
+| OBD auxiliary 3.3V rail | Switches on OBD-enable signal | PASSED | |
+| OBD Auxiliary 12V rail | Switches on OBD-enable signal | PASSED | |
 | Accelerometer | Operates while awake | PASSED | |
 | Accelerometer | Wake on motion | PASSED | |
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
@@ -97,7 +97,7 @@ connect the L wire of a vehicle to this board.</strong>
  - Ignition presence sensing
  - INA228 voltage reading
  - High efficiency buck converter
- - Auxillary 3.3V rail for the GPS antenna bias tee
+ - Auxiliary 3.3V rail for the GPS antenna bias tee
  - ASM330LHHXG1TR 6-axis IMU gyro/accelerometer
  - USB-C can be connected and disconnected for programming without any power
    disruption
@@ -116,7 +116,7 @@ connect the L wire of a vehicle to this board.</strong>
    the power rails, saving board space
  - S4R2 increased to 100K for better resiliency of ignition sensing with low
    system voltage
- - Auxillary power MOSFETs and several ideal diodes swapped out for load switches to
+ - Auxiliary power MOSFETs and several ideal diodes swapped out for load switches to
    simplify the system and reduce board footprint
  - OBD power rails are switched separately from the GPS power rail to reduce
    power consumption when engine-off telemetry wakes occur

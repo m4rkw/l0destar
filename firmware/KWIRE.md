@@ -429,8 +429,7 @@ What the vehicle does:
   engine ECU is not yet established.
 - Replies are at **9600 baud**, not the standard 10400.
 - The OBD functional address **0x33 gets nothing**, and the fast init gets
-  nothing on any address.  All four responding addresses have odd parity;
-  0x33 does not.
+  nothing on any address.
 - **K alone is sufficient.**  The L wire is not needed for the init.
 
 Serial output with that configuration:

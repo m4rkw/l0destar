@@ -32,7 +32,7 @@ yourself rather than taking them on trust.
 | INA228 | Voltage reading function | NOT TESTED |
 | Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
 | LT8609 | 4.2V output | NOT TESTED | |
-| Auxillary 3.3V rail | Switches on enable signal | NOT TESTED | |
+| Auxiliary 3.3V rail | Switches on enable signal | NOT TESTED | |
 | Accelerometer | Operates while awake | NOT TESTED | |
 | Accelerometer | Wake on motion | NOT TESTED | |
 | GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
@@ -46,7 +46,7 @@ yourself rather than taking them on trust.
  - Ignition presence sensing
  - INA228 voltage reading
  - High efficiency buck converter
- - Auxillary 3.3V rail for the GPS antenna bias tee
+ - Auxiliary 3.3V rail for the GPS antenna bias tee
  - ASM330LHHXG1TR 6-axis IMU gyro/accelerometer
  - USB-C can be connected and disconnected for programming without any power
    disruption
