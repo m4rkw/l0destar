@@ -68,8 +68,8 @@ connect the L wire of a vehicle to this board.</strong>
 | LT8609#1 | 4.2V output | PASSED | |
 | LT8609#2 | 5V output | PASSED | |
 | LT8609#2 | on/off with k-enable signal | PASSED | |
-| Auxillary 3.3V rail | Switches on enable signal | PASSED | |
-| Auxillary 12V rail | Switches on k-enable signal | PASSED | |
+| Auxiliary 3.3V rail | Switches on enable signal | PASSED | |
+| Auxiliary 12V rail | Switches on k-enable signal | PASSED | |
 | Accelerometer | Operates while awake | PASSED | |
 | Accelerometer | Wake on motion | PASSED | |
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
@@ -83,7 +83,7 @@ connect the L wire of a vehicle to this board.</strong>
  - Ignition presence sensing
  - INA228 voltage reading
  - High efficiency buck converter
- - Auxillary 3.3V rail for the GPS antenna bias tee
+ - Auxiliary 3.3V rail for the GPS antenna bias tee
  - ASM330LHHXG1TR 6-axis IMU gyro/accelerometer
  - USB-C can be connected and disconnected for programming without any power
    disruption

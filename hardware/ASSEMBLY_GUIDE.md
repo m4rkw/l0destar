@@ -136,7 +136,7 @@ Apply power again from the PSU with current limited to 50mA - any sign of a
 short and power off immediately. If the current doesn't pin at the max then
 changes are the PCB is built correctly.
 
-Note that shorts after the auxillary power rail load switches may still be
+Note that shorts after the auxiliary power rail load switches may still be
 present, but with the v3.1 board these can now be detected by the firmware.
 
 If you've made it this far you should now have a working tracker, the next step

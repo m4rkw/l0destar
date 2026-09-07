@@ -18,7 +18,7 @@ Features:
    12V ignition
  - INA228 voltage reading
  - High efficiency buck converter
- - Auxillary 3.3V power rail that can be turned off to save power
+ - Auxiliary 3.3V power rail that can be turned off to save power
  - ASM330LHHXG1TR 6-axis IMU gyro/accelerometer
  - 2200uF bulk cap on the 12V supply to keep it alive during turnover
 
@@ -36,7 +36,7 @@ yourself rather than taking them on trust.
 
 This board has been fully tested on a bench and seems to perform well. It hasn't
 been tested in a live vehicle yet. Quiescent current when asleep with the
-auxillary rail powered down and the accerometer armed was measured at around 1mA.
+auxiliary rail powered down and the accerometer armed was measured at around 1mA.
 The wire shown in the photo below near the buck converter is because an earlier
 version of this prototype missed a connection so I had to run a jumper to make
 it work. It's not necessary with this version, all of the earlier issues have

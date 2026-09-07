@@ -34,7 +34,7 @@ yourself rather than taking them on trust.
 ## New features
 
 - Significantly Improved handling of automotive transients
-- Auxillary rail fault detection
+- Auxiliary rail fault detection
 - Same physical footprint as v3.0 (note: one mounting hole moved slightly)
 - CAN routing optimised for integrity and EMI and a footprint added to support
   an optional CAN choke
@@ -81,10 +81,10 @@ connect the L wire of a vehicle to this board.</strong>
 | INA228 | Voltage reading function | PASSED |
 | Ignition presence | Ignition sense 3.3v signal | PASSED | |
 | LT8609#1 | 4.2V output | PASSED | |
-| GPS auxillary 3.3V rail | Switches on enable signal | PASSED | |
-| CAN auxillary 3.3V rail | Switches on CAN-enable signal | PASSED | |
-| K-line auxillary 3.3V rail | Switches on K-enable signal | PASSED | |
-| K-line auxillary 12V rail | Switches on K-enable signal | PASSED | |
+| GPS auxiliary 3.3V rail | Switches on enable signal | PASSED | |
+| CAN auxiliary 3.3V rail | Switches on CAN-enable signal | PASSED | |
+| K-line auxiliary 3.3V rail | Switches on K-enable signal | PASSED | |
+| K-line auxiliary 12V rail | Switches on K-enable signal | PASSED | |
 | Accelerometer | Operates while awake | PASSED | |
 | Accelerometer | Wake on motion | PASSED | |
 | GPS antenna bias tee | Obtains GPS signal | PASSED | |
@@ -92,7 +92,7 @@ connect the L wire of a vehicle to this board.</strong>
 | K-wire | L-line pulldown | PASSED | |
 | CAN | Connectivity | PASSED | |
 | CAN standby via XSTBY signal | Low standby current | PASSED | |
-| Board | Quiescent current | 130 µA | |
+| Board | Quiescent current | 130 µA | Revised from 120 µA: the original reading across a 10R resistor used a flawed method, corrected by the ~10 µA offset found when v3.2 was re-measured across 10K |
 
 ## Features
 
@@ -103,7 +103,7 @@ connect the L wire of a vehicle to this board.</strong>
  - Ignition presence sensing
  - INA228 voltage reading
  - High efficiency buck converter
- - Auxillary 3.3V rail for the GPS antenna bias tee
+ - Auxiliary 3.3V rail for the GPS antenna bias tee
  - ASM330LHHXTR 6-axis IMU gyro/accelerometer
  - USB-C can be connected and disconnected for programming without any power
    disruption
@@ -112,7 +112,7 @@ connect the L wire of a vehicle to this board.</strong>
    full functionality - the wire carries KWP2000 (ISO 14230-4), the older
    ISO 9141-2, and manufacturer-specific pre-OBD protocols such as VAG KW1281
  - CAN/K-wire switchable via jumper pads
- - Auxillary rail sensing/fault detection
+ - Auxiliary rail sensing/fault detection
 
 ## Changes from v3.0
 
@@ -125,7 +125,7 @@ connect the L wire of a vehicle to this board.</strong>
   plus 100 nF directly on the buck input. Less capacitance but a better
   dielectric, and it sits where the regulator wants it.
 
-- Added auxillary power rail sensing, enabling fault detection. If aux power
+- Added auxiliary power rail sensing, enabling fault detection. If aux power
   rails don't enable for some reason this can now be detected in firmware.
 
 - Added missing pulldown on the K-line transceiver sleep pin.
