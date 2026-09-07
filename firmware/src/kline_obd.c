@@ -21,6 +21,18 @@
  * The session is closed on ignition-off and before sleep, which also drops
  * the K rails so a hung or reset MCU can never hold the wire dominant.
  *
+ * POLLING
+ * -------
+ * One poll shape serves both the normal cadence and track mode: the four
+ * PIDs that move on a timescale a driver can see (RPM, speed, throttle,
+ * load) every call, and one of the eight slow-moving ones in rotation, so a
+ * call is four or five exchanges (~0.5 s) rather than thirteen (~1.3 s).
+ * Results merge into a live snapshot: fast fields are overwritten each
+ * call, slow ones keep their last reading until it is OBD_SLOW_MAX_AGE_MS
+ * old.  The GNSS fix wait ticks the poll at ~1 Hz, which is where a cycle
+ * spends its time anyway, and the record builder takes the snapshot
+ * without touching the bus unless it is older than OBD_LIVE_FRESH_MS.
+ *
  * SUPPORTED PIDS
  * --------------
  * The first poll of each session reads mode 01 PID 00, the support bitmap,
@@ -67,6 +79,14 @@ LOG_MODULE_REGISTER(kline_obd, CONFIG_APP_LOG_LEVEL);
  * is a request per iteration for as long as the fault persists. */
 #define OBD_DTC_RETRY_MS       30000
 
+/* The live snapshot (see POLLING above).  A record takes it as-is when the
+ * last poll is younger than OBD_LIVE_FRESH_MS and polls first otherwise;
+ * the fix-wait tick polls no more often than OBD_TICK_MIN_GAP_MS; a slow
+ * field older than OBD_SLOW_MAX_AGE_MS is reported as not read. */
+#define OBD_LIVE_FRESH_MS      1000
+#define OBD_TICK_MIN_GAP_MS    700
+#define OBD_SLOW_MAX_AGE_MS    30000
+
 /* How long engine RPM and vehicle speed stay usable for the tracker's own
  * decisions after the last successful read.  Long enough to ride out a
  * session reopen, short enough that a dead ECU falls back to the GNSS and
@@ -92,10 +112,21 @@ static bool     s_pids_known;
 static uint8_t  s_pids[4];              /* mode 01 PID 00 support bitmap */
 static bool     s_abort;                /* ignition went off mid-poll */
 
-/* RPM accumulated by obd_sample_tick() between telemetry records. */
+/* RPM accumulated across polls between telemetry records. */
 static int32_t  s_rpm_min = INT32_MAX, s_rpm_max = INT32_MIN;
 static int64_t  s_rpm_sum;
 static int32_t  s_rpm_n;
+
+/* The live snapshot, and when each part of it was last read. */
+static const uint8_t s_slow_pids[] = {
+	PID_COOLANT, PID_INTAKE, PID_MAF, PID_TIMING,
+	PID_STFT, PID_LTFT, PID_FUEL_SYS, PID_STATUS,
+};
+static struct obd_snapshot s_live;
+static int64_t  s_live_ms;                        /* last fast poll */
+static int64_t  s_slow_ms[ARRAY_SIZE(s_slow_pids)];
+static unsigned int s_slow_idx;
+static bool     s_no_reopen;    /* set while polling from the fix-wait tick */
 
 /* Stored-code count as last seen in mode 01 PID 01, and whether it has moved
  * since the last report was sent. */
@@ -137,6 +168,15 @@ static void obd_rpm_reset(void)
     s_rpm_n   = 0;
 }
 
+static void obd_snapshot_clear(struct obd_snapshot *s);
+
+static void obd_live_reset(void)
+{
+	obd_snapshot_clear(&s_live);
+	s_live_ms = 0;
+	memset(s_slow_ms, 0, sizeof(s_slow_ms));
+}
+
 static bool pid_supported(uint8_t pid)
 {
 	if (!s_pids_known || pid < 1 || pid > 32) {
@@ -163,6 +203,7 @@ void obd_close(void)
 	}
 	s_pids_known = false;
 	obd_rpm_reset();
+	obd_live_reset();
 	/* s_abort is deliberately NOT cleared here: obd_close() is part of the
 	 * abort path, and clearing it would undo the flag one line after it
 	 * was set.  obd_poll() clears it when a new cycle starts. */
@@ -252,6 +293,13 @@ static int obd_read(uint8_t pid, uint8_t *buf, int max)
 		s_abort = true;
 		obd_close();
 		return -ESHUTDOWN;
+	}
+
+	if (s_no_reopen) {
+		/* Polling from inside the GPS wait: a 5-baud init takes 2.4 s
+		 * with the bus dominant and has no business happening there.
+		 * The next poll from the record builder reopens. */
+		return n;
 	}
 
 	LOG_DBG("OBD PID %02X silent — reopening session", pid);
@@ -400,10 +448,65 @@ static void obd_note_status(int32_t status, struct obd_snapshot *s)
 	}
 }
 
-int obd_poll(struct obd_snapshot *s)
+static void obd_note_rpm(int32_t rpm)
 {
-	obd_snapshot_clear(s);
+	if (rpm == OBD_NA) {
+		return;
+	}
+	if (rpm < s_rpm_min) {
+		s_rpm_min = rpm;
+	}
+	if (rpm > s_rpm_max) {
+		s_rpm_max = rpm;
+	}
+	s_rpm_sum += rpm;
+	s_rpm_n++;
+}
 
+/* Copy the live snapshot out for a record: slow fields that have gone
+ * stale are dropped, and the RPM accumulated since the previous record is
+ * folded in and reset. */
+static int obd_snapshot_copy(struct obd_snapshot *s)
+{
+	int64_t now = k_uptime_get();
+
+	*s = s_live;
+	for (unsigned int i = 0; i < ARRAY_SIZE(s_slow_pids); i++) {
+		if (s_slow_ms[i] && now - s_slow_ms[i] <= OBD_SLOW_MAX_AGE_MS) {
+			continue;
+		}
+		switch (s_slow_pids[i]) {
+		case PID_COOLANT:  s->coolant = OBD_NA;     break;
+		case PID_INTAKE:   s->intake = OBD_NA;      break;
+		case PID_MAF:      s->maf = OBD_NA;         break;
+		case PID_TIMING:   s->timing = OBD_NA;      break;
+		case PID_STFT:     s->stft = OBD_NA;        break;
+		case PID_LTFT:     s->ltft = OBD_NA;        break;
+		case PID_FUEL_SYS: s->fuel_status = OBD_NA; break;
+		case PID_STATUS:   s->mil = s->dtc_count = OBD_NA; break;
+		default: break;
+		}
+	}
+	if (s_rpm_n > 0) {
+		s->rpm_min = s_rpm_min;
+		s->rpm_max = s_rpm_max;
+		s->rpm_avg = (int32_t)(s_rpm_sum / s_rpm_n);
+	}
+	obd_rpm_reset();
+
+	s->valid = (s->rpm != OBD_NA) || (s->speed != OBD_NA) ||
+		   (s->throttle != OBD_NA);
+	return s->valid ? 0 : -ENODATA;
+}
+
+/* The poll.  Fast PIDs every call, one slow PID in rotation, merged into
+ * the live snapshot; see POLLING at the top.  With `s` the snapshot is
+ * copied out afterwards.  Unsupported PIDs do not use a rotation slot. */
+int obd_poll_fast(struct obd_snapshot *s)
+{
+	if (s) {
+		obd_snapshot_clear(s);
+	}
 	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
 		return -ENODEV;
 	}
@@ -421,23 +524,45 @@ int obd_poll(struct obd_snapshot *s)
 		return err;
 	}
 
-	int32_t status;
+	int64_t now = k_uptime_get();
 
-	obd_get(PID_RPM,      &s->rpm);
-	obd_get(PID_SPEED,    &s->speed);
-	obd_note_state(s->rpm, s->speed);
-	obd_get(PID_COOLANT,  &s->coolant);
-	obd_get(PID_INTAKE,   &s->intake);
-	obd_get(PID_LOAD,     &s->load);
-	obd_get(PID_THROTTLE, &s->throttle);
-	obd_get(PID_MAF,      &s->maf);
-	obd_get(PID_TIMING,   &s->timing);
-	obd_get(PID_STFT,     &s->stft);
-	obd_get(PID_LTFT,     &s->ltft);
-	obd_get(PID_FUEL_SYS, &s->fuel_status);
-	obd_get(PID_STATUS,   &status);
+	obd_get(PID_RPM,      &s_live.rpm);
+	obd_get(PID_SPEED,    &s_live.speed);
+	obd_note_state(s_live.rpm, s_live.speed);
+	obd_note_rpm(s_live.rpm);
+	obd_get(PID_THROTTLE, &s_live.throttle);
+	obd_get(PID_LOAD,     &s_live.load);
+	s_live_ms = now;
 
-	obd_note_status(status, s);
+	for (unsigned int tries = 0; tries < ARRAY_SIZE(s_slow_pids) && !s_abort; tries++) {
+		unsigned int idx = s_slow_idx;
+		uint8_t pid = s_slow_pids[idx];
+
+		s_slow_idx = (s_slow_idx + 1) % ARRAY_SIZE(s_slow_pids);
+		if (!pid_supported(pid)) {
+			continue;
+		}
+
+		int32_t v;
+
+		obd_get(pid, &v);
+		if (v == OBD_NA) {
+			break;		/* asked and unanswered: keep the old value */
+		}
+		s_slow_ms[idx] = now;
+		switch (pid) {
+		case PID_COOLANT:  s_live.coolant = v;     break;
+		case PID_INTAKE:   s_live.intake = v;      break;
+		case PID_MAF:      s_live.maf = v;         break;
+		case PID_TIMING:   s_live.timing = v;      break;
+		case PID_STFT:     s_live.stft = v;        break;
+		case PID_LTFT:     s_live.ltft = v;        break;
+		case PID_FUEL_SYS: s_live.fuel_status = v; break;
+		case PID_STATUS:   obd_note_status(v, &s_live); break;
+		default: break;
+		}
+		break;
+	}
 
 	/* Only a poll that never had to reopen proves the session is healthy.
 	 * Clearing the count on any successful poll would defeat the limiter
@@ -448,109 +573,41 @@ int obd_poll(struct obd_snapshot *s)
 		s_reopen_count = 0;
 	}
 
-	/* RPM sampled across the cycle by obd_sample_tick(), which sees the
-	 * engine between records rather than only at the instant one is
-	 * built.  The instantaneous s->rpm above is kept alongside it. */
-	if (s_rpm_n > 0) {
-		s->rpm_min = s_rpm_min;
-		s->rpm_max = s_rpm_max;
-		s->rpm_avg = (int32_t)(s_rpm_sum / s_rpm_n);
-	}
-	obd_rpm_reset();
-
-	s->valid = (s->rpm != OBD_NA) || (s->speed != OBD_NA) ||
-		   (s->coolant != OBD_NA);
-	return s->valid ? 0 : -ENODATA;
+	return s ? obd_snapshot_copy(s) : 0;
 }
 
-/* Track mode.  The bus is asked twice a second here, so what is asked for
- * matters: the four PIDs that move on a timescale a driver can see are read
- * every call, and the eight that move over seconds or minutes take one slot
- * each in turn — coolant on one record, intake on the next, and so on, so
- * each refreshes about every four seconds.  Unsupported PIDs do not use a
- * slot.  The per-cycle RPM min/max/avg accumulator is not reported: at this
- * cadence the instantaneous figure is the resolution. */
-int obd_poll_track(struct obd_snapshot *s)
+/* What a normal telemetry record carries: the live snapshot, polled first
+ * only if the tick has not refreshed it lately (a warm fix that was already
+ * waiting, say, so the wait never ticked). */
+int obd_snapshot_take(struct obd_snapshot *s)
 {
-	static const uint8_t slow[] = {
-		PID_COOLANT, PID_INTAKE, PID_MAF, PID_TIMING,
-		PID_STFT, PID_LTFT, PID_FUEL_SYS, PID_STATUS,
-	};
-	static unsigned int s_slow_idx;
-
-	obd_snapshot_clear(s);
-
 	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
+		obd_snapshot_clear(s);
 		return -ENODEV;
 	}
-	if (!obd_ignition_on()) {
-		obd_close();
-		return -ESHUTDOWN;
+	if (s_live_ms == 0 || k_uptime_get() - s_live_ms > OBD_LIVE_FRESH_MS) {
+		return obd_poll_fast(s);
 	}
-
-	s_abort = false;
-	s_reopened_this_poll = false;
-
-	int err = obd_ensure_session();
-
-	if (err) {
-		return err;
-	}
-
-	obd_get(PID_RPM,      &s->rpm);
-	obd_get(PID_SPEED,    &s->speed);
-	obd_note_state(s->rpm, s->speed);
-	obd_get(PID_THROTTLE, &s->throttle);
-	obd_get(PID_LOAD,     &s->load);
-
-	for (unsigned int tries = 0; tries < ARRAY_SIZE(slow) && !s_abort; tries++) {
-		uint8_t pid = slow[s_slow_idx];
-
-		s_slow_idx = (s_slow_idx + 1) % ARRAY_SIZE(slow);
-		if (!pid_supported(pid)) {
-			continue;
-		}
-
-		int32_t v;
-
-		obd_get(pid, &v);
-		switch (pid) {
-		case PID_COOLANT:  s->coolant = v;     break;
-		case PID_INTAKE:   s->intake = v;      break;
-		case PID_MAF:      s->maf = v;         break;
-		case PID_TIMING:   s->timing = v;      break;
-		case PID_STFT:     s->stft = v;        break;
-		case PID_LTFT:     s->ltft = v;        break;
-		case PID_FUEL_SYS: s->fuel_status = v; break;
-		case PID_STATUS:   obd_note_status(v, s); break;
-		default: break;
-		}
-		break;
-	}
-
-	if (!s_abort && !s_reopened_this_poll) {
-		s_reopen_count = 0;
-	}
-	obd_rpm_reset();
-
-	s->valid = (s->rpm != OBD_NA) || (s->speed != OBD_NA) ||
-		   (s->throttle != OBD_NA);
-	return s->valid ? 0 : -ENODATA;
+	return obd_snapshot_copy(s);
 }
 
-/* Sample engine RPM only.  Called about once a second from the GNSS fix wait
- * (gnss_set_tick), which is where most of a telemetry cycle is spent.
+/* Called about once a second from the GNSS fix wait (gnss_set_tick), which
+ * is where most of a telemetry cycle is spent.  Runs the fast poll so the
+ * record built after the fix finds a snapshot younger than a second and
+ * needs no bus time of its own.
  *
  * Deliberately never opens or reopens a session: a 5-baud init takes 2.4 s
  * with the bus held dominant, and doing that inside the GPS wait would be
- * both slow and disruptive.  If there is no session the sample is skipped and
- * the next obd_poll() sorts it out.  A successful read also resets the ECU's
- * P3 timer, so sampling keeps the session alive through a long fix. */
+ * both slow and disruptive.  If there is no session the tick is skipped and
+ * the record builder's poll sorts it out.  A successful read also resets
+ * the ECU's P3 timer, so ticking keeps the session alive through a long
+ * fix. */
 void obd_sample_tick(void)
 {
-	uint8_t b[4];
-
 	if (!s_open || s_abort || !obd_ignition_on()) {
+		return;
+	}
+	if (k_uptime_get() - s_live_ms < OBD_TICK_MIN_GAP_MS) {
 		return;
 	}
 	if (!pid_supported(PID_RPM)) {
@@ -559,24 +616,9 @@ void obd_sample_tick(void)
 		return;
 	}
 
-	int n = kline_obd_pid(PID_RPM, b, sizeof(b));
-
-	s_last_req_ms = k_uptime_get();
-	if (n < 2) {
-		return;
-	}
-
-	int32_t rpm = ((int32_t)b[0] * 256 + b[1]) / 4;
-
-	obd_note_state(rpm, OBD_NA);
-	if (rpm < s_rpm_min) {
-		s_rpm_min = rpm;
-	}
-	if (rpm > s_rpm_max) {
-		s_rpm_max = rpm;
-	}
-	s_rpm_sum += rpm;
-	s_rpm_n++;
+	s_no_reopen = true;
+	obd_poll_fast(NULL);
+	s_no_reopen = false;
 }
 
 bool obd_dtc_pending(void)

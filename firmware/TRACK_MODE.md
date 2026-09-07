@@ -68,10 +68,10 @@ is on and the ignition is on.  Per cycle:
 2. `collect_track_data()` builds one record (below).
 3. `send_data()`.  Every `APP_TRACK_RESP_INTERVAL_S` the reply is waited
    for; otherwise the datagram goes out and the loop moves on.
-4. Idle out the rest of `APP_TRACK_PERIOD_MS` (default 500 ms).
+4. Idle out the rest of `APP_TRACK_PERIOD_MS` (default 1000 ms).
 
-The K-wire poll is the bulk of a cycle, so the real cadence is about two
-records a second.  The transport is put in streaming mode for the duration:
+The K-wire poll is about half of that; 500 ms gives a jittery two records a
+second at full bus duty if that is ever wanted.  The transport is put in streaming mode for the duration:
 the socket stays open and the RAI hint is `RAI_ONGOING`, so the modem keeps
 the RRC connection up between sends rather than releasing and re-acquiring
 it for each one.  With GNSS stopped there is nothing else wanting the radio.
@@ -92,12 +92,13 @@ receiver resumed; the next cycle re-acquires a fix.
 
 ### Not overloading the K wire
 
-A normal telemetry record reads thirteen PIDs, about 1.3 s of bus time.
-Track mode's `obd_poll_track()` reads the four that move on a timescale a
-driver can see every cycle — engine RPM, vehicle speed, throttle, load —
-and one of the eight slow-moving ones in rotation: coolant, intake, MAF,
-timing, STFT, LTFT, fuel system status, lamp/stored-code count.  Four or
-five exchanges a cycle, each slow value refreshing about every four
+The poll is the same rotating one normal telemetry uses (`obd_poll_fast()`,
+KWIRE.md): the four PIDs that move on a timescale a driver can see every
+cycle — engine RPM, vehicle speed, throttle, load — and one of the eight
+slow-moving ones in rotation: coolant, intake, MAF, timing, STFT, LTFT,
+fuel system status, lamp/stored-code count.  Four or five exchanges a
+cycle, about half a second of bus time; at the default one-second period
+the bus is busy half the time and each slow value refreshes every eight
 seconds.  The session is held open for the drive as always; the reopen rate
 limiter and the fault-code watch work unchanged.
 
@@ -106,7 +107,7 @@ limiter and the fault-code watch work unchanged.
 The ASM330 batches accel and gyro at 26 Hz into its FIFO while the tracker
 is awake (that ring is what impact forensics drain).  Each track record
 drains it with `accel_fifo_drain_samples()` and carries up to
-`APP_TRACK_IMU_SAMPLES` (default 16) samples, evenly spaced across the
+`APP_TRACK_IMU_SAMPLES` (default 24) samples, evenly spaced across the
 interval when the cycle ran long, so the stream thins rather than gapping.
 That is a 26 Hz accelerometer and gyro trace with no extra thread, no
 interrupt, and no extra bus traffic beyond the drain.
@@ -138,7 +139,7 @@ commands costing tens of milliseconds for values that change over minutes),
 the RPM min/max/avg accumulator (at this cadence the instantaneous figure is
 the resolution), and any GNSS wait.
 
-A record is around 600-700 bytes.  At two a second that is about 1.3 kB/s,
+A record is around 900 bytes with a full one-second burst — about 1 kB/s,
 comfortably inside what LTE-M sustains and under the 1200-byte datagram cap
 with room for the debug-log lines that ride along.
 
@@ -178,7 +179,7 @@ kept in the browser's localStorage, since the mounting does not change.
 | Symbol | Default | Meaning |
 |---|---|---|
 | `APP_TRACK_MODE` | y | build the mode at all |
-| `APP_TRACK_PERIOD_MS` | 500 | lower bound on the record period |
-| `APP_TRACK_IMU_SAMPLES` | 16 | samples per record; 0 sends only the instantaneous reading |
+| `APP_TRACK_PERIOD_MS` | 1000 | lower bound on the record period; 500 for a jittery two a second |
+| `APP_TRACK_IMU_SAMPLES` | 24 | samples per record; 0 sends only the instantaneous reading |
 | `APP_TRACK_RESP_INTERVAL_S` | 10 | how often a reply is waited for in the mode |
 | `APP_RESP_POLL_S` | 30 | how often a reply is waited for while driving normally; 0 restores the old never |

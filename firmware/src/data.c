@@ -304,16 +304,18 @@ int collect_data(int ignitionState)
         g_cell.dirty = false;
     }
 
-    /* OBD-II data over the K wire.  Polled here so the values belong to the
-     * same instant as the position they ride with.  A failed poll is not an
-     * error: the vehicle may have no K interface, the engine may be off, or
-     * the session may be reopening — the record simply carries no o* fields
-     * and the server leaves those columns null. */
+    /* OBD-II data over the K wire: the live snapshot the fix-wait tick has
+     * been refreshing, polled here only if it has gone stale, so the values
+     * are within a second of the position they ride with and the record
+     * normally costs no bus time.  No data is not an error: the vehicle may
+     * have no K interface, the engine may be off, or the session may be
+     * reopening — the record simply carries no o* fields and the server
+     * leaves those columns null. */
 #if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
     if (ignitionState == 0) {           /* active-low: 0 = ignition on */
         struct obd_snapshot obd;
 
-        if (obd_poll(&obd) == 0) {
+        if (obd_snapshot_take(&obd) == 0) {
             n = obd_append(&data_current[data_index],
                            DATA_LIMIT - data_index - 1, &obd);
             if (n > 0) data_index += n;
@@ -448,7 +450,7 @@ int collect_track_data(void)
 #if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
     struct obd_snapshot obd;
 
-    if (obd_poll_track(&obd) == 0) {
+    if (obd_poll_fast(&obd) == 0) {
         n = obd_append(&data_current[data_index],
                        DATA_LIMIT - data_index - 1, &obd);
         if (n > 0) data_index += n;

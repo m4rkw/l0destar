@@ -145,7 +145,10 @@ which `modem.c` provisions into the modem at **`TLS_SEC_TAG = 1`** on first boot
 
 Each telemetry record is one CSV line built in `data.c` (timestamp, lat, lon,
 speed, altitude, heading, HDOP, satellites, battery, ignition, uptime,
-accelerometer). Records batch by `BATCH_SIZE` (default 1).
+accelerometer). Records batch by `BATCH_SIZE` (default 3 while driving: each
+send costs an RRC connection and a GNSS re-acquisition, so three records a
+datagram roughly doubles the record rate for a page update every few seconds;
+ignition changes and settings syncs still flush at once).
 
 ---
 

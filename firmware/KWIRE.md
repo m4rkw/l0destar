@@ -259,21 +259,26 @@ Every field is independently optional.  A record from a vehicle with no K
 interface, or built with the ignition off, carries none of them and the
 columns stay null; nothing is carried forward from the previous row.
 
-**Resolution.** Most of these move slowly and one reading per record is
-plenty: coolant, intake, load, throttle, trims and the lamp.  Engine RPM does
-not, and a single sample every few seconds says nothing about how the car was
-driven, so RPM is also sampled on its own about once a second and reported as
+**Polling.** One poll shape: engine RPM, vehicle speed, throttle and load
+every call, and one of the eight slow-moving PIDs (temperatures, MAF, timing,
+trims, fuel status, lamp) in rotation — four or five exchanges, about half a
+second, rather than thirteen.  Results merge into a live snapshot; a slow
+value keeps its last reading for up to 30 s, after which it is reported as
+not read.  RPM is also accumulated across polls and reported as
 `ormin` / `ormax` / `oravg` alongside the instantaneous `orpm`.
 
-The sampling runs from a callback on the GNSS fix wait (`gnss_set_tick`),
-which is where most of a cycle is spent and where the thread would otherwise
-be asleep on a semaphore.  Because it runs on that same thread there is no
-locking anywhere: nothing else touches the K wire while the wait is in
-progress.  The sampler never opens or reopens a session — a 5-baud init takes
-2.4 s with the bus dominant, which has no business happening inside a GPS
-wait — so if there is no session it simply skips and the next poll sorts it
-out.  A successful sample also resets the ECU's P3 timer, so sampling keeps
-the session alive through a long fix.
+The poll runs from a callback on the GNSS fix wait (`gnss_set_tick`), about
+once a second, which is where most of a cycle is spent and where the thread
+would otherwise be asleep on a semaphore; the record built after the fix
+takes the snapshot and normally costs no bus time at all, polling itself
+only if the snapshot is more than a second old.  Because the tick runs on
+that same thread there is no locking anywhere: nothing else touches the K
+wire while the wait is in progress.  The tick never opens or reopens a
+session — a 5-baud init takes 2.4 s with the bus dominant, which has no
+business happening inside a GPS wait — so if there is no session it simply
+skips and the next record's poll sorts it out.  A successful poll also
+resets the ECU's P3 timer, so ticking keeps the session alive through a
+long fix.
 
 Vehicle speed is deliberately not sampled this way: most ECUs update PID 0x0D
 only about once a second internally, so faster polling buys nothing.

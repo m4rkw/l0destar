@@ -67,6 +67,11 @@ static bool s_ign_cb_installed;
 static void ign_isr(const struct device *dev, struct gpio_callback *cb,
                     uint32_t pins)
 {
+    /* Level trigger: nrfx re-arms the sense after every callback for as
+     * long as the pin holds the level, so left armed this would fire
+     * back-to-back and starve the sleep loop.  Disarm here; the loop
+     * re-arms before each wait. */
+    gpio_pin_interrupt_configure(dev, PIN_IGN_SENSE, GPIO_INT_DISABLE);
     k_sem_give(&s_wake_sem);
 }
 
@@ -77,7 +82,14 @@ static void ign_irq_enable(void)
         gpio_add_callback(hw_gpio0, &s_ign_cb);
         s_ign_cb_installed = true;
     }
-    gpio_pin_interrupt_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INT_EDGE_BOTH);
+    /* Level, not edge.  An edge trigger takes a GPIOTE IN channel, which
+     * keeps the pin-detect logic clocked for the whole sleep (~20-45 uA on
+     * the SiP per Nordic); a level trigger goes through the PORT/sense
+     * path, which costs nothing.  One direction is enough: sleep is only
+     * ever entered with the ignition off, so the only transition that can
+     * matter is the sense pin going low (ignition present).  The awake
+     * side polls ignition and is untouched by this. */
+    gpio_pin_interrupt_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INT_LEVEL_LOW);
 }
 
 static void ign_irq_disable(void)
@@ -132,10 +144,20 @@ static void console_resume(void)
 static struct gpio_callback s_accel_cb;
 static bool s_accel_cb_installed;
 static atomic_t s_accel_int_flag;
+/* True while the sleep-side level trigger is armed on INT1.  The ISR must
+ * disarm a level trigger (see ign_isr) but must leave the awake-side edge
+ * trigger alone, or the second impact of a drive would never be seen. */
+static atomic_t s_accel_level_armed;
 
 static void accel_isr(const struct device *dev, struct gpio_callback *cb,
                       uint32_t pins)
 {
+    /* Same as ign_isr: the sleep-side trigger is a level, so disarm before
+     * nrfx can re-arm it.  The awake-side crash trigger is an edge and
+     * stays armed. */
+    if (atomic_get(&s_accel_level_armed)) {
+        gpio_pin_interrupt_configure(dev, PIN_ACC_INT1, GPIO_INT_DISABLE);
+    }
     atomic_set(&s_accel_int_flag, 1);
     k_sem_give(&s_wake_sem);
 }
@@ -161,13 +183,17 @@ static void accel_irq_enable(void)
      * a phantom.  Cleared before the GPIO interrupt is armed, never after,
      * or a real edge arriving here would be swallowed. */
     atomic_clear(&s_accel_int_flag);
-    gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
-                                 GPIO_INT_EDGE_TO_ACTIVE);
+    /* Level trigger for the same reason as the ignition wake: no GPIOTE IN
+     * channel held for the whole sleep.  INT1 is an active-high pulse that
+     * idles low, so level-high is the same event as the rising edge. */
+    atomic_set(&s_accel_level_armed, 1);
+    gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INT_LEVEL_HIGH);
 }
 
 static void accel_irq_disable(void)
 {
     if (!accel_available()) return;
+    atomic_clear(&s_accel_level_armed);
     gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INT_DISABLE);
     accel_disable_wake_int();
 }
@@ -177,6 +203,7 @@ static void crash_irq_enable(void)
 {
     if (!accel_available()) return;
     accel_cb_install();
+    atomic_clear(&s_accel_level_armed);
     atomic_clear(&s_accel_int_flag);
     accel_fifo_enable();
     accel_crash_int_enable(CRASH_THRESHOLD_MG);
@@ -474,6 +501,10 @@ static void do_sleep(void)
         if (sleep_secs < 1) sleep_secs = 1;
 
         k_sem_reset(&s_wake_sem);
+        /* Re-arm the ignition wake after the reset, never before it: the
+         * ISR disarms itself, and a level already present when the sense is
+         * re-enabled fires immediately, which the reset would swallow. */
+        ign_irq_enable();
         int64_t t0 = k_uptime_get();
         console_suspend();
         k_sem_take(&s_wake_sem, K_SECONDS(sleep_secs));
@@ -1250,9 +1281,10 @@ int main(void)
     gnss_start();
 
 #if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
-    /* Sample engine RPM about once a second while waiting for a fix, which
-     * is where most of a cycle goes.  One reading per record would say
-     * nothing about how the car was driven. */
+    /* Poll the ECU about once a second while waiting for a fix, which is
+     * where most of a cycle goes: the record built after the fix then
+     * costs no bus time, and engine RPM is sampled across the cycle rather
+     * than once per record. */
     gnss_set_tick(obd_sample_tick);
 #endif
 
@@ -1425,7 +1457,7 @@ int main(void)
                 || previous_ignition == -1
                 || send_int_to_server
                 || !last_send_ok
-                || data_index >= DATA_LIMIT - BATCH_HEADROOM) {
+                || data_index >= BATCH_FLUSH_BYTES) {
                 s_state = STATE_SEND;
             } else {
                 s_state = STATE_IDLE;

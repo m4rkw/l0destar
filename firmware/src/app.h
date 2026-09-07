@@ -333,17 +333,21 @@ struct obd_snapshot {
 	int32_t dtc_count;      /* stored codes   */
 };
 
-int  obd_poll(struct obd_snapshot *s);
-/* Track-mode poll: RPM, speed, throttle and load every call, plus one of the
- * slow-moving PIDs in rotation.  Four or five exchanges instead of thirteen,
- * so the bus can be asked about twice a second without being flooded. */
-int  obd_poll_track(struct obd_snapshot *s);
+/* The poll: RPM, speed, throttle and load every call, plus one of the
+ * slow-moving PIDs in rotation — four or five exchanges (~0.5 s) rather than
+ * thirteen — merged into a live snapshot.  obd_poll_fast() always goes to
+ * the bus (track mode, one per record); obd_snapshot_take() copies the
+ * snapshot and polls first only if it is more than a second old (normal
+ * records, which the fix-wait tick has usually just refreshed). */
+int  obd_poll_fast(struct obd_snapshot *s);
+int  obd_snapshot_take(struct obd_snapshot *s);
 int  obd_append(char *buf, int max, const struct obd_snapshot *s);
 int  obd_dtc_report(char *buf, int max);
 void obd_close(void);
 
-/* Sampled ~1 Hz from the GNSS fix wait (see gnss_set_tick) so engine RPM has
- * useful resolution instead of one snapshot per telemetry record. */
+/* Runs the poll ~1 Hz from the GNSS fix wait (see gnss_set_tick), so the
+ * record built after the fix costs no bus time and engine RPM has useful
+ * resolution instead of one sample per record.  Never opens a session. */
 void obd_sample_tick(void);
 
 /* Bridge the gaps where nothing else is talking to the ECU (the send and the

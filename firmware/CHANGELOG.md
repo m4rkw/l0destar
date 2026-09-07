@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.4.26
+
+### Faster telemetry while driving: one poll shape, records batched three to a datagram
+- **The K-wire poll is the rotating one everywhere.**  RPM, speed, throttle
+and load every call and one slow PID in turn, four or five exchanges instead
+of thirteen, merged into a live snapshot; a slow value keeps its last
+reading for up to 30 s.  The GNSS fix-wait tick now runs that poll (it
+sampled RPM alone before), so the record built after the fix takes the
+snapshot and normally costs no bus time; it polls itself only if the
+snapshot is more than a second old.  The tick still never opens or reopens
+a session.
+- **`BATCH_SIZE` is 3.**  Each send costs an RRC connection and, because
+GNSS and LTE share the antenna, a fix re-acquisition; with a record now
+costing about a second, three per datagram roughly doubles the record rate
+(~0.6/s from ~0.33/s) for a page update every five seconds or so.  Ignition
+changes, settings syncs and send failures still flush at once.
+- **The batch flushes against the datagram cap**, not the record buffer:
+`BATCH_FLUSH_BYTES` leaves room for one more record plus log lines under
+`UDP_PACKET_SIZE`.  The old threshold sat above what the transport can
+send, which a larger batch would have hit as `-EMSGSIZE`.
+- Track mode defaults move to a steady one record a second
+(`APP_TRACK_PERIOD_MS` 1000) carrying the full 26 Hz IMU burst
+(`APP_TRACK_IMU_SAMPLES` 24); 500 ms still works for two a second.
+
+### Sleep-state power: wake interrupts moved off GPIOTE IN channels
+- The two sleep wake sources (ignition sense and the accelerometer's INT1)
+were edge-triggered, which on the nRF91 allocates a GPIOTE IN channel and
+keeps the pin-detect logic clocked for the whole sleep, ~20-45 uA on the SiP
+by Nordic's figures.  Both are now level-triggered (`GPIO_INT_LEVEL_LOW` on
+the active-low ignition sense, `GPIO_INT_LEVEL_HIGH` on INT1), which routes
+through the PORT/sense path and costs nothing while waiting.  Detection is
+unchanged: sleep is only ever entered with the ignition off, so the one
+transition that can matter is the sense pin going low, and INT1 is an
+active-high pulse that idles low.  nrfx re-arms a level trigger after every
+callback while the level persists, so both ISRs now disarm themselves and
+the sleep loop re-arms the ignition wake before each wait (after the
+semaphore reset, so a level already present is not swallowed).  The
+awake-side impact trigger keeps its edge configuration.
+
 ## 0.4.24 - track mode and minor bugfix
 
 ### Track mode (`APP_TRACK_MODE`, [TRACK_MODE.md](TRACK_MODE.md))

@@ -88,8 +88,21 @@
 
 /* -- buffers --------------------------------------------------------------- */
 #define DATA_LIMIT                  2500
-#define BATCH_SIZE                  1
+/* Records per datagram while driving.  Each send costs an RRC connection
+ * and, because GNSS and LTE share the antenna, a fix re-acquisition
+ * afterwards — one to two seconds that the records themselves do not: with
+ * the OBD poll folded into the fix wait a record costs about a second.  So
+ * batching raises the record rate (0.33/s at 1, ~0.6/s at 3) at the price of
+ * the page updating every N seconds instead of every cycle.  More than three
+ * does not fit: a record with ECU fields is 250-300 bytes and the datagram
+ * is capped at UDP_PACKET_SIZE.  Ignition changes, settings syncs and send
+ * failures still flush at once. */
+#define BATCH_SIZE                  3
+/* Flush before the next record could overflow the datagram: room for one
+ * more record plus the log lines that ride along.  Measured against the
+ * transport's cap, not DATA_LIMIT — the buffer is bigger than a datagram. */
 #define BATCH_HEADROOM              400
+#define BATCH_FLUSH_BYTES           (UDP_PACKET_SIZE - 64 - BATCH_HEADROOM)
 #define SPEED_MIN_SATS              4
 
 /* -- hardware presence flags (compiled-out paths) -------------------------- */
