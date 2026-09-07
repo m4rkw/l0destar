@@ -38,6 +38,8 @@ the protection features.
 - Magnification, I recommend [USOR 15x](https://link.amazon/B0isEdLNz),
   obviously a microscope like an Amscope would be way better but a lot more
   expensive
+- [Isopropyl alcohol](https://link.amazon/B00urqQmb)
+- [Foam swabs](https://link.amazon/B02K5TwZw)
 
 ## Suggestions
 
