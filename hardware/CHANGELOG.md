@@ -3,6 +3,21 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 08/09/2026
+
+- Fixed the ASM330LHHXTR accelerometer symbol in v3.4. Pins 10 and 11 are NC
+  per the datasheet, but the symbol had them as hidden passive pins stacked on
+  the GND pin, so the layout tied both pads to the ground pour on every board
+  from v3.0 to v3.3. With those pins grounded the part never enters its
+  low-power state, so it kept drawing current the whole time the board was
+  asleep. In v3.4 pins 10 and 11 are proper no-connect pins and the pads are
+  left unconnected.
+- Tested on a v3.2 board by scraping pads 10 and 11 off the board under S8U1:
+  sleep current dropped from ~140.8 µA to ~31.5 µA. v3.4 is expected to land
+  slightly above that because of the LT8609 enable divider added in v3.3
+  (~9 µA), so roughly ~40 µA. The same rework applies to any existing
+  v3.0-v3.3 board.
+
 ## 05/09/2026
 
 - Renamed the OBD serial interface from "ISO-9141" to **K-wire** throughout the

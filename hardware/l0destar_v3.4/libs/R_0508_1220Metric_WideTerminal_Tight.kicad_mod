@@ -1,0 +1,193 @@
+(footprint "R_0508_1220Metric_WideTerminal_Tight"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "Resistor SMD 0508 (1220 Metric) wide terminal (reverse geometry), body 1.25x2.00mm, TE 3430A2 series, pad proportions per KiCad R_0612_1632Metric convention, terminal wrap 0.30mm per TE datasheet 1773204-9 Rev. B, https://www.farnell.com/datasheets/3822554.pdf")
+	(tags "resistor wide terminal reverse geometry 0508 1220 TE 3430")
+	(property "Reference" "S10R3"
+		(at 0 -1.95 180)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "8479c245-8dd2-42ea-afe0-039e647747cb")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "0508 510R 5% 1W"
+		(at 0 1.95 180)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "7dea285f-632c-476a-b372-81eac4b8f785")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.farnell.com/datasheets/3822554.pdf"
+		(at 0 0 180)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "0d4e2b11-05ec-48a1-91b1-2a28b60637b5")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Description" "Resistor"
+		(at 0 0 180)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "f4069dd9-afdb-4c92-98de-afd7796bb470")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Manufacturer_Part_Number" "3430A2F510RTDF"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "46deafd7-49f9-40a3-8b0f-35e99efbcd09")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Manufacturer_Name" "CGS / TE Connectivity"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "ea02dd04-db16-4947-bcda-205ebef4e3d4")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property ki_fp_filters "R_*")
+	(sheetname "/")
+	(sheetfile "iso-9141_interface.kicad_sch")
+	(attr smd)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_line
+		(start -0.16 -1.11)
+		(end 0.16 -1.11)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "4f64a8f2-d1e8-4132-9696-c08a1a6f4d05")
+	)
+	(fp_line
+		(start -0.16 1.11)
+		(end 0.16 1.11)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "c207b2d8-8513-47ac-b3e6-b40bee231fcc")
+	)
+	(fp_rect
+		(start -0.93 -1.2)
+		(end 0.93 1.2)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "583d61b8-aaac-40c4-af17-fead64fd5282")
+	)
+	(fp_line
+		(start -0.625 -1)
+		(end 0.625 -1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "fc7278ee-7f90-44be-a229-89dd98a84995")
+	)
+	(fp_line
+		(start -0.625 1)
+		(end -0.625 -1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "e1b8acef-d0f0-481a-ad1f-e4a5128dd90f")
+	)
+	(fp_line
+		(start 0.625 -1)
+		(end 0.625 1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "b67b32dc-c117-4616-9a3a-24b18ec8e297")
+	)
+	(fp_line
+		(start 0.625 1)
+		(end -0.625 1)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "712ae663-7ddf-46fe-a9af-208893878985")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 180)
+		(layer "F.Fab")
+		(uuid "96d12a5c-2707-49a3-93f2-e6cd03390aa3")
+		(effects
+			(font
+				(size 0.5 0.5)
+				(thickness 0.08)
+			)
+		)
+	)
+	(pad "1" smd roundrect
+		(at -0.525 0)
+		(size 0.6 2.2)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(uuid "588a4a4d-1e03-4d77-9ee3-7a494ac10b78")
+	)
+	(pad "2" smd roundrect
+		(at 0.525 0)
+		(size 0.6 2.2)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.25)
+		(uuid "7ae5893a-7d05-4938-80d5-a54289e135df")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/libs/0508_R.step"
+		(offset
+			(xyz 0 -1 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -90 -0 -0)
+		)
+	)
+)

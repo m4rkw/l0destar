@@ -1,0 +1,146 @@
+
+(kicad_symbol_lib (version 20211014) (generator kicad_symbol_editor)
+  (symbol "LT8609AIMSE_PBF" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
+    (property "Reference" "U" (id 0) (at 28.3167 9.12539 0.0)
+      (effects (font (size 1.27 1.27)) (justify bottom left))
+    )
+    (property "Value" "LT8609AIMSE_PBF" (id 1) (at 27.7152 6.59158 0.0)
+      (effects (font (size 1.27 1.27)) (justify bottom left))
+    )
+    (property "Footprint" "LT8609AIMSE_PBF:MSOP-10_MSE" (id 2) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MF" "Analog Devices" (id 4) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "VENDOR" "Linear Technology" (id 5) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Description" "\n                        \n                            Buck Switching Regulator IC Positive Adjustable 0.782V 1 Output 3A 10-TFSOP, 10-MSOP (0.118, 3.00mm Width) Exposed Pad\n                        \n" (id 6) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Package" "MSOP-10 Linear Technology" (id 7) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Price" "None" (id 8) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Check_prices" "https://www.snapeda.com/parts/LT8609AIMSE%23PBF/Analog+Devices/view-part/?ref=eda" (id 9) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "SnapEDA_Link" "https://www.snapeda.com/parts/LT8609AIMSE%23PBF/Analog+Devices/view-part/?ref=snap" (id 10) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MP" "LT8609AIMSE#PBF" (id 11) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Availability" "In Stock" (id 12) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MANUFACTURER_PART_NUMBER" "lt8609hmse#trpbf" (id 13) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (symbol "LT8609AIMSE_PBF_0_0"
+      (polyline
+        (pts (xy 7.62 5.08) (xy 7.62 -17.78)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 7.62 -17.78) (xy 58.42 -17.78)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 58.42 -17.78) (xy 58.42 5.08)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 58.42 5.08) (xy 7.62 5.08)) (stroke (width 0.1524))
+      )
+      (pin input line (at 0.0 0.0 0) (length 7.62)
+        (name "BST"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "1"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin output line (at 0.0 -2.54 0) (length 7.62)
+        (name "SW"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "2"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at 0.0 -5.08 0) (length 7.62)
+        (name "INTVCC"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "3"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at 0.0 -7.62 0) (length 7.62)
+        (name "RT"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "4"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin input line (at 0.0 -10.16 0) (length 7.62)
+        (name "SYNC"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "5"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at 66.04 -12.7 180.0) (length 7.62)
+        (name "FB"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "6"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin output line (at 66.04 -10.16 180.0) (length 7.62)
+        (name "TR/SS"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "7"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin output line (at 66.04 -7.62 180.0) (length 7.62)
+        (name "PG"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "8"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin input line (at 66.04 -5.08 180.0) (length 7.62)
+        (name "VIN"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "9"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at 66.04 -2.54 180.0) (length 7.62)
+        (name "EN/UV"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "10"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin power_in line (at 66.04 0.0 180.0) (length 7.62)
+        (name "GND"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "11"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+    )
+  )
+)
