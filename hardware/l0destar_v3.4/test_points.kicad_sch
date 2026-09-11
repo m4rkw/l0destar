@@ -204,7 +204,17 @@
 	)
 	(wire
 		(pts
-			(xy 16.51 67.31) (xy 16.51 71.12)
+			(xy 17.145 51.435) (xy 19.685 51.435)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "02fcd226-d8f0-4250-a851-172f6ace8731")
+	)
+	(wire
+		(pts
+			(xy 17.145 34.29) (xy 17.145 38.1)
 		)
 		(stroke
 			(width 0)
@@ -214,27 +224,67 @@
 	)
 	(wire
 		(pts
-			(xy 36.195 71.12) (xy 38.735 71.12)
+			(xy 17.145 76.835) (xy 19.685 76.835)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "60cf7332-dff8-44c2-b4f6-c14fbbd753a7")
+		(uuid "19bc5a7f-3056-4d29-89ce-fa77c3011d17")
 	)
 	(wire
 		(pts
-			(xy 36.195 67.31) (xy 36.195 71.12)
+			(xy 17.145 89.535) (xy 19.685 89.535)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "8554e84a-6714-49ce-84e4-0c911ecc1efb")
+		(uuid "236ace2f-611c-4d19-9c41-5693c0f0a3c0")
 	)
 	(wire
 		(pts
-			(xy 16.51 71.12) (xy 19.05 71.12)
+			(xy 17.145 85.725) (xy 17.145 89.535)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2837a4bf-f48e-4f1e-883a-7e6c9f9cae26")
+	)
+	(wire
+		(pts
+			(xy 17.145 20.32) (xy 17.145 24.13)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7f49741b-bb53-460c-9323-64fbd1dc30e7")
+	)
+	(wire
+		(pts
+			(xy 17.145 64.135) (xy 19.685 64.135)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "82949369-471a-470d-9e03-f4284f06fbc6")
+	)
+	(wire
+		(pts
+			(xy 17.145 73.025) (xy 17.145 76.835)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "898a1711-6686-4e78-961f-e5f8e344bf47")
+	)
+	(wire
+		(pts
+			(xy 17.145 38.1) (xy 19.685 38.1)
 		)
 		(stroke
 			(width 0)
@@ -242,9 +292,59 @@
 		)
 		(uuid "8a0b638e-b923-4288-b174-115ad981e5f9")
 	)
-	(global_label "PP4V2_UNPROTECTED"
+	(wire
+		(pts
+			(xy 17.145 97.79) (xy 17.145 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9c86c807-c7c2-4408-8130-b007b522d933")
+	)
+	(wire
+		(pts
+			(xy 17.145 24.13) (xy 19.685 24.13)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a039f472-11b8-47e4-b2ac-fb4180e0b788")
+	)
+	(wire
+		(pts
+			(xy 17.145 47.625) (xy 17.145 51.435)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b9186ba1-ec4a-45f4-a452-34b131530c42")
+	)
+	(wire
+		(pts
+			(xy 17.145 60.325) (xy 17.145 64.135)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e9618439-7589-4c6c-904f-4503de051c20")
+	)
+	(wire
+		(pts
+			(xy 17.145 101.6) (xy 19.685 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fe7b75d6-eaf4-4f1e-aa27-dcac5906a328")
+	)
+	(global_label "PP3V3_CAN"
 		(shape input)
-		(at 38.735 71.12 0)
+		(at 19.685 76.835 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -252,9 +352,105 @@
 			)
 			(justify left)
 		)
-		(uuid "3e40a6c1-876a-4394-a3f5-ad7cd8dd7ef8")
+		(uuid "1e4fb29a-ea93-45b2-9943-a38e16043bc8")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 62.0401 71.12 0)
+			(at 33.3745 76.835 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+	)
+	(global_label "PP3V3"
+		(shape input)
+		(at 19.685 51.435 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "24ee3fc1-fe62-4234-a1a7-ca13b2091510")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 28.7178 51.435 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+	)
+	(global_label "PP12V_K"
+		(shape input)
+		(at 19.685 101.6 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "a3b3e7d4-72f9-4888-b671-3594ce3b8428")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 30.9554 101.6 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+	)
+	(global_label "PP3V3_GPS"
+		(shape input)
+		(at 19.685 64.135 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "c2495752-3167-4f26-a3cb-e16762cfc19f")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 33.4349 64.135 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+	)
+	(global_label "PP3V3_K"
+		(shape input)
+		(at 19.685 89.535 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "cc4a3032-c216-47f5-a683-8cf0773eca44")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 30.9554 89.535 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -268,7 +464,7 @@
 	)
 	(global_label "PP4V2"
 		(shape input)
-		(at 19.05 71.12 0)
+		(at 19.685 38.1 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -278,7 +474,31 @@
 		)
 		(uuid "e9ea9909-fe66-4f97-855c-68f1aba39eb8")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 28.0828 71.12 0)
+			(at 28.7178 38.1 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+	)
+	(global_label "GND"
+		(shape input)
+		(at 19.685 24.13 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f7732219-db88-4568-b9b7-71f795459bee")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 26.5407 24.13 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -292,7 +512,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 16.51 67.31 0)
+		(at 17.145 34.29 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -301,8 +521,8 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "3402a1d7-b342-47cb-a2da-99612e4c911a")
-		(property "Reference" "S12TP6"
-			(at 19.05 64.77 0)
+		(property "Reference" "S12TP2"
+			(at 19.685 31.75 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -313,7 +533,7 @@
 			)
 		)
 		(property "Value" "4.2V protected"
-			(at 19.05 67.31 0)
+			(at 19.685 34.29 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -324,7 +544,7 @@
 			)
 		)
 		(property "Footprint" "TestPoint:TestPoint_Pad_1.0x1.0mm"
-			(at 21.59 67.31 0)
+			(at 22.225 34.29 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -335,7 +555,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 21.59 67.31 0)
+			(at 22.225 34.29 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -346,7 +566,7 @@
 			)
 		)
 		(property "Description" "test point"
-			(at 16.51 67.31 0)
+			(at 17.145 34.29 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -362,7 +582,7 @@
 		(instances
 			(project "l0destar"
 				(path "/56dbd7ba-9ef6-4be5-849a-89b1d343de14"
-					(reference "S12TP6")
+					(reference "S12TP2")
 					(unit 1)
 				)
 			)
@@ -370,7 +590,7 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
-		(at 36.195 67.31 0)
+		(at 17.145 85.725 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -378,9 +598,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(uuid "98776659-7c25-47ab-9f57-85794a84d33c")
-		(property "Reference" "S12TP7"
-			(at 38.735 64.77 0)
+		(uuid "543d69c7-aaf8-4a95-a688-d50a6593c0e5")
+		(property "Reference" "S12TP6"
+			(at 19.685 83.185 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -390,8 +610,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "4.2V unprotected"
-			(at 38.735 67.31 0)
+		(property "Value" "3.3V K"
+			(at 19.685 85.725 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -402,7 +622,7 @@
 			)
 		)
 		(property "Footprint" "TestPoint:TestPoint_Pad_1.0x1.0mm"
-			(at 41.275 67.31 0)
+			(at 22.225 85.725 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -413,7 +633,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 41.275 67.31 0)
+			(at 22.225 85.725 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -424,7 +644,7 @@
 			)
 		)
 		(property "Description" "test point"
-			(at 36.195 67.31 0)
+			(at 17.145 85.725 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -435,12 +655,402 @@
 			)
 		)
 		(pin "1"
-			(uuid "7bbe500d-f4d1-4ddd-8464-f5774cdacfd6")
+			(uuid "e441f1ed-ca47-4212-a4a8-ed7b8a1f7c29")
+		)
+		(instances
+			(project "l0destar"
+				(path "/56dbd7ba-9ef6-4be5-849a-89b1d343de14"
+					(reference "S12TP6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 17.145 60.325 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "560b3981-bfa5-4312-9dd0-7d2a0ad8bbc0")
+		(property "Reference" "S12TP4"
+			(at 19.685 57.785 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "3.3V GPS"
+			(at 19.685 60.325 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_1.0x1.0mm"
+			(at 22.225 60.325 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 22.225 60.325 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point"
+			(at 17.145 60.325 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "9726bcab-7766-42aa-a7cb-72b3f545dbe6")
+		)
+		(instances
+			(project "l0destar"
+				(path "/56dbd7ba-9ef6-4be5-849a-89b1d343de14"
+					(reference "S12TP4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 17.145 97.79 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "58f01338-3257-4408-b1dd-40e07b12e69c")
+		(property "Reference" "S12TP7"
+			(at 19.685 95.25 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "12V K"
+			(at 19.685 97.79 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_1.0x1.0mm"
+			(at 22.225 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 22.225 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point"
+			(at 17.145 97.79 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "f2dcb964-ddec-4d62-8b88-67e8ebd79dda")
 		)
 		(instances
 			(project "l0destar"
 				(path "/56dbd7ba-9ef6-4be5-849a-89b1d343de14"
 					(reference "S12TP7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 17.145 47.625 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "9cc38a0b-faff-4580-9282-5c497964b96c")
+		(property "Reference" "S12TP3"
+			(at 19.685 45.085 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "3.3V"
+			(at 19.685 47.625 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_1.0x1.0mm"
+			(at 22.225 47.625 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 22.225 47.625 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point"
+			(at 17.145 47.625 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "df436d2b-3344-4dda-b10f-81766a519abb")
+		)
+		(instances
+			(project "l0destar"
+				(path "/56dbd7ba-9ef6-4be5-849a-89b1d343de14"
+					(reference "S12TP3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 17.145 20.32 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "ed7fd978-5a67-4240-a907-d2c608c1c51b")
+		(property "Reference" "S12TP1"
+			(at 19.685 17.78 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "GND"
+			(at 19.685 20.32 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_1.0x1.0mm"
+			(at 22.225 20.32 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 22.225 20.32 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point"
+			(at 17.145 20.32 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "996b6e06-f8c7-49fa-8645-8e2086f9af7d")
+		)
+		(instances
+			(project "l0destar"
+				(path "/56dbd7ba-9ef6-4be5-849a-89b1d343de14"
+					(reference "S12TP1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 17.145 73.025 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "fd63e0eb-0a07-49d4-9d75-99d2b1c327ca")
+		(property "Reference" "S12TP5"
+			(at 19.685 70.485 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "3.3V CAN"
+			(at 19.685 73.025 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_1.0x1.0mm"
+			(at 22.225 73.025 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 22.225 73.025 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "test point"
+			(at 17.145 73.025 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "c187fb8d-3116-4b2b-ab47-6ce10b5f3b78")
+		)
+		(instances
+			(project "l0destar"
+				(path "/56dbd7ba-9ef6-4be5-849a-89b1d343de14"
+					(reference "S12TP5")
 					(unit 1)
 				)
 			)

@@ -5563,7 +5563,7 @@
 				)
 			)
 		)
-		(property "Footprint" "libs:Makerdiary_power_header"
+		(property "Footprint" "libs:MakerDiary2PinHeader"
 			(at 22.86 68.58 0)
 			(hide yes)
 			(show_name no)

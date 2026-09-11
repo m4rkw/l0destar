@@ -29,6 +29,8 @@ yourself rather than taking them on trust.
   grounded on v3.0-v3.3, which stopped the part from ever entering its
   low-power state. Sleep current on a reworked v3.2 board fell from ~140.8 µA
   to ~31.5 µA.
+- Added test points for easier assembly/testing
+- Slightly increased the size of the holes for the 2-pin power connector
 
 Carried over from v3.3:
 
@@ -133,6 +135,8 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
   the two pads scraped off: sleep current went from ~140.8 µA to ~31.5 µA.
   v3.4 will likely sit slightly above that because of the enable divider
   added in v3.3, but not by much.
+- Added test points for easier assembly/testing
+- Slightly increased the size of the holes for the 2-pin power connector
 
 ## Changes from v3.2
 
