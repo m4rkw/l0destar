@@ -78,9 +78,13 @@ int hw_selftest(void)
 	 * held there for the whole session, so only its present state can be
 	 * checked — powering it down here would drop the bias tee.  A failure
 	 * to come up was already logged and alerted by hw_domain_request(),
-	 * so don't spend a second slot in the alert queue on it. */
+	 * which leaves GPS_ENABLE asserted regardless (no signal pins live on
+	 * this rail), so don't spend a second slot in the alert queue on it. */
 	if (!hw_domain_is_on(HW_DOMAIN_AUX)) {
-		LOG_ERR("PP3V3_GPS: domain off (rail fault at boot)");
+		LOG_ERR("PP3V3_GPS: domain off");
+		fails++;
+	} else if (hw_domain_faulted(HW_DOMAIN_AUX)) {
+		LOG_ERR("PP3V3_GPS: rail fault at boot (enable left high)");
 		fails++;
 	} else if (wait_rail(PIN_GPS_RAIL_ST, 1, "PP3V3_GPS")) {
 		alert_enqueue("SELFTEST:GPS rail fail", 1);

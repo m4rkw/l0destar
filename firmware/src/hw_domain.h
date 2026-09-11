@@ -15,7 +15,10 @@
  * On boards with rail-sense inputs (v3.1) hw_domain_request() also confirms
  * the rail actually came up before it lets go of the pins; a domain whose
  * load switch fails stays parked and reports the fault rather than letting a
- * driver bit-bang into an unpowered peripheral.
+ * driver bit-bang into an unpowered peripheral.  A domain with no signal
+ * pins (v3.x AUX, the GPS bias tee) is the exception: its enable is left
+ * asserted through a rail fault, since nothing can be backfed and dropping
+ * it would only guarantee no GPS.
  */
 enum hw_domain {
 	HW_DOMAIN_AUX,   /* AUX_SW: v2.x aux rail(s), v3.0/v3.1 GPS bias rail */
@@ -38,9 +41,12 @@ int  hw_domain_init(void);
 /* Power a domain up (or add a user to an already-powered one).  Returns 0 on
  * success, -EIO if the board has rail sensing and the rail did not come up —
  * in that case the domain is left off with every pin parked and the caller
- * must not touch its signals. */
+ * must not touch its signals.  A domain with no signal pins never returns
+ * -EIO: on a rail fault it stays enabled, counts as on, and
+ * hw_domain_faulted() reports the fault (already logged and alerted). */
 int  hw_domain_request(enum hw_domain d, uint8_t user);
 void hw_domain_release(enum hw_domain d, uint8_t user);
 bool hw_domain_is_on(enum hw_domain d);
+bool hw_domain_faulted(enum hw_domain d);
 
 #endif

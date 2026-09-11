@@ -33,6 +33,13 @@
  * would leave the drivers bit-banging 3.3 V into an unpowered MCP2518FD or
  * TJA1027T through their clamp diodes — exactly what the parking rules above
  * exist to prevent.
+ *
+ * A domain with no signal pins (v3.x AUX: GPS_ENABLE gates only the antenna
+ * bias tee) has nothing to protect, so a rail that fails to report up is
+ * treated differently: the fault is logged and alerted, but the enable is
+ * left asserted and the domain counted as on.  Dropping it would only
+ * guarantee no GPS for the session, whereas a late-rising rail or a bad
+ * sense divider still gets a working bias tee this way.
  */
 
 #include <stdio.h>
@@ -288,11 +295,6 @@ int hw_domain_request(enum hw_domain dom, uint8_t user)
 		k_msleep(DOMAIN_SETTLE_MS);
 
 		if (!dom_wait_rail(d, true, RAIL_UP_TIMEOUT_MS)) {
-			/* Load-switch or rail fault: back out completely so
-			 * nothing drives into the dead rail. */
-			dom_park(d);
-			gpio_pin_configure(hw_gpio0, d->enable_pin,
-					   GPIO_OUTPUT_LOW);
 			LOG_ERR("%s domain rail did not come up (P0.%d)",
 				dom_name(dom), d->enable_pin);
 			if (!d->faulted) {
@@ -302,10 +304,27 @@ int hw_domain_request(enum hw_domain dom, uint8_t user)
 				alert_enqueue(msg, 1);
 				d->faulted = true;
 			}
-			return -EIO;
+			if (d->npins > 0) {
+				/* Load-switch or rail fault: back out
+				 * completely so nothing drives into the dead
+				 * rail. */
+				dom_park(d);
+				gpio_pin_configure(hw_gpio0, d->enable_pin,
+						   GPIO_OUTPUT_LOW);
+				return -EIO;
+			}
+			/* No signal pins terminate in this domain (v3.x GPS
+			 * bias tee), so there is nothing a dead rail can be
+			 * backfed through.  Leave the enable high: a rail that
+			 * comes up late, or a sense line that is lying, still
+			 * gets a working bias tee. */
+			LOG_WRN("%s domain left enabled despite rail fault",
+				dom_name(dom));
+		} else {
+			d->faulted = false;
+			LOG_INF("%s domain on (P0.%d)", dom_name(dom),
+				d->enable_pin);
 		}
-		d->faulted = false;
-		LOG_INF("%s domain on (P0.%d)", dom_name(dom), d->enable_pin);
 	}
 	d->users |= user;
 	return 0;
@@ -338,4 +357,9 @@ void hw_domain_release(enum hw_domain dom, uint8_t user)
 bool hw_domain_is_on(enum hw_domain dom)
 {
 	return s_dom[dom].enable_pin >= 0 && s_dom[dom].users != 0;
+}
+
+bool hw_domain_faulted(enum hw_domain dom)
+{
+	return s_dom[dom].enable_pin >= 0 && s_dom[dom].faulted;
 }

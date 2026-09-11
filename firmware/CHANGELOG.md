@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### GPS rail fault no longer switches the bias tee off
+- **A GPS rail that fails its rail-sense check at power-up now stays
+enabled.**  `hw_domain_request()` used to treat every sensed rail the same:
+if the sense line did not report the rail up within 50 ms it parked the
+domain's pins and drove the enable low, which for the AUX/GPS domain meant
+no antenna bias for the whole session.  That protection exists to stop the
+nRF backfeeding a dead rail through a peripheral's clamp diodes, and on
+v3.x no signal pin terminates in the GPS domain, so there is nothing to
+protect.  A pin-less domain now keeps GPS_ENABLE high through the fault,
+counts as on, and returns success; the `RAIL:AUX rail fail` alert and log
+line are unchanged.  Domains with signal pins (CAN, K) behave as before.
+- `hw_domain_faulted()` exposes the sticky fault, and the boot self-test
+uses it to report the GPS rail without queueing a second alert.
+
 ## 0.4.26
 
 ### Faster telemetry while driving: one poll shape, records batched three to a datagram
