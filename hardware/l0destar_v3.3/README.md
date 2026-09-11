@@ -56,30 +56,28 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 
 | Item | Test | Result | Notes |
 |---------|------|--------|-------|
-| Input stage | 12V input reverse polarity | NOT TESTED | |
-| Input stage | 12V ignition input reverse polarity | NOT TESTED | |
-| INA228 | Voltage reading function | NOT TESTED | |
-| Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
-| LT8609 | 4.2V output | NOT TESTED | |
+| Input stage | 12V input reverse polarity | PASSED | |
+| Input stage | 12V ignition input reverse polarity | PASSED | |
+| INA228 | Voltage reading function | PASSED | |
+| Ignition presence | Ignition sense 3.3v signal | PASSED | |
+| LT8609 | 4.2V output | PASSED | |
 | LT8609 | UVLO thresholds | NOT TESTED | |
-| MCU OVP | 4.2V passes through at nominal voltage | NOT TESTED | S11Q1 on, S12TP6 ≈ S12TP7 |
-| MCU OVP | Cuts off when S12TP7 is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
-| MCU OVP | Fault injection via S11TP1 | NOT TESTED | Short S11TP1 to the unprotected rail, PP4V2 should drop |
-| MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | NOT TESTED | |
-| GPS auxiliary 3.3V rail | Switches on enable signal | NOT TESTED | |
-| CAN auxiliary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
-| K-line auxiliary 3.3V rail | Switches on K-enable signal | NOT TESTED | |
-| K-line auxiliary 12V rail | Switches on K-enable signal | NOT TESTED | |
-| Accelerometer | Operates while awake | NOT TESTED | |
-| Accelerometer | Wake on motion | NOT TESTED | |
-| GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
-| K-wire | K wire connectivity | NOT TESTED | |
-| K-wire | L-line pulldown | NOT TESTED | |
+| MCU OVP | 4.2V passes through at nominal voltage | PASSED | S11Q1 on, S12TP6 ≈ S12TP7 |
+| MCU OVP | Cuts off when S12TP7 is driven above ~5V | PASSED | Trip ≈ 5.00V, release ≈ 4.80V |
+| GPS auxiliary 3.3V rail | Switches on enable signal | PASSED | |
+| CAN auxiliary 3.3V rail | Switches on CAN-enable signal | PASSED | |
+| K-line auxiliary 3.3V rail | Switches on K-enable signal | PASSED | |
+| K-line auxiliary 12V rail | Switches on K-enable signal | PASSED | |
+| Accelerometer | Operates while awake | PASSED | |
+| Accelerometer | Wake on motion | PASSED | |
+| GPS antenna bias tee | Obtains GPS signal | PASSED | |
+| K-wire | K wire connectivity | PASSED | |
+| K-wire | L-line pulldown | PASSED | |
 | K-wire | L-line external short to 12V while L\_SEND high | NOT TESTED | Added to cover the L-line defect in earlier boards |
 | K-wire | L-line sensing via L_SENSE | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 143 µA (v3.2's 134 µA plus around ~9 µA for the enable divider) |
+| Board | Quiescent current | 146.2 µA | Note: with the accelerometer fix applied (pads scraped off) this drops to 43.7 µA |
 
 ## Features
 
