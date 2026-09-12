@@ -58,6 +58,20 @@ config APP_VOLTAGE_TEST
 	  bring-up aid — leave off in production.  Has no effect while
 	  APP_DEBUG_BATTERY_MV is set, which fakes the reading.
 
+config APP_L_SENSE_TEST
+	bool "Stream the K-wire L-line sense at boot"
+	default n
+	depends on APP_BOARD_HAS_L_SENSE
+	help
+	  At startup, sample L_SENSE continuously (5 Hz) and print the reading
+	  in millivolts with its LOW/HIGH classification against
+	  APP_L_SENSE_LOW_MV, flagging every transition.  Opens by asserting
+	  L_SEND for 2 s so the board's own pulldown can be seen taking the
+	  wire LOW, then releases it and only observes (the pull phase is
+	  skipped where APP_L_SEND_ENABLED is off).  Loops forever; does not
+	  enter the main loop.  Bench bring-up aid for v3.3+ — leave off in
+	  production.
+
 config APP_OBD_MODE
 	int "OBD interface mode (0=none, 1=CAN, 2=K-line)"
 	default 0

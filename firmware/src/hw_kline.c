@@ -2129,12 +2129,16 @@ void kline_dtc_string(uint16_t v, char *out)
  * and taps it for L_SENSE: pin -> 47K -> 1N4148 anode, cathode on the L
  * node.  The diode blocks the vehicle's 12 V from ever reaching the pin, so
  * the only way to read the line is to source current into it, and the SAADC
- * does that with its internal pull-up resistor ladder (~400K to VDD):
+ * does that with its internal pull-up resistor ladder.  Measured on v3.3
+ * the ladder is only ~65K to the 4.2 V VDD (not the ~400K first assumed),
+ * so the pulled-low level is higher than a bare diode drop:
  *
  *   L pulled low   diode conducts, the pin sits a forward drop plus
- *                  47K x ladder current above the wire: ~0.7-0.9 V
+ *                  47K x ~33 uA of ladder current above the wire: ~2.0 V
  *   L high or open diode reverse biased, the ladder takes the pin to VDD
- *                  and the reading runs into the 3.6 V full scale
+ *                  and the reading pins at the 3.6 V full scale
+ *
+ * CONFIG_APP_L_SENSE_LOW_MV (2800) splits those two.
  *
  * A plain GPIO input cannot do this — the nRF's ~13K internal pull-up
  * against the 47K leaves even a grounded line at ~2.7 V, above VIH — and
@@ -2315,6 +2319,84 @@ int kline_l_line_probe(int *idle_mv, int *pulled_mv)
 	LOG_INF("L line OK (%d mV idle -> %d mV pulled)", idle, pulled);
 	return 0;
 }
+
+#if IS_ENABLED(CONFIG_APP_L_SENSE_TEST)
+/* Bench aid (CONFIG_APP_L_SENSE_TEST): sample L_SENSE forever and print
+ * what the wire is doing.  Every sample is printed at 5 Hz as millivolts
+ * plus LOW/HIGH against L_SENSE_LOW_MV; a change of state is marked so a
+ * transition is easy to spot in a scrolling log.
+ *
+ * It opens by asserting L_SEND for L_SENSE_TEST_PULL_SAMPLES samples so
+ * the board's own pulldown can be seen dragging the wire low and the
+ * sense following it, then releases the FET and just watches — pull the
+ * wire yourself from there to see it move.  Where L_SEND is disabled or
+ * unfitted the pull phase is skipped and it goes straight to watching.
+ * Never returns. */
+#define L_SENSE_TEST_PULL_SAMPLES 10   /* 2 s at 5 Hz */
+
+void kline_l_sense_test(void)
+{
+	printk("\n*** L SENSE TEST — streaming L_SENSE at 5 Hz ***\n");
+
+	if (!kline_l_sense_available()) {
+		printk("L sense not available on this build (P0.%d) — "
+		       "nothing to read.\n", PIN_L_SENSE);
+		for (;;) {
+			k_msleep(10000);
+		}
+	}
+
+	printk("L_SENSE on P0.%d, LOW below %d mV.  ~2.0 V = pulled low, "
+	       "%d mV (full scale) = high/open/shorted to battery.\n",
+	       PIN_L_SENSE, L_SENSE_LOW_MV, L_SENSE_FS_MV);
+
+	/* Pull phase: the board drags L low itself for the first few samples.
+	 * On v3.3 the AL5809-90 caps that at 90 mA even into a short, so it
+	 * is safe to hold for a couple of seconds. */
+	bool pulling = false;
+	int err = kline_l_send(true);
+
+	if (err == 0) {
+		pulling = true;
+		printk("L_SEND (P0.%d) asserted for %d samples — expect LOW, "
+		       "then HIGH again once released.\n",
+		       PIN_L_SEND, L_SENSE_TEST_PULL_SAMPLES);
+	} else if (err == -EPERM) {
+		printk("L_SEND disabled on this board (APP_L_SEND_ENABLED=n) — "
+		       "skipping the pull phase, observing only.\n");
+	} else {
+		printk("L_SEND unavailable (%d) — skipping the pull phase, "
+		       "observing only.\n", err);
+	}
+
+	int last = -1;   /* -1 unknown, 0 low, 1 high */
+	uint32_t n = 0;
+
+	for (;;) {
+		if (pulling && n == L_SENSE_TEST_PULL_SAMPLES) {
+			kline_l_send(false);
+			pulling = false;
+			printk("L_SEND released.\n");
+		}
+
+		int mv = kline_l_sense_mv();
+
+		if (mv < 0) {
+			printk("[%6u] read failed (%d)\n", n, mv);
+		} else {
+			int state = mv < L_SENSE_LOW_MV ? 0 : 1;
+
+			printk("[%6u] %s L=%s %4d mV%s\n", n,
+			       pulling ? "pull" : "idle",
+			       state ? "HIGH" : "LOW ", mv,
+			       (last >= 0 && state != last) ? "  <-- changed" : "");
+			last = state;
+		}
+		n++;
+		k_msleep(200);
+	}
+}
+#endif /* CONFIG_APP_L_SENSE_TEST */
 
 /* K-wire interface loopback test.  On boards with two transceivers (bench), stream
  * bytes K1->K2 and K2->K1 across the wire.  On single-transceiver boards

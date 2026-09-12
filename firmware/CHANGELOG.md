@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### L-line sense streamer (bench)
+- **`CONFIG_APP_L_SENSE_TEST`** (v3.3+ only) samples L_SENSE at 5 Hz from
+boot and prints each reading in millivolts with its LOW/HIGH classification
+against `CONFIG_APP_L_SENSE_LOW_MV`, marking transitions.  It opens by
+asserting L_SEND for 2 s so the pulldown and the sense can be verified
+against each other, then releases the FET and only observes the wire.
+Loops forever like the accel and voltage streamers.
+- **`CONFIG_APP_L_SENSE_LOW_MV` default raised from 1500 to 2800.**  The
+SAADC pull-up ladder measures ~65K to VDD on v3.3, not the ~400K the sense
+code assumed, so a grounded L wire reads ~2.0 V rather than 0.7-0.9 V and
+the old threshold never classified it LOW.  A high, open or shorted line
+still pins at the 3.6 V full scale; 2800 sits midway.  This also fixes
+`kline_l_line_probe()`, which would have reported every healthy L wire as
+shorted to battery.
+
 ### GPS rail fault no longer switches the bias tee off
 - **A GPS rail that fails its rail-sense check at power-up now stays
 enabled.**  `hw_domain_request()` used to treat every sensed rail the same:

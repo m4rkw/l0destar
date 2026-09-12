@@ -385,6 +385,7 @@ int  kline_l_sense_init(void);
 bool kline_l_sense_available(void);
 int  kline_l_sense_mv(void);            /* millivolts, or a negative errno */
 int  kline_l_line_probe(int *idle_mv, int *pulled_mv);
+void kline_l_sense_test(void);           /* CONFIG_APP_L_SENSE_TEST; never returns */
 
 int  hw_can_init(void);
 bool hw_can_available(void);

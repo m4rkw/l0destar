@@ -1186,6 +1186,10 @@ int main(void)
     }
 #endif
 
+#if IS_ENABLED(CONFIG_APP_L_SENSE_TEST)
+    kline_l_sense_test();   /* streams the L-line sense; never returns */
+#endif
+
 #if IS_ENABLED(CONFIG_APP_CAN_BENCH)
     can_bench_run();   /* host-driven CAN test target; never returns */
 #endif

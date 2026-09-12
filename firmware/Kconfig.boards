@@ -601,13 +601,16 @@ config APP_BOARD_HAS_L_SENSE
 
 config APP_L_SENSE_LOW_MV
 	int "L line counts as pulled low below this (mV)"
-	default 1500
+	default 2800
 	depends on APP_BOARD_HAS_L_SENSE
 	help
 	  A line pulled to ground sits at a diode drop plus 47K x the ladder
-	  current, ~0.7-0.9 V; a line that is high, open or shorted to battery
-	  reverse-biases the diode and the reading runs up to the 3.6 V full
-	  scale.  Anywhere in between separates the two.
+	  current.  The SAADC ladder is only ~65K to the 4.2 V VDD (measured
+	  on v3.3 — the datasheet-free assumption of ~400K was wrong), so
+	  that lands at ~2.0 V rather than under 1 V.  A line that is high,
+	  open or shorted to battery reverse-biases the diode and the reading
+	  pins at the 3.6 V full scale.  2800 sits midway between the two
+	  with ~0.8 V of margin either side.
 
 # --- rail-sense inputs (v3.1+) ------------------------------------------------
 # GPIO-readable status of each switched rail, for firmware-side fault

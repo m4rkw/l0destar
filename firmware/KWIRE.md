@@ -603,14 +603,16 @@ with thermal shutdown - and added **L_SENSE**, a tap on the wire through a
 1N4148 (cathode to L) and a 47K. The diode blocks the vehicle's 12 V from ever
 reaching the pin, so the line can only be read by sourcing current into it:
 firmware samples it on the SAADC with the internal pull-up resistor ladder
-engaged (~400K to VDD).
+engaged. That ladder measures ~65K to the 4.2 V VDD on v3.3 (an early
+assumption of ~400K was wrong), so a grounded line does not pull the pin down
+to a bare diode drop:
 
 | L wire | Reading |
 |--------|---------|
-| pulled low (our FET, or an ECU) | diode conducts, ~0.7-0.9 V |
-| high, open, or shorted to battery | diode reverse biased, runs to the 3.6 V full scale |
+| pulled low (our FET, or an ECU) | diode conducts, ~2.0 V |
+| high, open, or shorted to battery | diode reverse biased, pinned at the 3.6 V full scale |
 
-`CONFIG_APP_L_SENSE_LOW_MV` (default 1500) splits the two. A plain GPIO input
+`CONFIG_APP_L_SENSE_LOW_MV` (default 2800) splits the two. A plain GPIO input
 cannot: the nRF's ~13K internal pull-up against the 47K leaves even a grounded
 line at ~2.7 V, above VIH. Zephyr's ADC driver hard-codes the ladder to bypass,
 so `src/hw_kline.c` drives the SAADC through nrfx.
