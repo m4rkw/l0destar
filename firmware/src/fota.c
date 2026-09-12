@@ -518,10 +518,14 @@ void fota_confirm_image(void)
         return;
     }
 
+    /* Console only.  The "updated to" notification is the server's to
+     * raise, from the version the next record reports against the version
+     * it staged: this runs on exactly one boot — every later one returns
+     * at boot_is_img_confirmed() above — and an alert queued here has to
+     * survive both a working link and no reset before the next send.  When
+     * it did not, nothing ever raised it again, so a missing notification
+     * meant nothing.  See fw_check_running() in the server. */
     LOG_INF("running image confirmed (%s)", APP_VERSION_STRING);
-    char msg[48];
-    snprintf(msg, sizeof(msg), "fota: updated to %s", APP_VERSION_STRING);
-    alert_enqueue(msg, 0);
 }
 
 /* Failed attempts push the next one out (doubling to 8x) so a broken image or

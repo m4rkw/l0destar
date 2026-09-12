@@ -1703,6 +1703,18 @@ int main(void)
                 gnss_resume();
                 s_state = STATE_GPS_COLLECT;
             } else if (ignition != 0 && !s_coasting) {
+                /* Key off is where an update gets installed.  The device
+                 * already knows whether one is waiting — every response
+                 * carries fota=<version> and the last one was the reply to
+                 * the ignition-off record just sent — and this is the best
+                 * moment to act on it: the radio is still registered, the
+                 * battery has just come off the alternator, and the vehicle
+                 * is not about to be driven.  Left to the telemetry wake it
+                 * would happen an hour later on a colder battery, and only
+                 * if the unit still had an engine-off interval to wake on.
+                 * A no-op with nothing pending — no traffic on an ordinary
+                 * key off. */
+                fota_check(FOTA_CTX_AWAKE);
                 s_state = STATE_SLEEP;
             } else if (!engine_running && !s_coasting) {
                 s_state = STATE_IGNITION_SLEEP;

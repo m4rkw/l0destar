@@ -1,6 +1,34 @@
 # Changelog
 
-## 0.4.37
+## 0.4.39
+
+### A waiting update installs at key off
+- **`fota_check()` runs on the way into sleep**, so an update the server has
+advertised is installed when the engine stops rather than at the next
+telemetry wake.  The device already knew one was waiting — `fota=<version>`
+rides every response, including the reply to the ignition-off record it has
+just sent — but the key-off path reached `STATE_SLEEP` without passing any
+of the three `fota_check()` call sites, so the pending flag sat there for
+up to an hour.
+- Key off is also the right moment for it: the radio is still registered
+from that last record, the battery has just come off the alternator, and
+the vehicle is not about to be driven.  The alternative was a download an
+hour later on a colder battery, and only on a unit that still had an
+engine-off interval to wake on.  A no-op when nothing is pending, so an
+ordinary key off costs no traffic.
+
+### The "updated to" notification comes from the server
+- **The device no longer raises it; it only logs it.**  It could only ever
+raise it on the one boot that writes the MCUboot confirm flag — every later
+boot returns at `boot_is_img_confirmed()` — and on that boot it was an alert
+queued in RAM that had to survive a working link and no reset before the
+next send.  When it did not, nothing re-raised it, so an update that worked
+perfectly could look silent and a missing notification meant nothing either
+way.
+- The server raises it instead, in `fw_check_running()`, when the version a
+device reports in `fw=` matches the version it was told to stage.  That is
+state rather than a one-shot event: it survives every reboot and arrives
+with the first record that gets through.
 
 ### A failed update is remembered, reported, and not retried forever
 - **The device knows whether its own update took.**  What it stages is
@@ -24,6 +52,8 @@ once, not retried, and scoped to that version.
 - **The bare `fota` command is the manual retry**: it clears the local
 block, the attempt record and the failure holdoff, so an operator can force
 another go at a version the device has given up on.
+
+## 0.4.37
 
 ### The tracker stopped tracking mid-journey on a car with charging control
 - **The vehicle sheds its alternator on purpose, and that read as "engine
