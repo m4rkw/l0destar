@@ -223,6 +223,17 @@ int collect_data(int ignitionState)
      * motion, which is wrong for a vehicle that has just been switched off. */
     float speed = stale ? 0.0f : g_gnss.speed_kmh;
     long  sats  = stale ? 0     : g_gnss.sats;
+    /* Ignition on last record, off on this one: the key has just turned, so
+     * the vehicle is stopped and a residual GNSS speed is noise, not motion
+     * — see IGN_OFF_STOPPED_KMH.  Only the transition record, and only a
+     * GNSS speed: a genuine roll-away or a key cut while moving still
+     * reports what it measured. */
+    if (ignitionState != 0 && s_ign_last == 0 && speed > 0.0f &&
+        speed < IGN_OFF_STOPPED_KMH) {
+        LOG_INF("ignition off at %.2f km/h — reporting stopped",
+                (double)speed);
+        speed = 0.0f;
+    }
     n = snprintf(&data_current[data_index], remaining,
         "%s,%s,%s,%.2f,%.2f,%.2f,%ld,%ld,%.2f,%d,%lld,%d",
         ts, g_gnss.lat_str, g_gnss.lon_str,
@@ -599,7 +610,8 @@ int send_data(void)
     /* Server response, if requested */
     if (read_udp_response) {
         char resp[256];
-        int n = transport_recv_response(resp, sizeof(resp), 2000);
+        int n = transport_recv_response(resp, sizeof(resp),
+                                        RESPONSE_TIMEOUT_MS);
         if (n > 0) {
             LOG_INF("resp: %s", resp);
             /* Plaintext shape:  "1,int,ma[,cmd]"  */

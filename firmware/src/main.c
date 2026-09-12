@@ -309,6 +309,11 @@ static char s_record_ignition;
  * out rather than being collected again with a later time and position. */
 static bool s_transition_buffered;
 static bool s_wait_logged;
+/* When registration was first missed while awake, 0 while registered.  The
+ * idle poll waits for the modem to sort itself out, but it cannot wait
+ * forever: a modem that has been reinitialised after a fault comes back at
+ * CFUN=0 and nothing else awake would ever bring it up again. */
+static int64_t s_unregistered_ms;
 
 void movement_reset(void)
 {
@@ -512,15 +517,27 @@ static void do_sleep(void)
         ign_irq_enable();
         int64_t t0 = k_uptime_get();
         console_suspend();
-        k_sem_take(&s_wake_sem, K_SECONDS(sleep_secs));
+        /* Waited out in slices so the watchdog keeps being fed: a sleep
+         * runs up to an hour and the window is 32 s.  A slice that expires
+         * does not take the semaphore, so a wake still ends the wait at the
+         * first slice boundary after it arrives — and the wake sources are
+         * interrupts, which give the semaphore immediately either way. */
+        for (int left = sleep_secs; left > 0; left -= WATCHDOG_SLEEP_SLICE_S) {
+            int slice = MIN(left, WATCHDOG_SLEEP_SLICE_S);
+
+            if (k_sem_take(&s_wake_sem, K_SECONDS(slice)) == 0) {
+                break;
+            }
+            watchdog_kick();
+        }
         console_resume();
         int elapsed = (int)((k_uptime_get() - t0) / 1000);
         if (elapsed < 1) elapsed = 1;
 
         /* Set by every path below that brings the radio up.  network_ready is
          * not enough on its own: modem_connect() sets it only on success, but
-         * lte_lc_connect() has already taken the modem out of offline mode by
-         * the time it fails, so a failed connect leaves the radio powered and
+         * it has already taken the modem out of offline mode by the time it
+         * gives up waiting, so a failed connect leaves the radio powered and
          * searching with the flag still false. */
         bool modem_raised = false;
 
@@ -1119,6 +1136,40 @@ int main(void)
     LOG_INF("=== l0destar firmware boot (v%s, board %s) ===",
             fota_version(), fota_board_id());
 
+    /* Why this boot happened, on the console, now.  It also rides out with
+     * the first record as rst=, but a unit that resets during bring-up
+     * never gets that far — which is exactly when the answer matters, and
+     * is how a reset loop hides what is resetting it.  Reading it here does
+     * not consume it: both accessors cache, so the record still carries it.
+     *
+     * "on probation" means MCUboot swapped this image in as a test and will
+     * take it back out unless the bring-up below completes. */
+    {
+        const char *rst = dbglog_reset_cause();
+
+        LOG_INF("reset cause: %s%s", rst ? rst : "(none reported)",
+                fota_image_on_probation() ? " — image on probation" : "");
+    }
+
+    /* Before anything that can take time, and long before the radio.
+     *
+     * It used to be armed at the end of bring-up, after the modem connect
+     * and the A-GNSS fetch, some eleven seconds in.  That is too late in
+     * both directions.  The nRF watchdog cannot be stopped once started and
+     * survives a soft reset, so a unit that reboots for any reason — a FOTA
+     * swap, a fatal error — comes up with the previous image's watchdog
+     * still counting down its 12 s window and nothing feeding it until the
+     * app takes ownership.  Bring-up is longer than the window, so the boot
+     * dies at the same point every time, which is a reset loop that no
+     * amount of reflashing over the air can break: the new image never
+     * lives long enough to confirm itself and MCUboot reverts it.
+     *
+     * Taking ownership here instead feeds the stale watchdog within a
+     * couple of hundred milliseconds (task_wdt allocates the same hardware
+     * channel the previous image did, so the reload lands on the running
+     * one), and everything slow below already kicks as it waits. */
+    watchdog_init();
+
 #if defined(CONFIG_APP_PROVISION_MODE)
     /* Provisioning build (prov.conf): bring up the modem library so the AT
      * Host library can bridge nrfcloud-utils <-> modem (AT%KEYGEN, cert
@@ -1299,7 +1350,6 @@ int main(void)
 
     crash_irq_enable();
 
-    watchdog_init();
     s_last_send_ms = k_uptime_get();
 
     /* Everything above got through without hanging or faulting, so a freshly
@@ -1352,8 +1402,30 @@ int main(void)
                 int reg = modem_get_network_status();
                 if (reg == 1 || reg == 5) {
                     network_ready = true;
+                    s_unregistered_ms = 0;
                     LOG_INF("network ready");
                 } else {
+                    /* Reapply the link settings and CFUN=1 every retry
+                     * interval.  Cheap, idempotent, and the only thing that
+                     * brings the radio back after a modem fault: the reset
+                     * thread reinitialises the library but leaves the modem
+                     * offline with none of the app's settings.  Not a
+                     * blocking connect — the poll below is already the
+                     * wait, and it keeps servicing the ignition line and the
+                     * K-wire keep-alive while the network is away. */
+                    int64_t now = k_uptime_get();
+
+                    if (s_unregistered_ms == 0) {
+                        s_unregistered_ms = now;
+                    } else if (NETWORK_RETRY_INTERVAL > 0 &&
+                               now - s_unregistered_ms >=
+                                   (int64_t)NETWORK_RETRY_INTERVAL * 1000) {
+                        LOG_WRN("no registration for %ds — bringing the "
+                                "radio up again", NETWORK_RETRY_INTERVAL);
+                        modem_radio_up();
+                        s_unregistered_ms = now;
+                    }
+
                     /* Nothing can be sent, but the key turning still has
                      * to be captured now: the modem can spend a quarter of
                      * an hour searching, and building the ignition-off

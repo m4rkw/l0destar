@@ -214,6 +214,35 @@ bool modem_is_nbiot(void)
     return lte_lc_lte_mode_get(&mode) == 0 && mode == LTE_LC_LTE_MODE_NBIOT;
 }
 
+/* Wait for registration by polling, feeding the watchdog every second.
+ *
+ * Never lte_lc_connect(): it ends in a semaphore take of up to
+ * CONFIG_LTE_NETWORK_TIMEOUT (600 s by default, and this build does not
+ * override it) with nothing feeding the watchdog and nothing else in the
+ * main loop running — no ignition read, no accelerometer service, no
+ * telemetry, no console output.  A unit that entered it in bad coverage
+ * looked wedged from outside and stayed that way, because the watchdog it
+ * was outlasting had no teeth either.
+ *
+ * Returns the seconds waited, or -ETIMEDOUT with the radio left searching:
+ * the caller's loop is a better place to keep waiting than this one. */
+static int wait_for_registration(int timeout_s)
+{
+    for (int waited = 1; waited <= timeout_s; waited++) {
+        k_sleep(K_SECONDS(1));
+        watchdog_kick();
+
+        int reg = modem_get_network_status();
+
+        if (reg == 1 || reg == 5) {
+            s_connected = true;
+            network_ready = true;
+            return waited;
+        }
+    }
+    return -ETIMEDOUT;
+}
+
 /* Drop the link and make the modem choose a cell/PLMN from scratch.
  *
  * A stationary unit can sit on one marginal cell for hours: telemetry is a few
@@ -246,37 +275,55 @@ int modem_rescan_plmn(int timeout_s)
         return err;
     }
 
-    for (int waited = 0; waited < timeout_s; waited++) {
-        k_sleep(K_SECONDS(1));
-        watchdog_kick();
+    int waited = wait_for_registration(timeout_s);
 
-        int reg = modem_get_network_status();
-        if (reg == 1 || reg == 5) {
-            s_connected = true;
-            network_ready = true;
-            LOG_INF("re-registered after %ds on %s", waited + 1, modem_rat());
-            return 0;
-        }
+    if (waited < 0) {
+        LOG_WRN("no registration %ds after re-scan", timeout_s);
+        return -ETIMEDOUT;
     }
-
-    LOG_WRN("no registration %ds after re-scan", timeout_s);
-    return -ETIMEDOUT;
+    LOG_INF("re-registered after %ds on %s", waited, modem_rat());
+    return 0;
 }
 
-int modem_connect(void)
+/* Reapply everything the radio needs and take it out of offline, without
+ * waiting to see whether it registers.
+ *
+ * Split out because a modem that has just been reinitialised — by the
+ * fault handler's reset thread, or by modem_recover()'s last-resort restart
+ * — comes back at CFUN=0 with none of this in place: no APN, no %REL14FEAT,
+ * no %RAI, and +COPS wherever modem NVM left it.  Registration alone would
+ * then come back without RAI, quietly costing the GNSS duty cycle the whole
+ * design depends on.  Idempotent, so a caller that is not sure whether the
+ * radio needs it can just call it. */
+int modem_radio_up(void)
 {
     modem_set_apn(g_settings.apn);
 
     apply_link_settings();
 
-    LOG_INF("connecting (this can take 30s+)...");
-    int err = lte_lc_connect();
+    int err = lte_lc_normal();
+
     if (err) {
-        LOG_ERR("lte_lc_connect: %d", err);
+        LOG_ERR("lte_lc_normal: %d", err);
+    }
+    return err;
+}
+
+int modem_connect(void)
+{
+    LOG_INF("connecting (this can take 30s+)...");
+
+    int err = modem_radio_up();
+
+    if (err) {
         return err;
     }
-    s_connected = true;
-    network_ready = true;
+
+    if (wait_for_registration(NETWORK_REGISTRATION_TIMEOUT) < 0) {
+        LOG_WRN("no registration after %ds — radio left searching",
+                NETWORK_REGISTRATION_TIMEOUT);
+        return -ETIMEDOUT;
+    }
 
     char resp[128];
     if (nrf_modem_at_cmd(resp, sizeof(resp), "AT+CEDRXRDP") == 0) {
@@ -460,6 +507,12 @@ bool modem_is_registered(void)
     return s_connected;
 }
 
+/* Escalates and returns immediately: bringing the radio back up is CFUN=1
+ * and nothing more, and STATE_IDLE is already polling for registration once
+ * a second while it services the ignition line, the K-wire keep-alive and
+ * the accelerometer.  Waiting for the network in here instead — which is
+ * what lte_lc_connect() did — stopped all of that for as long as the
+ * network stayed away. */
 int modem_recover(void)
 {
     /* Always drop the socket: it is cheap, it is local, and a stale one is
@@ -495,19 +548,22 @@ int modem_recover(void)
                 failing_ms / 1000);
         s_last_escalation = now;
         s_failing_since = 0;
+        s_connected = false;
+        network_ready = false;
         nrf_modem_lib_shutdown();
+        watchdog_kick();
         k_msleep(1000);
 
         int err = nrf_modem_lib_init();
 
+        watchdog_kick();
         if (err && err != -EALREADY) {
             LOG_ERR("modem reinit: %d", err);
             return err;
         }
         lte_lc_register_handler(lte_handler);
         modem_set_apn(g_settings.apn);
-        watchdog_kick();
-        err = lte_lc_connect();
+        err = lte_lc_normal();
         if (err) {
             LOG_ERR("reconnect: %d", err);
             return err;
@@ -520,12 +576,14 @@ int modem_recover(void)
         LOG_WRN("registered but unable to send for %lld s — CFUN cycle",
                 failing_ms / 1000);
         s_last_escalation = now;
+        s_connected = false;
+        network_ready = false;
         lte_lc_offline();
         k_msleep(2000);
         modem_set_apn(g_settings.apn);
         watchdog_kick();
 
-        int err = lte_lc_connect();
+        int err = lte_lc_normal();
 
         if (err) {
             LOG_ERR("reconnect: %d", err);

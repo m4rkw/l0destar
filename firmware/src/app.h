@@ -103,6 +103,7 @@ void settings_print(void);
 int  modem_init(void);
 int  modem_provision_tls(void);
 int  modem_connect(void);
+int  modem_radio_up(void);              /* settings + CFUN=1, no wait */
 int  modem_get_imei(char *out, size_t out_len);
 int  modem_get_network_status(void);   /* 1=home, 5=roaming */
 void modem_set_apn(const char *apn);
@@ -200,6 +201,7 @@ void        fota_notify_available(const char *ver);  /* fota=<ver> from the
                                           server response: check only if newer */
 bool        fota_check_requested(void);
 void        fota_confirm_image(void);  /* stop MCUboot reverting this image */
+bool        fota_image_on_probation(void); /* swapped in, not yet confirmed */
 /* 0 = no update, 1 = updating (reboots, does not return), <0 = check failed */
 int         fota_check(enum fota_ctx ctx);
 
@@ -235,6 +237,7 @@ void watchdog_kick(void);
 
 void reboot_now(void);
 void status_delay(long ms);   /* watchdog-aware sleep */
+const char *fatal_last_crash(void); /* "fatal:<reason>@<pc>" once, else NULL */
 
 /* Hardware modules */
 int  hw_gpio_init(void);

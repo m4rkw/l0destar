@@ -97,7 +97,10 @@ CREATE TABLE `log` (
 
   `fw`            VARCHAR(16)  DEFAULT NULL COMMENT 'running firmware version, carried forward',
   `dbg`           VARCHAR(255) DEFAULT NULL COMMENT 'debug counters, only after a fault',
-  `rst`           VARCHAR(64)  DEFAULT NULL COMMENT 'reset cause, only after a reset',
+  -- Every sticky RESETREAS bit the firmware saw, joined with '+', not a
+  -- single cause: "pin+sw+dbg+lockup" is one value.  The firmware formats
+  -- it into a 40-byte buffer, so 39 chars is the ceiling; do not narrow.
+  `rst`           VARCHAR(64)  DEFAULT NULL COMMENT 'reset cause(s), + joined, only after a reset',
 
   -- OBD-II over the K wire.  Only on vehicles with a K interface and only
   -- for the PIDs the ECU supports, so every column is independently NULL and

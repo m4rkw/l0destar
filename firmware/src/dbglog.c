@@ -579,6 +579,15 @@ const char *dbglog_reset_cause(void)
             }
             (void)hwinfo_clear_reset_cause();
         }
+
+        /* A crash reboots through sys_reboot(), so the register only ever
+         * says "sw" for it.  The handler's note says which one it was. */
+        const char *crash = fatal_last_crash();
+
+        if (crash) {
+            snprintf(s_cause + pos, sizeof(s_cause) - pos, "%s%s",
+                     pos ? "+" : "", crash);
+        }
     }
     return s_cause[0] ? s_cause : NULL;
 }

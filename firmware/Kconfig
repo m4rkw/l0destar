@@ -873,7 +873,7 @@ config APP_COAST_MAX_ITERATIONS
 
 config APP_BATCH_SIZE
 	int "Records per datagram while driving"
-	default 1
+	default 3
 	range 1 16
 	help
 	  Each send costs an RRC connection and, because GNSS and LTE share the

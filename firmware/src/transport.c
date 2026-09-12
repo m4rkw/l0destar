@@ -75,7 +75,12 @@ static int transport_resolve(void)
     char port_str[8];
     snprintf(port_str, sizeof(port_str), "%u", SERVER_PORT);
 
+    /* The modem's resolver, and it can sit on a query for tens of seconds
+     * when the link is marginal.  Nothing to slice, so bracket it with
+     * kicks: the lookup gets a full watchdog window to itself. */
+    watchdog_kick();
     int err = zsock_getaddrinfo(SERVER_HOST, port_str, &hints, &res);
+    watchdog_kick();
     if (err) {
         LOG_ERR("getaddrinfo(%s): %d", SERVER_HOST, err);
         return -EIO;
@@ -223,11 +228,17 @@ int transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms)
 
     uint8_t buf[UDP_PACKET_SIZE];
     int64_t deadline = k_uptime_get() + timeout_ms;
+    int stale = 0;
 
     for (;;) {
         int n = zsock_recv(s_sock, buf, sizeof(buf), 0);
         if (n < 0) {
-            if (errno != EAGAIN) LOG_WRN("recv: %d", errno);
+            if (errno != EAGAIN) {
+                LOG_WRN("recv: %d", errno);
+            } else if (stale) {
+                LOG_WRN("%d stale repl%s, none for this request in %d ms",
+                        stale, stale == 1 ? "y" : "ies", timeout_ms);
+            }
             /* A missed reply is routine when streaming; keep the socket. */
             if (!s_streaming || errno != EAGAIN) {
                 transport_close();
@@ -235,33 +246,48 @@ int transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms)
             return -errno;
         }
 
+        int err = -EPROTO;
+
         if (n < NONCE_LEN + TAG_LEN) {
             LOG_WRN("response too short: %d", n);
-            if (!s_streaming) transport_close();
-            return -EPROTO;
-        }
+        } else {
+            size_t pt_len;
 
-        size_t pt_len;
-        int err = crypto_decrypt(buf + NONCE_LEN, n - NONCE_LEN,
+            err = crypto_decrypt(buf + NONCE_LEN, n - NONCE_LEN,
                                  aad, imei_len + NONCE_LEN,
                                  buf,
                                  (uint8_t *)out_plaintext, out_len - 1,
                                  &pt_len);
-        if (err == 0) {
-            if (!s_streaming) transport_close();
-            out_plaintext[pt_len] = '\0';
-            return (int)pt_len;
+            if (err == 0) {
+                if (stale) {
+                    LOG_INF("skipped %d stale repl%s", stale,
+                            stale == 1 ? "y" : "ies");
+                }
+                if (!s_streaming) transport_close();
+                out_plaintext[pt_len] = '\0';
+                return (int)pt_len;
+            }
         }
 
-        /* When streaming, a reply that fails the tag check is one to a
-         * previous send that was still in flight when the drain ran.  The
-         * wanted one is behind it: keep reading until the deadline. */
+        /* Not a reply to this request.  The response AAD binds it to the
+         * request nonce, which is fresh per send, so a reply the server
+         * sent to an earlier datagram fails the tag check by construction —
+         * and on a slow link a reply routinely arrives after the window it
+         * was waited for, which made every one of them cost a warning, a
+         * closed socket and the RRC connection the next send had to build
+         * again.  The one being waited for may be right behind it, so keep
+         * reading until the deadline the caller set.  Nothing is trusted
+         * that does not authenticate: this only decides how long to listen.
+         */
         int64_t left = deadline - k_uptime_get();
-        if (!s_streaming || left <= 0) {
-            LOG_WRN("response decrypt failed: %d", err);
+
+        if (left <= 0) {
+            LOG_WRN("response decrypt failed: %d (%d stale skipped)",
+                    err, stale);
             if (!s_streaming) transport_close();
             return -EPROTO;
         }
+        stale++;
         LOG_DBG("stale reply skipped (%d), %lld ms left", err, left);
         tv.tv_sec  = left / 1000;
         tv.tv_usec = (left % 1000) * 1000;

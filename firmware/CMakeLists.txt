@@ -26,6 +26,7 @@ target_sources(app PRIVATE
     src/led.c
     src/watchdog.c
     src/reboot.c
+    src/fatal.c
 )
 
 # Interactive bring-up rig (board_test.sh) — bench builds only.

@@ -1,5 +1,132 @@
 # Changelog
 
+## 0.4.36
+
+### A fatal error halted the unit instead of rebooting it
+- **The firmware defines its own `k_sys_fatal_error_handler()`.**  Zephyr's
+default calls `arch_system_halt()`, which locks interrupts and spins
+forever, and `CONFIG_RESET_ON_FATAL_ERROR` (Nordic's opt-in reboot handler)
+was not enabled.  So any fatal error anywhere — bus fault, failed assert,
+stack overflow, a fault in any thread — killed the whole device: no
+telemetry, no console, no ignition wake and no accelerometer alerts, because
+interrupts were off, and nothing short of pulling power recovered it.  That
+is the state a unit was found in after a drive on 2026-09-12, dead for hours
+with the key having been cycled several times.
+- **The handler leaves a note before rebooting.**  Reason, PC and LR go into
+a `__noinit` struct that survives the warm reset, and dbglog folds them into
+the `rst=` field of the next record that reaches the server:
+`rst=sw+fatal:4@0x2a1c8` instead of a bare `rst=sw` that reads like a
+commanded reboot.  Enough to place the fault in the map file.
+
+### The watchdog is armed at the top of main(), not the end of bring-up
+- **Arming it last caused a FOTA revert loop.**  The nRF watchdog cannot be
+stopped once started and is not cleared by a soft reset, so after any
+reboot — a FOTA swap, a fatal error — the previous image's watchdog is
+still counting down its 12 s window while the new image boots.  With
+`watchdog_init()` at the end of bring-up, behind the modem connect and the
+A-GNSS fetch, the app did not take ownership until about eleven seconds in
+and the watchdog fired first, at the same point every boot.  A swapped-in
+image therefore never reached `fota_confirm_image()`, MCUboot reverted it,
+the old image downloaded it again, and the unit spent 300 KB a cycle going
+nowhere.  Armed at the top of `main()` the app takes ownership within a
+couple of hundred milliseconds — task_wdt allocates the same hardware
+channel, so the reload feeds the running watchdog — and every slow step in
+bring-up already kicks as it waits.
+- **The reset cause is logged at boot and cleared there.**  RESETREAS bits
+are sticky until something reads them, and until now that only happened
+when the first telemetry record was built.  A unit resetting during
+bring-up never got that far, so the bits accumulated and a reading of
+`sw+wdt` could not distinguish "rebooted, then watchdogged" from "one of
+these happened three boots ago".  Reading it at boot makes each line the
+cause of that one reset.  A unit already in a watchdog loop needs a pin
+reset or a power cycle, which is what stops the watchdog.
+
+### The watchdog was never armed
+- **`task_wdt_init()` is given the hardware watchdog, and the timeout
+callback lets it fire.**  Neither layer was active: Zephyr only configures
+the hardware fallback when `task_wdt_init()` is passed a device, and this
+passed NULL, so `CONFIG_TASK_WDT_HW_FALLBACK=y` did nothing; and task_wdt
+only reboots by itself for a channel registered with no callback, so the
+empty callback replaced that reboot with nothing.  A thread that stopped
+feeding was therefore never noticed — which is how a unit that blocked
+inside a modem call sat dead in a car for over an hour, ignoring the
+ignition and the accelerometer, until it was power-cycled by hand.  The
+callback deliberately does not call `sys_reboot()`: leaving the hardware
+watchdog unfed resets the SoC a couple of seconds later and RESETREAS then
+records a watchdog reset, so the next record carries `rst=wdt` rather than
+the `rst=sw` of an ordinary commanded reboot.
+- **`CONFIG_TASK_WDT_MIN_TIMEOUT` 100 ms -> 10 s.**  That symbol is how
+often the background timer feeds the hardware watchdog, so with the fallback
+finally armed it is also how often the CPU wakes during an engine-off sleep.
+The default would have been ten wakes a second for the whole sleep; at 10 s
+(the maximum the symbol allows) the cost is a rounding error against 134 uA.
+- **The sleep wait is sliced.**  An engine-off sleep waits up to an hour in
+one `k_sem_take`, far past the 32 s window, so it now waits in 20 s slices
+and feeds between them.  A slice that expires does not take the semaphore,
+so wake behaviour is unchanged.  Two operations that cannot be sliced — the
+A-GNSS REST fetch and the modem's DNS lookup — are bracketed with kicks
+instead, and the A-GNSS request timeout is 20 s rather than 30 s so that a
+full timeout still fits inside the window.
+
+### A modem crash recovers itself
+- **`CONFIG_NRF_MODEM_LIB_ON_FAULT_RESET_MODEM=y`** replaces the
+`DO_NOTHING` default.  A modem fault was logged and then ignored, and every
+modem call returned `-NRF_ESHUTDOWN` from then on: the unit stayed awake,
+fed and tracking GNSS, but mute.  Whether it ever came back depended on
+`s_connected` still reading true at the moment of the crash — if it did,
+`modem_recover()` reached its 30-minute restart branch eventually; if it
+did not, the escalation timer never started and nothing recovered it short
+of a reboot.  The library's reset thread now reinitialises within a second,
+and unlike a reboot it keeps the databuf backlog.
+- **`CONFIG_NRF_MODEM_LIB_FAULT_STRERROR=y`** so the fault line names the
+reason (`NRF_MODEM_FAULT_BUS`) instead of printing a bare `0x4`.  It is an
+ERR, so dbglog carries it to the server.
+- **STATE_IDLE brings the radio back up.**  A reinitialised modem comes back
+at CFUN=0 with no APN, no `%REL14FEAT` and no `%RAI`, and nothing awake put
+those back — so the fix above on its own would have traded "mute until
+reboot" for "mute until the next key cycle".  While unregistered, the idle
+poll now calls `modem_radio_up()` (settings + CFUN=1, no wait) every
+`APP_NETWORK_RETRY_INTERVAL`, which until now was defined and referenced by
+nothing.  Not a blocking connect: the one-second poll stays in charge, so
+the ignition line and the K-wire keep-alive keep being serviced.
+
+### A late reply no longer costs the socket
+- **A response that fails the tag check is skipped, not treated as the end
+of the exchange.**  The response AAD binds a reply to the request nonce,
+which is fresh random bytes per send, so a reply the server sent to an
+earlier datagram cannot authenticate against the current one — by design.
+Track mode already knew that and kept reading; the normal path did not, and
+logged `psa_aead_decrypt: -149` / `response decrypt failed: -13` and closed
+the socket instead, so the next send had to build a new RRC connection,
+which made the next reply later still.  Both paths now read on until the
+caller's deadline and report the skipped count with the fresh reply (INF) or
+with the failure (WRN), which also distinguishes "the reply was late" from
+"the only reply we got would not decrypt".  Nothing that fails to
+authenticate is ever acted on; this only changes how long the socket
+listens.
+- **The response window is 4 s rather than 2 s** (`RESPONSE_TIMEOUT_MS`).
+RAI releases the radio after each datagram, so a reply arrives after an
+idle-to-connected transition and possibly a paging cycle, which two seconds
+does not reliably cover on LTE-M.  Only paid when a reply is late or lost,
+and only on the sends that ask for one.
+
+### Modem recovery no longer blocks the whole firmware
+- **`lte_lc_connect()` is gone from `modem_connect()` and
+`modem_recover()`.**  It ends in a semaphore take of up to
+`CONFIG_LTE_NETWORK_TIMEOUT` — 600 s by default, and this build never
+overrode it.  Both escalation branches called it, so a unit that reached the
+CFUN cycle or the modem restart in bad coverage stopped doing everything
+else for up to ten minutes at a time: no ignition read, no accelerometer
+service, no K-line keep-alive, no console output, and no watchdog kick.
+From outside it was indistinguishable from a dead unit.
+- Recovery now brings the radio up with `lte_lc_normal()` and returns.
+STATE_IDLE already polls registration once a second while servicing
+everything else, and records an ignition change that happens during the
+outage, so waiting inside the recovery call bought nothing.
+`modem_connect()` waits with the same polled helper `modem_rescan_plmn()`
+uses, bounded by `APP_NETWORK_REGISTRATION_TIMEOUT` (60 s) and feeding the
+watchdog each second, and leaves the radio searching when it gives up.
+
 ## 0.4.32
 
 ### Batch size is a build-time option

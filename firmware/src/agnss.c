@@ -126,6 +126,7 @@ int agnss_fetch(void *agnss_request)
 		LOG_INF("JWT needs modem time; waiting for NTP fallback...");
 		for (int i = 0; i < 15; i++) {
 			k_msleep(1000);
+			watchdog_kick();
 			err = nrf_cloud_jwt_generate(0, jwt_buf, sizeof(jwt_buf));
 			if (!err) break;
 		}
@@ -138,7 +139,12 @@ int agnss_fetch(void *agnss_request)
 	struct nrf_cloud_rest_context rest_ctx = {
 		.connect_socket = -1,
 		.keep_alive = false,
-		.timeout_ms = 30000,
+		/* Inside the watchdog window (WATCHDOG_TIMEOUT_S): this is one
+		 * blocking call that cannot be sliced, so it has to fit between
+		 * two kicks rather than outlast them.  Ample for a few KB with
+		 * the radio handed to LTE below, and a miss is not fatal — GNSS
+		 * asks again itself, the first fix just takes longer. */
+		.timeout_ms = 20000,
 		.auth = jwt_buf,
 		.rx_buf = rx_buf,
 		.rx_buf_len = sizeof(rx_buf),
@@ -182,7 +188,9 @@ int agnss_fetch(void *agnss_request)
 		LOG_INF("GNSS paused for the download (shared RF front-end)");
 	}
 
+	watchdog_kick();
 	err = nrf_cloud_rest_agnss_data_get(&rest_ctx, &req, &result);
+	watchdog_kick();
 
 	if (paused) {
 		gnss_resume();

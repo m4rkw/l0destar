@@ -17,6 +17,16 @@
 #define TLS_PORT            65481
 #define DTLS_PORT           5684
 #define UDP_PACKET_SIZE     1200
+/* How long a send that asked for a reply listens for it.  Two seconds was
+ * too tight for LTE-M: RAI releases the radio after each datagram, so the
+ * reply arrives after an idle-to-connected transition and, if the modem has
+ * already gone idle, a paging cycle on top.  A reply later than the window
+ * is not lost — it lands during the next exchange, where it fails the tag
+ * check against that request's nonce — so waiting a little longer here is
+ * what stops a slow link turning into a stream of decrypt warnings.  Only
+ * paid when a reply is actually late or lost, and only on the sends that
+ * ask for one (transitions, standstill, and every APP_RESP_POLL_S). */
+#define RESPONSE_TIMEOUT_MS 4000
 #define TLS_SEC_TAG         1
 
 /* Fallback PSK — all zeros disables sends.  Real keys go in local.conf
@@ -86,6 +96,18 @@
 #define MODEM_STUCK_CFUN_S          CONFIG_APP_MODEM_STUCK_CFUN_S
 #define MODEM_STUCK_RESET_S         CONFIG_APP_MODEM_STUCK_RESET_S
 
+/* -- watchdog -------------------------------------------------------------- */
+/* How long any awake loop may go without feeding the watchdog.  Every long
+ * operation in the firmware kicks as it waits (status_delay, gnss_collect,
+ * the FOTA download, the registration polls), so this is a real ceiling on
+ * one iteration, not a budget to be spent. */
+#define WATCHDOG_TIMEOUT_S          32
+/* The engine-off sleep waits up to an hour in one k_sem_take, far past the
+ * window above, so it waits in slices this long and kicks between them.  A
+ * slice that times out does not take the semaphore, so wake behaviour is
+ * unchanged; it costs one CPU wake every 20 s, well under a microamp. */
+#define WATCHDOG_SLEEP_SLICE_S      20
+
 /* -- buffers --------------------------------------------------------------- */
 #define DATA_LIMIT                  2500
 /* Records per datagram while driving.  Each send costs an RRC connection
@@ -105,6 +127,15 @@
 #define BATCH_HEADROOM              400
 #define BATCH_FLUSH_BYTES           (UDP_PACKET_SIZE - 64 - BATCH_HEADROOM)
 #define SPEED_MIN_SATS              4
+/* Key-off means the vehicle is stopped, but GNSS speed does not settle to
+ * exactly zero at a standstill: multipath and the receiver's own filter
+ * leave a residual of a km/h or two, and the last fix before the key turned
+ * can be a second or so old.  A record that says "ignition off at 2.4 km/h"
+ * puts a phantom crawl on the end of every journey.  So on the ignition-off
+ * record, and only there, a GNSS speed below this reads as stopped and goes
+ * out as 0.  2 mph in km/h; above it the vehicle really was still rolling
+ * (coasting to a stop, or the key cut while moving) and the figure stands. */
+#define IGN_OFF_STOPPED_KMH         3.22f
 
 /* -- hardware presence flags (compiled-out paths) -------------------------- */
 #define LOW_POWER_STANDBY           1

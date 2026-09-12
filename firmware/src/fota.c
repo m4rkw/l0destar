@@ -371,6 +371,14 @@ bool fota_check_requested(void)
     return s_forced;
 }
 
+/* True while MCUboot is still waiting to be told this image works: it was
+ * swapped in as BOOT_UPGRADE_TEST and any reset before fota_confirm_image()
+ * runs takes it back out again. */
+bool fota_image_on_probation(void)
+{
+    return !boot_is_img_confirmed();
+}
+
 void fota_confirm_image(void)
 {
     /* A swapped-in image boots as BOOT_UPGRADE_TEST: unless it confirms
@@ -677,6 +685,7 @@ void fota_request_check(void)   { }
 void fota_notify_available(const char *ver) { ARG_UNUSED(ver); }
 bool fota_check_requested(void) { return false; }
 void fota_confirm_image(void)   { }
+bool fota_image_on_probation(void) { return false; }
 int  fota_check(enum fota_ctx ctx) { ARG_UNUSED(ctx); return 0; }
 
 #endif /* CONFIG_APP_FOTA */
