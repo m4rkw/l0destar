@@ -40,6 +40,11 @@
 CONFIG_APP_PSK_HEX="<64 hex chars — same value as local.conf>"
 CONFIG_APP_SERVER_HOST="tracker.example.com"
 CONFIG_APP_MOVEMENT_ALARM=y
+# LTE-M only (GNSS stays on), matching prj.conf.  Stated here too because a
+# per-device build layers only [common] and the IMEI section over prj.conf, so
+# this is where a fleet-wide RAT change belongs.  Do not add a
+# CONFIG_LTE_MODE_PREFERENCE_* line: those depend on a dual-mode choice.
+CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=y
 
 [000000000000000]
 name    = example car

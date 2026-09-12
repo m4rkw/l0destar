@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Network mode is LTE-M only
+- **`CONFIG_LTE_NETWORK_MODE_LTE_M_GPS` replaces
+`CONFIG_LTE_NETWORK_MODE_LTE_M_NBIOT_GPS`.**  NB-IoT is no longer enabled in
+`%XSYSTEMMODE`, so the modem will not fall back to it when LTE-M is
+unreachable.  Registration has one RAT to scan instead of two; the cost is
+that a site with no LTE-M coverage now has nothing to fall back to.  GNSS is
+unaffected and stays enabled.
+- **`CONFIG_LTE_MODE_PREFERENCE_LTE_M` dropped.**  Every
+`CONFIG_LTE_MODE_PREFERENCE_*` symbol depends on one of the two dual-mode
+network choices, so keeping it alongside a single-RAT mode is an unmet
+dependency, and Zephyr's warnings-as-errors turns that into a failed build.
+lte_link_control now sends preference 0 (auto), the value `%XSYSTEMMODE`
+takes when one RAT is enabled.
+- **Set in `remote.conf.example`'s `[common]` as well as `prj.conf`.**  A
+per-device build layers only `[common]` and the IMEI section over `prj.conf`,
+so that is where a fleet-wide RAT change belongs.
+
 ### L-line sense streamer (bench)
 - **`CONFIG_APP_L_SENSE_TEST`** (v3.3+ only) samples L_SENSE at 5 Hz from
 boot and prints each reading in millivolts with its LOW/HIGH classification
