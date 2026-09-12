@@ -145,6 +145,12 @@ Flash over SWD (Connect Kit must be plugged in via USB):
 ./flash.sh
 ```
 
+`flash.sh` finishes with a hardware (pin) reset rather than pyocd's default
+soft reset. A soft reset leaves the nRF9151 in debug interface mode, where it
+draws milliamps in sleep until a pin reset or power cycle. The reset line is
+shared with the interface MCU, so USB re-enumerates and an open `screen`
+session must be reopened after each flash.
+
 Monitor serial output (the Connect Kit exposes a USB CDC-ACM console):
 
 ```bash
