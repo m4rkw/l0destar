@@ -197,6 +197,27 @@ def check_running(device, running, database, log=None):
     note_failed(device, staged, running, database, log)
 
 
+def note_check_in(imei, running, log=None):
+    """Reconcile the version in a manifest request against what we staged.
+
+    The same reconciliation as check_running(), reached from the firmware
+    HTTP side rather than from telemetry, because the boot check is the
+    earliest and most reliable thing a freshly updated device does: it needs
+    only a registered modem, where a telemetry record also needs a position.
+    """
+    log = log or logs.tls
+    imei = str(imei or '')
+    if not imei.isdigit() or not _version_ok(running):
+        return
+    database = db.tls
+    try:
+        device = database.one('SELECT * FROM `device` WHERE `imei` = %s', (imei,))
+        if device and device.get('fw_staged'):
+            check_running(device, running, database, log)
+    except Exception:
+        log.exception('check-in reconciliation failed for %s', imei)
+
+
 def blocked_version(imei, database=None):
     """Version withheld from this IMEI, or None."""
     imei = str(imei or '')
@@ -347,6 +368,15 @@ def serve_http(conn, ip, first_bytes, log=None):
         # no usable IMEI gets a 404 rather than somebody else's image.
         if path == '/fw/manifest.txt':
             req_imei = _query_param(query, 'imei')
+
+            # The power-on check carries v=<running version>, which settles
+            # a staged update without waiting for telemetry.  That matters:
+            # after a reboot the device's engine-off interval is back at its
+            # compiled default until a response restores it, so on a parked
+            # vehicle the next record can be a long way off — and the update
+            # verdict, including the notification, should not wait for a
+            # GNSS fix in a car park.  A no-op unless a version is staged.
+            note_check_in(req_imei, _query_param(query, 'v'), log)
 
             # Withheld from this device after it failed to boot here.  The
             # power-on check fetches a manifest unconditionally, so silence

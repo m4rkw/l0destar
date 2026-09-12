@@ -342,3 +342,47 @@ def test_blocked_manifest_refuses_without_a_404(monkeypatch, published):
     assert b'version=0.4.12' in body
     assert b'status=blocked' in body
     assert b'reason=' in body
+
+
+def test_manifest_check_in_confirms_the_update(monkeypatch, published, alerts):
+    # The boot check is the earliest thing a freshly updated device does, and
+    # it carries v=<running>.  Waiting for telemetry instead means waiting for
+    # a GNSS fix, and after a reboot the engine-off interval is back at its
+    # default until a response restores it — on a parked car that is a long
+    # wait for a notification about something that already happened.
+    seen = {}
+    monkeypatch.setattr(firmware, 'blocked_version', lambda imei, database=None: None)
+    monkeypatch.setattr(firmware, 'check_running',
+                        lambda device, running, database, log=None:
+                            seen.update(imei=device['imei'], running=running))
+
+    class OneDevice:
+        def one(self, sql, args=None):
+            return {'id': 1, 'imei': args[0], 'name': 'Car', 'fw_staged': '0.4.12'}
+
+    monkeypatch.setattr(firmware.db, 'tls', OneDevice())
+    session = Session()
+    try:
+        session.request('GET /fw/manifest.txt?imei=%s&v=0.4.12' % IMEI)
+    finally:
+        session.close()
+    assert seen == {'imei': IMEI, 'running': '0.4.12'}
+
+
+def test_manifest_check_in_ignores_junk(monkeypatch, published):
+    called = []
+    monkeypatch.setattr(firmware, 'blocked_version', lambda imei, database=None: None)
+    monkeypatch.setattr(firmware, 'check_running',
+                        lambda *a, **k: called.append(a))
+
+    class Boom:
+        def one(self, sql, args=None):
+            raise AssertionError('should not reach the database')
+
+    monkeypatch.setattr(firmware.db, 'tls', Boom())
+    session = Session()
+    try:
+        session.request('GET /fw/manifest.txt?imei=%s&v=nightly' % IMEI)
+    finally:
+        session.close()
+    assert called == []
