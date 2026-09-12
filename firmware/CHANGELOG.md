@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.42
+
+### A lost datagram no longer silences a parked unit
+- **A reboot always leaves something to wake on.**  Settings live in RAM, so
+every boot starts at the compiled `APP_ENGINE_OFF_LOOP_INTERVAL` — 0 on
+these builds, meaning "never wake to report" — and only a server response
+restores the real value.  One lost record was therefore enough to silence a
+parked unit indefinitely.  Observed on 2026-09-12: the unit booted into
+0.4.39 at 19:21:18, sent its post-boot record (the modem accepted the
+datagram; the server never saw it, and logged no rejection), got no
+response, and then had no telemetry timer for 90 minutes until the key
+turned — uptime 5519 s on the next record, so it had neither rebooted nor
+crashed.  `ENGINE_OFF_BOOT_INTERVAL` (900 s) is the cadence until the first
+response, which then replaces it, including with 0.
+- **`fw=` and `rst=` are cleared by the reply, not by the send.**
+`s_fw_pending` was cleared as soon as `transport_send()` accepted the
+datagram, so the once-per-boot diagnostics were discarded even when nothing
+received them — precisely the case where the reset cause is worth having.
+They now clear on a decodable response, the only proof the record arrived,
+and ride the next record until then.  It is why the boot above is
+unexplained: its `rst=` went out once and was lost.
+
 ## 0.4.39
 
 ### A waiting update installs at key off

@@ -198,12 +198,16 @@ def check_running(device, running, database, log=None):
 
 
 def note_check_in(imei, running, log=None):
-    """Reconcile the version in a manifest request against what we staged.
+    """Confirm a staged update from the boot check, and only confirm.
 
-    The same reconciliation as check_running(), reached from the firmware
-    HTTP side rather than from telemetry, because the boot check is the
-    earliest and most reliable thing a freshly updated device does: it needs
-    only a registered modem, where a telemetry record also needs a position.
+    A device fetches its manifest with v=<running version> moments after
+    booting, which settles a successful update long before telemetry does.
+    But the request says nothing trustworthy about *failure*: the publisher
+    verifies every push with v=0.0.0 from the build host, and reading that
+    as "the device is running 0.0.0" marked a perfectly good update as
+    failed and withheld it.  So only an exact match with the staged version
+    counts here.  A revert is reported by the device itself
+    (F,fota,failed) or inferred from the version in its telemetry.
     """
     log = log or logs.tls
     imei = str(imei or '')
@@ -212,7 +216,7 @@ def note_check_in(imei, running, log=None):
     database = db.tls
     try:
         device = database.one('SELECT * FROM `device` WHERE `imei` = %s', (imei,))
-        if device and device.get('fw_staged'):
+        if device and device.get('fw_staged') == str(running).strip():
             check_running(device, running, database, log)
     except Exception:
         log.exception('check-in reconciliation failed for %s', imei)
@@ -385,8 +389,13 @@ def serve_http(conn, ip, first_bytes, log=None):
             # still take a newer one.  Firmware predating status= sees
             # version=<blocked>, which is never newer than what it is
             # running, so it does nothing either.
+            # Version-scoped, like every other part of this: the refusal
+            # covers the build that failed here, not the device.  Once a
+            # newer one is published it is served normally — that is the
+            # fix arriving, and blocking it would strand the unit on the
+            # broken build with no way back.
             blocked = blocked_version(req_imei)
-            if blocked:
+            if blocked and latest_version(req_imei) == blocked:
                 body = ('version=%s\nstatus=blocked\n'
                         'reason=failed to boot on this device\n'
                         % blocked).encode()

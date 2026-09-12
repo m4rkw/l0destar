@@ -344,6 +344,44 @@ def test_blocked_manifest_refuses_without_a_404(monkeypatch, published):
     assert b'reason=' in body
 
 
+def test_manifest_check_in_ignores_a_mismatch(monkeypatch, published):
+    # The publisher verifies every push with v=0.0.0 from the build host.
+    # Read as a device check-in that would mark the staged version failed
+    # and withhold it — which is exactly what happened on 2026-09-12.
+    called = []
+    monkeypatch.setattr(firmware, 'blocked_version', lambda imei, database=None: None)
+    monkeypatch.setattr(firmware, 'check_running',
+                        lambda *a, **k: called.append(a))
+
+    class Staged:
+        def one(self, sql, args=None):
+            return {'id': 1, 'imei': args[0], 'name': 'Car', 'fw_staged': '0.4.12'}
+
+    monkeypatch.setattr(firmware.db, 'tls', Staged())
+    session = Session()
+    try:
+        session.request('GET /fw/manifest.txt?imei=%s&v=0.0.0' % IMEI)
+    finally:
+        session.close()
+    assert called == []
+
+
+def test_blocked_manifest_yields_to_a_newer_build(monkeypatch, published, alerts):
+    # 0.4.12 is published and 0.4.9 is blocked: the refusal is scoped to the
+    # build that failed, so the newer one is served normally.  Blocking it
+    # would strand the unit on the broken build with no way back.
+    monkeypatch.setattr(firmware, 'blocked_version', lambda imei, database=None: '0.4.9')
+    monkeypatch.setattr(firmware, 'note_check_in', lambda *a, **k: None)
+    session = Session()
+    try:
+        head, body = session.request('GET /fw/manifest.txt?imei=%s&v=0.4.9' % IMEI)
+    finally:
+        session.close()
+    assert '200 OK' in head
+    assert b'status=blocked' not in body
+    assert b'version=0.4.12' in body
+
+
 def test_manifest_check_in_confirms_the_update(monkeypatch, published, alerts):
     # The boot check is the earliest thing a freshly updated device does, and
     # it carries v=<running>.  Waiting for telemetry instead means waiting for
@@ -359,6 +397,7 @@ def test_manifest_check_in_confirms_the_update(monkeypatch, published, alerts):
     class OneDevice:
         def one(self, sql, args=None):
             return {'id': 1, 'imei': args[0], 'name': 'Car', 'fw_staged': '0.4.12'}
+
 
     monkeypatch.setattr(firmware.db, 'tls', OneDevice())
     session = Session()

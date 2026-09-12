@@ -21,7 +21,13 @@ static void settings_defaults(void)
     strncpy(g_settings.apn,  apn,  sizeof(g_settings.apn) - 1);
     strncpy(g_settings.user, DEFAULT_USER, sizeof(g_settings.user) - 1);
     strncpy(g_settings.pwd,  DEFAULT_PASS, sizeof(g_settings.pwd) - 1);
-    g_settings.loop_interval  = ENGINE_OFF_LOOP_INTERVAL;
+    /* Not the compiled default alone: it is 0 on these builds, and 0 means
+     * "never wake to report", which leaves a rebooted unit with nothing to
+     * bring it back if its first record does not get through.  See
+     * ENGINE_OFF_BOOT_INTERVAL. */
+    g_settings.loop_interval  = ENGINE_OFF_LOOP_INTERVAL > 0
+                                    ? ENGINE_OFF_LOOP_INTERVAL
+                                    : ENGINE_OFF_BOOT_INTERVAL;
     g_settings.movement_alarm = DEFAULT_MOVEMENT_ALARM;
     g_settings.track_mode     = 0;      /* the server switches it on */
 

@@ -40,6 +40,17 @@
 
 /* -- intervals (seconds unless noted) -------------------------------------- */
 #define ENGINE_OFF_LOOP_INTERVAL    CONFIG_APP_ENGINE_OFF_LOOP_INTERVAL
+/* Engine-off cadence until the server has said what it wants, which is the
+ * state every boot starts in: settings live in RAM, so a reboot forgets the
+ * interval the server set and only a response brings it back.  With the
+ * compiled default of 0 — "never wake to report" — a single lost datagram
+ * is enough to silence a parked unit indefinitely: on 2026-09-12 the record
+ * sent 30 s after a FOTA reboot never reached the server, so no response
+ * came, so nothing scheduled a wake, and the unit sat idle for 90 minutes
+ * until the key turned.  This is the retry cadence for that state, and the
+ * first response replaces it — including with 0 for a unit the server
+ * genuinely wants quiet. */
+#define ENGINE_OFF_BOOT_INTERVAL    900
 #define IGNITION_ON_SLEEP_INTERVAL  CONFIG_APP_IGNITION_ON_SLEEP_INTERVAL
 #define VOLTAGE_POLL_INTERVAL       CONFIG_APP_VOLTAGE_POLL_INTERVAL
 #define BATTERY_CHECK_INTERVAL      CONFIG_APP_BATTERY_CHECK_INTERVAL

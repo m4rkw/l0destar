@@ -657,6 +657,14 @@ int send_data(void)
             char cmd[128] = "";
             int matched = sscanf(resp, "1,%d,%d,%127[^\n]",
                                  &interval, &ma, cmd);
+            /* A decodable response is proof the datagram it answers
+             * arrived, which is the only evidence that fw= and rst= landed.
+             * Clearing s_fw_pending on the send instead threw the boot
+             * diagnostics away whenever the record was lost — and a lost
+             * boot record is exactly the case where the reset cause is
+             * worth having.  Left set, they ride the next record. */
+            s_fw_pending = false;
+
             if (matched >= 2) {
                 if (!send_int_to_server) {
                     if (interval >= 0) g_settings.loop_interval = interval;
@@ -671,7 +679,6 @@ int send_data(void)
     }
 
     send_int_to_server = false;
-    s_fw_pending = false;
     alert_send();
     return 1;
 }
