@@ -908,8 +908,8 @@
         "uuid": "541192ef-b00d-4e78-9ba2-020e6675d607"
       },
       {
-        "filename": "iso-9141_interface.kicad_sch",
-        "name": "ISO-9141 Interface",
+        "filename": "kwire_interface.kicad_sch",
+        "name": "K-wire Interface (page 10)",
         "uuid": "a19a758b-308a-40ee-b23e-9b8799ce601f"
       },
       {
@@ -970,7 +970,7 @@
     ],
     [
       "a19a758b-308a-40ee-b23e-9b8799ce601f",
-      "ISO-9141 Interface"
+      "K-wire Interface (page 10)"
     ],
     [
       "beed275b-497f-4836-8be5-9728b43e190d",

@@ -3990,7 +3990,7 @@
 			)
 		)
 	)
-	(global_label "CAN_H_ISO9141_K"
+	(global_label "CAN_H_KWIRE_K"
 		(shape input)
 		(at 38.1 33.02 180)
 		(fields_autoplaced yes)
@@ -4002,7 +4002,7 @@
 		)
 		(uuid "67029c8a-8ca7-46fe-bf29-f891e16aff85")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 17.9396 33.02 0)
+			(at 20.1772 33.02 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4230,7 +4230,7 @@
 			)
 		)
 	)
-	(global_label "CAN_L_ISO9141_L"
+	(global_label "CAN_L_KWIRE_L"
 		(shape input)
 		(at 60.96 27.94 0)
 		(fields_autoplaced yes)
@@ -4242,7 +4242,7 @@
 		)
 		(uuid "cf68537b-9ab1-4b4a-8479-dd01e7b7fc38")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 80.5761 27.94 0)
+			(at 78.3385 27.94 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)

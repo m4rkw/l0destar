@@ -1539,7 +1539,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "l0destar ISO-9141 interface"
+	(text "l0destar k-wire interface"
 		(exclude_from_sim no)
 		(at 186.436 189.738 0)
 		(effects
@@ -1612,7 +1612,7 @@
 		)
 		(uuid "c37c9d87-c017-4c63-9721-f4e84e487429")
 	)
-	(text "ISO-9141 interface (K-line) using TJA1027T\nTVS on the K and L wires\nL line can be pulled low via L_SEND\nAL5809-90 added to limit current to 90mA in the event that L is shorted to 12V\nSense signal added to detect short to 12V on the L line"
+	(text "K-wire interface using TJA1027T\nTVS on the K and L wires\nL line can be pulled low via L_SEND\nAL5809-90 added to limit current to 90mA in the event that L is shorted to 12V\nSense signal added to detect short to 12V on the L line"
 		(exclude_from_sim no)
 		(at 179.07 173.355 0)
 		(effects
