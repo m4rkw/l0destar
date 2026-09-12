@@ -144,6 +144,32 @@ draws milliamps in sleep until a pin reset or power cycle. The reset line is
 shared with the interface MCU, so USB re-enumerates and an open `screen`
 session must be reopened after each flash.
 
+Both `flash.sh` and `reset.sh` pass `-O auto_unlock=false` to the pyocd calls
+that must not destroy the image on the chip. pyocd defaults that option to
+true, and every connect to an nRF91 reads CTRL-AP `APPROTECTSTATUS` first; a
+part reporting APPROTECT engaged gets a CTRL-AP `ERASEALL` so the debugger can
+attach again. The erase takes about a second and wipes application flash *and*
+UICR, which looks exactly like the board bricking itself on an innocent reset.
+
+That matters because the pin reset returns the SoC to normal mode, where
+APPROTECT is re-armed in hardware at every reset. The firmware clears it on
+boot (`CONFIG_NRF_APPROTECT_USE_UICR=y`) but only while `UICR.APPROTECT` reads
+Unprotected (`0x50FA50FA`), and a mass erase leaves UICR blank -- so one erase
+puts the board in a state where the next reset erases it again. `flash.sh`
+keeps auto-unlock on for the load step alone, where pyocd restores UICR and
+reprograms the firmware straight after. Modem firmware is outside the erased
+region and survives.
+
+Reboot the board without reflashing:
+
+```bash
+./reset.sh
+```
+
+It uses `sysresetreq`, which resets the nRF9151 core only and leaves USB and an
+open `screen` session alone. If it fails reporting APPROTECT, the board booted
+locked; `./flash.sh` is the recovery path.
+
 Monitor serial output (the Connect Kit exposes a USB CDC-ACM console):
 
 ```bash
