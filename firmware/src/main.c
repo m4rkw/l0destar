@@ -304,6 +304,11 @@ static int  s_saved_loop_interval = -1;
  * previous_ignition means "what the server has been told", so it is latched
  * from this rather than from a fresh read — see STATE_SEND. */
 static char s_record_ignition;
+/* An ignition change was recorded while the modem had no registration.  The
+ * record is in the send buffer; when the network returns it goes straight
+ * out rather than being collected again with a later time and position. */
+static bool s_transition_buffered;
+static bool s_wait_logged;
 
 void movement_reset(void)
 {
@@ -1344,15 +1349,61 @@ int main(void)
         case STATE_IDLE:
 
             if (!network_ready) {
-                LOG_INF("waiting for network registration...");
                 int reg = modem_get_network_status();
                 if (reg == 1 || reg == 5) {
                     network_ready = true;
                     LOG_INF("network ready");
                 } else {
-                    status_delay(5000);
+                    /* Nothing can be sent, but the key turning still has
+                     * to be captured now: the modem can spend a quarter of
+                     * an hour searching, and building the ignition-off
+                     * record only once it is back put the end of a drive
+                     * at the wrong time.  GNSS is still running, so take
+                     * whatever fix it has and build the record from that
+                     * (or from the last known position if it has none).
+                     * It waits in the send buffer with the rest of the
+                     * batch. */
+                    char told = s_buffered_records > 0 ? s_record_ignition
+                                                       : previous_ignition;
+
+                    if (previous_ignition != -1 && ignition != told) {
+                        LOG_WRN("ignition %s with no registration — "
+                                "recording now, sending when it returns",
+                                ignition == 0 ? "ON" : "OFF");
+                        struct gnss_fix fix = {0};
+                        if (gnss_collect(2000, &fix) == 0 && fix.valid) {
+                            g_gnss = fix;
+                        }
+                        use_cached_gps = true;
+                        force_record = true;
+                        s_record_ignition = ignition;
+                        if (collect_data(ignition) > 0) {
+                            s_buffered_records++;
+                            s_transition_buffered = true;
+                        }
+                        force_record = false;
+                        use_cached_gps = false;
+                    }
+                    if (!s_wait_logged) {
+                        s_wait_logged = true;
+                        LOG_INF("waiting for network registration...");
+                    }
+                    /* One second, not five: the K-line keep-alive runs from
+                     * the top of this loop and the ECU drops the session
+                     * after P3max (5 s) of silence. */
+                    status_delay(1000);
                     break;
                 }
+            }
+            s_wait_logged = false;
+
+            /* The registration handler can flip network_ready on its own,
+             * so this is outside the poll above.  Send what was recorded
+             * during the outage instead of collecting it again. */
+            if (s_transition_buffered) {
+                s_transition_buffered = false;
+                s_state = STATE_SEND;
+                break;
             }
 
             battery_v = battery_read_voltage();
@@ -1488,6 +1539,7 @@ int main(void)
             led_sent();
             s_last_send_ms = k_uptime_get();
             s_buffered_records = 0;
+            s_transition_buffered = false;
             data_reset();
 
             if (read_udp_response && last_send_ok) {

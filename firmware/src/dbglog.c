@@ -28,6 +28,13 @@
  * and text) are collapsed into the first plus a "repeated N times" marker,
  * since a stuck link says the same thing every cycle.
  *
+ * In deferred mode the log core can also throw messages away itself when
+ * its buffer overflows before the log thread drains it.  That count is
+ * global and level-blind: it is almost entirely INF traffic bound for the
+ * console (a send logs every record in the batch back to back), so it is
+ * kept apart from ours and reported as "console lines dropped" rather than
+ * being mistaken for warnings that never made it here.
+ *
  * DRAINING
  * --------
  * send_data() appends as many lines as fit its budget to the outgoing record
@@ -88,9 +95,13 @@ static struct ring s_tail = { .buf = s_tail_buf, .size = TAIL_SIZE };
 
 static struct k_spinlock s_lock;
 
-/* Lines lost: evicted from the tail, or dropped by the log core itself in
- * deferred mode.  Reported as one marker line on the next drain. */
+/* Lines lost from the tail ring (evicted, or refused during a send).
+ * Reported as one marker line on the next drain. */
 static uint32_t s_dropped;
+
+/* Messages of any level the log core discarded before any backend saw them
+ * (deferred mode only).  Reported separately: see the header comment. */
+static uint32_t s_core_dropped;
 
 /* Duplicate collapsing: the last line stored, minus its timestamp. */
 static char     s_last[DBG_LINE_MAX + 1];
@@ -101,6 +112,7 @@ static int64_t  s_repeat_ms;
 static uint16_t s_take_head;
 static uint16_t s_take_tail;
 static uint32_t s_take_dropped;
+static uint32_t s_take_core;
 
 static bool ring_fits(const struct ring *r, uint8_t len)
 {
@@ -351,13 +363,14 @@ static void process(const struct log_backend *const backend,
 }
 
 /* Deferred mode only: the core ran out of message buffer and threw some
- * away before any backend saw them.  Count them with ours. */
+ * away before any backend saw them.  Counted apart from our own losses:
+ * the figure covers every level, and in practice it is console INF output. */
 static void dropped(const struct log_backend *const backend, uint32_t cnt)
 {
     ARG_UNUSED(backend);
 
     k_spinlock_key_t key = k_spin_lock(&s_lock);
-    s_dropped += cnt;
+    s_core_dropped += cnt;
     k_spin_unlock(&s_lock, key);
 }
 
@@ -385,6 +398,34 @@ size_t dbglog_pending(void)
     size_t n = (size_t)s_head.used + s_tail.used;
     k_spin_unlock(&s_lock, key);
     return n;
+}
+
+/* Append one "\nL,<uptime>,W,dbglog: <text>" marker if it fits.  Returns
+ * bytes written, or 0 when there was no room.  Called with the lock held. */
+static size_t put_marker(char *out, size_t max, const char *fmt, uint32_t n)
+{
+    char marker[DBG_LINE_MAX];
+    int len = snprintf(marker, sizeof(marker), "\nL,%lld,W,dbglog: ",
+                       (long long)k_uptime_get());
+
+    if (len < 0 || (size_t)len >= sizeof(marker)) {
+        return 0;
+    }
+    int m = snprintf(marker + len, sizeof(marker) - (size_t)len, fmt,
+                     (unsigned)n);
+
+    if (m < 0) {
+        return 0;
+    }
+    len += m;
+    if ((size_t)len >= sizeof(marker)) {
+        len = (int)sizeof(marker) - 1;
+    }
+    if ((size_t)len > max) {
+        return 0;
+    }
+    memcpy(out, marker, (size_t)len);
+    return (size_t)len;
 }
 
 /* Append lines from `r` as "\nL,<line>" until `max` is exhausted.  Returns
@@ -423,27 +464,43 @@ int dbglog_take(char *out, size_t max)
     s_take_head = 0;
     s_take_tail = 0;
     s_take_dropped = 0;
+    s_take_core = 0;
 
     flush_repeat();
 
     used += drain_ring(&s_head, out + used, max - used, &s_take_head);
 
-    /* Only once the head has gone out entirely: the marker sits between
-     * the onset and the recent lines, which is where the gap is. */
+    /* Only once the head has gone out entirely: the markers sit between
+     * the onset and the recent lines, which is where the gap is.  The tail
+     * follows only if every pending marker fitted, so the order on the
+     * server is always onset, losses, recovery. */
     if (s_take_head == s_head.lines) {
-        if (s_dropped > 0) {
-            char marker[DBG_LINE_MAX];
-            int n = snprintf(marker, sizeof(marker),
-                             "\nL,%lld,W,dbglog: %u lines dropped",
-                             (long long)k_uptime_get(), (unsigned)s_dropped);
+        bool markers_out = true;
 
-            if (n > 0 && used + (size_t)n <= max) {
-                memcpy(out + used, marker, (size_t)n);
-                used += (size_t)n;
+        if (s_dropped > 0) {
+            size_t n = put_marker(out + used, max - used,
+                                  "%u lines dropped", s_dropped);
+
+            if (n > 0) {
+                used += n;
                 s_take_dropped = s_dropped;
+            } else {
+                markers_out = false;
             }
         }
-        if (s_take_dropped == s_dropped) {
+        if (markers_out && s_core_dropped > 0) {
+            size_t n = put_marker(out + used, max - used,
+                                  "%u console lines dropped (log buffer "
+                                  "overflow)", s_core_dropped);
+
+            if (n > 0) {
+                used += n;
+                s_take_core = s_core_dropped;
+            } else {
+                markers_out = false;
+            }
+        }
+        if (markers_out) {
             used += drain_ring(&s_tail, out + used, max - used,
                                &s_take_tail);
         }
@@ -467,10 +524,12 @@ void dbglog_ack(bool sent)
             s_take_tail--;
         }
         s_dropped -= s_take_dropped;
+        s_core_dropped -= s_take_core;
     }
     s_take_head = 0;
     s_take_tail = 0;
     s_take_dropped = 0;
+    s_take_core = 0;
 
     k_spin_unlock(&s_lock, key);
 }

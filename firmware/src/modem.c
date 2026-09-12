@@ -28,20 +28,36 @@ struct cell_info g_cell;
 
 static bool s_connected;
 
+/* Uptime at which registration was last lost, 0 while registered.  Losing
+ * the network is logged at WRN so the outage and its length are in the
+ * captured log: a unit that sits silent for a quarter of an hour while the
+ * modem searches would otherwise leave no trace of why. */
+static int64_t s_lost_ms;
+
 static void lte_handler(const struct lte_lc_evt *evt)
 {
     switch (evt->type) {
-    case LTE_LC_EVT_NW_REG_STATUS:
-        LOG_INF("nw reg status: %d", evt->nw_reg_status);
-        if (evt->nw_reg_status == LTE_LC_NW_REG_REGISTERED_HOME ||
-            evt->nw_reg_status == LTE_LC_NW_REG_REGISTERED_ROAMING) {
-            s_connected = true;
-            network_ready = true;
+    case LTE_LC_EVT_NW_REG_STATUS: {
+        bool registered =
+            evt->nw_reg_status == LTE_LC_NW_REG_REGISTERED_HOME ||
+            evt->nw_reg_status == LTE_LC_NW_REG_REGISTERED_ROAMING;
+
+        if (registered && !s_connected && s_lost_ms) {
+            LOG_WRN("registered again after %lld s (status %d)",
+                    (k_uptime_get() - s_lost_ms) / 1000,
+                    evt->nw_reg_status);
+            s_lost_ms = 0;
+        } else if (!registered && s_connected) {
+            s_lost_ms = k_uptime_get();
+            LOG_WRN("registration lost (status %d) — waiting for the modem",
+                    evt->nw_reg_status);
         } else {
-            s_connected = false;
-            network_ready = false;
+            LOG_INF("nw reg status: %d", evt->nw_reg_status);
         }
+        s_connected = registered;
+        network_ready = registered;
         break;
+    }
     case LTE_LC_EVT_RRC_UPDATE:
         LOG_DBG("RRC mode: %s",
                 evt->rrc_mode == LTE_LC_RRC_MODE_CONNECTED

@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+### Registration outages: visible, and the key-off record no longer waits
+- The 16-minute silence on 2026-09-12 (08:51-09:07) was the modem losing
+LTE-M and searching until it found NB-IoT.  Registration changes were logged
+at INF, so the captured log showed nothing, and STATE_IDLE waits for
+registration before it looks at anything else, so the ignition-off record
+was built when the network came back rather than when the key turned: right
+position, 15 minutes late.  Losing and regaining registration now logs at
+WRN with the outage length, and the idle wait records an ignition change
+straight away from the current fix (or last known position) and sends it
+the moment registration returns instead of collecting it again.  The wait
+also polls every second rather than every five, so the K-line keep-alive
+stays inside P3max and the session is not dropped each time round.
+- **"dbglog: N lines dropped" every datagram** was the deferred log core
+overflowing its 1 KB buffer on every send (three ~300-byte record lines
+logged back to back, and the log thread only wakes on a 1 s timer or ten
+queued messages).  That count is global and level-blind, so the marker was
+reporting lost console INF lines as if they were lost warnings.  The buffer
+is now 4 KB with a wake threshold of 3, and dbglog keeps the core's count
+apart from its own, reported as "console lines dropped (log buffer
+overflow)".  Bench builds with `CONFIG_LOG_MODE_IMMEDIATE=y` warn that the
+two settings have no effect; that is expected.
+
+### IF MCU patch dropped - both fixes are upstream
+- makerdiary/nrf9151-connectkit#20, the follow-up that routes every IF MCU
+power-off path through the SEVONPEND-clearing helper, merged on 2026-09-10.
+`ifmcu/patches/` is gone and `ifmcu/build.sh` builds the Makerdiary clone
+unmodified; it now refuses a checkout that predates #20 rather than one that
+merely predates #19. Neither PR is in a published Makerdiary release (v2.0.0
+is from June 2026), so Connect Kits still need the IF MCU firmware built from
+current `main` and flashed once by hand, as QUICKSTART.md describes. An
+existing clone with the old patch applied needs `git checkout -- .` before
+`git pull`.
+
 ### L-line sense streamer (bench)
 - **`CONFIG_APP_L_SENSE_TEST`** (v3.3+ only) samples L_SENSE at 5 Hz from
 boot and prints each reading in millivolts with its LOW/HIGH classification
