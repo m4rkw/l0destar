@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.31
 
 ### Rail-fault alerts name the rail, not the domain
 - **`RAIL:<net> fail` replaces `RAIL:<domain> rail fail`.**  K_EN switches two
