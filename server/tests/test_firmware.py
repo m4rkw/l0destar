@@ -6,6 +6,7 @@ strict about ``206`` and ``Content-Range``, and a framing bug shows up as a
 device that downloads a corrupt image and refuses to boot it.
 """
 
+import datetime
 import os
 import socket
 import threading
@@ -196,3 +197,148 @@ def test_keep_alive_across_many_ranges(http, published):
                                   'Range: bytes=%d-%d\r\n' % (start, start + 2047))
         assert head.startswith('HTTP/1.1 206')
         assert len(body) == 2048
+
+
+# -- failed updates ----------------------------------------------------------
+#
+# An image that boots and dies is reverted by MCUboot, and the loop that
+# follows — advertise, download, revert, advertise — is what flattens a parked
+# vehicle's battery.  These drive the state machine directly with a fake
+# database, so they run without one; the SQL itself is covered by the
+# integration tests.
+
+class FakeDB:
+    """One device row, matched by the fragment of SQL each query carries."""
+
+    def __init__(self, **row):
+        self.row = {'fw_staged': None, 'fw_staged_at': None,
+                    'fw_blocked': None, 'fw_fail_count': 0}
+        self.row.update(row)
+
+    def one(self, sql, args=None):
+        return dict(self.row)
+
+    def query(self, sql, args=None):
+        if '`fw_staged` = %s' in sql:
+            self.row.update(fw_staged=args[0],
+                            fw_staged_at=datetime.datetime.now())
+        elif '`fw_blocked` = %s' in sql:
+            self.row.update(fw_staged=None, fw_staged_at=None,
+                            fw_blocked=args[0], fw_fail_count=args[1])
+        elif '`fw_blocked` = NULL' in sql:
+            self.row.update(fw_staged=None, fw_staged_at=None,
+                            fw_blocked=None, fw_fail_count=0)
+
+
+@pytest.fixture
+def alerts(monkeypatch):
+    sent = []
+    monkeypatch.setattr(firmware.notify, 'device_alert',
+                        lambda name, msg, pri: sent.append((msg, pri)))
+    return sent
+
+
+DEV = {'id': 1, 'imei': IMEI, 'name': 'Car'}
+
+
+def _dev(fake):
+    return {**DEV, **fake.row}
+
+
+def test_staged_then_running_confirms(alerts):
+    fake = FakeDB()
+    firmware.note_staged(DEV, '0.4.13', fake)
+    assert fake.row['fw_staged'] == '0.4.13'
+
+    firmware.check_running(_dev(fake), '0.4.13', fake)
+    assert fake.row['fw_staged'] is None
+    assert fake.row['fw_blocked'] is None
+    # The device cannot reliably raise this itself: it only reaches the
+    # confirm on one boot, and the alert is queued in RAM until a send.
+    assert alerts == [('fota: updated to 0.4.13', 0)]
+
+
+def test_success_notified_once(alerts):
+    fake = FakeDB()
+    firmware.note_staged(DEV, '0.4.13', fake)
+    firmware.check_running(_dev(fake), '0.4.13', fake)
+    firmware.check_running(_dev(fake), '0.4.13', fake)
+    assert len(alerts) == 1
+
+
+def test_reboot_with_nothing_staged_is_silent(alerts):
+    fake = FakeDB()
+    firmware.check_running(_dev(fake), '0.4.12', fake)
+    assert alerts == []
+    assert fake.row['fw_blocked'] is None
+
+
+def test_reported_revert_blocks_the_version(alerts):
+    fake = FakeDB()
+    firmware.note_staged(DEV, '0.4.13', fake)
+    firmware.note_failed(DEV, '0.4.13', '0.4.12', fake)
+    assert fake.row['fw_blocked'] == '0.4.13'
+    assert fake.row['fw_fail_count'] == 1
+    assert len(alerts) == 1 and 'failed to boot' in alerts[0][0]
+
+
+def test_repeated_failure_report_is_idempotent(alerts):
+    # The device repeats the report until a send lands; each repeat must not
+    # count as another failure or wake anyone up again.
+    fake = FakeDB()
+    firmware.note_staged(DEV, '0.4.13', fake)
+    firmware.note_failed(DEV, '0.4.13', '0.4.12', fake)
+    firmware.note_failed(DEV, '0.4.13', '0.4.12', fake)
+    assert fake.row['fw_fail_count'] == 1
+    assert len(alerts) == 1
+
+
+def test_revert_inferred_only_after_the_grace_period(alerts):
+    # Covers a device whose reverted-to image is too old to report anything:
+    # the running version in its telemetry is the only evidence.
+    fake = FakeDB()
+    firmware.note_staged(DEV, '0.4.13', fake)
+
+    firmware.check_running(_dev(fake), '0.4.12', fake)
+    assert fake.row['fw_blocked'] is None, 'still rebooting'
+    assert alerts == []
+
+    stale = _dev(fake)
+    stale['fw_staged_at'] = (datetime.datetime.now()
+                             - datetime.timedelta(seconds=firmware.STAGE_GRACE_S + 1))
+    firmware.check_running(stale, '0.4.12', fake)
+    assert fake.row['fw_blocked'] == '0.4.13'
+    assert len(alerts) == 1
+
+
+def test_newer_version_clears_the_block(alerts):
+    fake = FakeDB(fw_blocked='0.4.13', fw_fail_count=2)
+    firmware.note_staged(DEV, '0.4.14', fake)
+    firmware.check_running(_dev(fake), '0.4.14', fake)
+    assert fake.row['fw_blocked'] is None
+    assert fake.row['fw_fail_count'] == 0
+
+
+def test_bad_version_in_report_ignored(alerts):
+    fake = FakeDB()
+    firmware.note_staged(DEV, 'nightly', fake)
+    assert fake.row['fw_staged'] is None
+    firmware.note_failed(DEV, 'nightly', '0.4.12', fake)
+    assert fake.row['fw_blocked'] is None
+
+
+def test_blocked_manifest_refuses_without_a_404(monkeypatch, published):
+    # The power-on check fetches a manifest unconditionally, so the refusal
+    # has to name the version: that is what lets the device scope the block
+    # to one build and still take a newer one.
+    monkeypatch.setattr(firmware, 'blocked_version', lambda imei, database=None: '0.4.12')
+    session = Session()
+    try:
+        head, body = session.request(
+            'GET /fw/manifest.txt?imei=%s&v=0.4.9' % IMEI)
+    finally:
+        session.close()
+    assert '200 OK' in head
+    assert b'version=0.4.12' in body
+    assert b'status=blocked' in body
+    assert b'reason=' in body

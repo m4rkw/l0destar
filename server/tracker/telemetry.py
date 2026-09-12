@@ -773,6 +773,19 @@ def process_lines(device, lines, ip, database, log):
                 # Complete current set of stored fault codes; "D," alone means
                 # the ECU reported none, which clears anything still active.
                 process_dtc_report(device, line[2:].split(','), database, log)
+            elif line.startswith('F,fota,'):
+                # Update lifecycle, reported by the device:
+                #   F,fota,staged,<new>,<old>         rebooting into <new>
+                #   F,fota,failed,<staged>,<running>  MCUboot reverted it
+                parts = line.split(',')
+                if len(parts) >= 4 and parts[2] == 'staged':
+                    firmware.note_staged(device, parts[3], database, log)
+                elif len(parts) >= 5 and parts[2] == 'failed':
+                    firmware.note_failed(device, parts[3], parts[4],
+                                         database, log)
+                else:
+                    log.warning('unparsed fota line from %s: %r',
+                                device['imei'], line)
             elif line.startswith('L,'):
                 # A warning or error the firmware logged since its last
                 # successful send.  File it; nothing to store or act on.
@@ -782,7 +795,14 @@ def process_lines(device, lines, ip, database, log):
                 logs.device.info('%s', format_device_log(
                     line, device['imei'], boot_wall))
             else:
-                process_record(parse_csv_line(line), device, ip, database=database)
+                parsed = parse_csv_line(line)
+                process_record(parsed, device, ip, database=database)
+                # fw= rides the first record after every restart.  Against
+                # what we staged it says whether the update took, and it
+                # works for a device whose reverted-to image is too old to
+                # report the failure itself.
+                if parsed.get('fw'):
+                    firmware.check_running(device, parsed['fw'], database, log)
             processed += 1
         except ValueError as e:
             log.error('record error IMEI=%s: %s', device['imei'], e)
@@ -794,5 +814,13 @@ def process_lines(device, lines, ip, database, log):
     # Re-read: the batch may have changed the device's own settings.
     device = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
 
-    return build_response(device, database, log,
-                          firmware_version=firmware.latest_version(device['imei']))
+    # An advertised version this device has already failed to boot is
+    # withheld: dropping the advert is what stops it asking, since the
+    # device only fetches a manifest when the advertised version is newer
+    # than its own.  A version newer than the blocked one is offered
+    # normally — that is the fix arriving.
+    available = firmware.latest_version(device['imei'])
+    if available and available == device.get('fw_blocked'):
+        available = None
+
+    return build_response(device, database, log, firmware_version=available)

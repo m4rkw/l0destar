@@ -17,6 +17,18 @@ misbehaves in the field.  So the publisher writes ``l0destar-<ver>-<imei>.bin``
 plus ``manifest-<imei>.txt`` per device, and a device with no manifest is told
 about no update at all.  Failing to update is the safe direction.
 
+Failed updates
+--------------
+An image is swapped in as a test and reverted by MCUboot unless it confirms
+itself, so a build that boots and dies takes the old one back — and the
+server, knowing nothing about that, goes on advertising it while the device
+goes on fetching it.  On a parked vehicle that loop is a flattened battery,
+not a missed update.  So the lifecycle is tracked per device: what was
+staged (``note_staged``), whether the version now running matches it
+(``check_running``), and if it does not, the version is withheld from that
+device until a newer one is published or an operator clears it
+(``note_failed`` / ``blocked_version``).
+
 Delivery
 --------
 Downloads are served over the same TLS port as telemetry.  See
@@ -24,10 +36,11 @@ Downloads are served over the same TLS port as telemetry.  See
 ``docs/PROTOCOL.md`` for the request sequence the nRF91 FOTA stack produces.
 """
 
+import datetime
 import os
 import re
 
-from . import config, logs
+from . import config, db, logs, notify
 
 VERSION_RE = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}$')
 IMAGE_RE = re.compile(r'^l0destar-(\d{1,3}\.\d{1,3}\.\d{1,3})-\d+\.bin$')
@@ -76,6 +89,127 @@ def latest_version(imei):
         _manifest_cache[path] = cached
 
     return cached[1]
+
+
+# How long after a reported stage a device is still expected to be rebooting.
+# A record naming a different running version after this is a revert rather
+# than a device that simply has not restarted yet.
+STAGE_GRACE_S = 600
+
+
+def _version_ok(version):
+    return bool(version) and bool(VERSION_RE.match(str(version).strip()))
+
+
+def note_staged(device, version, database, log=None):
+    """The device says it has staged `version` and is rebooting into it."""
+    log = log or logs.udp
+    if not _version_ok(version):
+        log.warning('fota staged report with bad version %r from %s',
+                    version, device['imei'])
+        return
+    database.query(
+        'UPDATE `device` SET `fw_staged` = %s, `fw_staged_at` = NOW() '
+        'WHERE `id` = %s',
+        (str(version).strip(), device['id']),
+    )
+    log.info('%s staged %s', device['imei'], version)
+
+
+def note_failed(device, staged, running, database, log=None):
+    """`staged` was applied and did not survive: MCUboot put `running` back.
+
+    Reported by the device from the boot that finds itself running the old
+    image, and inferred by check_running() for a device whose reverted-to
+    image is too old to report it.  Idempotent either way: the device repeats
+    the report until a send succeeds, and only the first one counts.
+    """
+    log = log or logs.udp
+    if not _version_ok(staged):
+        return
+    staged = str(staged).strip()
+    row = database.one(
+        'SELECT `fw_blocked`, `fw_fail_count` FROM `device` WHERE `id` = %s',
+        (device['id'],),
+    ) or {}
+    already = row.get('fw_blocked') == staged
+    fails = (row.get('fw_fail_count') or 0) + (0 if already else 1)
+
+    database.query(
+        'UPDATE `device` SET `fw_staged` = NULL, `fw_staged_at` = NULL, '
+        '`fw_blocked` = %s, `fw_fail_count` = %s WHERE `id` = %s',
+        (staged, fails, device['id']),
+    )
+    log.error('%s: update to %s failed, running %s (attempt %d) — withholding it',
+              device['imei'], staged, running, fails)
+
+    # On the transition into blocked only.  The device repeats its report
+    # until one gets through, and a notification per repeat is noise.
+    if not already:
+        try:
+            notify.device_alert(
+                device['name'],
+                'fota: %s failed to boot (running %s) — updates withheld '
+                'until retried' % (staged, running), 1)
+        except Exception:
+            log.exception('alert failed for fota failure')
+
+
+def check_running(device, running, database, log=None):
+    """Reconcile the version a record reports against what we staged.
+
+    Same version means the update took; a different one, once the reboot has
+    had time to happen, means it was reverted.
+    """
+    log = log or logs.udp
+    staged = device.get('fw_staged')
+    if not running or not staged:
+        return
+    running = str(running).strip()
+
+    if running == staged:
+        database.query(
+            'UPDATE `device` SET `fw_staged` = NULL, `fw_staged_at` = NULL, '
+            '`fw_blocked` = NULL, `fw_fail_count` = 0 WHERE `id` = %s',
+            (device['id'],),
+        )
+        log.info('%s is running %s — update confirmed', device['imei'], staged)
+        # The "updated to" notification belongs here rather than on the
+        # device.  The device can only raise it on the one boot that writes
+        # the MCUboot confirm flag, and on that boot it is a queued alert in
+        # RAM needing a working link before the next reset; lost there, it is
+        # never re-raised, so a missing notification said nothing about
+        # whether the update worked.  The version a device reports is state:
+        # it survives reboots and arrives with the first record that gets
+        # through.  Clearing fw_staged above makes this fire exactly once.
+        try:
+            notify.device_alert(device['name'],
+                                'fota: updated to %s' % staged, 0)
+        except Exception:
+            log.exception('alert failed for fota success')
+        return
+
+    staged_at = device.get('fw_staged_at')
+    if staged_at is not None:
+        age = (datetime.datetime.now() - staged_at).total_seconds()
+        if age < STAGE_GRACE_S:
+            return       # still rebooting, or the record predates the swap
+    note_failed(device, staged, running, database, log)
+
+
+def blocked_version(imei, database=None):
+    """Version withheld from this IMEI, or None."""
+    imei = str(imei or '')
+    if not imei.isdigit():
+        return None
+    database = database or db.DB()
+    try:
+        row = database.one('SELECT `fw_blocked` FROM `device` WHERE `imei` = %s',
+                           (imei,))
+    except Exception:
+        logs.udp.exception('fw_blocked lookup failed for %s', imei)
+        return None
+    return (row or {}).get('fw_blocked')
 
 
 def published_versions():
@@ -212,7 +346,29 @@ def serve_http(conn, ip, first_bytes, log=None):
         # Redirect that onto the manifest built for that unit; a request with
         # no usable IMEI gets a 404 rather than somebody else's image.
         if path == '/fw/manifest.txt':
-            per_device = manifest_path(_query_param(query, 'imei'))
+            req_imei = _query_param(query, 'imei')
+
+            # Withheld from this device after it failed to boot here.  The
+            # power-on check fetches a manifest unconditionally, so silence
+            # is not enough: the device has to be told, and told which
+            # version, so it can scope the refusal to that one build and
+            # still take a newer one.  Firmware predating status= sees
+            # version=<blocked>, which is never newer than what it is
+            # running, so it does nothing either.
+            blocked = blocked_version(req_imei)
+            if blocked:
+                body = ('version=%s\nstatus=blocked\n'
+                        'reason=failed to boot on this device\n'
+                        % blocked).encode()
+                log.info('fw http: %s %s from %s -> blocked (%s)',
+                         method, target, ip, blocked)
+                _respond(conn, '200 OK', body, 'text/plain',
+                         keep=keep, head_only=head_only)
+                if not keep:
+                    return
+                continue
+
+            per_device = manifest_path(req_imei)
             if per_device is None:
                 log.info('fw http: %s %s from %s -> 404 (no usable imei)',
                          method, target, ip)

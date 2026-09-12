@@ -31,6 +31,14 @@ CREATE TABLE `device` (
   `movement_alarm` TINYINT(1)  NOT NULL DEFAULT 1  COMMENT 'wake and report on accelerometer trigger',
   `track_mode`    TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'GNSS off, ECU+IMU streamed fast; sent as track=<0|1> on every response',
 
+  -- Update state.  An image that boots but never confirms itself is reverted
+  -- by MCUboot; without somewhere to remember that, the server would go on
+  -- advertising it and the device would go on downloading it.
+  `fw_staged`     VARCHAR(16)  DEFAULT NULL COMMENT 'version the device reported staging, cleared once it is seen running',
+  `fw_staged_at`  DATETIME     DEFAULT NULL COMMENT 'when that stage was reported; a different version running after the grace period is a revert',
+  `fw_blocked`    VARCHAR(16)  DEFAULT NULL COMMENT 'version withheld from this device after it failed to boot here',
+  `fw_fail_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'consecutive failed attempts at fw_blocked',
+
   -- Settings the server acts on; these never reach the device.
   `alarm`         TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'notify on ignition on',
   `garage`        TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'expected to be moved; downgrades alert priority',
