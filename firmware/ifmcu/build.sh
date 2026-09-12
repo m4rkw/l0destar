@@ -2,16 +2,14 @@
 # Build the Makerdiary IF MCU firmware for the nRF52820.
 #
 # Clones the official Makerdiary nRF9151 ConnectKit repo (if not already
-# present), applies the patches in ifmcu/patches/ and builds it.  The SYSTEM
-# OFF on USB disconnect fix - without which the nRF52820 holds HFCLK at ~2 mA
-# after the cable is removed - is upstream as of
-# makerdiary/nrf9151-connectkit#19 (an existing clone from before that merge
-# needs a `git pull`).  ifmcu/patches/ carries the follow-up that is not
-# merged yet: the SEVONPEND clear from #19 applied to the charger-poll and
-# shell power-off paths too, which otherwise can still leave the chip
-# spinning at ~2 mA.  Drop the patch once it lands upstream.
+# present) and builds it unmodified.  The SYSTEM OFF on USB disconnect fix -
+# without which the nRF52820 holds HFCLK at ~2 mA after the cable is removed -
+# is upstream as makerdiary/nrf9151-connectkit#19 plus the #20 follow-up that
+# applies the SEVONPEND clear to the charger-poll and shell power-off paths
+# too.  Both are merged on main but neither is in a published release, hence
+# building from source.  An existing clone from before #20 needs a `git pull`.
 #
-# Output: build_ifmcu/zephyr/zephyr.uf2
+# Output: build_ifmcu/ifmcu_firmware/zephyr/zephyr.uf2
 #
 # Flash by double-pressing the ConnectKit reset button (enters UF2
 # bootloader), then copying the .uf2 to the mass-storage device.
@@ -49,37 +47,17 @@ fi
 
 APP_DIR="$REPO_DIR/applications/ifmcu_firmware"
 
-# The whole reason we build this ourselves: warn loudly if the checkout
-# predates the power fix, otherwise we'd silently produce ~2 mA firmware.
-# Upstream names the helper enter_system_off; the patch below renames it to
-# ifmcu_system_off, so accept either.
-if ! grep -qE "enter_system_off|ifmcu_system_off" "$APP_DIR/src/main.c"; then
-	echo "Error: $REPO_DIR predates the USB-disconnect power fix." >&2
-	echo "Update it, then re-run:" >&2
-	echo "  git -C $REPO_DIR pull" >&2
+# The whole reason we build this ourselves: refuse a checkout that predates
+# the power fix, otherwise we'd silently produce ~2 mA firmware.  #20 is the
+# one that introduced ifmcu_system_off(); a clone with only #19 (which named
+# its helper enter_system_off) still has the charger-poll race.
+if ! grep -q "ifmcu_system_off" "$APP_DIR/src/main.c"; then
+	echo "Error: $REPO_DIR predates makerdiary/nrf9151-connectkit#20 (the IF MCU power fix)." >&2
+	echo "Update it, then re-run.  If the clone has local edits (e.g. the old" >&2
+	echo "l0destar patch), discard them first:" >&2
+	echo "  git -C $REPO_DIR checkout -- . && git -C $REPO_DIR pull" >&2
 	exit 1
 fi
-
-# --- apply local patches ---
-# Each patch is applied once: one that already reverse-applies is skipped;
-# one that neither applies nor reverse-applies (upstream moved, or the clone
-# has been edited by hand) aborts rather than building something
-# half-patched.
-for p in "$SCRIPT_DIR"/patches/*.patch; do
-	[[ -e "$p" ]] || continue
-	name="$(basename "$p")"
-	if git -C "$REPO_DIR" apply --reverse --check "$p" 2>/dev/null; then
-		echo "Patch already applied: $name"
-	elif git -C "$REPO_DIR" apply --check "$p" 2>/dev/null; then
-		echo "Applying patch: $name"
-		git -C "$REPO_DIR" apply "$p"
-	else
-		echo "Error: $name does not apply to $REPO_DIR." >&2
-		echo "Either upstream changed (rebase the patch, or drop it if merged)" >&2
-		echo "or the clone has local edits: see 'git -C $REPO_DIR status'." >&2
-		exit 1
-	fi
-done
 
 echo "Building IF MCU firmware for $BOARD"
 
