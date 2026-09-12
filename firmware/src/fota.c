@@ -131,6 +131,29 @@ static bool    s_dl_init_done;
 static uint32_t s_alerted_ver;    /* version we've already reported stuck */
 static uint32_t s_announced_ver;  /* version we've already said we're fetching */
 static int     s_nbiot_defers;    /* consecutive checks deferred off NB-IoT */
+static uint32_t s_denied_ver;     /* version the server or we refused */
+static bool    s_denied_logged;
+static char    s_pending_report[64]; /* "F,fota,..." waiting for a link */
+
+/* What we last staged, kept across the reboot that applies it.  __noinit so
+ * it survives a warm reset; a power-on leaves RAM undefined, which is what
+ * the magic is for, and losing it there is the right answer anyway — a unit
+ * that has been off long enough to lose RAM deserves a fresh attempt.
+ *
+ * This is what lets the device notice its own failed update.  A staged
+ * version that is not the one running after the reboot means MCUboot
+ * reverted it: the image booted but never confirmed itself.  Without this
+ * the device has no memory of having tried, so it downloads the same broken
+ * image on every wake — which with the engine off is a battery flattened by
+ * a 300 KB download an hour. */
+#define FOTA_ATTEMPT_MAGIC  0x10DEF07Au
+#define FOTA_MAX_ATTEMPTS   2
+
+static __noinit struct {
+    uint32_t magic;
+    uint32_t version;     /* packed version staged before the reboot */
+    uint8_t  attempts;    /* consecutive attempts at that version */
+} s_attempt;
 
 /* -- download completion --------------------------------------------------- */
 static K_SEM_DEFINE(s_dl_done, 0, 1);
@@ -332,8 +355,23 @@ static int download_image(void)
 
 /* -- public API ------------------------------------------------------------ */
 
+/* The bare `fota` command is the manual retry: it clears everything this
+ * device has decided about a bad version, so an operator who has fixed the
+ * image (or wants to try again anyway) can override both the local block
+ * and the failure holdoff from the server. */
 void fota_request_check(void)
 {
+    if (s_denied_ver) {
+        LOG_INF("manual retry — clearing the block on the failed version");
+    }
+    s_denied_ver = 0;
+    s_denied_logged = false;
+    s_attempt.magic = 0;
+    s_attempt.version = 0;
+    s_attempt.attempts = 0;
+    s_fail_count = 0;
+    s_next_check_ms = 0;
+
     if (IS_ENABLED(CONFIG_APP_FOTA_INHIBIT)) {
         LOG_WRN("ignoring `fota` command — updates inhibited");
         return;
@@ -359,6 +397,17 @@ void fota_notify_available(const char *ver)
     if (avail <= VER_RUNNING) {
         return;   /* steady state: server advertises what we already run */
     }
+    if (avail == s_denied_ver) {
+        /* Tried and reverted, or refused by the server.  Not acted on and
+         * not asked about again: the advert rides on every response, so a
+         * device that kept reacting to it would fetch the manifest on every
+         * wake for as long as the server kept saying it. */
+        if (!s_denied_logged) {
+            s_denied_logged = true;
+            LOG_WRN("ignoring %s — it has already failed here", ver);
+        }
+        return;
+    }
     if (avail != s_last_logged) {
         s_last_logged = avail;
         LOG_INF("server advertises %s (running %s)", ver, APP_VERSION_STRING);
@@ -377,6 +426,79 @@ bool fota_check_requested(void)
 bool fota_image_on_probation(void)
 {
     return !boot_is_img_confirmed();
+}
+
+/* Format a packed version back into "a.b.c" for the wire and the log. */
+static const char *ver_str_of(uint32_t v, char *buf, size_t len)
+{
+    snprintf(buf, len, "%u.%u.%u", (unsigned)(v >> 16) & 0xff,
+             (unsigned)(v >> 8) & 0xff, (unsigned)v & 0xff);
+    return buf;
+}
+
+/* Did the update we staged before the last reboot actually take?
+ *
+ * Called at boot, before the confirm, and it has to run on both outcomes:
+ * the image that booted and the image MCUboot put back when it didn't.
+ * Reporting the failure is the whole point — the server cannot tell a
+ * revert from a device that never downloaded until the device says so, and
+ * "F,fota,failed,<staged>,<running>" is that statement. */
+void fota_verdict_on_boot(void)
+{
+    if (s_attempt.magic != FOTA_ATTEMPT_MAGIC || s_attempt.version == 0) {
+        s_attempt.magic = 0;      /* power-on, or nothing was staged */
+        return;
+    }
+
+    char staged[16];
+
+    ver_str_of(s_attempt.version, staged, sizeof(staged));
+
+    if (s_attempt.version == VER_RUNNING) {
+        LOG_INF("update to %s took", staged);
+        s_attempt.magic = 0;
+        s_attempt.version = 0;
+        s_attempt.attempts = 0;
+        return;
+    }
+
+    /* Staged one version, running another: MCUboot reverted it. */
+    LOG_ERR("update to %s reverted — running %s (attempt %u of %u)",
+            staged, APP_VERSION_STRING, s_attempt.attempts,
+            FOTA_MAX_ATTEMPTS);
+
+    char line[64];
+
+    snprintf(line, sizeof(line), "F,fota,failed,%s,%s", staged,
+             APP_VERSION_STRING);
+    /* Queued as an alert too: the line goes out as its own datagram at the
+     * next send, the alert is what a person sees. */
+    char msg[80];
+    snprintf(msg, sizeof(msg), "fota: %s failed to boot, reverted to %s",
+             staged, APP_VERSION_STRING);
+    alert_enqueue(msg, 0);
+    s_pending_report[0] = '\0';
+    strncpy(s_pending_report, line, sizeof(s_pending_report) - 1);
+
+    if (s_attempt.attempts >= FOTA_MAX_ATTEMPTS) {
+        s_denied_ver = s_attempt.version;
+        s_denied_logged = false;
+        LOG_ERR("%s has failed %u times — not trying it again until a newer "
+                "version or a manual retry", staged, s_attempt.attempts);
+    }
+}
+
+/* Send the verdict once there is a link.  Its own datagram, like the DTC
+ * report, and dropped only if the send fails — the server's own timeout on
+ * the staged version covers a device that never manages to report. */
+void fota_report_flush(void)
+{
+    if (s_pending_report[0] == '\0') {
+        return;
+    }
+    if (data_send_line(s_pending_report) == 0) {
+        s_pending_report[0] = '\0';
+    }
 }
 
 void fota_confirm_image(void)
@@ -469,6 +591,36 @@ int fota_check(enum fota_ctx ctx)
         LOG_WRN("manifest version '%s' malformed", ver_str);
         fail_backoff();
         return -EPROTO;
+    }
+
+    /* "status=blocked" is the server withholding this image from this
+     * device — normally because it watched an earlier copy of it fail to
+     * boot here.  Not an error and not retried: remember the version so
+     * the advert that rides on every response stops meaning anything, and
+     * wait for a newer one or for a manual `fota`. */
+    char status[16];
+
+    if (manifest_value(s_manifest, "status", status,
+                       sizeof(status)) == 0 &&
+        strcmp(status, "blocked") == 0) {
+        if (s_denied_ver != available || !s_denied_logged) {
+            char why[48] = "";
+
+            (void)manifest_value(s_manifest, "reason", why, sizeof(why));
+            LOG_WRN("server is withholding %s%s%s", ver_str,
+                    why[0] ? " — " : "", why);
+            s_denied_logged = true;
+        }
+        s_denied_ver = available;
+        s_fail_count = 0;
+        s_next_check_ms = 0;
+        return 0;
+    }
+
+    if (available == s_denied_ver) {
+        LOG_INF("%s is blocked here after a failed update — skipping",
+                ver_str);
+        return 0;
     }
 
     /* Strictly newer only.  Equal is the steady state; older would loop
@@ -662,8 +814,28 @@ int fota_check(enum fota_ctx ctx)
     s_fail_count = 0;
     LOG_INF("image staged — rebooting into %s", ver_str);
 
-    /* Tell the server before the radio goes down; the matching "updated to"
-     * alert is raised by fota_confirm_image() after the new image boots. */
+    /* Remember what we staged, so the boot after this one can tell whether
+     * it took: same version running means success, anything else means
+     * MCUboot reverted it.  Consecutive attempts at the same version are
+     * counted; a different version starts again from one. */
+    if (s_attempt.magic != FOTA_ATTEMPT_MAGIC ||
+        s_attempt.version != available) {
+        s_attempt.attempts = 0;
+    }
+    s_attempt.magic = FOTA_ATTEMPT_MAGIC;
+    s_attempt.version = available;
+    s_attempt.attempts++;
+
+    /* Tell the server before the radio goes down, twice over: the line is
+     * for the server's state machine (it now knows this device holds a
+     * staged image and can withhold the next one until it sees the version
+     * running), the alert is for a person.  The matching "updated to" alert
+     * is raised by fota_confirm_image() after the new image boots. */
+    char line[64];
+    snprintf(line, sizeof(line), "F,fota,staged,%s,%s", ver_str,
+             APP_VERSION_STRING);
+    data_send_line(line);
+
     char msg[64];
     snprintf(msg, sizeof(msg), "fota: %s -> %s, rebooting",
              APP_VERSION_STRING, ver_str);
@@ -686,6 +858,8 @@ void fota_notify_available(const char *ver) { ARG_UNUSED(ver); }
 bool fota_check_requested(void) { return false; }
 void fota_confirm_image(void)   { }
 bool fota_image_on_probation(void) { return false; }
+void fota_verdict_on_boot(void) { }
+void fota_report_flush(void)    { }
 int  fota_check(enum fota_ctx ctx) { ARG_UNUSED(ctx); return 0; }
 
 #endif /* CONFIG_APP_FOTA */

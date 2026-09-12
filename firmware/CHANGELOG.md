@@ -1,5 +1,67 @@
 # Changelog
 
+## 0.4.37
+
+### A failed update is remembered, reported, and not retried forever
+- **The device knows whether its own update took.**  What it stages is
+recorded in `__noinit` RAM, which survives the reboot that applies it, and
+the next boot compares it against what is actually running: the same
+version means success, anything else means MCUboot reverted it.  Until now
+the device had no memory of having tried, so a bad image was downloaded
+again on every wake — 300 KB an hour with the engine off, which is a
+flattened car battery rather than a missed update.
+- **A reverted version is blocked locally** after `FOTA_MAX_ATTEMPTS` (2),
+and the block is version-scoped: the `fota=<ver>` advert that rides on every
+response stops meaning anything for that version, so no manifest is fetched
+either, while a newer version is still picked up automatically.
+- **Two new lines tell the server what happened**: `F,fota,staged,<new>,
+<old>` before the reboot, and `F,fota,failed,<staged>,<running>` from the
+boot that finds itself running the old image.  Sent as their own datagrams
+like the DTC report, queued until there is a link.
+- **`status=blocked` in the manifest is understood** as the server
+withholding an image from this device, with an optional `reason=`.  Logged
+once, not retried, and scoped to that version.
+- **The bare `fota` command is the manual retry**: it clears the local
+block, the attempt record and the failure holdoff, so an operator can force
+another go at a version the device has given up on.
+
+### The tracker stopped tracking mid-journey on a car with charging control
+- **The vehicle sheds its alternator on purpose, and that read as "engine
+off".**  Once the battery is topped up this car's ECU cuts alternator output
+to save drag, and two days of logs show the rail sitting at 12.2-12.5 V for
+up to 140 s at a stretch — at any engine speed, including 2000-2500 rpm —
+before climbing back to 14.3 V on overrun.  Parked, the same battery rests
+at 12.0-13.1 V.  The driving-with-charge-cut band therefore overlaps the
+engine-off band and is frequently *below* it, so no voltage threshold
+separates the two.  `ENGINE_RUNNING_VOLTAGE` (13 V) was being crossed dozens
+of times per drive and each crossing dropped the unit to its engine-off
+cadence in the middle of a journey.
+- **The debounce that was supposed to cover this was not in the path.**
+`engine_is_running()` was a bare compare with no hysteresis at all, and the
+`ENGINE_STOPPED_COUNT` counter lived only in `data.c`'s sampler — so
+`main.c` demoted on a single sub-13 V reading and never consulted it.  Both
+call sites now go through one function, which is the only place the voltage
+verdict is formed.
+- **Demotion needs corroboration, promotion does not.**  Nothing but an
+alternator puts the rail above `ENGINE_RUNNING_VOLTAGE`, so voltage still
+promotes on its own.  Going the other way now needs the rail low *and* the
+vehicle standing still *and* both sustained for `ENGINE_STOPPED_HOLD_S`
+(300 s); any GNSS speed above `ENGINE_MOVING_KMH` restarts the hold, so a
+charge-cut episode cannot accumulate towards a stop however long it runs.
+Key-on-engine-off while rolling — a tow, a coast — holds the running
+cadence, which is the side to err on for a tracker.  Replaying both versions
+over the logged drives: 39 false "engine stopped" calls mid-drive, now none.
+- **Unchanged where the ECU answers.**  A fresh RPM figure still settles it
+outright, so this only bites builds with no K wire, no session, or a reading
+gone stale.  `ENGINE_STOPPED_COUNT` is replaced by `ENGINE_STOPPED_HOLD_S`,
+`ENGINE_MOVING_KMH` and `ENGINE_FIX_MAX_AGE_S` — a wall-clock hold rather
+than a sample count whose real duration depended on which state was polling.
+- **The averaging in `battery_read_voltage()` was miscredited.**  Its
+comments claimed it existed to suppress "~12 V readings mid-drive on a car
+with no charging fault".  Those readings are real and no amount of averaging
+removes them.  The eight-conversion average stays — it rejects alternator
+ripple, worth a few tens of mV — and the comments now say so.
+
 ## 0.4.36
 
 ### A fatal error halted the unit instead of rebooting it

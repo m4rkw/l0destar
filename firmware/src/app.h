@@ -80,8 +80,12 @@ extern int8_t previous_ignition;
 extern bool  engine_running;
 extern float battery_v;
 /* Live verdict from the ECU's RPM when a fresh figure exists, else from
- * battery_v against ENGINE_RUNNING_VOLTAGE.  Callers deciding cadence or
- * state should use this rather than test battery_v themselves. */
+ * battery_v, GNSS speed and a hold timer — see the note on the definition
+ * for why the fallback cannot be a bare voltage threshold.  Callers deciding
+ * cadence or state should use this rather than test battery_v themselves.
+ * Reads battery_v and engine_running and advances the fallback's hold timer,
+ * so call it once per fresh battery_v rather than treating it as a free
+ * query. */
 bool engine_is_running(void);
 
 /* -- module init / lifecycle ----------------------------------------------- */
@@ -202,6 +206,8 @@ void        fota_notify_available(const char *ver);  /* fota=<ver> from the
 bool        fota_check_requested(void);
 void        fota_confirm_image(void);  /* stop MCUboot reverting this image */
 bool        fota_image_on_probation(void); /* swapped in, not yet confirmed */
+void        fota_verdict_on_boot(void); /* did the staged update take? */
+void        fota_report_flush(void);   /* send that verdict once linked */
 /* 0 = no update, 1 = updating (reboots, does not return), <0 = check failed */
 int         fota_check(enum fota_ctx ctx);
 

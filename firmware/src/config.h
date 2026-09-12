@@ -54,7 +54,21 @@
 #define SLEEP_SAFETY_VOLTAGE        (CONFIG_APP_SLEEP_SAFETY_MV / 1000.0f)
 #define ENGINE_RUNNING_VOLTAGE      (CONFIG_APP_ENGINE_RUNNING_MV / 1000.0f)
 #define IMPLAUSIBLE_VOLTAGE         5.0f
-#define ENGINE_STOPPED_COUNT        10
+
+/* -- engine-running detection, voltage fallback ---------------------------- */
+/* Only consulted when the ECU is not answering — see engine_is_running().
+ * Demoting to "engine stopped" needs the rail low AND the vehicle standing
+ * still for this long; any GNSS speed above ENGINE_MOVING_KMH restarts the
+ * hold.  Generous on purpose: holding the driving cadence a few minutes too
+ * long after a genuine key-on-engine-off stop costs some power, dropping it
+ * mid-journey costs the journey. */
+#define ENGINE_STOPPED_HOLD_S       300
+#define ENGINE_MOVING_KMH           3.0f  /* above this, something is driving */
+/* How old a fix may be and still count as evidence of movement.  STATE_IDLE
+ * only refreshes GNSS once per record, so this has to span a record interval
+ * or a driving car reads as stationary between sends; it also has to stay
+ * well under ENGINE_STOPPED_HOLD_S so a parked one still demotes. */
+#define ENGINE_FIX_MAX_AGE_S        180
 /* A low reading only counts as a low battery once the ignition has been off
  * this long.  Cranking pulls the rail to 9-10 V for a second or two, and the
  * sense line can read "off" for a moment inside that, which used to yield an
@@ -64,10 +78,10 @@
 #define BATTERY_WARN_SETTLE_S       60
 
 /* -- battery voltage sampling ---------------------------------------------- */
-/* One INA228 conversion is not a trustworthy figure in a car: alternator
- * ripple and ignition noise on the 12 V rail can drop a single ~1 ms
- * conversion a volt or so low, which reads as "12.0 V, engine running".
- * Every battery_read_voltage() averages this many conversions instead. */
+/* One INA228 conversion samples a single point on the alternator's ripple.
+ * Every battery_read_voltage() averages this many conversions instead, which
+ * is worth a few tens of mV.  It is not what keeps a charge-cut episode from
+ * reading as "engine stopped" — see engine_is_running(). */
 #define BATTERY_SAMPLES             8     /* conversions averaged per read   */
 #define BATTERY_SAMPLE_GAP_MS       3     /* > one bus+shunt cycle (2.1 ms), */
                                           /* so each read is a new conversion */

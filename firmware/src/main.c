@@ -858,6 +858,11 @@ static void do_sleep(void)
             use_cached_gps = false;
             transport_close();
 
+            /* Tell the server about a reverted update before asking it
+             * for another one: a unit that goes straight back to sleep
+             * after a revert would otherwise never get the report out. */
+            fota_report_flush();
+
             /* Run a server-indicated update now, while the modem is still
              * registered and GNSS is already stopped: the response that was
              * just processed (cmd_run above) may have advertised a newer
@@ -1170,6 +1175,13 @@ int main(void)
      * one), and everything slow below already kicks as it waits. */
     watchdog_init();
 
+    /* Before anything tries to update again: work out whether the update
+     * staged before the last reboot is the one now running.  It queues an
+     * alert and a line for the server if MCUboot reverted it, which is what
+     * stops a bad image being downloaded over and over with the engine
+     * off — the one failure mode of this that flattens a car battery. */
+    fota_verdict_on_boot();
+
 #if defined(CONFIG_APP_PROVISION_MODE)
     /* Provisioning build (prov.conf): bring up the modem library so the AT
      * Host library can bridge nrfcloud-utils <-> modem (AT%KEYGEN, cert
@@ -1371,6 +1383,12 @@ int main(void)
         watchdog_kick();
         crash_check();
         handle_ignition_state();
+
+        /* A failed-update report waiting for a link.  No-op with nothing
+         * pending, which is every iteration but the ones after a revert. */
+        if (network_ready) {
+            fota_report_flush();
+        }
 #if IS_ENABLED(CONFIG_APP_KLINE_OBD)
         /* The RPM sampler covers the GPS fix wait; this covers everything
          * else in a cycle — the send and the idle — so the diagnostic
@@ -1404,6 +1422,7 @@ int main(void)
                     network_ready = true;
                     s_unregistered_ms = 0;
                     LOG_INF("network ready");
+                    fota_report_flush();
                 } else {
                     /* Reapply the link settings and CFUN=1 every retry
                      * interval.  Cheap, idempotent, and the only thing that

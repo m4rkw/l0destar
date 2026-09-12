@@ -35,7 +35,9 @@ static int8_t  s_ign_last = -1;
 /* Cleared once a packet carrying fw= has actually left the device, so a
  * failed first send doesn't lose the version until the next reboot. */
 static bool s_fw_pending = true;
-static int  s_below_voltage_count;
+/* Uptime at which the rail first read below ENGINE_RUNNING_VOLTAGE with the
+ * vehicle stationary, or -1 when the hold is not running. */
+static int64_t s_low_voltage_since = -1;
 
 void data_reset(void)
 {
@@ -43,54 +45,90 @@ void data_reset(void)
     data_index = 0;
 }
 
+/* Is anything driving the vehicle's electrics?  GNSS only: the fallback below
+ * exists precisely because the ECU is not answering, so obd_speed_kmh() is no
+ * use here.  A fix that is missing, thin on satellites or stale reads as "not
+ * moving", which only ever makes the fallback more conservative. */
+static bool gnss_says_moving(void)
+{
+    if (!g_gnss.valid || g_gnss.sats < SPEED_MIN_SATS) {
+        return false;
+    }
+    if (k_uptime_get() - g_gnss.fix_uptime_ms >
+        (int64_t)ENGINE_FIX_MAX_AGE_S * 1000) {
+        return false;
+    }
+    return g_gnss.speed_kmh >= ENGINE_MOVING_KMH;
+}
+
 /* Is the engine running?
  *
  * RPM from the ECU is a direct measurement and settles it whenever a fresh
- * figure exists.  Charging voltage is only a proxy, and a poor one: a tired
- * battery, a smart alternator shedding load, or a noisy INA228 read all put
- * the rail below ENGINE_RUNNING_VOLTAGE while the car is being driven, and
- * that used to drop the tracker to its engine-off cadence mid-journey.  Fall
- * back to voltage only when the ECU is not answering — no K wire on this
- * build, no session, or a reading that has gone stale. */
+ * figure exists.  Fall back to the rail voltage only when the ECU is not
+ * answering — no K wire on this build, no session, or a figure gone stale.
+ *
+ * That fallback cannot be a bare threshold.  This vehicle's ECU sheds the
+ * alternator once the battery is topped up: logged drives sit at 12.2-12.5 V
+ * for up to 140 s at a stretch, at any engine speed, and climb back to
+ * 14.3 V on overrun.  Parked, the same battery rests at 12.0-13.1 V.  The
+ * driving-with-charge-cut band therefore overlaps the engine-off band, and
+ * is frequently below it, so no threshold separates them on voltage alone —
+ * which is how a single sub-13 V reading used to drop the tracker to its
+ * engine-off cadence mid-journey.
+ *
+ * The asymmetry that does hold: nothing but an alternator puts the rail
+ * above ENGINE_RUNNING_VOLTAGE, so voltage may promote on its own.  Demotion
+ * additionally needs the vehicle standing still for ENGINE_STOPPED_HOLD_S,
+ * and any movement restarts that hold, so a charge-cut episode can never
+ * accumulate towards a stop however long it lasts.  Within the hold the
+ * previous verdict stands.
+ *
+ * Key-on-engine-off while rolling — a tow, a coast — holds the running
+ * cadence instead.  That is the side to err on for a tracker: the vehicle is
+ * moving and its position is worth having.  Stationary key-on-engine-off is
+ * the one case voltage and GNSS genuinely cannot call, and the hold is what
+ * bounds it.
+ *
+ * Latches: the hold timer advances here, so this is the single place the
+ * voltage verdict is formed.  Callers take the result rather than testing
+ * battery_v themselves. */
 bool engine_is_running(void)
 {
 #if IS_ENABLED(CONFIG_APP_KLINE_OBD)
     int rpm = obd_rpm();
 
     if (rpm >= 0) {
+        /* Reset the hold so that losing the ECU later falls back from a
+         * clean slate rather than part-way through someone else's timer. */
+        s_low_voltage_since = -1;
         return rpm > 0;
     }
 #endif
-    return battery_v >= ENGINE_RUNNING_VOLTAGE;
+    if (battery_v >= ENGINE_RUNNING_VOLTAGE) {
+        s_low_voltage_since = -1;
+        return true;
+    }
+    if (gnss_says_moving()) {
+        s_low_voltage_since = -1;
+        return true;
+    }
+
+    int64_t now = k_uptime_get();
+
+    if (s_low_voltage_since < 0) {
+        s_low_voltage_since = now;
+    }
+    if (now - s_low_voltage_since < (int64_t)ENGINE_STOPPED_HOLD_S * 1000) {
+        return engine_running;
+    }
+    return false;
 }
 
 static float battery_sample_with_engine_check(void)
 {
-    float v = battery_read_voltage();
-    battery_v = v;
-
-#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
-    /* Same precedence as engine_is_running(): a fresh RPM figure wins over
-     * whatever the rail reads.  The voltage hysteresis below is reset so
-     * that losing the ECU later falls back to it from a clean slate. */
-    int rpm = obd_rpm();
-
-    if (rpm >= 0) {
-        s_below_voltage_count = 0;
-        engine_running = rpm > 0;
-        return v;
-    }
-#endif
-    if (v >= ENGINE_RUNNING_VOLTAGE) {
-        s_below_voltage_count = 0;
-        engine_running = true;
-    } else {
-        s_below_voltage_count++;
-        if (s_below_voltage_count >= ENGINE_STOPPED_COUNT) {
-            engine_running = false;
-        }
-    }
-    return v;
+    battery_v = battery_read_voltage();
+    engine_running = engine_is_running();
+    return battery_v;
 }
 
 /* -- data collection ------------------------------------------------------ */

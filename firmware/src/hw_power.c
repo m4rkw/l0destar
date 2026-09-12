@@ -92,15 +92,20 @@ float battery_read_voltage(void)
 #else
 	if (!s_ok) return -1.0f;
 
-	/* Average several conversions rather than trust one.  Alternator
-	 * ripple and ignition noise on the vehicle rail reach the INA228's bus
-	 * input, and a single ~1 ms conversion can land around a volt low —
-	 * seen as ~12 V readings mid-drive on a car with no charging fault,
-	 * which the engine-running logic then took at face value.  ADC_CONFIG
+	/* Average several conversions rather than trust one.  Alternator ripple
+	 * reaches the INA228's bus input and a single ~1 ms conversion samples
+	 * a point on it, so the average is the steadier figure.  ADC_CONFIG
 	 * runs bus and shunt conversions back to back (~1.05 ms each), so
 	 * BATTERY_SAMPLE_GAP_MS apart each read sees a fresh conversion, not
 	 * the same register contents again.  A NACK drops that sample; the
-	 * read only fails outright when none succeeded. */
+	 * read only fails outright when none succeeded.
+	 *
+	 * This averaging was once believed to explain ~12 V readings mid-drive
+	 * "on a car with no charging fault".  It does not: those readings are
+	 * real.  The ECU sheds the alternator when the battery is topped up and
+	 * the rail genuinely sits at 12.2-12.5 V for minutes at a time — see
+	 * engine_is_running() in data.c, which is where that is handled.  What
+	 * is left here is ordinary ripple rejection, worth a few tens of mV. */
 	float sum = 0.0f, lo = 0.0f, hi = 0.0f;
 	int   n = 0;
 
