@@ -29,6 +29,9 @@ yourself rather than taking them on trust.
   grounded on v3.0-v3.3, which stopped the part from ever entering its
   low-power state. Sleep current on a reworked v3.2 board fell from ~140.8 µA
   to ~31.5 µA.
+- The buck enable divider added in v3.3 is now an optional extra, DNP by
+  default. S6R4 is a 0R jumper by default, so the expected sleep current is
+  ~31.5 µA; fitting the divider adds around ~12 µA.
 - Added test points for easier assembly/testing
 - Slightly increased the size of the holes for the 2-pin power connector
 
@@ -37,9 +40,10 @@ Carried over from v3.3:
 - Fixed L-line defect that could brick earlier boards if L_SEND was
   used while the external L wire had been shorted to 12V.
 - Added L-line sensing capability to detect 12V short faults.
-- Buck converter tuned to shut off cleanly below inadequate supply voltage and
-  turn on again only when the supply has risen significantly above the cutoff
-  threshold (to avoid flapping states).
+- Buck converter can optionally be tuned to shut off cleanly below inadequate
+  supply voltage and turn on again only when the supply has risen significantly
+  above the cutoff threshold (to avoid flapping states). Optional in v3.4, see
+  [Optional: buck enable divider](#optional-buck-enable-divider-s6r4s6r5s6r6).
 
 See below for a full change summary.
 
@@ -101,7 +105,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 | K-wire | L-line sensing via L_SENSE | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Estimated at around 40 µA (~31.5 µA measured on a v3.2 board with the accelerometer NC pads lifted, plus around ~9 µA for the enable divider added in v3.3) |
+| Board | Quiescent current | NOT TESTED | Expected ~31.5 µA with the default build (measured on a v3.2 board with the accelerometer NC pads lifted, which is electrically the same as v3.4 with S6R4 fitted as a 0R jumper). Fitting the optional enable divider adds around ~12 µA |
 
 ## Features
 
@@ -133,8 +137,13 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
   accelerometer from ever entering its low-power state. The pins are now
   no-connect and the pads are left unconnected. Measured on a v3.2 board with
   the two pads scraped off: sleep current went from ~140.8 µA to ~31.5 µA.
-  v3.4 will likely sit slightly above that because of the enable divider
-  added in v3.3, but not by much.
+- Made the LT8609 enable divider (S6R4/S6R5/S6R6, added in v3.3) an optional
+  extra, DNP by default. S6R4 is now fitted as a 0R jumper by default so EN is
+  tied straight to VIN and the buck runs whenever the input is present; S6R5
+  and S6R6 are DNP. Fitting the divider costs around ~12 µA of sleep current on
+  top of the ~31.5 µA baseline, so the default build sits at ~31.5 µA. See
+  [Optional: buck enable divider](#optional-buck-enable-divider-s6r4s6r5s6r6)
+  for the fitted values.
 - Added test points for easier assembly/testing
 - Slightly increased the size of the holes for the 2-pin power connector
 
@@ -162,7 +171,8 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
   with current from the external 12V blocked by a 1N4148 (S10D5). If that
   diode ever failed short, S10R8 (47K) bounds the current reaching the GPIO
   to ~250 uA at 12V.
-- 3-resistor divider added to the LT8609 enable pin. It now won't turn on until
+- 3-resistor divider added to the LT8609 enable pin (made optional and DNP by
+  default in v3.4). With it fitted the buck won't turn on until
   the supply voltage reaches ~5.6V and will turn off if the supply falls to
   ~4.3V, requiring ~5.6V to turn on again (clear hysteresis here avoids it
   ending up in a continuously flapping state). Worst case over the EN/UV pin
@@ -331,9 +341,9 @@ separate load switches.
 | S6R1 | Oscillator frequency resistor | 0402 18.2K 1% | [RC0402FR-0718K2L](https://uk.farnell.com/yageo/rc0402fr-0718k2l/res-18k2-1-0-0625w-0402-thick/dp/3495542) | 18.2K == 2MHz |
 | S6R2 | Output voltage divider resistor | 0402 226K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V, sets output voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | S6R3 | Output voltage divider resistor | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Sets output voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
-| S6R4 | Enable voltage divider resistor | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
-| S6R5 | Enable voltage divider resistor | 0402 243K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2433FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2433ftl/res-243k-1-0-0625w-0402-ceramic/dp/2072824) | Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
-| S6R6 | Enable voltage divider resistor | 0402 3.92M 1% | [CRCW04023M92FKED](https://uk.farnell.com/vishay/crcw04023m92fked/res-3m92-1-0-063w-0402-thick-film/dp/2141113) | |
+| S6R4 | Buck enable jumper | 0402 0R | Any 0402 0R jumper | Ties EN to VIN. Replace with 1M if fitting the optional enable divider - see note below |
+| S6R5 | Enable voltage divider resistor | DNP | - | **Optional** - see note below |
+| S6R6 | Enable voltage divider resistor | DNP | - | **Optional** - see note below |
 | S7U1 | Reverse-blocking load switch | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://uk.farnell.com/vishay/sip32431dr3-t1ge3/ic-load-switch-1-1v-5-5v-1a-sc70/dp/2361509) | |
 | S7R1 | 100K resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | S7R2 | 1M resistor | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
@@ -382,6 +392,32 @@ separate load switches.
 | - | u.FL cable - LTE | 50 ohm 35mm | [U.FL-2LPHF6-04N1TV-A-35](https://uk.farnell.com/hirose-hrs/u-fl-2lphf6-04n1tv-a-35/cbl-assy-u-fl-r-a-plug-r-a-plug/dp/4294251) | |
 | - | u.FL cable - GPS | 50 ohm 35mm | [U.FL-2LPHF6-04N1TV-A-35](https://uk.farnell.com/hirose-hrs/u-fl-2lphf6-04n1tv-a-35/cbl-assy-u-fl-r-a-plug-r-a-plug/dp/4294251) | |
 | - | JST power cable | Ultra-thin MX1.25 51146 | [10PCS MX1.25 51146 Cable](https://www.aliexpress.com/item/4000586964114.html) | |
+
+### Optional: buck enable divider (S6R4/S6R5/S6R6)
+
+S6R4/S6R5/S6R6 form a 3-resistor divider on the LT8609 EN/UV pin that gives
+the buck a defined under-voltage lockout with hysteresis: it won't start until
+the supply reaches ~5.6V and will shut off if the supply falls to ~4.3V, then
+needs ~5.6V again to restart. This is aimed at ISO 16750-2 low-voltage and
+drop-out tests. The divider draws around ~12 µA continuously from the 12V
+input, on top of the ~31.5 µA the rest of the board draws asleep, so it is
+DNP by default.
+
+**Default build (no divider):** fit S6R4 as a `0402 0R` jumper and leave S6R5
+and S6R6 unpopulated. EN is tied directly to VIN and the buck runs whenever
+the input is present, relying on the LT8609's own internal UVLO.
+
+**With the divider:** fit the three parts below in place of the jumper.
+
+| Item | Description | Specification | Example | Notes |
+|------|-------------|---------------|---------|-------|
+| S6R4 | Enable voltage divider resistor | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Replaces the 0R jumper. Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
+| S6R5 | Enable voltage divider resistor | 0402 243K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2433FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2433ftl/res-243k-1-0-0625w-0402-ceramic/dp/2072824) | Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
+| S6R6 | Enable voltage divider resistor | 0402 3.92M 1% | [CRCW04023M92FKED](https://uk.farnell.com/vishay/crcw04023m92fked/res-3m92-1-0-063w-0402-thick-film/dp/2141113) | |
+
+With EN threshold 1.05V rising / 1.00V falling and VOUT = 4.24V:
+K = 1 + S6R4/S6R5 + S6R4/S6R6, VIN\_on = K x 1.05 ≈ 5.6V,
+VIN\_off = K x 1.00 - S6R4 x VOUT / S6R6 ≈ 4.3V.
 
 ## Bill of materials - CAN bus parts
 
