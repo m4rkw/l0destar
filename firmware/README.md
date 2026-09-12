@@ -145,10 +145,11 @@ which `modem.c` provisions into the modem at **`TLS_SEC_TAG = 1`** on first boot
 
 Each telemetry record is one CSV line built in `data.c` (timestamp, lat, lon,
 speed, altitude, heading, HDOP, satellites, battery, ignition, uptime,
-accelerometer). Records batch by `BATCH_SIZE` (default 3 while driving: each
-send costs an RRC connection and a GNSS re-acquisition, so three records a
-datagram roughly doubles the record rate for a page update every few seconds;
-ignition changes and settings syncs still flush at once).
+accelerometer). Records batch by `BATCH_SIZE` (`CONFIG_APP_BATCH_SIZE`,
+default 3 while driving: each send costs an RRC connection and a GNSS
+re-acquisition, so three records a datagram roughly doubles the record rate
+for a page update every few seconds; ignition changes and settings syncs
+still flush at once).
 
 ---
 
@@ -342,6 +343,7 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_MOVEMENT_ALARM` | n | Enable movement alarm |
 | `APP_COAST_STOP_SPEED_KMH_X10` | 50 | Coast-to-stop speed threshold (km/h ×10) |
 | `APP_COAST_MAX_ITERATIONS` | 60 | Coast-to-stop max iterations |
+| `APP_BATCH_SIZE` | 3 | Records per datagram while driving |
 | `APP_GSM_ESCALATION_POWERCYCLE` / `_SLEEP` | 3 / 5 | Send failures before power-cycle / sleep |
 | `APP_GSM_RECOVERY_SLEEP_INTERVAL` | 300 | Recovery sleep interval (s) |
 

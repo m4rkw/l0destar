@@ -871,6 +871,22 @@ config APP_COAST_MAX_ITERATIONS
 
 # --- error escalation ------------------------------------------------------
 
+config APP_BATCH_SIZE
+	int "Records per datagram while driving"
+	default 1
+	range 1 16
+	help
+	  Each send costs an RRC connection and, because GNSS and LTE share the
+	  antenna, a fix re-acquisition afterwards - one to two seconds that the
+	  records themselves do not.  So batching raises the record rate
+	  (0.33/s at 1, ~0.6/s at 3) at the price of the page updating every N
+	  records instead of every cycle.
+
+	  Three is about the ceiling in practice: a record with ECU fields is
+	  250-300 bytes and BATCH_FLUSH_BYTES flushes before the datagram cap,
+	  so a larger value here mostly hands the decision to that byte guard.
+	  Ignition changes, settings syncs and send failures still flush at once.
+
 config APP_DATABUF_SLOTS
 	int "Telemetry records held when the link is down"
 	default 32

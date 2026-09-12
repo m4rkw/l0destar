@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.32
+
+### Batch size is a build-time option
+- **`CONFIG_APP_BATCH_SIZE` (default 3, range 1-16) replaces the hardcoded
+`BATCH_SIZE` in `config.h`.**  Every other cadence and threshold in that
+header already comes from Kconfig, so the one knob that decides how many
+records ride in a datagram was the odd one out: changing it for a bench run
+or a per-device build in `remote.conf` meant editing tracked source.  The
+trade-off it sets is unchanged - a larger batch raises the record rate
+(0.33/s at 1, ~0.6/s at 3) because each send costs an RRC connection and a
+GNSS re-acquisition, at the price of the page updating every N records
+instead of every cycle.  Values above three mostly hand the decision to
+`BATCH_FLUSH_BYTES`, which flushes a datagram before it can overflow;
+ignition changes, settings syncs and send failures still flush at once.
+
 ## 0.4.31
 
 ### Rail-fault alerts name the rail, not the domain

@@ -93,11 +93,12 @@
  * afterwards — one to two seconds that the records themselves do not: with
  * the OBD poll folded into the fix wait a record costs about a second.  So
  * batching raises the record rate (0.33/s at 1, ~0.6/s at 3) at the price of
- * the page updating every N seconds instead of every cycle.  More than three
- * does not fit: a record with ECU fields is 250-300 bytes and the datagram
- * is capped at UDP_PACKET_SIZE.  Ignition changes, settings syncs and send
- * failures still flush at once. */
-#define BATCH_SIZE                  3
+ * the page updating every N seconds instead of every cycle.  Three is about
+ * the ceiling in practice: a record with ECU fields is 250-300 bytes and
+ * BATCH_FLUSH_BYTES flushes before the datagram cap, so a larger setting
+ * mostly hands the decision to that byte guard.  Ignition changes, settings
+ * syncs and send failures still flush at once. */
+#define BATCH_SIZE                  CONFIG_APP_BATCH_SIZE
 /* Flush before the next record could overflow the datagram: room for one
  * more record plus the log lines that ride along.  Measured against the
  * transport's cap, not DATA_LIMIT — the buffer is bigger than a datagram. */
