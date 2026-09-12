@@ -7,6 +7,7 @@ tree are noted where they were removed.
 
 - Swapped MAX33041EASA+ for TCAN3414DR in v3.4. Identical footprint/pinout
   but is fully rated for CAN-FD at 1/3 the price of the ADI chip.
+- Cleaned up all unreferenced symbols and footprints
 
 ## 08/09/2026
 
