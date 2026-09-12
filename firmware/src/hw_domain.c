@@ -84,10 +84,13 @@ struct domain_pin {
 
 /* A rail-status input and the level it reads while its rail is up.  The 3.3V
  * senses are plain dividers (high = up); PP12V_K is inverted by a 2N7002
- * (low = up), per CONFIG_APP_BOARD_RAIL_ST_12V_ACTIVE_LOW. */
+ * (low = up), per CONFIG_APP_BOARD_RAIL_ST_12V_ACTIVE_LOW.  The name is the
+ * schematic net, so a domain that gates more than one rail (K_EN switches
+ * both PP3V3_K and PP12V_K) can say which of them failed. */
 struct domain_sense {
 	int8_t pin;
 	uint8_t up_level;
+	const char *name;
 };
 
 #define DOMAIN_MAX_PINS 12
@@ -104,6 +107,8 @@ struct domain {
 };
 
 static struct domain s_dom[HW_DOMAIN_COUNT];
+
+static const char *dom_name(enum hw_domain d);
 
 static void dom_add(struct domain *d, int pin, enum pin_role role)
 {
@@ -130,13 +135,15 @@ static void dom_release_pins(const struct domain *d)
 	}
 }
 
-static void dom_add_sense(struct domain *d, int pin, bool active_low)
+static void dom_add_sense(struct domain *d, int pin, bool active_low,
+			  const char *name)
 {
 	if (pin < 0 || d->nsense >= DOMAIN_MAX_SENSE) {
 		return;
 	}
 	d->sense[d->nsense++] = (struct domain_sense){ (int8_t)pin,
-						       active_low ? 0 : 1 };
+						       active_low ? 0 : 1,
+						       name };
 }
 
 /* True once every sense line for this domain reads the wanted state. */
@@ -149,6 +156,32 @@ static bool dom_rail_at(const struct domain *d, bool up)
 		}
 	}
 	return true;
+}
+
+/* Names of the sense lines that are NOT at the wanted state, joined with '+'
+ * ("PP3V3_K", "PP3V3_K+PP12V_K").  Falls back to the domain name when the
+ * domain has no named senses. */
+static void dom_fault_names(const struct domain *d, enum hw_domain dom, bool up,
+			    char *buf, size_t len)
+{
+	size_t used = 0;
+
+	buf[0] = '\0';
+	for (int i = 0; i < d->nsense; i++) {
+		int want = up ? d->sense[i].up_level : !d->sense[i].up_level;
+
+		if (gpio_pin_get(hw_gpio0, d->sense[i].pin) == want) {
+			continue;
+		}
+		used += snprintf(buf + used, (used < len) ? len - used : 0,
+				 "%s%s", used ? "+" : "", d->sense[i].name);
+		if (used >= len) {
+			break;
+		}
+	}
+	if (buf[0] == '\0') {
+		snprintf(buf, len, "%s", dom_name(dom));
+	}
 }
 
 static bool dom_wait_rail(const struct domain *d, bool up, int timeout_ms)
@@ -239,10 +272,10 @@ int hw_domain_init(void)
 		const bool inv_12v =
 			IS_ENABLED(CONFIG_APP_BOARD_RAIL_ST_12V_ACTIVE_LOW);
 
-		dom_add_sense(aux, PIN_GPS_RAIL_ST,  false);
-		dom_add_sense(can, PIN_CAN_RAIL_ST,  false);
-		dom_add_sense(k,   PIN_K3V3_RAIL_ST, false);
-		dom_add_sense(k,   PIN_K12V_RAIL_ST, inv_12v);
+		dom_add_sense(aux, PIN_GPS_RAIL_ST,  false,   "PP3V3_GPS");
+		dom_add_sense(can, PIN_CAN_RAIL_ST,  false,   "PP3V3_CAN");
+		dom_add_sense(k,   PIN_K3V3_RAIL_ST, false,   "PP3V3_K");
+		dom_add_sense(k,   PIN_K12V_RAIL_ST, inv_12v, "PP12V_K");
 
 		static const int8_t rail_st[] = {
 			PIN_GPS_RAIL_ST, PIN_CAN_RAIL_ST,
@@ -295,12 +328,15 @@ int hw_domain_request(enum hw_domain dom, uint8_t user)
 		k_msleep(DOMAIN_SETTLE_MS);
 
 		if (!dom_wait_rail(d, true, RAIL_UP_TIMEOUT_MS)) {
-			LOG_ERR("%s domain rail did not come up (P0.%d)",
-				dom_name(dom), d->enable_pin);
+			char bad[32];
+
+			dom_fault_names(d, dom, true, bad, sizeof(bad));
+			LOG_ERR("%s domain: %s did not come up (EN P0.%d)",
+				dom_name(dom), bad, d->enable_pin);
 			if (!d->faulted) {
-				char msg[40];
+				char msg[48];
 				snprintf(msg, sizeof(msg),
-					 "RAIL:%s rail fail", dom_name(dom));
+					 "RAIL:%s fail", bad);
 				alert_enqueue(msg, 1);
 				d->faulted = true;
 			}
@@ -318,8 +354,8 @@ int hw_domain_request(enum hw_domain dom, uint8_t user)
 			 * backfed through.  Leave the enable high: a rail that
 			 * comes up late, or a sense line that is lying, still
 			 * gets a working bias tee. */
-			LOG_WRN("%s domain left enabled despite rail fault",
-				dom_name(dom));
+			LOG_WRN("%s domain left enabled despite %s fault",
+				dom_name(dom), bad);
 		} else {
 			d->faulted = false;
 			LOG_INF("%s domain on (P0.%d)", dom_name(dom),

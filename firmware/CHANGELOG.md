@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Rail-fault alerts name the rail, not the domain
+- **`RAIL:<net> fail` replaces `RAIL:<domain> rail fail`.**  K_EN switches two
+rails (PP3V3_K and PP12V_K) and CAN_EN one, but the alert only carried the
+domain name, so a K-line fault said `RAIL:K rail fail` with no way to tell
+the 3.3V shifter supply from the 12V K output.  Each sense line now carries
+its schematic net name, and the alert and the error log list the sense
+line(s) that were not up when the timeout expired: `RAIL:PP12V_K fail`, or
+`RAIL:PP3V3_K+PP12V_K fail` when both are down.  A domain with no named
+senses still falls back to the domain name.
+
 ### Network mode is LTE-M only
 - **`CONFIG_LTE_NETWORK_MODE_LTE_M_GPS` replaces
 `CONFIG_LTE_NETWORK_MODE_LTE_M_NBIOT_GPS`.**  NB-IoT is no longer enabled in
