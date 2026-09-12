@@ -28,10 +28,10 @@ yourself rather than taking them on trust.
 - Fixed the accelerometer symbol: ASM330LHHXTR pins 10 and 11 (NC) were
   grounded on v3.0-v3.3, which stopped the part from ever entering its
   low-power state. Sleep current on a reworked v3.2 board fell from ~140.8 µA
-  to ~31.5 µA.
+  to ~35.5 µA at 12V.
 - The buck enable divider added in v3.3 is now an optional extra, DNP by
   default. S6R4 is a 0R jumper by default, so the expected sleep current is
-  ~31.5 µA; fitting the divider adds around ~12 µA.
+  ~35.5 µA at 12V; fitting the divider adds around ~12 µA.
 - Added test points for easier assembly/testing
 - Slightly increased the size of the holes for the 2-pin power connector
 
@@ -59,8 +59,8 @@ is asleep. Fixed here by making pins 10 and 11 proper no-connect pins in the
 symbol; the pads are unconnected in the layout.
 
 Tested on a v3.2 board by scraping pads 10 and 11 off the board under S8U1:
-sleep current dropped from ~140.8 µA to ~31.5 µA. The same rework applies to
-any existing v3.0 - v3.3 board.
+sleep current dropped from ~140.8 µA to ~35.5 µA at 12V. The same rework
+applies to any existing v3.0 - v3.3 board.
 
 ### L line pull-down can be destroyed by a short to battery
 
@@ -105,7 +105,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 | K-wire | L-line sensing via L_SENSE | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Expected ~31.5 µA with the default build (measured on a v3.2 board with the accelerometer NC pads lifted, which is electrically the same as v3.4 with S6R4 fitted as a 0R jumper). Fitting the optional enable divider adds around ~12 µA |
+| Board | Quiescent current | NOT TESTED | Expected ~35.5 µA at 12V with the default build (measured on a v3.2 board with the accelerometer NC pads lifted, which is electrically the same as v3.4 with S6R4 fitted as a 0R jumper). Fitting the optional enable divider adds around ~12 µA |
 
 ## Features
 
@@ -136,13 +136,14 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
   were grounded in the layout on every board from v3.0 to v3.3. This kept the
   accelerometer from ever entering its low-power state. The pins are now
   no-connect and the pads are left unconnected. Measured on a v3.2 board with
-  the two pads scraped off: sleep current went from ~140.8 µA to ~31.5 µA.
+  the two pads scraped off: sleep current went from ~140.8 µA to ~35.5 µA at
+  12V.
 - Made the LT8609 enable divider (S6R4/S6R5/S6R6, added in v3.3) an optional
   extra, DNP by default. S6R4 is now fitted as a 0R jumper by default so EN is
   tied straight to VIN and the buck runs whenever the input is present; S6R5
   and S6R6 are DNP. Fitting the divider costs around ~12 µA of sleep current on
-  top of the ~31.5 µA baseline, so the default build sits at ~31.5 µA. See
-  [Optional: buck enable divider](#optional-buck-enable-divider-s6r4s6r5s6r6)
+  top of the ~35.5 µA baseline, so the default build sits at ~35.5 µA at 12V.
+  See [Optional: buck enable divider](#optional-buck-enable-divider-s6r4s6r5s6r6)
   for the fitted values.
 - Added test points for easier assembly/testing
 - Slightly increased the size of the holes for the 2-pin power connector
@@ -400,7 +401,7 @@ the buck a defined under-voltage lockout with hysteresis: it won't start until
 the supply reaches ~5.6V and will shut off if the supply falls to ~4.3V, then
 needs ~5.6V again to restart. This is aimed at ISO 16750-2 low-voltage and
 drop-out tests. The divider draws around ~12 µA continuously from the 12V
-input, on top of the ~31.5 µA the rest of the board draws asleep, so it is
+input, on top of the ~35.5 µA the rest of the board draws asleep, so it is
 DNP by default.
 
 **Default build (no divider):** fit S6R4 as a `0402 0R` jumper and leave S6R5

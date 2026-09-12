@@ -119,7 +119,7 @@ stage isn't populated yet.
    v3.3 and draws around 9 µA continuously. If you don't need the clean
    under-voltage cut-off you can fit a 0R in place of S6R4 and omit S6R5 and
    S6R6 entirely, which ties EN/UV straight to the 12V rail and drops the
-   sleep current to around ~31.5 µA. The buck then runs down to its own
+   sleep current to around ~35.5 µA at 12V. The buck then runs down to its own
    internal minimum input voltage instead of shutting off cleanly.
 
 3. Apply paste to the remaining pads, place the rest of the components and

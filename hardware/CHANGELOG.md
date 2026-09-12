@@ -13,9 +13,9 @@ tree are noted where they were removed.
   asleep. In v3.4 pins 10 and 11 are proper no-connect pins and the pads are
   left unconnected.
 - Tested on a v3.2 board by scraping pads 10 and 11 off the board under S8U1:
-  sleep current dropped from ~140.8 µA to ~31.5 µA. v3.4 is expected to land
-  slightly above that because of the LT8609 enable divider added in v3.3
-  (~9 µA), so roughly ~40 µA. The same rework applies to any existing
+  sleep current dropped from ~140.8 µA to ~35.5 µA at 12V. v3.4 is expected
+  to land slightly above that because of the LT8609 enable divider added in
+  v3.3 (~9 µA), so roughly ~45 µA. The same rework applies to any existing
   v3.0-v3.3 board.
 
 ## 05/09/2026
