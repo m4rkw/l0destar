@@ -79,7 +79,7 @@
         <div id="imu-bar"><div id="imu-bar-fill"></div></div>
       </div>
     </div>
-    <div id="map"></div>
+    <div id="map" data-maps="{{ 1 if google_maps_api_key else 0 }}"></div>
     <!-- Track mode dashboard: shown in place of the map while the server-side
          switch is on.  Filled by updateTrack() in track.js. -->
     <div id="track" style="display:none">
@@ -159,9 +159,6 @@
     {% if google_maps_api_key %}
     <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap"
     async defer></script>
-    {% else %}
-    <script>document.getElementById('map').innerHTML =
-      '<p style="padding:1em">Set google_maps_api_key in config.yaml to show the map.</p>';</script>
     {% endif %}
   </body>
 </html>

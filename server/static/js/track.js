@@ -990,3 +990,10 @@ setInterval(function() {
   var age = (Date.now() - tkLastArrival) / 1000;
   tkSet('tk-age', age < 10 ? age.toFixed(1) + ' s' : Math.round(age) + ' s', age >= 5 ? 'warn' : '');
 }, 250);
+
+// No Maps key configured: say so where the map would be.  Done here rather
+// than in an inline script in the page, which the Content-Security-Policy in
+// deploy/nginx.conf.example (scripts from files only) would refuse to run.
+if ($('#map').attr('data-maps') !== '1') {
+  $('#map').html('<p class="map-note">Set google_maps_api_key in config.yaml to show the map.</p>');
+}

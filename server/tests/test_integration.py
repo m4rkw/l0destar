@@ -4,6 +4,8 @@ Skipped unless ``TRACKER_TEST_DB`` is set; see conftest.py.  These are
 destructive — they truncate every table they touch.
 """
 
+import re
+
 from conftest import needs_db, record
 
 from tracker import db, logs, telemetry
@@ -265,6 +267,14 @@ def test_map_page_renders(client, device, database, logged_in):
     response = client.get('/track')
     assert response.status_code == 200
     assert b'AB12CDE' in response.data
+
+
+def test_map_page_runs_no_inline_script(client, device, database, logged_in):
+    # deploy/nginx.conf.example allows scripts only from files, so an inline
+    # <script> would silently never run.
+    page = client.get('/track').get_data(as_text=True)
+    assert re.search(r'<script(?![^>]*\bsrc=)[^>]*>', page) is None
+    assert 'data-maps="0"' in page      # no key configured in the tests
 
 
 def test_map_page_survives_a_device_with_no_records(client, device, database, logged_in):
