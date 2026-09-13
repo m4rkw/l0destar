@@ -145,12 +145,14 @@ genuine resting low reading still relays.
 ```
 
 The leading `1` is the ack the firmware checks before clearing its send
-buffer. `slim_response` drops the movement_alarm field — and with it the OTA
-indication, which rides the same field.
+buffer. `slim_response` drops the movement_alarm field, and with it everything
+that follows: current firmware applies a reply only when it carries both the
+interval and movement_alarm, so a slim reply delivers no settings, commands,
+OTA indication or track-mode switch. Leave it off.
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is
-safer than replaying a `poweroff` after the operator has changed their mind.
+safer than replaying a `reboot` after the operator has changed their mind.
 
 ## Transports
 
@@ -189,9 +191,12 @@ than radio time.
 ```
 
 The modem terminates TLS itself. The device authenticates only by presenting
-an enrolled IMEI, which is not a secret — so either restrict who can reach the
-port, or configure `tls_client_ca` for mutual TLS. The UDP transport's
-per-device PSK is stronger in that respect.
+an enrolled IMEI, which is not a secret, and the port has to be open for
+firmware downloads — so telemetry frames are refused unless `tls_telemetry` is
+set, and anyone setting it should restrict who can reach the port or configure
+`tls_client_ca` for mutual TLS. The UDP transport's per-device PSK is stronger
+in that respect; current firmware reports over UDP and uses this port only to
+download updates.
 
 The handshake timeout is deliberately much longer than the read timeout. A
 device on LTE-M in weak signal has to get the certificate chain across before

@@ -25,9 +25,12 @@ secure_cookies: true
 # it is served to the browser and cannot be kept secret.
 google_maps_api_key: ''
 
-# IMEI the web UI opens on when a request does not name a device.  Every other
-# endpoint takes ?imei= or ?device_id=, so this is only a landing page.
-default_device: '000000000000000'
+# Optional.  The device a read request is about when it names none: the map
+# the web UI opens on, the bare /api/1.0/track redirect.  Unset, a request
+# that names no device is answered for the only enrolled device, and with
+# several the web UI opens on its device list.  Requests that change anything
+# always name their device.
+# default_device: '000000000000000'
 
 # ---------------------------------------------------------------------------
 # Storage
@@ -42,14 +45,14 @@ database:
 
 # Both default to directories beside this file.
 # log_dir: /var/log/tracker
-# fw_dir: /var/www/tracker/fw
+# fw_dir: /srv/l0destar/server/fw
 
 # ---------------------------------------------------------------------------
 # Listeners
 #
-# Enable whichever transports your devices use; each is independent and a
-# device only ever speaks one of them.  See docs/PROTOCOL.md for the
-# trade-offs between them.
+# Current firmware reports over UDP and downloads updates over TLS, so both
+# are on; telemetry over TLS and DTLS stay off unless a device needs them.
+# Each listener is independent.  See docs/PROTOCOL.md for the trade-offs.
 # ---------------------------------------------------------------------------
 
 # UDP + ChaCha20-Poly1305, keyed per device from `device`.`psk`.
@@ -57,11 +60,21 @@ udp_enabled: true
 udp_host: 0.0.0.0
 udp_port: 65480
 
-# TLS 1.2 over TCP.  Also serves firmware downloads on the same port.
+# TLS 1.2 over TCP: firmware downloads, and telemetry when tls_telemetry is on.
+# The listener is disabled while tls_cert or tls_key is unset.
 tls_host: 0.0.0.0
 tls_port: 65481
 tls_cert: certs/server.crt
 tls_key: certs/server.key
+# Connections the listener queues while every thread is busy accepting.
+tls_backlog: 8
+
+# Accept telemetry frames on the TLS port.  Leave this off unless a device
+# really reports over TLS: that transport identifies a device by nothing more
+# than the IMEI it presents, and the port has to be open to the internet for
+# firmware downloads, so anyone who learns an IMEI could post as that device
+# and collect its queued commands.  Firmware downloads work either way.
+tls_telemetry: false
 
 # Optional mutual TLS.  With a per-device client certificate the transport
 # authenticates the device instead of trusting the IMEI it presents.
@@ -89,8 +102,10 @@ dtls_port: 65482
 # dtls_cert: certs/server.crt
 # dtls_key: certs/server.key
 
-# Drop movement_alarm from the response — shortens every reply.  Note this
-# also disables OTA indication, which rides the same field.
+# Drop movement_alarm from the response to shorten every reply.  Keep this
+# false with current firmware: it applies a reply only when it carries both
+# the interval and movement_alarm, so a slim reply delivers no settings, no
+# commands, no update indication and no track-mode switch.
 slim_response: false
 
 # ---------------------------------------------------------------------------
@@ -139,8 +154,20 @@ notify:
 # too.  Point a cron at POST /api/1.0/home and this catches the other case.
 # ---------------------------------------------------------------------------
 
+# One entry per vehicle (a single mapping without the list works too).
+# POST /api/1.0/home checks them all, or only the one ?imei= names.
 # home_check:
-#   imei: '000000000000000'
-#   latitude: 0.0
-#   longitude: 0.0
-#   radius_m: 300
+#   - imei: '000000000000000'
+#     latitude: 0.0
+#     longitude: 0.0
+#     radius_m: 300
+#   - imei: '000000000000001'
+#     latitude: 0.0
+#     longitude: 0.0
+
+# ---------------------------------------------------------------------------
+# Tools
+# ---------------------------------------------------------------------------
+
+# Where tools/command.py sends commands: this server's own web listener.
+# api_base: http://127.0.0.1:5000

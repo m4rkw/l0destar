@@ -6,28 +6,36 @@
     tools/command.py 350000000000000 locate
 
 Nothing is pushed.  The device is asleep almost all of the time, so the command
-waits until it next reports and rides back on the response it was already going
-to receive.  At the default reporting interval that can be an hour away.
+waits until it next reads a reply and rides back on it.  A parked unit reads one
+on each timed engine-off wake, so with no engine-off interval set a command can
+wait until the ignition next comes on.
 
-Commands
---------
-    int=<seconds>          reporting interval
-    movealarm=0|1          wake and report on accelerometer trigger
-    locate                 report position on next check-in
-    locatenow              wake and report position immediately
-    config                 report current settings
+Commands the firmware carries out
+---------------------------------
+    int=<seconds>          engine-off reporting interval; 0 = no timed wakes
+    movealarm=0|1          set the movement alarm flag (stored and reported
+                           back; firmware 0.4.x raises movement alerts either way)
+    locate                 alert with the last known position
+    locatenow              take and send a position, then alert with it
+    tomtom / tomtomnow     as locate / locatenow, as a TomTom link
+    config                 alert with firmware, settings, battery, ignition, uptime
+    movereset              reset the movement alert cooldown
     reboot                 restart the device
-    poweroff               enter deep sleep until externally woken
-    fota                   check for an update now
-    fota-retry             clear a withheld version and check again
+    fota                   check for an update now, clearing the device's own
+                           block and retry holdoff
+    fota-retry             clear the version withheld on the server, then queue fota
 
-    alarm=0|1              notify on ignition on          (server-side)
-    garage=0|1             expected to be moved           (server-side)
-    overnightalarm=0|1     notify on overnight ignition   (server-side)
-    overnight_alarm_hour_from=0-23                        (server-side)
-    overnight_alarm_hour_to=0-23                          (server-side)
+Settings the server acts on, applied immediately and never sent to the device:
 
-Server-side settings are applied immediately and never reach the device.
+    alarm=0|1              notify when the ignition comes on
+    garage=0|1             expected to be moved; urgent alerts are demoted
+    overnightalarm=0|1     notify when the ignition comes on overnight
+    overnight_alarm_hour_from=0-23
+    overnight_alarm_hour_to=0-23
+
+Track mode is switched from the map page or POST /api/1.0/trackmode rather than
+queued here: every reply already carries the server's switch, so a queued
+track= would be undone by the next one.
 
 fota-retry is both halves of a manual retry: it clears the version withheld
 from this device after a failed update, then queues the bare `fota` command,
