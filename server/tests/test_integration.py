@@ -48,6 +48,12 @@ def test_speed_is_converted_to_mph(device, database):
     assert str(last_log(database)['speed']) == '29.83'
 
 
+def test_hdop_arrives_in_tenths(device, database):
+    # The firmware sends HDOP x 10: 12 on the wire is an HDOP of 1.2.
+    send(device, record(0, 51.5, -0.1, 0, hdop=12))
+    assert str(last_log(database)['hdop']) == '1.20'
+
+
 def test_obd_fields_are_stored_scaled(device, database):
     send(device, record(0, 51.5, -0.1, 1, speed=40.0,
                         extras=',orpm=850;ospd=48;ocl=87;old=235;omaf=1234'))

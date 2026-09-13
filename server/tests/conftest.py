@@ -165,8 +165,9 @@ def published_for_device(fw_dir, device):
     return device
 
 
-def record(minute, lat, lon, ignition, speed=0.0, extras=''):
-    """Build a telemetry line at a given minute of the day."""
+def record(minute, lat, lon, ignition, speed=0.0, extras='', hdop=9):
+    """Build a telemetry line at a given minute of the day.  ``hdop`` is as
+    the firmware sends it, in tenths."""
     hours, minutes = divmod(minute, 60)
-    return ('12/08/26,%02d:%02d:00+01,%.6f,%.6f,%.1f,30.0,90.0,0.9,10,12.40,%d,5,0%s'
-            % (hours, minutes, lat, lon, speed, ignition, extras))
+    return ('12/08/26,%02d:%02d:00+01,%.6f,%.6f,%.1f,30.0,90.0,%d,10,12.40,%d,5,0%s'
+            % (hours, minutes, lat, lon, speed, hdop, ignition, extras))

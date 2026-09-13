@@ -11,7 +11,7 @@ on every record, and the server reconstructs it.
 ## Records
 
 ```
-ts,lat,lon,spd,alt,hdg,hdop,sat,bat,ign,waketime,pon[,extras...]
+ts,lat,lon,spd,alt,hdg,hdop,sat,bat,ign,up,pon[,extras...]
 ```
 
 | Field | Meaning |
@@ -21,12 +21,14 @@ ts,lat,lon,spd,alt,hdg,hdop,sat,bat,ign,waketime,pon[,extras...]
 | `spd` | km/h (the server stores mph) |
 | `alt` | metres |
 | `hdg` | degrees true |
-| `hdop` | horizontal dilution of precision |
+| `hdop` | horizontal dilution of precision **× 10**, a whole number: `12` is an HDOP of 1.2. The server stores the HDOP itself |
 | `sat` | satellites used |
 | `bat` | vehicle battery, volts |
-| `ign` | ignition state, 0 or 1 |
-| `waketime` | seconds awake for this send |
-| `pon` | powered-on flag |
+| `ign` | ignition, 1 on, 0 off |
+| `up` | seconds since boot, the same figure as the `up=` extra. Stored in the `waketime` column, whose name is older than the field's current meaning |
+| `pon` | the device's powered-on flag; the server derives its own `powered_on` from the ignition transition |
+
+Records built in track mode send `0` for `hdop` and `sat`, and `1` for `ign`.
 
 `+NN` in the timestamp is quarter-hours east of UTC, per 3GPP `AT+CCLK`.
 
