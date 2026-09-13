@@ -9,7 +9,7 @@ Every device gets its own build. Boards differ in revision and in which OBD inte
 1. You run `push_fw.sh` on your build machine. For each device in `remote.conf` it builds an image, uploads it to the server's firmware directory as `l0destar-<version>-<imei>.bin` and writes that device's `manifest-<imei>.txt`.
 2. From then on, every reply the server sends that device carries `fota=<version>`, and the device compares it with the version it is running.
 3. When the published version is newer, the device checks for the update at the next safe moment: from its main loop, on a timed engine-off wake, or on the way to sleep when the ignition is switched off. It also checks every time it boots, and when it is sent the `fota` command.
-4. It fetches `/fw/manifest.txt?imei=<imei>&v=<running version>` from `CONFIG_APP_SERVER_HOST` on TCP port 65481 over TLS, checking the server's certificate against the CA stored in its modem. It installs only a strictly newer version whose `board=` matches its own build (for example `v3.3+kline`), and waits while the vehicle battery reads below 12.0V.
+4. It fetches `/fw/manifest.txt?imei=<imei>&v=<running version>` from `CONFIG_APP_SERVER_HOST` on TCP port 65481 over TLS, checking the server's certificate against the CA stored in its modem. It installs only a strictly newer version whose `board=` matches its own build (for example `v3.4+kline`), and waits while the vehicle battery reads below 12.0V.
 5. It raises the alert `fota: <old> -> <new> available, downloading`, stops GNSS (which shares the radio front end) and downloads the image into its second flash slot in 2KB pieces: up to three attempts per check, within a 20 minute budget.
 6. It tells the server the image is staged, raises `fota: <old> -> <new>, rebooting` and restarts.
 7. MCUboot swaps the new image in as a trial. The new firmware runs its whole start-up and then confirms itself. An image that hangs or crashes before that is swapped back out on the next boot.
@@ -47,7 +47,7 @@ CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=y
 [350000000000000]
 name    = Car
 profile = makerdiary
-CONFIG_APP_BOARD_L0DESTAR_V3_3=y
+CONFIG_APP_BOARD_L0DESTAR_V3_4=y
 CONFIG_APP_OBD_MODE=2
 CONFIG_APP_PSK_HEX="<64 hex characters>"
 ```

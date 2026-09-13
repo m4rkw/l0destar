@@ -5,7 +5,8 @@
 # Which l0destar PCB this build targets.  Selecting a board sets the whole
 # GPIO map, fitted-hardware flags and power-domain sequencing (see
 # Kconfig.boards).  Default is the bench (DK / Connect Kit + breadboard).
-# CONFIG_APP_BOARD_L0DESTAR_V3_3=y      (v3.3 and v3.4)
+# CONFIG_APP_BOARD_L0DESTAR_V3_4=y
+# CONFIG_APP_BOARD_L0DESTAR_V3_3=y
 # CONFIG_APP_BOARD_L0DESTAR_V3_2=y
 # CONFIG_APP_BOARD_L0DESTAR_V3_1=y
 # CONFIG_APP_BOARD_L0DESTAR_V3_0=y

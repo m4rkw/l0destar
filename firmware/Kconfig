@@ -76,7 +76,7 @@ config APP_OBD_MODE
 	int "OBD interface mode (0=none, 1=CAN, 2=K-line)"
 	default 0
 	help
-	  Which OBD interface is populated on a v3.1/v3.2/v3.3 board.  The
+	  Which OBD interface is populated on a v3.1/v3.2/v3.3/v3.4 board.  The
 	  jumper pads select the electrical path; this tells firmware which
 	  rails to test and which protocol driver to start.
 	    0 = no OBD interface (S5R1-S5R4 all open)

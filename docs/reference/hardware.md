@@ -15,17 +15,17 @@ different Connect Kit pins and switches its power rails differently. Select the 
 
 | Board | Status | Board selection | Interface setting | FOTA board id |
 |---|---|---|---|---|
-| v3.4 | Designed, not yet built or tested | `CONFIG_APP_BOARD_L0DESTAR_V3_3=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.3`, `v3.3+can`, `v3.3+kline` |
+| v3.4 | Designed, not yet built or tested | `CONFIG_APP_BOARD_L0DESTAR_V3_4=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.4`, `v3.4+can`, `v3.4+kline` |
 | v3.3 | Built and bench tested | `CONFIG_APP_BOARD_L0DESTAR_V3_3=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.3`, `v3.3+can`, `v3.3+kline` |
 | v3.2 | Built and bench tested | `CONFIG_APP_BOARD_L0DESTAR_V3_2=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.2`, `v3.2+can`, `v3.2+kline` |
 | v3.1 | Built and bench tested | `CONFIG_APP_BOARD_L0DESTAR_V3_1=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.1`, `v3.1+can`, `v3.1+kline` |
 | v3.0 | Archived | `CONFIG_APP_BOARD_L0DESTAR_V3_0=y` | `CONFIG_APP_BOARD_HAS_CAN` and `CONFIG_APP_BOARD_HAS_KLINE`, both on by default; turn off the one not populated | `v3.0+can+kline` by default |
 
-There is no v3.4 board definition in the firmware. **A v3.4 board uses the v3.3 definition**: the
-Connect Kit headers and the power header carry identical nets on the two PCBs - the only
-differences are the renamed bus nets and the accelerometer's NC pads - so the pin map and the rail
-topology are the same. The FOTA board id is therefore `v3.3` too. The interactive board test has
-no v3.4 entry either; pick v3.3.
+v3.4 has its own board definition, but it is the v3.3 one under a new name: the Connect Kit
+headers and the power header carry identical nets on the two PCBs - the only differences are the
+renamed bus nets and the accelerometer's NC pads - so the pin map and the rail topology are the same.
+It exists so that update images stay tied to the revision: a v3.4 unit reports the FOTA board id
+`v3.4` and installs only images built for it. Pick v3.4 in the interactive board test.
 
 `CONFIG_APP_OBD_MODE` tells v3.1 and later firmware which interface is populated, and with it
 which rails to switch and which drivers to start:
@@ -230,7 +230,7 @@ Whether the firmware may drive the K-wire interface's L line is a board-level de
 
 | Board | Default | Why |
 |---|---|---|
-| v3.3 and v3.4 (built as v3.3) | On | The L pull-down is current-limited to 90mA by an AL5809-90, and the L_SENSE input (Connect Kit P0.14, an analog input) lets the firmware detect an L wire shorted to battery before driving it |
+| v3.3 and v3.4 | On | The L pull-down is current-limited to 90mA by an AL5809-90, and the L_SENSE input (Connect Kit P0.14, an analog input) lets the firmware detect an L wire shorted to battery before driving it |
 | Every board before v3.3 | Off | A short from the L wire to battery can destroy the pull-down transistor and the nRF9151 |
 
 On boards before v3.3 the pin stays parked low and nothing asserts it. The advice for those boards

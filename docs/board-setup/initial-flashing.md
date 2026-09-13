@@ -31,8 +31,8 @@ Then create `firmware/local.conf`, the configuration for the board on your bench
 ```text
 # firmware/local.conf
 
-# Carrier board: v3.4 uses the v3.3 definition
-CONFIG_APP_BOARD_L0DESTAR_V3_3=y
+# Carrier board
+CONFIG_APP_BOARD_L0DESTAR_V3_4=y
 # The OBD interface you built: 0 none, 1 CAN, 2 K-wire
 CONFIG_APP_OBD_MODE=2
 
@@ -49,7 +49,7 @@ CONFIG_APP_FOTA_INHIBIT=y
 
 | Setting | What it does |
 |---|---|
-| `CONFIG_APP_BOARD_L0DESTAR_V3_3` | Selects the carrier board: its GPIO map, the parts it has and how its switched power rails are sequenced. v3.4 and v3.3 connect the Connect Kit identically, pad for pad. Other revisions have their own symbol, listed in the [hardware reference](/reference/hardware.html). |
+| `CONFIG_APP_BOARD_L0DESTAR_V3_4` | Selects the carrier board: its GPIO map, the parts it has and how its switched power rails are sequenced. Other revisions have their own symbol, listed in the [hardware reference](/reference/hardware.html). |
 | `CONFIG_APP_OBD_MODE` | Must match the [interface selection pads](/reference/hardware.html#interface-selection-pads) you bridged: `0` none, `1` CAN, `2` K-wire. It decides which OBD rails are powered and which driver starts. `0` powers no OBD circuitry at all, so it is safe on any board while you check the rest. |
 | `CONFIG_APP_SERVER_HOST` | Where telemetry (UDP 65480) and updates (TCP 65481) go. Use the name your server's certificate was issued for. It must resolve to an IPv4 address: the firmware does not use IPv6. |
 | `CONFIG_APP_APN` | The default in `prj.conf` (`sensor.net`) is almost certainly not your SIM provider's APN. With the wrong APN the modem can register on the network and still have no data connection. |
@@ -150,7 +150,7 @@ A healthy boot looks like this (abridged - timings and readings will differ):
 ```text
 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
 *** Booting My Application v0.4.0 ***
-<inf> main: === l0destar firmware boot (v0.4.0, board v3.3+kline) ===
+<inf> main: === l0destar firmware boot (v0.4.0, board v3.4+kline) ===
 <inf> main: reset cause: sw
 <inf> settings: apn=your.apn user=
 <inf> settings: imei=(unset)
@@ -172,7 +172,7 @@ A healthy boot looks like this (abridged - timings and readings will differ):
 
 What to look for:
 
-- **`board v3.3+kline`** - the board and interface you configured (`+can` for CAN, nothing after the version for no interface).
+- **`board v3.4+kline`** - the board and interface you configured (`+can` for CAN, nothing after the version for no interface).
 - **`self-test: all rails OK`** - the switched rails came up. `RAIL:` or `SELFTEST:` failures send you back to the [board test](/assembly/board-test.html).
 - **`battery=`** close to your supply voltage, and **`ignition=`** following the switch on pin 5.
 - **`connected`** followed by **`imei=`**. Write the IMEI down: you need it on the next page.

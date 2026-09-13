@@ -36,6 +36,7 @@ BAUD=115200
 # --- board table: newest first; first entry is the default -------------------
 # id|menu label|Kconfig board select|flags (obd = ask which OBD interface)
 BOARDS=(
+    "v3.4|l0destar v3.4  (v3.3 map, IMU NC pads fixed)|CONFIG_APP_BOARD_L0DESTAR_V3_4=y|obd"
     "v3.3|l0destar v3.3  (v3.1 map, fixed L-line + L sense)|CONFIG_APP_BOARD_L0DESTAR_V3_3=y|obd"
     "v3.2|l0destar v3.2  (v3.1 map + MCU OVP)|CONFIG_APP_BOARD_L0DESTAR_V3_2=y|obd"
     "v3.1|l0destar v3.1  (combined CAN/K-line, rail sensing)|CONFIG_APP_BOARD_L0DESTAR_V3_1=y|obd"

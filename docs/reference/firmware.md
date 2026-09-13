@@ -181,18 +181,13 @@ same decision see [Hardware](/reference/hardware.html#interface-selection-pads).
 | `APP_BOARD_L0DESTAR_V3_0` | v3.0 (CAN and K-wire, jumper-selected) | `v3.0` |
 | `APP_BOARD_L0DESTAR_V3_1` | v3.1 (adds rail sensing) | `v3.1` |
 | `APP_BOARD_L0DESTAR_V3_2` | v3.2 (adds MCU over-voltage protection) | `v3.2` |
-| `APP_BOARD_L0DESTAR_V3_3` | v3.3, and v3.4 | `v3.3` |
-
-!!! note "v3.4 builds as v3.3"
-    There is no entry for v3.4. Select `APP_BOARD_L0DESTAR_V3_3`: the Connect Kit header and
-    power header nets are identical in the v3.3 and v3.4 PCBs, pad for pad. The only differences
-    are the names of the bus nets and the accelerometer's no-connect pads, neither of which the
-    firmware sees.
+| `APP_BOARD_L0DESTAR_V3_3` | v3.3 (fixes the L-line pull-down and adds L_SENSE) | `v3.3` |
+| `APP_BOARD_L0DESTAR_V3_4` | v3.4 (same pin map as v3.3) | `v3.4` |
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
 | `APP_OBD_MODE` | int | `0` | The OBD interface populated on a v3.1, v3.2, v3.3 or v3.4 board: `0` none, `1` CAN, `2` K-wire. It sets the `APP_BOARD_HAS_CAN` and `APP_BOARD_HAS_KLINE` defaults, and which rails the boot self-test and the board test exercise. Ignored on other boards |
-| `APP_BOARD_ID` | string, hidden | per board, as above | Board identity for update manifests. The full identity appends the fitted interfaces - `v3.3+kline`, `v3.3+can` or plain `v3.3` - and a device refuses an image built for a different one |
+| `APP_BOARD_ID` | string, hidden | per board, as above | Board identity for update manifests. The full identity appends the fitted interfaces - `v3.4+kline`, `v3.4+can` or plain `v3.4` - and a device refuses an image built for a different one |
 | `APP_BOARD_IS_L0DESTAR` | bool, hidden | `y` for every board but the bench | Switches the pin and flag defaults from bench values to PCB values |
 
 ### Fitted hardware and power domains
