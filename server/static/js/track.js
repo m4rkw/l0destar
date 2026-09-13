@@ -4,6 +4,15 @@ var marker = null;
 var accuracyCircle = null;
 var engineRunning = false;
 
+// The device this page follows.  The server settles it when it renders the
+// page, and every request below names it rather than leaving the server to
+// guess, which on a server tracking several vehicles it cannot.
+var deviceImei = $('input#device_imei').val() || '';
+
+function forDevice(url) {
+  return url + (url.indexOf('?') < 0 ? '?' : '&') + 'imei=' + encodeURIComponent(deviceImei);
+}
+
 // The speed to show: the ECU's road speed when the device reported one, else
 // GNSS.  The server sends it as combined_speed; points from before that
 // column existed only carry the GNSS figure.
@@ -249,7 +258,7 @@ var _wsStaleTimer = null;
 
 function connectWebSocket() {
   var proto = (location.protocol === 'https:') ? 'wss:' : 'ws:';
-  var ws = new WebSocket(proto + '//' + location.host + '/ws/carpos');
+  var ws = new WebSocket(proto + '//' + location.host + forDevice('/ws/carpos'));
 
   function resetStaleTimer() {
     if (_wsStaleTimer) clearTimeout(_wsStaleTimer);
@@ -452,7 +461,7 @@ function loadJourneys() {
   historyLoading = true;
   $.ajax({
     type: 'GET',
-    url: '/api/1.0/journeys?page=' + historyPage,
+    url: forDevice('/api/1.0/journeys?page=' + historyPage),
     dataType: 'json',
     success: function(resp) {
       var data = resp.journeys || [];
@@ -501,7 +510,7 @@ function startReplay(journeyId) {
   $('#replay-progress').attr('max', 0).val(0);
   $.ajax({
     type: 'GET',
-    url: '/api/1.0/journey/' + journeyId + '/points',
+    url: forDevice('/api/1.0/journey/' + journeyId + '/points'),
     dataType: 'json',
     success: function(resp) {
       var data = resp.points || [];
@@ -550,7 +559,7 @@ function fetchLivePosition() {
   belowVoltageCount = engineRunning ? 0 : parseInt($('input#engine_stopped_count').val());
   $.ajax({
     type: 'GET',
-    url: '/api/1.0/carpos',
+    url: forDevice('/api/1.0/carpos'),
     dataType: 'json',
     success: function(resp) {
       accelBaseline = resp.accel_baseline || null;
@@ -701,6 +710,8 @@ var tkForward = null;         // {x, y, z} unit forward axis, learnt (see below)
 var TK_REDLINE = 6500;
 var TK_RPM_MAX = 7000;
 var tkToggledAt = 0;          // when this page last flipped the switch itself
+// Per device: each is mounted its own way.
+var TK_FORWARD_KEY = 'tkForward:' + deviceImei;
 
 // The switch as reported by the server on rows and pings.  For a few seconds
 // after this page toggled it, the local value wins: a row built just before
@@ -736,7 +747,7 @@ $(document).on('click', '#track-link', function(e) {
   if (want && !confirm('Enable track mode? GPS is switched off and the ECU is polled continuously until it is turned off again.')) return;
   $.ajax({
     type: 'POST',
-    url: '/api/1.0/trackmode',
+    url: forDevice('/api/1.0/trackmode'),
     contentType: 'application/json',
     data: JSON.stringify({on: want ? 1 : 0}),
     dataType: 'json',
@@ -746,7 +757,7 @@ $(document).on('click', '#track-link', function(e) {
 });
 
 try {
-  var f = JSON.parse(localStorage.getItem('tkForward'));
+  var f = JSON.parse(localStorage.getItem(TK_FORWARD_KEY));
   if (f && isFinite(f.x)) tkForward = f;
 } catch (e) {}
 
@@ -803,7 +814,7 @@ function tkLearnForward(meanH, speed) {
     var n = Math.sqrt(tkForward.x * tkForward.x + tkForward.y * tkForward.y + tkForward.z * tkForward.z) || 1;
     tkForward.x /= n; tkForward.y /= n; tkForward.z /= n;
   }
-  try { localStorage.setItem('tkForward', JSON.stringify(tkForward)); } catch (e) {}
+  try { localStorage.setItem(TK_FORWARD_KEY, JSON.stringify(tkForward)); } catch (e) {}
 }
 
 function updateTrack(data) {

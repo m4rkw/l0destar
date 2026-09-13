@@ -108,6 +108,20 @@ def device(database):
 
 
 @pytest.fixture
+def second_device(device, database):
+    """Another enrolled device, for anything that has to tell vehicles apart."""
+    from tracker import db
+
+    imei = '350000000000001'
+    database.query(
+        "INSERT INTO `device` (`imei`, `name`, `registration`, `psk`) "
+        "VALUES (%s, 'Van', 'XY34ZZZ', %s)",
+        (imei, 'bb' * 32),
+    )
+    return db.lookup_device(imei=imei)
+
+
+@pytest.fixture
 def client(database):
     from tracker.web import create_app
 

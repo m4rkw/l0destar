@@ -84,7 +84,7 @@ def _session_id():
 @bp.route('/login', methods=['GET'])
 def login():
     if 'username' in session:
-        return redirect(url_for('views.track'))
+        return redirect(url_for('views.index'))
     return render_template('login.tpl')
 
 

@@ -8,6 +8,10 @@ Two audiences with different authentication:
   bearer token from the ``api_token`` table.  Tokens are opaque, minted by
   ``tools/gentoken.py``, and carry no scopes — anything holding one can queue a
   command, so treat one as equivalent to console access.
+
+Which device a request is about is settled in ``devices.py``: a read that
+names none falls back to ``default_device`` or the only enrolled device, and
+anything that changes state has to name its device.
 """
 
 import math
@@ -63,14 +67,29 @@ def bearer_ok():
                       (token,)) is not None
 
 
+def _device(allow_default=True):
+    """The device a request is about, and the error to answer without one.
+
+    Which error depends on whether the request tried: a device it named that
+    is not enrolled is not found, and one that named none where no fallback
+    applies has to name one.
+    """
+    device = devices.from_request(allow_default=allow_default)
+    if device:
+        return device, None
+    if devices.named():
+        return None, error('device not found')
+    return None, error('imei or device_id required')
+
+
 # -- browser endpoints -------------------------------------------------------
 
 @bp.route('/carpos', methods=['GET'])
 @login_required
 def carpos():
-    device = devices.from_request()
-    if not device:
-        return error('device not found')
+    device, failure = _device()
+    if failure:
+        return failure
     row = devices.latest_log(device)
     if not row:
         return error('no records for device')
@@ -86,13 +105,13 @@ def carpos():
 def trackmode():
     """The track-mode switch (firmware TRACK_MODE.md).
 
-    POST ``{"on": 0|1}`` sets it; the device picks it up from its next reply,
-    which while driving is at most APP_RESP_POLL_S away and in the mode at
-    most APP_TRACK_RESP_INTERVAL_S.  GET reads it.
+    POST ``{"on": 0|1}`` sets it and has to name the device; the device picks
+    it up from its next reply, which while driving is at most APP_RESP_POLL_S
+    away and in the mode at most APP_TRACK_RESP_INTERVAL_S.  GET reads it.
     """
-    device = devices.from_request()
-    if not device:
-        return error('device not found')
+    device, failure = _device(allow_default=request.method == 'GET')
+    if failure:
+        return failure
     if request.method == 'POST':
         data = request.get_json(silent=True) or {}
         on = 1 if data.get('on') else 0
@@ -105,9 +124,9 @@ def trackmode():
 @bp.route('/journeys', methods=['GET'])
 @login_required
 def journeys():
-    device = devices.from_request()
-    if not device:
-        return error('device not found')
+    device, failure = _device()
+    if failure:
+        return failure
 
     per_page = min(int(request.args.get('per_page', 50)), 200)
     page = max(int(request.args.get('page', 0)), 0)
@@ -140,6 +159,14 @@ def journey_points(journey_id):
     journey = db.web.one('SELECT * FROM `journey` WHERE `id` = %s', (journey_id,))
     if not journey:
         return error('journey not found')
+
+    # The map page names the vehicle it follows.  Another vehicle's journey
+    # is not part of that vehicle's history, so it is not found rather than
+    # replayed on the wrong map.
+    if devices.named():
+        device = devices.from_request(allow_default=False)
+        if not device or device['id'] != journey['device_id']:
+            return error('journey not found')
 
     # Bound by log id rather than by time: the ids were recorded when the
     # journey opened and closed, so this cannot drift on clock skew or on a
@@ -181,9 +208,9 @@ def track_link():
     if not bearer_ok():
         return unauthorised()
 
-    device = devices.from_request()
-    if not device:
-        return error('device not found')
+    device, failure = _device()
+    if failure:
+        return failure
     row = devices.latest_log(device)
     if not row:
         return error('no records for device')
@@ -247,9 +274,9 @@ def home_check():
 def get_config():
     if not bearer_ok():
         return unauthorised()
-    device = devices.from_request()
-    if not device:
-        return error('device not found')
+    device, failure = _device()
+    if failure:
+        return failure
 
     defaults = {'ma': 1, 'oaf': 23, 'oat': 6}
     result = {}
@@ -268,9 +295,9 @@ def update_config():
     if not isinstance(data, dict):
         return error('invalid JSON body')
 
-    device = devices.from_request()
-    if not device:
-        return error('device not found')
+    device, failure = _device(allow_default=False)
+    if failure:
+        return failure
 
     updates = []
     for key, column in CONFIG_FIELDS.items():
@@ -330,9 +357,9 @@ def queue_command():
     if not isinstance(data, dict) or 'command' not in data:
         return error('command required')
 
-    device = devices.from_request(allow_default=False)
-    if not device:
-        return error('device not found')
+    device, failure = _device(allow_default=False)
+    if failure:
+        return failure
 
     server_side = []
     for_device = []
@@ -374,18 +401,18 @@ def queue_command():
 @bp.route('/devices', methods=['GET'])
 @login_required
 def list_devices():
-    rows = db.web.all(
-        'SELECT `id`, `imei`, `name`, `registration` FROM `device` ORDER BY `name`')
-    return ok({'devices': [dict(r) for r in rows]})
+    """Every enrolled device with its latest record; see devices.summary()."""
+    return ok({'devices': [devices.summary(device)
+                           for device in devices.enrolled()]})
 
 
 @bp.route('/status', methods=['GET'])
 @login_required
 def status():
     """Current settings and last-seen for one device."""
-    device = devices.from_request()
-    if not device:
-        return error('device not found')
+    device, failure = _device()
+    if failure:
+        return failure
     row = devices.latest_log(device)
     return ok({
         'imei': device['imei'],

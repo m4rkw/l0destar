@@ -40,9 +40,11 @@ SESSION_SECRET = require('session_secret')
 SESSION_LIFETIME_DAYS = int(get('session_lifetime_days', 30))
 MAPS_API_KEY = get('google_maps_api_key', '')
 
-# Device shown by the web UI and the bare /api/1.0/track redirect when the
-# request does not name one.  Everything else is addressed by IMEI, so a
-# deployment tracking several vehicles only needs this to pick a landing page.
+# Device a read is about when the request names none: the map the web UI
+# lands on, the bare /api/1.0/track redirect.  Optional.  Unset, or naming a
+# device that is not enrolled, a request that names none falls back to the
+# only enrolled device, and with several the web UI opens on the device list.
+# A request that changes anything always has to name its device.
 DEFAULT_DEVICE_IMEI = str(get('default_device', '') or '')
 
 # Login rate limiting: authoptions requests permitted per IP per window.
