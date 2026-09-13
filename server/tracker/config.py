@@ -108,11 +108,39 @@ NOTIFY = get('notify') or {}
 
 # -- home check --------------------------------------------------------------
 # Optional watchdog: an external cron POSTs /api/1.0/home and the server
-# reports whether the vehicle's last fix is near a reference point.  Used to
+# reports whether each listed vehicle's last fix is near its home.  Used to
 # catch a tracker that has silently stopped reporting while parked at home —
 # the last row keeps looking plausible, so only an external check notices.
-_home = get('home_check') or {}
-HOME_CHECK_IMEI = str(_home.get('imei', '') or '')
-HOME_CHECK_LAT = _home.get('latitude')
-HOME_CHECK_LON = _home.get('longitude')
-HOME_CHECK_RADIUS_M = float(_home.get('radius_m', 300))
+
+
+def home_checks(raw):
+    """``home_check`` as a list of ``{imei, latitude, longitude, radius_m}``.
+
+    A single mapping is the original form and still accepted; a list covers
+    several vehicles.  An entry missing its IMEI or a coordinate is a mistake
+    to report rather than work around, so it stops the server at startup
+    instead of leaving that vehicle silently unchecked.
+    """
+    if not raw:
+        return []
+    if isinstance(raw, dict):
+        raw = [raw]
+    if not isinstance(raw, list):
+        raise RuntimeError('home_check in %s must be a mapping or a list of them'
+                           % CONFIG_PATH)
+    checks = []
+    for number, entry in enumerate(raw, 1):
+        if (not isinstance(entry, dict) or not entry.get('imei')
+                or entry.get('latitude') is None or entry.get('longitude') is None):
+            raise RuntimeError('home_check entry %d in %s needs imei, latitude '
+                               'and longitude' % (number, CONFIG_PATH))
+        checks.append({
+            'imei': str(entry['imei']),
+            'latitude': float(entry['latitude']),
+            'longitude': float(entry['longitude']),
+            'radius_m': float(entry.get('radius_m', 300)),
+        })
+    return checks
+
+
+HOME_CHECKS = home_checks(get('home_check'))

@@ -228,46 +228,63 @@ def track_link():
 
 @bp.route('/home', methods=['POST'])
 def home_check():
-    """Report whether the vehicle's last fix is near the reference point.
+    """Report whether each listed vehicle's last fix is near its home.
 
     A stalled tracker parked at home is invisible from the inside: the last
     record still looks like a car sitting at home, which is exactly what a
     healthy tracker reports too.  An external cron calling this notices the
-    other case — the vehicle is not where it should be and nothing has said so.
+    other case — a vehicle that is not where it should be, with nothing having
+    said so.  Every ``home_check`` entry is checked, or only the one ``imei``
+    names.
     """
     if not bearer_ok():
         return unauthorised()
-    if (not config.HOME_CHECK_IMEI
-            or config.HOME_CHECK_LAT is None
-            or config.HOME_CHECK_LON is None):
+    checks = config.HOME_CHECKS
+    if not checks:
         return error('home_check not configured')
 
-    device = db.lookup_device(imei=config.HOME_CHECK_IMEI)
+    imei = devices.requested()[0]
+    if imei:
+        checks = [c for c in checks if c['imei'] == str(imei).strip()]
+        if not checks:
+            return error('no home_check entry for %s' % imei)
+
+    return ok({'devices': [_check_home(check) for check in checks]})
+
+
+def _check_home(check):
+    """One home_check entry's verdict, notifying when the vehicle is away."""
+    device = db.lookup_device(imei=check['imei'])
     if not device:
-        return error('home_check device not found')
+        return {'imei': check['imei'], 'name': None, 'error': 'device not found'}
+
+    name = device.get('name') or device['imei']
+    result = {'imei': device['imei'], 'name': name,
+              'garage': bool(device.get('garage'))}
     row = devices.latest_log(device)
-    if not row:
-        return error('no records for device')
+    if not row or row.get('latitude') is None or row.get('longitude') is None:
+        result['error'] = 'no position recorded'
+        return result
 
-    lat1 = math.radians(float(config.HOME_CHECK_LAT))
-    lat2 = math.radians(devices.to_float(row['latitude']))
-    dlat = lat2 - lat1
-    dlon = math.radians(devices.to_float(row['longitude']) - float(config.HOME_CHECK_LON))
-    h = (math.sin(dlat / 2) ** 2
-         + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2)
-    distance_m = 2 * 6371000 * math.asin(math.sqrt(h))
+    distance_m = _distance_m(check['latitude'], check['longitude'],
+                             float(row['latitude']), float(row['longitude']))
+    result['at_home'] = distance_m <= check['radius_m']
+    result['distance_m'] = round(distance_m, 1)
 
-    at_home = distance_m <= config.HOME_CHECK_RADIUS_M
-    garage = bool(device.get('garage'))
+    if not result['at_home'] and not result['garage']:
+        notify.send('%s: tracker may be stalled - vehicle is %dm from home'
+                    % (name, int(distance_m)), title='Tracker home check')
+    return result
 
-    if not at_home and not garage:
-        notify.send(
-            'Tracker may be stalled - vehicle is %dm from home' % int(distance_m),
-            title='Tracker home check',
-        )
 
-    return ok({'at_home': at_home, 'distance_m': round(distance_m, 1),
-               'garage': garage})
+def _distance_m(lat1, lon1, lat2, lon2):
+    """Great-circle distance between two points, in metres."""
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = phi2 - phi1
+    dlambda = math.radians(lon2 - lon1)
+    h = (math.sin(dphi / 2) ** 2
+         + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2)
+    return 2 * 6371000 * math.asin(math.sqrt(h))
 
 
 @bp.route('/config', methods=['GET'])
