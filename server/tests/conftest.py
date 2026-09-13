@@ -141,8 +141,13 @@ def bearer(database):
 
 
 @pytest.fixture
-def logged_in(client):
-    """A session cookie standing in for a completed passkey login."""
+def logged_in(client, database):
+    """A session cookie standing in for a completed passkey login, for an
+    account that exists: a session whose user is gone or locked is refused."""
+    database.query(
+        "INSERT INTO `user` (`username`, `user_id`, `credential`) "
+        "VALUES ('tester', 'tester-credential', '{}')"
+    )
     with client.session_transaction() as session:
         session['username'] = 'tester'
     return client

@@ -2,11 +2,11 @@
 
 import datetime
 
-from flask import Blueprint, redirect, render_template, session, url_for
+from flask import Blueprint, redirect, render_template, url_for
 
 from .. import config, db
 from . import devices
-from .auth import login_required
+from .auth import current_user, login_required
 
 bp = Blueprint('views', __name__)
 
@@ -14,7 +14,7 @@ bp = Blueprint('views', __name__)
 @bp.route('/', methods=['GET'])
 def index():
     """Land on a map when it is clear which vehicle, else on the list."""
-    if 'username' not in session:
+    if current_user() is None:
         return redirect(url_for('auth.login'))
     device = devices.default_device()
     if device:

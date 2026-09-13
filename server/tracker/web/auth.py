@@ -49,10 +49,30 @@ CHALLENGE_TTL = 300              # 5 minutes
 MAX_FAILED_LOGINS = 5
 
 
+def current_user():
+    """The logged-in user's row, or None.
+
+    A signed session cookie outlives anything that happens to its account, so
+    a user removed from the table, or locked after failed logins, would keep
+    their access until the cookie expired.  Every authenticated request looks
+    the account up instead — one indexed query — and a session whose user is
+    gone or locked is cleared.
+    """
+    username = session.get('username')
+    if not username:
+        return None
+    user = db.web.one('SELECT `id`, `username`, `locked` FROM `user` '
+                      'WHERE `username` = %s', (username,))
+    if not user or user['locked']:
+        session.pop('username', None)
+        return None
+    return user
+
+
 def login_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if 'username' not in session:
+        if current_user() is None:
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return wrapper
@@ -83,7 +103,7 @@ def _session_id():
 
 @bp.route('/login', methods=['GET'])
 def login():
-    if 'username' in session:
+    if current_user() is not None:
         return redirect(url_for('views.index'))
     return render_template('login.tpl')
 

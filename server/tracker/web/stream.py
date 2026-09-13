@@ -11,19 +11,23 @@ indexed lookup per second per open map is not a load worth engineering around.
 import json
 import time
 
-from flask import session
-
 from .. import db, logs
 from . import devices, sock
+from .auth import current_user
 
 POLL_INTERVAL = 1.0
 TRACK_POLL_INTERVAL = 0.25
 PING_INTERVAL = 10.0
+# A stream stays open for as long as its page does, so checking the account
+# only at connect would let a removed or locked user go on watching a vehicle
+# for as long as they kept the page up.
+ACCOUNT_CHECK_INTERVAL = 60.0
 
 
 @sock.route('/ws/carpos')
 def carpos(ws):
-    if 'username' not in session:
+    user = current_user()
+    if user is None:
         ws.close(1008, 'unauthorised')
         return
 
@@ -37,9 +41,18 @@ def carpos(ws):
     handle = db.DB()
     last_id = 0
     last_send = time.time()
+    last_account_check = time.time()
 
     try:
         while ws.connected:
+            if time.time() - last_account_check >= ACCOUNT_CHECK_INTERVAL:
+                account = handle.one('SELECT `locked` FROM `user` WHERE `id` = %s',
+                                     (user['id'],))
+                if not account or account['locked']:
+                    ws.close(1008, 'unauthorised')
+                    break
+                last_account_check = time.time()
+
             # The track-mode switch, read fresh on every pass — a primary-key
             # lookup, four times a second at most — so a row is never stamped
             # with a value the page has already moved on from.
