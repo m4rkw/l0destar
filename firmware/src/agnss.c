@@ -142,8 +142,9 @@ int agnss_fetch(void *agnss_request)
 		/* Inside the watchdog window (WATCHDOG_TIMEOUT_S): this is one
 		 * blocking call that cannot be sliced, so it has to fit between
 		 * two kicks rather than outlast them.  Ample for a few KB with
-		 * the radio handed to LTE below, and a miss is not fatal — GNSS
-		 * asks again itself, the first fix just takes longer. */
+		 * the radio handed to LTE below, and a miss is not fatal:
+		 * gnss_collect() retries it (AGNSS_RETRIES) while the receiver
+		 * keeps searching. */
 		.timeout_ms = 20000,
 		.auth = jwt_buf,
 		.rx_buf = rx_buf,

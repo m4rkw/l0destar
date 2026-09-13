@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### A failed A-GNSS fetch no longer leaves a cold start unassisted
+- **The in-search fetch is retried.**  When the receiver asks for assistance
+and the fetch at the start of a cold search fails, `gnss_collect()` now
+tries `AGNSS_RETRIES` (2) more times, `AGNSS_RETRY_INTERVAL_MS` (15 s) apart,
+from inside the fix wait and only while the modem is registered; the
+receiver keeps searching between attempts.  It used to make one attempt and
+then wait out the search unassisted, with nothing asking again until the
+next cold collect.  Observed on 2026-09-13: one fetch timed out at key-on
+(-116, HTTP 0), the search took 2 min 23 s, and no telemetry went out
+meanwhile.
+- **GNSS priority mode is only requested when the receiver is starved.**
+Every cold collect turned it on straight away and re-armed it every 30 s,
+holding it for the whole search — over two minutes in that same cold
+start, during which the modem dropped off the network.  It is now requested
+only after `GNSS_PRIO_STARVED_EPOCHS` (5) consecutive epochs flagged
+`NOT_ENOUGH_WINDOW_TIME` — Nordic's documented trigger, and the count its
+location library uses — and not again while the modem's 40 s window may
+still be running.  The first request in a search logs at WRN, so it reaches
+the server's device log.
+
 ## 0.4.42
 
 ### A lost datagram no longer silences a parked unit

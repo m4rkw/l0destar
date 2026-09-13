@@ -59,6 +59,23 @@
 #define GPS_FIX_TIMEOUT_MS          CONFIG_APP_GPS_FIX_TIMEOUT_MS
 #define GPS_COLD_FIX_TIMEOUT_MS     CONFIG_APP_GPS_COLD_FIX_TIMEOUT_MS
 
+/* -- cold-start GNSS: A-GNSS retries, priority mode ------------------------ */
+/* A failed A-GNSS fetch used to leave the whole cold search unassisted:
+ * nothing asked again until the next cold gnss_collect(), after a fix or the
+ * cold timeout.  On 2026-09-13 a single -116 (HTTP 0, no response) at key-on
+ * left a search that took 2 min 23 s, with no telemetry meanwhile.  Retries
+ * run from inside the fix wait, so GNSS keeps searching between attempts;
+ * each attempt still pauses it for up to the 20 s REST timeout. */
+#define AGNSS_RETRIES               2
+#define AGNSS_RETRY_INTERVAL_MS     15000
+/* GNSS priority takes the radio from LTE's idle-mode work (paging, cell
+ * measurements), and the modem ends it after the first fix or 40 s.  It is
+ * only requested once the receiver has flagged NOT_ENOUGH_WINDOW_TIME for
+ * this many epochs in a row, the threshold Nordic's location library uses,
+ * and never again while a window may still be running. */
+#define GNSS_PRIO_STARVED_EPOCHS    5
+#define GNSS_PRIO_WINDOW_MS         40000
+
 /* -- voltage thresholds (Kconfig uses mV, code uses float V) -------------- */
 #define BATTERY_WARNING_LEVEL       (CONFIG_APP_BATTERY_WARNING_MV / 1000.0f)
 #define BATTERY_POWEROFF_LEVEL      (CONFIG_APP_BATTERY_POWEROFF_MV / 1000.0f)
