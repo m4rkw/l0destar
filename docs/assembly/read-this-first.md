@@ -33,8 +33,8 @@ These pages describe the **l0destar v3.4** board.
   reads NOT TESTED.
 - **v3.3 is the most recent board that has been built and bench tested.** v3.4 changes the
   accelerometer footprint (see below), makes the buck converter's enable divider an optional
-  part that is not fitted by default, adds test points, enlarges the holes for the 2-pin power
-  header and specifies a TCAN3414DR CAN transceiver in place of the MAX33041E (same footprint and
+  part that is not fitted by default, adds test points, enlarges the holes for the Connect Kit power
+  lead and specifies a TCAN3414DR CAN transceiver in place of the MAX33041E (same footprint and
   pinout).
 - Earlier v3.x boards are close enough that most of the assembly guide still applies, but the
   test points and the designators in the over-voltage protection stage differ.

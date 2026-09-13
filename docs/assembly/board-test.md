@@ -55,7 +55,7 @@ the ignition input. Pins 3 and 6 are the interface bus lines and pin 1 is unused
    nothing is driving their enable signals.
 5. Turn the board over and measure the voltage on every pin of both 20-pin headers. Every pin
    should read below 3.3V, and none may read 12V. Nothing on the headers is powered until the Connect
-   Kit supplies the 3.3V rail; the 4.2V supply reaches the Connect Kit through the power header S1J4,
+   Kit supplies the 3.3V rail; the 4.2V supply reaches the Connect Kit through the power lead in S1J4,
    not through the headers.
 
 !!! danger "Any 12V on a header pin means stop"

@@ -26,8 +26,8 @@ are on the right, as in this render of v3.4:
   and `K` on the silkscreen. They select which interface the connector's two bus pins are routed
   to.
 - **Top middle**: the 2-pin CAN termination header S9J1, marked `CAN-T`.
-- **Bottom left**, beside the lower 20-pin header: the OVP bypass pad S5R5, the 2-pin Connect Kit
-  power header S1J4 (marked `+` and `-`), and the test points S12TP1 (`GND`) and S12TP2 (`4.2V`,
+- **Bottom left**, beside the lower 20-pin header: the OVP bypass pad S5R5, the holes for the
+  Connect Kit power lead, S1J4 (marked `+` and `-`), and the test points S12TP1 (`GND`) and S12TP2 (`4.2V`,
   the protected rail that feeds the Connect Kit).
 - **Top right**: test points S12TP3 (`3.3V`), S12TP4 (`3.3V GPS`) and S12TP5 (`3.3V CAN`).
 - **Right, between the SMA connectors**: test points S12TP6 (`3.3V K`) and S12TP7 (`12V K`).
@@ -113,10 +113,13 @@ and only exists for boards built without the S11 stage, which is not recommended
 With all the SMD parts in place, fit the through-hole parts in order of height, starting with the
 Molex Micro-Fit connector S1J1.
 
-### 6. Fit the power and termination headers
+### 6. Fit the power lead and the termination header
 
-Next fit the 2-pin Connect Kit power header S1J4 and, on CAN builds, the 2-pin termination header
-S9J1. Only fit a shunt on S9J1 if the tracker is going to be at the end of the CAN bus. A tracker
+Next solder the bare end of the MX1.25 power lead into S1J4, with the wire that goes to the positive
+pin of its plug in the `+` hole and the other in `-`. Work out which wire is which with a meter
+before you solder - see the polarity warning under [final assembly](#final-assembly). On CAN
+builds, also fit the 2-pin termination header S9J1. Only fit a shunt on S9J1 if the tracker is
+going to be at the end of the CAN bus. A tracker
 connected to a vehicle's OBD socket normally is not, because the vehicle's bus is already
 terminated.
 

@@ -96,7 +96,7 @@ OBD socket, CAN high is pin 6 and CAN low pin 14; the K line is pin 7 and the L 
 |---|---|---|
 | S1J2 | Connect Kit pins 1-20 | Lower 20-pin 2.54mm header. Pin 1 (VBUS) is the square pad at the Molex end. |
 | S1J3 | Connect Kit pins 21-40 | Upper 20-pin 2.54mm header, pin 40 at the Molex end. |
-| S1J4 | `+` protected 4.2V, `-` ground | Feeds the Connect Kit's battery connector through an MX1.25 lead. |
+| S1J4 | `+` protected 4.2V, `-` ground | Holes for the MX1.25 lead that feeds the Connect Kit's battery connector; the lead's wires are soldered in. |
 | S9J1 | CAN termination | 2-pin 2.54mm header in series with the 120R resistor S9R3 across the bus. CAN builds only. |
 
 **CAN termination.** Fit a shunt on S9J1 only if the tracker is at the end of the CAN bus. A tracker
