@@ -1,6 +1,6 @@
 # l0destar
 
-A fully open-source vehicle tracker - open hardware and open software.
+[l0destar.com](https://l0destar.com) A fully open-source vehicle tracker - open hardware and open software.
 
 Inspired by the [Geolink Opentracker](https://github.com/geolink/opentracker/) and the [Fortebit Polaris](https://www.fortebit.tech/polaris/), the goal is to build something that will last: a reference design for the best possible vehicle tracker that anyone can fab, modify, and host. Hardware and software are completely open and maintained as a community project.
 
