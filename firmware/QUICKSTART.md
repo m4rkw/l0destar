@@ -47,7 +47,8 @@ is on a `main` that includes #20 and build
 
 Flash via UF2 bootloader:
 
-1. Double-press the Connect Kit reset button - a `UF2BOOT` mass-storage
+1. Hold the Connect Kit's DFU/RST button while plugging in USB (with the 12V
+   supply off if it is on the carrier board) - a `UF2BOOT` mass-storage
    volume appears.
 2. Copy the built image:
    ```bash

@@ -11,8 +11,9 @@
 #
 # Output: build_ifmcu/ifmcu_firmware/zephyr/zephyr.uf2
 #
-# Flash by double-pressing the ConnectKit reset button (enters UF2
-# bootloader), then copying the .uf2 to the mass-storage device.
+# Flash by holding the Connect Kit's DFU/RST button while plugging in USB
+# (enters the UF2 bootloader; switch the 12V off first if it is on the carrier
+# board), then copying the .uf2 to the mass-storage device.
 set -euo pipefail
 
 NCS_VERSION="${NCS_VERSION:-v3.4.0}"
@@ -69,5 +70,5 @@ UF2="$BUILD_DIR/ifmcu_firmware/zephyr/zephyr.uf2"
 echo
 echo "Built: $UF2"
 echo
-echo "To flash: double-press reset on the Connect Kit, then copy it onto the"
-echo "UF2BOOT drive that appears."
+echo "To flash: hold DFU/RST on the Connect Kit while plugging in USB (12V off"
+echo "if it is on the carrier board), then copy it onto the UF2BOOT drive."

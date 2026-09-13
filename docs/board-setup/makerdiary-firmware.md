@@ -52,8 +52,8 @@ The image is written to `build_ifmcu/ifmcu_firmware/zephyr/zephyr.uf2`.
 
 ## Flash
 
-1. Connect the Connect Kit with USB-C. It can be on the carrier board or off it.
-2. Double-press the reset button on the Connect Kit. A drive called `UF2BOOT` appears.
+1. If the Connect Kit is on the carrier board, switch off the 12V supply: the board powers the Connect Kit through its battery connector, so plugging in USB would not restart it.
+2. Unplug USB, hold the DFU/RST button on the Connect Kit, plug USB back in and then release the button. A drive called `UF2BOOT` appears. (Pressing the button while the Connect Kit is running only resets the nRF9151.)
 3. Copy the image onto it.
 
 On macOS:
