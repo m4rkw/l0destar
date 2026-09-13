@@ -176,7 +176,7 @@ What to look for:
 - **`self-test: all rails OK`** - the switched rails came up. `RAIL:` or `SELFTEST:` failures send you back to the [board test](/assembly/board-test.html).
 - **`battery=`** close to your supply voltage, and **`ignition=`** following the switch on pin 5.
 - **`connected`** followed by **`imei=`**. Write the IMEI down: you need it on the next page.
-- **`sent N bytes`** - a datagram went to your server.
+- **`sent N bytes`** - a datagram went to your server. A record needs a position, so nothing is sent until the GNSS antenna has had its first fix since the tracker started: `no fix, skipping send` means it is still waiting.
 - With pin 5 off, **`entering sleep`** a few seconds later. The `registration lost (status 0)` warning after `sleep: modem power off` is the modem being switched off, not a fault.
 
 A roaming SIM often sees a few `Registration rejected` warnings from networks it may not use before `nw reg status: 5` (registered, roaming) - that took about 50 seconds on the author's bench. The two `CA provisioned` lines appear on the tracker firmware's first boot only; later boots, and boards that already hold a CA, print `TLS CA already provisioned (sec_tag 1)`.
@@ -195,7 +195,7 @@ These are worth knowing when you check telemetry later:
 
 | Bench state | What the firmware does |
 |---|---|
-| Pin 5 off (ignition off) | Sends a record, then sleeps. It wakes on ignition, movement, knocks and tilt, and every 15 minutes until the server has told it how often to report. |
+| Pin 5 off (ignition off) | Sends a record, then sleeps. It wakes on ignition, movement, knocks and tilt, and every 15 minutes until the server has told it how often to report. Without a fix since it started it sends nothing and sleeps, then looks for a fix again on timed wakes: after 15 and 30 minutes, 1, 2 and 4 hours, then every 4 hours. |
 | Pin 5 on, supply below 13.0V | Ignition on with the engine stopped: sends a record about every 30 seconds and reads the server's reply each time. |
 | Pin 5 on, supply at 13.0V or above | The engine counts as running: it tracks continuously and sends three records per datagram. |
 
@@ -211,4 +211,5 @@ Once the engine counts as running, the supply has to stay below 13.0V for five m
 | The board keeps restarting | The bench supply's current limit: around 300mA once firmware is running, because at 50mA the modem's draw browns the board out. Then look for a pattern in the `reset cause:` line. |
 | `RAIL:... fail` or `SELFTEST:` messages | A switched rail did not come up: go back to the [board test](/assembly/board-test.html). |
 | `no GPS fix` | Active antenna on the GNSS connector, with a view of the sky. An unassisted first fix can take 2 to 5 minutes. |
+| `no fix, skipping send`, and no `sent` line | Nothing is sent before the first GNSS fix since the tracker started. Check the antenna as above, then switch pin 5 on: with the ignition on it keeps searching until it has a fix. |
 | `battery=0.00V` or a silly reading | 12V on pin 4, and the INA228 stage of the board test. |

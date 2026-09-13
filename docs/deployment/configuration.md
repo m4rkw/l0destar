@@ -184,7 +184,7 @@ What the setting trades:
 
 Other behaviour worth knowing:
 
-- After every restart, including one after an update, the tracker reports every 900 seconds until its first reply brings back the server's value, so one lost reply cannot leave a parked unit silent.
+- After every restart, including one after an update, the tracker reports every 900 seconds until its first reply brings back the server's value, so one lost reply cannot leave a parked unit silent. Those reports need a position, though: a unit that restarts where GNSS cannot see the sky - an underground car park after a key-off update, say - sends nothing until it gets a fix, and looks for one on timed wakes after 15 and 30 minutes, 1, 2 and 4 hours, then every 4 hours.
 - A confirmed movement on a unit whose interval is 0, or longer than four hours, schedules one report four hours later, with GNSS; the reply to that report restores the server's interval.
 - Ignition, movement, impact and tilt wake the tracker whatever the interval. The tilt check wakes the processor every 30 seconds for a single accelerometer read, which costs very little.
 - Battery gates apply to timed reports: below 12.0V (`CONFIG_APP_SLEEP_SAFETY_MV`) the report is skipped, and below 11.8V (`CONFIG_APP_BATTERY_POWEROFF_MV`) timed reports stop and the battery is checked again a day later. Update downloads wait for 12.0V.

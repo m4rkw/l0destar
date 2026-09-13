@@ -439,6 +439,28 @@ static void obd_service(void)
 }
 #endif
 
+/* A last known position exists once there has been a fix since boot; without
+ * one collect_data() cannot build a record. */
+static bool have_position(void)
+{
+    return g_gnss.lat_str[0] != '\0' && g_gnss.lon_str[0] != '\0';
+}
+
+/* Timed wakes that go looking for a first fix: the 1st, 2nd, 4th, 8th and
+ * 16th, then every 16th.  At the 900 s boot interval that is 15 and 30
+ * minutes, 1, 2 and 4 hours, then every 4 hours. */
+static unsigned s_nofix_wakes;
+
+static bool nofix_search_due(void)
+{
+    unsigned n = ++s_nofix_wakes;
+
+    if (n <= 16) {
+        return (n & (n - 1)) == 0;
+    }
+    return (n % 16) == 0;
+}
+
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
@@ -828,7 +850,14 @@ static void do_sleep(void)
             if (reg != 1 && reg != 5) modem_connect();
             modem_update_cell_info();
 
-            if (s_move_needs_gps) {
+            /* No position since boot means no record can be built, so a unit
+             * restarted somewhere GNSS cannot reach would stay silent until
+             * something moved it.  Search on timed wakes too, backing off so
+             * one parked underground does not spend its battery on it. */
+            bool search_gps = s_move_needs_gps ||
+                              (!have_position() && nofix_search_due());
+
+            if (search_gps) {
                 /* the GPS antenna bias tee lives on the AUX domain */
                 hw_domain_request(HW_DOMAIN_AUX, HW_DOMAIN_USER_GNSS);
                 gnss_start();
@@ -850,7 +879,7 @@ static void do_sleep(void)
             }
             data_reset();
 
-            if (s_move_needs_gps) {
+            if (search_gps) {
                 gnss_stop();
                 hw_domain_release(HW_DOMAIN_AUX, HW_DOMAIN_USER_GNSS);
                 s_move_needs_gps = false;
@@ -1611,7 +1640,16 @@ int main(void)
                  * position at all, where no valid record can be produced no
                  * matter how often it retries. */
                 previous_ignition = ignition;
-                s_state = STATE_IDLE;
+                /* With the ignition off and no position since boot there is
+                 * nothing to send, and sleep is only entered from STATE_SEND,
+                 * so idling here would keep the unit awake, GNSS searching,
+                 * until a fix turned up.  Sleep instead: do_sleep() searches
+                 * again on timed wakes. */
+                if (ignition != 0 && !have_position()) {
+                    s_state = STATE_SLEEP;
+                } else {
+                    s_state = STATE_IDLE;
+                }
                 break;
             }
             s_buffered_records++;
