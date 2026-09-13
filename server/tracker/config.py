@@ -70,6 +70,14 @@ TLS_PORT = int(get('tls_port', 65481))
 TLS_CERT = get('tls_cert', '')
 TLS_KEY = get('tls_key', '')
 
+# Accept telemetry frames on the TLS port.  Off by default: that transport
+# authenticates a device by nothing more than the IMEI it presents, and the
+# port has to be reachable from the internet for firmware downloads, so with
+# this on anyone who learns an IMEI can post positions and alerts as that
+# device — and collect the commands queued for it.  Current firmware reports
+# over UDP and only comes here for updates, which are served either way.
+TLS_TELEMETRY = bool(get('tls_telemetry', False))
+
 DTLS_HOST = get('dtls_host', '0.0.0.0')
 DTLS_PORT = int(get('dtls_port', 65482))
 DTLS_CERT = get('dtls_cert', '') or TLS_CERT

@@ -18,11 +18,13 @@ big-endian length capped at 8192, while an HTTP request starts with ``GE`` or
 Authentication
 --------------
 The device proves nothing beyond presenting an enrolled IMEI, and the IMEI is
-not a secret.  This transport therefore assumes the TLS listener is reachable
-only from where the operator expects, or that mutual TLS is configured
+not a secret — while the port has to be reachable from the internet for
+firmware downloads.  So telemetry frames are refused unless ``tls_telemetry``
+is set.  With it on, restrict who can reach the port or configure mutual TLS
 (``tls_client_ca``); with neither, anyone who learns an IMEI can post
-telemetry as that device.  The UDP transport's per-device PSK is stronger in
-that respect.
+telemetry as that device and collect the commands queued for it.  The UDP
+transport's per-device PSK is stronger in that respect, and it is what
+current firmware reports over.
 """
 
 import socket
@@ -64,42 +66,7 @@ def handle_connection(ctx, conn, addr):
         # exchange, so anything slower is a stalled or hostile client holding a
         # thread.  serve_http() widens it again for image downloads.
         conn.settimeout(int(config.get('tls_read_timeout', 10)))
-
-        header = recv_exact(conn, 2)
-        if not header:
-            return
-
-        if header in (b'GE', b'HE'):
-            firmware.serve_http(conn, ip, header, log=logs.tls)
-            return
-
-        payload_len = struct.unpack('>H', header)[0]
-        if not 1 <= payload_len <= 8192:
-            logs.tls.warning('bad payload length %d from %s', payload_len, ip)
-            return
-
-        payload = recv_exact(conn, payload_len)
-        if not payload:
-            logs.tls.warning('truncated payload from %s', ip)
-            return
-
-        text = payload.decode('ascii', errors='replace')
-        lines = [line for line in text.split('\n') if line.strip()]
-        if not lines:
-            return
-
-        imei = lines[0].strip()
-        if not imei.isdigit() or not 14 <= len(imei) <= 16:
-            logs.tls.warning('invalid IMEI from %s: %r', ip, imei[:20])
-            return
-
-        device = db.tls.one('SELECT * FROM `device` WHERE `imei` = %s', (imei,))
-        if not device:
-            logs.tls.warning('unknown IMEI %s from %s', imei, ip)
-            return
-
-        response = telemetry.process_lines(device, lines[1:], ip, db.tls, logs.tls)
-        conn.sendall(response.encode('ascii'))
+        serve(conn, ip)
     except Exception:
         logs.tls.exception('TLS connection error from %s', ip)
     finally:
@@ -110,6 +77,56 @@ def handle_connection(ctx, conn, addr):
         # This thread ends here, and its database connection with it, rather
         # than lingering until the database server times it out.
         db.tls.close()
+
+
+def serve(conn, ip):
+    """Serve one established connection.
+
+    A firmware download always; a telemetry exchange only when
+    ``tls_telemetry`` is on.  Kept apart from the handshake so the dispatch
+    can be driven over a plain socket in the tests.
+    """
+    header = recv_exact(conn, 2)
+    if not header:
+        return
+
+    if header in (b'GE', b'HE'):
+        firmware.serve_http(conn, ip, header, log=logs.tls)
+        return
+
+    if not config.TLS_TELEMETRY:
+        # Current firmware reports over UDP and comes here only for updates,
+        # so a telemetry frame is an old build or somebody holding an IMEI.
+        logs.tls.warning('telemetry frame from %s refused: tls_telemetry is off', ip)
+        return
+
+    payload_len = struct.unpack('>H', header)[0]
+    if not 1 <= payload_len <= 8192:
+        logs.tls.warning('bad payload length %d from %s', payload_len, ip)
+        return
+
+    payload = recv_exact(conn, payload_len)
+    if not payload:
+        logs.tls.warning('truncated payload from %s', ip)
+        return
+
+    text = payload.decode('ascii', errors='replace')
+    lines = [line for line in text.split('\n') if line.strip()]
+    if not lines:
+        return
+
+    imei = lines[0].strip()
+    if not imei.isdigit() or not 14 <= len(imei) <= 16:
+        logs.tls.warning('invalid IMEI from %s: %r', ip, imei[:20])
+        return
+
+    device = db.tls.one('SELECT * FROM `device` WHERE `imei` = %s', (imei,))
+    if not device:
+        logs.tls.warning('unknown IMEI %s from %s', imei, ip)
+        return
+
+    response = telemetry.process_lines(device, lines[1:], ip, db.tls, logs.tls)
+    conn.sendall(response.encode('ascii'))
 
 
 def _context():
