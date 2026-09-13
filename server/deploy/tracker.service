@@ -19,7 +19,7 @@ Restart=always
 RestartSec=5
 
 # The listener threads live in the gunicorn master, so a reload that replaces
-# the master has to rebind three ports. KillMode=mixed lets the master exit
+# the master has to rebind both device ports. KillMode=mixed lets the master exit
 # promptly instead of waiting on WebSocket workers that cannot drain.
 KillMode=mixed
 TimeoutStopSec=10

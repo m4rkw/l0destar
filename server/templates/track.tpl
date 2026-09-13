@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Tracking</title>
+    <title>Tracking{% if registration %} — {{ registration }}{% endif %}</title>
     <meta name="viewport" content="initial-scale=1.0">
     <meta charset="utf-8">
     <style>
@@ -22,12 +22,15 @@
       <input type="hidden" id="engine_running_voltage" value="{{ engine_running_voltage }}" />
       <input type="hidden" id="engine_stopped_count" value="{{ engine_stopped_count }}" />
       <input type="hidden" id="engine_running_init" value="{{ 1 if engine_running else 0 }}" />
+      <!-- The device this page follows; track.js names it on every request. -->
+      <input type="hidden" id="device_imei" value="{{ device.imei }}" />
       <p>
         <span><strong>{{ registration }}</strong></span>
         <span class="links">
             <a class="gps-link" href="https://maps.google.com/maps/place/{{ log.get('latitude', 0) }},{{ log.get('longitude', 0) }}/" target="_blank">gps</a>
             <a href="#" id="history-link">history</a>
             <a href="#" id="track-link" title="Track mode: GNSS off, ECU and IMU streamed live">track</a>
+            {% if device_count > 1 %}<a href="/devices">devices</a>{% endif %}
             <a href="/logout">logout</a>
         </span>
         <div class="line">
@@ -76,7 +79,7 @@
         <div id="imu-bar"><div id="imu-bar-fill"></div></div>
       </div>
     </div>
-    <div id="map"></div>
+    <div id="map" data-maps="{{ 1 if google_maps_api_key else 0 }}"></div>
     <!-- Track mode dashboard: shown in place of the map while the server-side
          switch is on.  Filled by updateTrack() in track.js. -->
     <div id="track" style="display:none">
@@ -156,9 +159,6 @@
     {% if google_maps_api_key %}
     <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap"
     async defer></script>
-    {% else %}
-    <script>document.getElementById('map').innerHTML =
-      '<p style="padding:1em">Set google_maps_api_key in config.yaml to show the map.</p>';</script>
     {% endif %}
   </body>
 </html>

@@ -5,15 +5,22 @@
 # Which l0destar PCB this build targets.  Selecting a board sets the whole
 # GPIO map, fitted-hardware flags and power-domain sequencing (see
 # Kconfig.boards).  Default is the bench (DK / Connect Kit + breadboard).
-# CONFIG_APP_BOARD_L0DESTAR_V2_1=y
-# CONFIG_APP_BOARD_L0DESTAR_V2_1_MINI=y
-# CONFIG_APP_BOARD_L0DESTAR_V2_5_CAN=y
-# CONFIG_APP_BOARD_L0DESTAR_V2_5_KLINE=y
-# CONFIG_APP_BOARD_L0DESTAR_V2_5_MICRO=y
+# CONFIG_APP_BOARD_L0DESTAR_V3_3=y      (v3.3 and v3.4)
+# CONFIG_APP_BOARD_L0DESTAR_V3_2=y
+# CONFIG_APP_BOARD_L0DESTAR_V3_1=y
+# CONFIG_APP_BOARD_L0DESTAR_V3_0=y
 # CONFIG_APP_BOARD_L0DESTAR_V2_6_CAN=y
 # CONFIG_APP_BOARD_L0DESTAR_V2_6_KLINE=y
 # CONFIG_APP_BOARD_L0DESTAR_V2_6_MICRO=y
-# CONFIG_APP_BOARD_L0DESTAR_V3_0=y
+# CONFIG_APP_BOARD_L0DESTAR_V2_5_CAN=y
+# CONFIG_APP_BOARD_L0DESTAR_V2_5_KLINE=y
+# CONFIG_APP_BOARD_L0DESTAR_V2_5_MICRO=y
+# CONFIG_APP_BOARD_L0DESTAR_V2_1=y
+# CONFIG_APP_BOARD_L0DESTAR_V2_1_MINI=y
+#
+# v3.1 and later: the OBD interface fitted, as bridged on the selection pads -
+# 0 none, 1 CAN, 2 K-wire:
+# CONFIG_APP_OBD_MODE=2
 #
 # v3.0 only: the PCB carries both OBD circuits; match the jumper/population
 # of the actual board by disabling the one that isn't in use:
@@ -21,12 +28,15 @@
 # CONFIG_APP_BOARD_HAS_KLINE=n
 
 # --- secrets (required) ----------------------------------------------------
+# This unit's key, from `openssl rand -hex 32`.  Enrol the unit on the server
+# with the same key: tools/adddevice.py <imei> <name> --psk <key>
 CONFIG_APP_PSK_HEX=""
 
 # --- network (required) ----------------------------------------------------
 CONFIG_APP_SERVER_HOST=""
-CONFIG_APP_SERVER_PORT=0
 CONFIG_APP_APN=""
+# Only if the server publishes its UDP listener under another port number:
+# CONFIG_APP_SERVER_PORT=65480
 
 # --- preferences -----------------------------------------------------------
 # CONFIG_APP_MOVEMENT_ALARM=n

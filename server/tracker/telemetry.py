@@ -1,18 +1,19 @@
 """Telemetry parsing, storage and response building.
 
-Everything below the transports lives here: the three listeners (UDP, TLS,
-DTLS) differ only in how bytes arrive and how they are authenticated.  Once a
-datagram or frame has been decrypted and attributed to a device, they all hand
-the same list of plaintext lines to :func:`process_lines`.
+Everything below the UDP listener lives here.  Once a datagram has been
+decrypted and attributed to a device, the listener hands its plaintext lines
+to :func:`process_lines`.
 
 Wire format
 -----------
 One record per line, comma-separated::
 
-    ts,lat,lon,spd,alt,hdg,hdop,sat,bat,ign,waketime,pon[,extras...]
+    ts,lat,lon,spd,alt,hdg,hdop,sat,bat,ign,up,pon[,extras...]
 
 ``ts`` is the modem's own clock as ``dd/mm/yy,HH:MM:SS+NN`` — note that it
 contains a comma, so the first two fields are rejoined before parsing.
+``hdop`` arrives multiplied by ten, and ``up`` is seconds since boot, stored
+in the ``waketime`` column; see docs/PROTOCOL.md.
 
 Everything after the twelve fixed fields is an "extras" group: comma-separated
 groups of ``key=value`` pairs joined by semicolons.  Extras are optional and
@@ -34,7 +35,9 @@ import re
 
 from . import config, db, logs, notify
 
-# Fixed fields, in wire order.
+# Fixed fields, in wire order, named for the columns they are stored in.  The
+# eleventh is seconds since boot on current firmware; its column kept the
+# older name, waketime.
 CSV_FIELDS = [
     'gsm_timestamp', 'latitude', 'longitude', 'speed', 'altitude',
     'heading', 'hdop', 'satellites',
@@ -227,7 +230,10 @@ def _build_entry(data, device, ip, previous):
 
     # The device reports km/h; everything downstream is mph.
     entry['speed'] = '%.2f' % (float(data['speed']) * KM_PER_HOUR_TO_MPH)
-    for key in ('latitude', 'longitude', 'altitude', 'heading', 'hdop',
+    # HDOP arrives in tenths — the firmware sends hdop x 10, the scale the
+    # tracker it replaced used — and the column holds the HDOP itself.
+    entry['hdop'] = '%.2f' % (float(data['hdop']) / 10)
+    for key in ('latitude', 'longitude', 'altitude', 'heading',
                 'satellites', 'battery_level'):
         entry[key] = str(data[key])
 

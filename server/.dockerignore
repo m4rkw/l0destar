@@ -1,0 +1,21 @@
+# The image needs the application, its tools, the schema and migrations, and
+# docker/.  Secrets, local state and development files stay out of it.
+config.yaml
+certs/*.key
+certs/*.crt
+certs/*.srl
+certs/ca_cert.h
+fw/
+logs/
+.venv/
+__pycache__/
+*.pyc
+tests/
+deploy/
+docs/
+pytest.ini
+requirements-dev.txt
+README.md
+Dockerfile
+.dockerignore
+.gitignore

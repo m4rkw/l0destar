@@ -153,15 +153,10 @@ to be at the end of the CAN bus.
 solder a single pin on each row to hold them, then remove the tape and solder
 the rest.
 
-8. Finally the SMA connectors. Easiest way I've found is to rest the board
-upside down with the connectors in place, surround each pin with solder paste
-and then apply hot air. Because the connectors are metal they have a lot of
-thermal mass so turn heat and airflow up to maximum (500C in my case). As soon
-as the solder melts again the pin remove the heat, if you let too much of it
-drain down by the pins you can end up shorting the centre pin to ground.
-
-Once an SMA connector has been through this once or twice it's generally got too
-much solder on it to be easily reused so I've begun treating them as disposable.
+8. Finally the SMA connectors. Don't use hot air for these. Carefully solder
+each pin with the iron and don't use too much solder - if it runs down the pins
+it can short the centre pin to ground. Do the four ground pins first and the
+centre pin last.
 
 ## Testing
 

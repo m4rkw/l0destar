@@ -24,6 +24,22 @@
 #   reset  turns it off. Nothing may erase the image that was just programmed.
 #
 # reset.sh turns it off for the same reason: a reset must never erase.
-set -e
-pyocd load -t nrf91 --no-reset build/merged.hex
+#
+# On a locked part the load can stop with a memory transfer fault straight
+# after the mass erase that unlocks it: the erase has taken, but that pyocd
+# session cannot program the part, and a new one can. So a load that fails
+# after pyocd reported unlocking the part is tried once more. Any other failed
+# load stops here with pyocd's exit status.
+set -eo pipefail
+
+log="$(mktemp)"
+trap 'rm -f "$log"' EXIT
+
+status=0
+pyocd load -t nrf91 --no-reset build/merged.hex 2>&1 | tee "$log" || status=$?
+if [[ $status -ne 0 ]]; then
+    grep -q "APPROTECT enabled: will try to unlock" "$log" || exit "$status"
+    echo "flash.sh: pyocd erased the locked nRF9151 to unlock it and the load then failed; loading again." >&2
+    pyocd load -t nrf91 --no-reset build/merged.hex
+fi
 pyocd reset -t nrf91 -m hw -O auto_unlock=false

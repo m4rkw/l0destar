@@ -3,7 +3,7 @@
 # Usage: bash gen_certs.sh <server-hostname>
 #
 # Outputs:
-#   ca.key / ca.crt         — CA keypair (ca.crt goes to modem + committed)
+#   ca.key / ca.crt         — CA keypair (build.sh embeds ca.crt; never commit either)
 #   server.key / server.crt — server keypair (deploy to server, never commit)
 #   ../src/ca_cert.h        — CA cert as a C string for firmware embedding
 set -euo pipefail

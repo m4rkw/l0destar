@@ -4,6 +4,8 @@ Skipped unless ``TRACKER_TEST_DB`` is set; see conftest.py.  These are
 destructive — they truncate every table they touch.
 """
 
+import re
+
 from conftest import needs_db, record
 
 from tracker import db, logs, telemetry
@@ -44,6 +46,12 @@ def test_record_is_stored(device, database):
 def test_speed_is_converted_to_mph(device, database):
     send(device, record(0, 51.5, -0.1, 1, speed=48.0))
     assert str(last_log(database)['speed']) == '29.83'
+
+
+def test_hdop_arrives_in_tenths(device, database):
+    # The firmware sends HDOP x 10: 12 on the wire is an HDOP of 1.2.
+    send(device, record(0, 51.5, -0.1, 0, hdop=12))
+    assert str(last_log(database)['hdop']) == '1.20'
 
 
 def test_obd_fields_are_stored_scaled(device, database):
@@ -265,6 +273,14 @@ def test_map_page_renders(client, device, database, logged_in):
     response = client.get('/track')
     assert response.status_code == 200
     assert b'AB12CDE' in response.data
+
+
+def test_map_page_runs_no_inline_script(client, device, database, logged_in):
+    # deploy/nginx.conf.example allows scripts only from files, so an inline
+    # <script> would silently never run.
+    page = client.get('/track').get_data(as_text=True)
+    assert re.search(r'<script(?![^>]*\bsrc=)[^>]*>', page) is None
+    assert 'data-maps="0"' in page      # no key configured in the tests
 
 
 def test_map_page_survives_a_device_with_no_records(client, device, database, logged_in):

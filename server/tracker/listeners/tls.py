@@ -1,37 +1,21 @@
-"""TLS telemetry, and firmware downloads on the same port.
+"""Firmware downloads over TLS.
 
 The device's modem terminates TLS itself, so the server only has to speak
-plain TLS 1.2 over TCP.  A telemetry exchange is one length-prefixed frame in
-and one plaintext response out::
+plain TLS 1.2 over TCP, and over it the small part of HTTP that the nRF91 FOTA
+stack uses (``firmware.serve_http``).  The certificate is issued by the CA
+compiled into the firmware, which is how a device knows the manifest and the
+image come from its own server.
 
-    [2] payload length, big-endian, <= 8192
-    [N] payload:  IMEI '\\n' record '\\n' record ...
-
-Sharing the port with firmware downloads
-----------------------------------------
-The public HTTPS name may well terminate somewhere else, but this port is
-already open and already has a certificate the device trusts, so downloads ride
-it too.  The two protocols cannot be confused: a telemetry frame starts with a
-big-endian length capped at 8192, while an HTTP request starts with ``GE`` or
-``HE`` — 0x4745 and 0x4845, far above the cap.  The first two bytes decide.
-
-Authentication
---------------
-The device proves nothing beyond presenting an enrolled IMEI, and the IMEI is
-not a secret.  This transport therefore assumes the TLS listener is reachable
-only from where the operator expects, or that mutual TLS is configured
-(``tls_client_ca``); with neither, anyone who learns an IMEI can post
-telemetry as that device.  The UDP transport's per-device PSK is stronger in
-that respect.
+Telemetry does not come here: it arrives over UDP, where every datagram is
+authenticated with the device's own key.
 """
 
 import socket
 import ssl
-import struct
 import threading
 import time
 
-from .. import config, db, firmware, logs, telemetry
+from .. import config, db, firmware, logs
 
 
 def recv_exact(conn, n):
@@ -60,46 +44,11 @@ def handle_connection(ctx, conn, addr):
         return
 
     try:
-        # Handshake done, back to the short budget.  Telemetry is one brief
-        # exchange, so anything slower is a stalled or hostile client holding a
-        # thread.  serve_http() widens it again for image downloads.
+        # Handshake done, back to a short budget until the request arrives, so
+        # a client that connects and says nothing does not hold a thread.
+        # serve_http() widens it again for the download itself.
         conn.settimeout(int(config.get('tls_read_timeout', 10)))
-
-        header = recv_exact(conn, 2)
-        if not header:
-            return
-
-        if header in (b'GE', b'HE'):
-            firmware.serve_http(conn, ip, header, log=logs.tls)
-            return
-
-        payload_len = struct.unpack('>H', header)[0]
-        if not 1 <= payload_len <= 8192:
-            logs.tls.warning('bad payload length %d from %s', payload_len, ip)
-            return
-
-        payload = recv_exact(conn, payload_len)
-        if not payload:
-            logs.tls.warning('truncated payload from %s', ip)
-            return
-
-        text = payload.decode('ascii', errors='replace')
-        lines = [line for line in text.split('\n') if line.strip()]
-        if not lines:
-            return
-
-        imei = lines[0].strip()
-        if not imei.isdigit() or not 14 <= len(imei) <= 16:
-            logs.tls.warning('invalid IMEI from %s: %r', ip, imei[:20])
-            return
-
-        device = db.tls.one('SELECT * FROM `device` WHERE `imei` = %s', (imei,))
-        if not device:
-            logs.tls.warning('unknown IMEI %s from %s', imei, ip)
-            return
-
-        response = telemetry.process_lines(device, lines[1:], ip, db.tls, logs.tls)
-        conn.sendall(response.encode('ascii'))
+        serve(conn, ip)
     except Exception:
         logs.tls.exception('TLS connection error from %s', ip)
     finally:
@@ -107,17 +56,33 @@ def handle_connection(ctx, conn, addr):
             conn.close()
         except OSError:
             pass
+        # This thread ends here, and its database connection with it, rather
+        # than lingering until the database server times it out.
+        db.tls.close()
+
+
+def serve(conn, ip):
+    """Serve one established connection.
+
+    The firmware's downloader only ever sends GET and HEAD, so the first two
+    bytes are enough to turn anything else away before it can hold the thread
+    for a download's long read timeout.  Kept apart from the handshake so the
+    dispatch can be driven over a plain socket in the tests.
+    """
+    header = recv_exact(conn, 2)
+    if not header:
+        return
+
+    if header not in (b'GE', b'HE'):
+        logs.tls.warning('not a firmware request from %s', ip)
+        return
+
+    firmware.serve_http(conn, ip, header, log=logs.tls)
 
 
 def _context():
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(config.TLS_CERT, config.TLS_KEY)
-    client_ca = config.get('tls_client_ca')
-    if client_ca:
-        # Optional mutual TLS: with a per-device client certificate the
-        # transport authenticates the device rather than trusting the IMEI.
-        ctx.verify_mode = ssl.CERT_REQUIRED
-        ctx.load_verify_locations(client_ca)
     return ctx
 
 
@@ -137,24 +102,33 @@ def _bind():
     return None
 
 
-def run():
-    if not config.TLS_CERT or not config.TLS_KEY:
-        logs.tls.info('TLS cert/key not configured, TLS listener disabled')
-        return
+def run(ready=None):
+    """Accept connections until the process exits.
 
-    ctx = _context()
-    sock = _bind()
-    if sock is None:
-        return
+    ``ready``, if given, is set once the socket is listening, or once it is
+    clear that it will not be; see ``wsgi.start_listeners``.
+    """
+    try:
+        if not config.TLS_CERT or not config.TLS_KEY:
+            logs.tls.info('TLS cert/key not configured, TLS listener disabled')
+            return
 
-    sock.listen(int(config.get('tls_backlog', 8)))
-    logs.tls.info('TLS listening on %s:%d', config.TLS_HOST, config.TLS_PORT)
+        ctx = _context()
+        sock = _bind()
+        if sock is None:
+            return
+
+        sock.listen(int(config.get('tls_backlog', 8)))
+        logs.tls.info('TLS listening on %s:%d', config.TLS_HOST, config.TLS_PORT)
+    finally:
+        if ready is not None:
+            ready.set()
 
     # Handshake budget, deliberately generous.  A device on LTE-M in weak
     # signal has to get the server's certificate chain across before it can
-    # reply, and the telemetry read timeout is far too tight for that — the
-    # symptom is repeated "handshake operation timed out" on FOTA attempts that
-    # never reach the HTTP layer at all.
+    # reply, and the read timeout is far too tight for that — the symptom is
+    # repeated "handshake operation timed out" on FOTA attempts that never
+    # reach the HTTP layer at all.
     handshake_timeout = int(config.get('tls_handshake_timeout', 45))
 
     while True:

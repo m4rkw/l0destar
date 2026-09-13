@@ -1,10 +1,14 @@
 """Minimal MySQL wrapper.
 
-One :class:`DB` per thread.  pymysql connections are not thread-safe and the
-listeners run concurrently with the Flask workers, so each gets its own handle
-rather than sharing a pool — the query volume is a few per device per wake, and
-a pool would be more moving parts than the load justifies.
+One connection per thread.  pymysql connections are not thread-safe, and this
+process runs a good many threads: the UDP listener, one per TLS connection
+downloading firmware, and a pool of request threads in each gunicorn worker.
+So the module-level handles below hand every thread its own connection rather
+than sharing a pool — the query volume is a few per device per wake, and a
+pool would be more moving parts than the load justifies.
 """
+
+import threading
 
 import pymysql
 import pymysql.cursors
@@ -71,16 +75,58 @@ class DB:
             return cur.lastrowid
 
 
-# One handle per thread of execution.
-web = DB()
-udp = DB()
-tls = DB()
-dtls = DB()
+class PerThread:
+    """A :class:`DB` for each thread that queries through this handle.
 
-ALL = (web, udp, tls, dtls)
+    The module-level handles are shared by everything that imports them.
+    Shared as plain connections, two request threads in one worker — or two
+    TLS connections downloading firmware at once — interleave their queries on
+    one socket and corrupt both result sets.  Each thread dials its own
+    connection the first time it queries instead, and keeps it for its life.
+    """
+
+    def __init__(self, settings=None):
+        self._settings = settings
+        self._local = threading.local()
+
+    def handle(self):
+        """The calling thread's :class:`DB`, created on first use."""
+        handle = getattr(self._local, 'db', None)
+        if handle is None:
+            handle = self._local.db = DB(self._settings)
+        return handle
+
+    def close(self):
+        """Close the calling thread's connection, if it has one.  Other
+        threads' connections are theirs to close."""
+        handle = getattr(self._local, 'db', None)
+        if handle is not None:
+            handle.close()
+
+    def one(self, sql, params=None):
+        return self.handle().one(sql, params)
+
+    def all(self, sql, params=None):
+        return self.handle().all(sql, params)
+
+    def query(self, sql, params=None):
+        return self.handle().query(sql, params)
+
+
+# One handle per consumer, each a connection per thread underneath.
+web = PerThread()
+udp = PerThread()
+tls = PerThread()
+
+ALL = (web, udp, tls)
 
 
 def close_all():
+    """Close the calling thread's connection on every handle.
+
+    Called after fork(), where the forking thread is the only one the child
+    has: its connections are the ones inherited from the parent.
+    """
     for handle in ALL:
         handle.close()
 

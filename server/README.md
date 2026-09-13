@@ -16,16 +16,17 @@ live on hardware you control.
 
 ## What it does
 
-- **Ingests telemetry** over three transports — UDP with ChaCha20-Poly1305,
-  modem-terminated TLS, and DTLS with Connection ID. A device speaks one of
-  them; see [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
+- **Ingests telemetry** over UDP with ChaCha20-Poly1305, under a key per
+  device; see [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
 - **Stores** positions, IMU, cell, thermal and power telemetry, and derives
   journeys from ignition transitions.
 - **Alerts** on ignition, movement and low battery, through Pushover, a
   webhook, or nothing at all.
 - **Delivers firmware** as per-device signed images with range support, over
-  the same TLS port as telemetry.
+  TLS.
 - **Serves a map** with live position over a WebSocket and journey replay.
+- **Tracks several vehicles**: a device list, a map per vehicle, and an API
+  that is told which device each request is about.
 - **Queues commands** for delivery on a device's next check-in.
 
 Authentication is passkeys only. There is no password column in the schema.
@@ -36,13 +37,15 @@ Authentication is passkeys only. There is no password column in the schema.
 tracker/            application package
   config.py           configuration loading
   db.py               MySQL handles, device and operator lookup
-  logs.py             per-transport log channels
+  logs.py             per-channel log files
   notify.py           pluggable outbound notifications
   telemetry.py        parsing, storage, journeys, response building
   firmware.py         OTA manifests and the firmware HTTP server
-  listeners/          udp.py, tls.py, dtls.py
+  listeners/          udp.py (telemetry), tls.py (firmware downloads)
   web/                Flask app, passkey auth, JSON API, WebSocket
 tools/              enrolment and operations scripts
+Dockerfile          the m4rkw/l0destar image
+docker/             the image's entrypoint and database settings
 deploy/             nginx, systemd and launchd examples
 docs/PROTOCOL.md    the device-facing wire protocol
 schema.sql          MySQL schema
@@ -52,13 +55,45 @@ wsgi.py             entrypoint
 The listeners and the web application share the telemetry layer and nothing
 else; either runs without the other.
 
-## Setup
+## Running it with Docker
 
-Requires Python 3.9+ and MySQL or MariaDB.
+The `m4rkw/l0destar` image runs the server together with the MariaDB it
+stores everything in, and keeps everything in the host directory mounted at
+`/data`:
 
 ```sh
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+sudo install -d -o "$USER" -g "$USER" /srv/l0destar
+sudo docker run -d --name l0destar --restart unless-stopped \
+    -e L0DESTAR_HOSTNAME=tracker.example.com \
+    -v /srv/l0destar:/data \
+    -p 65480:65480/udp -p 65481:65481/tcp -p 127.0.0.1:5000:5000 \
+    m4rkw/l0destar
+```
+
+The first start writes `config.yaml`, creates a CA and a certificate for
+`L0DESTAR_HOSTNAME` in `certs/`, and creates the database; every start applies
+any migrations the database has not had. The server and the database run as
+the owner of the data directory. The tools run inside the container:
+
+```sh
+sudo docker exec l0destar python tools/adddevice.py 350000000000000 "Car" AB12CDE
+```
+
+The full walkthrough is [`docs/server/installation.md`](../docs/server/installation.md),
+and [`docker/entrypoint.sh`](docker/entrypoint.sh) is what runs at start-up.
+To build and publish the image for both architectures:
+
+```sh
+docker buildx build --platform linux/amd64,linux/arm64 -t m4rkw/l0destar --push .
+```
+
+## Running it from a checkout
+
+Requires Python 3 (developed and tested on 3.12) and MySQL or MariaDB.
+
+```sh
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -r requirements.txt
 
 mysql -u root -p -e "CREATE DATABASE tracker CHARACTER SET utf8mb4"
 mysql -u root -p tracker < schema.sql
@@ -71,14 +106,18 @@ $EDITOR config.yaml          # at minimum: session_secret, database
 Enrol a device and a user:
 
 ```sh
-tools/adddevice.py 350000000000000 "Car" AB12CDE
-tools/regtoken.py alice tracker.example.com
+.venv/bin/python tools/adddevice.py 350000000000000 "Car" AB12CDE
+.venv/bin/python tools/regtoken.py alice tracker.example.com
 ```
 
+The tools run on the venv's interpreter: their `#!/usr/bin/env python3` line
+would find a Python without the dependencies.
+
 `adddevice.py` prints a pre-shared key once — it has to be built into that
-unit's firmware and is not shown again. `regtoken.py` prints a single-use
-enrolment URL valid for 24 hours; open it on the device that will hold the
-passkey.
+unit's firmware and is not shown again. Enrol every vehicle the same way; each
+gets its own key. `regtoken.py` prints a single-use enrolment URL valid for 24
+hours; open it on the device that will hold the passkey, at the hostname people
+will use to reach the server, because the passkey is bound to it.
 
 Run it:
 
@@ -86,29 +125,42 @@ Run it:
 .venv/bin/gunicorn -c gunicorn.conf.py wsgi:app
 ```
 
+`TRACKER_BIND` (`127.0.0.1:5000`), `TRACKER_WORKERS` (2) and `TRACKER_THREADS`
+(16 per worker) size it. Every open map page holds a thread for its WebSocket,
+which is why the workers are threaded; the telemetry listeners run once, in the
+gunicorn master.
+
 `deploy/` has nginx, systemd and launchd examples. Put nginx in front of the
 web UI; the telemetry listeners bind their own ports and want forwarding at
 the firewall rather than proxying.
 
 ### Certificates
 
-For the TLS and DTLS transports the device needs to trust the server. The
-firmware embeds a CA certificate, so a self-signed CA is the simplest thing
-that works and avoids depending on a public CA's renewal cadence for something
-that has to keep working with a device in a car park:
+For firmware downloads the device needs to trust the server. The firmware
+embeds a CA certificate, so a self-signed CA is the simplest thing that works
+and avoids depending on a public CA's renewal cadence for something that has
+to keep working with a device in a car park. The Docker image creates one on
+its first start. From a checkout, the usual place to make it is the firmware
+tree, whose build embeds `firmware/certs/ca.crt`:
 
 ```sh
-certs/gen_certs.sh tracker.example.com
+firmware/certs/gen_certs.sh tracker.example.com
 ```
 
-This writes `certs/ca.{key,crt}`, `certs/server.{key,crt}` and a
-`src/ca_cert.h` for the firmware build. The server key never leaves the
-server. Certificates are gitignored.
+Then copy `firmware/certs/server.crt` and `server.key` into this directory's
+`certs/` (`tls_cert` and `tls_key`). The same script is here as
+`certs/gen_certs.sh`; run from the server, it writes everything beside itself,
+or to the directory given as its second argument, and `ca.crt` then goes to
+`firmware/certs/ca.crt` on the build machine. Keys and certificates are
+gitignored, and the firmware build generates `firmware/src/ca_cert.h` from
+`ca.crt`, so no CA is ever committed.
 
 ## Migrations
 
 `schema.sql` is the full current schema for a new database.  An existing one
-takes the ALTER statements in `migrations/`, oldest first, each applied once:
+takes the ALTER statements in `migrations/`, oldest first, each applied once.
+The Docker image does that itself at start-up, and records what it applied in
+`schema_migration`. From a checkout:
 
 ```
 mysql -u root -p tracker < migrations/2026-09-06_track_mode.sql
@@ -117,19 +169,26 @@ mysql -u root -p tracker < migrations/2026-09-06_track_mode.sql
 ## Operating
 
 ```sh
-tools/command.py 350000000000000 int=3600     # reporting interval
-tools/command.py 350000000000000 locate       # position on next check-in
-tools/command.py 350000000000000 alarm=1      # notify on ignition
-tools/gentoken.py home-automation             # bearer token for the API
-tools/import_plmn.py plmn.csv                 # operator names for the UI
+.venv/bin/python tools/device.py list                        # every vehicle, last seen
+.venv/bin/python tools/device.py show 350000000000000        # settings, updates, queue
+.venv/bin/python tools/command.py 350000000000000 int=3600   # engine-off interval
+.venv/bin/python tools/command.py 350000000000000 locate     # position as an alert
+.venv/bin/python tools/command.py 350000000000000 alarm=1    # notify on ignition
+.venv/bin/python tools/gentoken.py home-automation           # bearer token for the API
+.venv/bin/python tools/import_plmn.py plmn.csv               # operator names for the UI
 ```
+
+With Docker, run the same tools as `sudo docker exec l0destar python tools/...`.
+
+`device.py` also renames a device, replaces its key (`rekey`) and removes it
+along with its history. `command.py` with no arguments lists every command.
 
 Nothing is pushed to a device. It is asleep almost all of the time, so a
 command waits in the queue until it next reports and rides back on the response
 it was already going to receive — which at a long reporting interval can be an
 hour away.
 
-Logs are one file per transport under `log_dir`, plus `debug.log`, which only
+Logs are one file per channel under `log_dir`, plus `debug.log`, which only
 receives records carrying debug counters or a reset cause. That keeps the
 short chronological list of things that went wrong out of the bulk traffic.
 
@@ -144,17 +203,24 @@ anything holding one can queue a command, so treat one as console-equivalent.
 | `GET /api/1.0/carpos` | session | latest position |
 | `GET /api/1.0/journeys` | session | journey list, paged |
 | `GET /api/1.0/journey/<id>/points` | session | one journey's track |
-| `GET /api/1.0/devices` | session | enrolled devices |
+| `GET /api/1.0/devices` | session | every device with its latest record |
 | `GET /api/1.0/status` | session | settings, firmware, last seen |
 | `GET,POST /api/1.0/trackmode` | session | read or set the track-mode switch (`{"on": 1}`) |
 | `GET /ws/carpos` | session | live position stream |
 | `GET /api/1.0/track` | bearer | redirect to a map at the last fix |
 | `GET,POST /api/1.0/config` | bearer | read and write device settings |
 | `POST /api/1.0/command` | bearer | queue a command |
-| `POST /api/1.0/home` | bearer | stalled-tracker watchdog |
+| `POST /api/1.0/home` | bearer | stalled-tracker watchdog, per `home_check` vehicle |
 
-Endpoints take `?imei=` or `?device_id=`; the browser ones fall back to
-`default_device` from the config.
+A request names its device with `imei` or `device_id`, in the query string or
+a JSON body, or with an `X-Imei` header. A read that names none is answered
+for `default_device`, or for the only enrolled device; a `POST` to `config`,
+`command` or `trackmode` always has to name one. A named device that is not
+enrolled is an error, never another vehicle's data.
+
+The web UI itself is `/devices`, every vehicle with its last record, and
+`/track?imei=<imei>`, one vehicle's map. `/` opens a map when there is one
+obvious vehicle and the list otherwise.
 
 ## Tests
 
@@ -179,8 +245,6 @@ as a device that installs a corrupt image.
 
 ## Known gaps
 
-- The DTLS Connection ID library is not in this repository. That listener
-  disables itself when `dtls_lib` is unset; UDP and TLS are unaffected.
 - Nothing here has been run against real hardware in this form. The tests
   exercise the protocol against synthetic records, which is not the same as a
   device in a car park on a marginal cell.
@@ -189,6 +253,8 @@ as a device that installs a corrupt image.
 - `log` grows without bound and there is no retention policy. A device
   reporting once a minute writes roughly half a million rows a year.
 - Bearer tokens have no scopes or expiry.
+- Every logged-in user can see and control every device; there are no
+  per-user device permissions.
 
 ## Security notes
 
@@ -197,7 +263,15 @@ Certificates and private keys are gitignored too.
 
 The app trusts `X-Forwarded-*` because passkeys bind to the origin. That is
 only safe if the reverse proxy overwrites those headers and nothing else can
-reach the backend port. Bind gunicorn to loopback.
+reach the backend port. Bind gunicorn to loopback — or, with Docker, publish
+port 5000 on `127.0.0.1` only, since Docker opens the ports it publishes ahead
+of the host firewall.
+
+The TLS port has to be reachable from the internet for firmware downloads.
+Firmware images are built with the device's pre-shared key inside, and that
+port serves them to anyone who asks for a device's manifest - keep it closed
+between rollouts if that exposure matters, and rekey a device whose image has
+left your control (`tools/device.py rekey`).
 
 If you find a security problem, please report it privately rather than opening
 an issue — see the repository root.

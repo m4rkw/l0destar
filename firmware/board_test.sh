@@ -226,10 +226,11 @@ if [[ -n "${SERIAL:-}" ]]; then
     PORT="$SERIAL"
 else
     shopt -s nullglob
-    ports=(/dev/cu.usbmodem*)
+    # macOS: /dev/cu.usbmodem*.  Linux: the by-id link for the first interface.
+    ports=(/dev/cu.usbmodem* /dev/serial/by-id/*IFMCU*-if00)
     shopt -u nullglob
     if [[ ${#ports[@]} -eq 0 ]]; then
-        echo "No /dev/cu.usbmodem* serial port found." >&2
+        echo "No Connect Kit serial port found (/dev/cu.usbmodem* or /dev/serial/by-id/*IFMCU*)." >&2
         echo "Power/cable? (bench: try 'power on')  Or set SERIAL=/dev/..." >&2
         exit 1
     else

@@ -40,9 +40,11 @@ SESSION_SECRET = require('session_secret')
 SESSION_LIFETIME_DAYS = int(get('session_lifetime_days', 30))
 MAPS_API_KEY = get('google_maps_api_key', '')
 
-# Device shown by the web UI and the bare /api/1.0/track redirect when the
-# request does not name one.  Everything else is addressed by IMEI, so a
-# deployment tracking several vehicles only needs this to pick a landing page.
+# Device a read is about when the request names none: the map the web UI
+# lands on, the bare /api/1.0/track redirect.  Optional.  Unset, or naming a
+# device that is not enrolled, a request that names none falls back to the
+# only enrolled device, and with several the web UI opens on the device list.
+# A request that changes anything always has to name its device.
 DEFAULT_DEVICE_IMEI = str(get('default_device', '') or '')
 
 # Login rate limiting: authoptions requests permitted per IP per window.
@@ -65,16 +67,11 @@ UDP_PORT = int(get('udp_port', 65480))
 UDP_ENABLED = bool(get('udp_enabled', True))
 MAX_DGRAM = 2048
 
+# Firmware downloads.  Telemetry only ever arrives over UDP.
 TLS_HOST = get('tls_host', '0.0.0.0')
 TLS_PORT = int(get('tls_port', 65481))
 TLS_CERT = get('tls_cert', '')
 TLS_KEY = get('tls_key', '')
-
-DTLS_HOST = get('dtls_host', '0.0.0.0')
-DTLS_PORT = int(get('dtls_port', 65482))
-DTLS_CERT = get('dtls_cert', '') or TLS_CERT
-DTLS_KEY = get('dtls_key', '') or TLS_KEY
-DTLS_LIB = get('dtls_lib', '')
 
 # Drop the movement_alarm response field; shortens every reply.
 SLIM_RESPONSE = bool(get('slim_response', False))
@@ -98,11 +95,39 @@ NOTIFY = get('notify') or {}
 
 # -- home check --------------------------------------------------------------
 # Optional watchdog: an external cron POSTs /api/1.0/home and the server
-# reports whether the vehicle's last fix is near a reference point.  Used to
+# reports whether each listed vehicle's last fix is near its home.  Used to
 # catch a tracker that has silently stopped reporting while parked at home —
 # the last row keeps looking plausible, so only an external check notices.
-_home = get('home_check') or {}
-HOME_CHECK_IMEI = str(_home.get('imei', '') or '')
-HOME_CHECK_LAT = _home.get('latitude')
-HOME_CHECK_LON = _home.get('longitude')
-HOME_CHECK_RADIUS_M = float(_home.get('radius_m', 300))
+
+
+def home_checks(raw):
+    """``home_check`` as a list of ``{imei, latitude, longitude, radius_m}``.
+
+    A single mapping is the original form and still accepted; a list covers
+    several vehicles.  An entry missing its IMEI or a coordinate is a mistake
+    to report rather than work around, so it stops the server at startup
+    instead of leaving that vehicle silently unchecked.
+    """
+    if not raw:
+        return []
+    if isinstance(raw, dict):
+        raw = [raw]
+    if not isinstance(raw, list):
+        raise RuntimeError('home_check in %s must be a mapping or a list of them'
+                           % CONFIG_PATH)
+    checks = []
+    for number, entry in enumerate(raw, 1):
+        if (not isinstance(entry, dict) or not entry.get('imei')
+                or entry.get('latitude') is None or entry.get('longitude') is None):
+            raise RuntimeError('home_check entry %d in %s needs imei, latitude '
+                               'and longitude' % (number, CONFIG_PATH))
+        checks.append({
+            'imei': str(entry['imei']),
+            'latitude': float(entry['latitude']),
+            'longitude': float(entry['longitude']),
+            'radius_m': float(entry.get('radius_m', 300)),
+        })
+    return checks
+
+
+HOME_CHECKS = home_checks(get('home_check'))

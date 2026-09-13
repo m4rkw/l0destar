@@ -1,9 +1,9 @@
 # nginx vhost for the l0destar tracking server.
 #
-# Only the web UI and API go through nginx.  The telemetry listeners bind their
-# own ports directly (65480/udp, 65481/tcp, 65482/udp) and must be forwarded to
-# this host at the firewall, not proxied here — nginx cannot usefully sit in
-# front of a raw datagram or a modem-terminated TLS session.
+# Only the web UI and API go through nginx.  The device listeners bind their
+# own ports directly (65480/udp, 65481/tcp) and must be forwarded to this host
+# at the firewall, not proxied here — nginx cannot usefully sit in front of a
+# raw datagram or a modem-terminated TLS session.
 
 server {
     listen 80;
@@ -37,6 +37,8 @@ server {
 
     client_max_body_size 1m;
 
+    # Everything, /static/ included, comes from the application, so this works
+    # the same whether the server runs in Docker or straight on the host.
     location / {
         proxy_pass http://127.0.0.1:5000;
     }
@@ -52,15 +54,4 @@ server {
         # would drop it repeatedly on a parked vehicle.
         proxy_read_timeout 3600s;
     }
-
-    location /static/ {
-        alias /srv/l0destar/server/static/;
-        expires 1h;
-    }
-
-    # Optionally serve firmware over public HTTPS as well as over the
-    # telemetry TLS port.  Devices that can reach 443 will prefer it.
-    # location /fw/ {
-    #     alias /srv/l0destar/server/fw/;
-    # }
 }

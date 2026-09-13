@@ -1,0 +1,14 @@
+# The database inside the l0destar server image, read after Debian's own
+# settings.  Its files live in the host directory mounted at /data, and only
+# the server in the same container can reach it.
+
+[mysqld]
+datadir = /data/mysql
+bind-address = 127.0.0.1
+# Docker's default seccomp profile blocks io_uring, so native AIO would log two
+# warnings at every start before falling back.  A tracker's write load does not
+# need it.
+innodb_use_native_aio = 0
+# Debian sets this, but there is no binary log to expire, so MariaDB would
+# warn about it at every start.
+expire_logs_days = 0

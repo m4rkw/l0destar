@@ -82,9 +82,9 @@ def database():
 
     handle = db.web
     handle.query('SET FOREIGN_KEY_CHECKS = 0')
-    for table in ('journey', 'command', 'log', 'device', 'plmn', 'api_token',
-                  'user', 'registration', 'regoptions', 'authoptions',
-                  'authoptions_ip'):
+    for table in ('journey', 'command', 'dtc', 'log', 'device', 'plmn',
+                  'api_token', 'user', 'registration', 'regoptions',
+                  'authoptions', 'authoptions_ip'):
         handle.query('DELETE FROM `%s`' % table)
     handle.query('SET FOREIGN_KEY_CHECKS = 1')
     return handle
@@ -103,6 +103,20 @@ def device(database):
     )
     database.query(
         "INSERT INTO `plmn` (`mcc`, `mnc`, `operator`) VALUES ('234', '10', 'Test Network')"
+    )
+    return db.lookup_device(imei=imei)
+
+
+@pytest.fixture
+def second_device(device, database):
+    """Another enrolled device, for anything that has to tell vehicles apart."""
+    from tracker import db
+
+    imei = '350000000000001'
+    database.query(
+        "INSERT INTO `device` (`imei`, `name`, `registration`, `psk`) "
+        "VALUES (%s, 'Van', 'XY34ZZZ', %s)",
+        (imei, 'bb' * 32),
     )
     return db.lookup_device(imei=imei)
 
@@ -127,8 +141,13 @@ def bearer(database):
 
 
 @pytest.fixture
-def logged_in(client):
-    """A session cookie standing in for a completed passkey login."""
+def logged_in(client, database):
+    """A session cookie standing in for a completed passkey login, for an
+    account that exists: a session whose user is gone or locked is refused."""
+    database.query(
+        "INSERT INTO `user` (`username`, `user_id`, `credential`) "
+        "VALUES ('tester', 'tester-credential', '{}')"
+    )
     with client.session_transaction() as session:
         session['username'] = 'tester'
     return client
@@ -146,8 +165,9 @@ def published_for_device(fw_dir, device):
     return device
 
 
-def record(minute, lat, lon, ignition, speed=0.0, extras=''):
-    """Build a telemetry line at a given minute of the day."""
+def record(minute, lat, lon, ignition, speed=0.0, extras='', hdop=9):
+    """Build a telemetry line at a given minute of the day.  ``hdop`` is as
+    the firmware sends it, in tenths."""
     hours, minutes = divmod(minute, 60)
-    return ('12/08/26,%02d:%02d:00+01,%.6f,%.6f,%.1f,30.0,90.0,0.9,10,12.40,%d,5,0%s'
-            % (hours, minutes, lat, lon, speed, ignition, extras))
+    return ('12/08/26,%02d:%02d:00+01,%.6f,%.6f,%.1f,30.0,90.0,%d,10,12.40,%d,5,0%s'
+            % (hours, minutes, lat, lon, speed, hdop, ignition, extras))

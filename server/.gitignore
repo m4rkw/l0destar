@@ -6,6 +6,8 @@ config.yaml
 certs/*.key
 certs/*.crt
 certs/*.srl
+# Firmware header left by certs/gen_certs.sh, to copy into firmware/src.
+certs/ca_cert.h
 
 # Published firmware images and manifests.
 fw/

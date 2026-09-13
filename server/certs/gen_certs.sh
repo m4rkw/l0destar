@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 # Generate a self-signed CA + server certificate for TLS modem offload.
-# Usage: bash gen_certs.sh <server-hostname>
+# Usage: bash gen_certs.sh <server-hostname> [output-dir]
 #
-# Outputs:
-#   ca.key / ca.crt         — CA keypair (ca.crt goes to modem + committed)
+# Outputs, all in output-dir, or beside this script without one:
+#   ca.key / ca.crt         — CA keypair (ca.crt goes to firmware/certs/ on the
+#                             build machine; never commit either)
 #   server.key / server.crt — server keypair (deploy to server, never commit)
-#   ../src/ca_cert.h        — CA cert as a C string for firmware embedding
+#   ca_cert.h               — CA cert as a C string (firmware/build.sh makes
+#                             its own from ca.crt)
+#
+# firmware/certs/gen_certs.sh is the same script run from the firmware tree,
+# where it writes ../src/ca_cert.h in place.  There is no src/ beside the
+# server, so this copy leaves the header here instead.
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "${2:-$(dirname "$0")}"
 
 HOST="${1:?Usage: $0 <server-hostname>}"
 DAYS_CA=3650
@@ -36,7 +42,8 @@ echo "--- ca_cert.h ---"
     echo ';'
     echo ''
     echo '#endif'
-} > ../src/ca_cert.h
+} > ca_cert.h
 
-echo "Done.  Deploy server.key + server.crt to the server."
-echo "       ca.crt is embedded in the firmware via src/ca_cert.h."
+echo "Done.  server.key + server.crt are the listener's tls_key / tls_cert."
+echo "       Copy ca.crt to firmware/certs/ca.crt on the build machine: the"
+echo "       firmware build embeds it, and push_fw.sh checks the server with it."

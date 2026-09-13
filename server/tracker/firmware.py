@@ -31,8 +31,7 @@ device until a newer one is published or an operator clears it
 
 Delivery
 --------
-Downloads are served over the same TLS port as telemetry.  See
-``listeners/tls.py`` for why the two protocols can share a port, and
+Downloads are served by the TLS listener (``listeners/tls.py``).  See
 ``docs/PROTOCOL.md`` for the request sequence the nRF91 FOTA stack produces.
 """
 
@@ -227,7 +226,9 @@ def blocked_version(imei, database=None):
     imei = str(imei or '')
     if not imei.isdigit():
         return None
-    database = database or db.DB()
+    # Asked from the TLS connection threads, which own a connection each on
+    # this handle; a fresh DB() per manifest request was never closed.
+    database = database or db.tls
     try:
         row = database.one('SELECT `fw_blocked` FROM `device` WHERE `imei` = %s',
                            (imei,))
@@ -323,13 +324,13 @@ def serve_http(conn, ip, first_bytes, log=None):
     """Serve firmware requests on an already-established TLS connection."""
     log = log or logs.tls
 
-    # The telemetry read timeout is deliberately short: one brief exchange,
-    # anything slower is a stalled or hostile client holding a thread.  An
-    # image is hundreds of sequential ranged GETs on this one connection and
+    # The listener's read timeout is deliberately short: until a request
+    # arrives, anything slower is a stalled or hostile client holding a thread.
+    # An image is hundreds of sequential ranged GETs on this one connection and
     # the device goes quiet between them for as long as the radio makes it.  A
-    # single RRC re-establishment in weak signal outlasts the telemetry budget,
-    # and because the downloader has no resume, one read timeout costs the
-    # whole transfer and the next attempt restarts at byte zero.
+    # single RRC re-establishment in weak signal outlasts that budget, and
+    # because the downloader has no resume, one read timeout costs the whole
+    # transfer and the next attempt restarts at byte zero.
     conn.settimeout(int(config.get('fw_download_timeout', 120)))
 
     buf = first_bytes

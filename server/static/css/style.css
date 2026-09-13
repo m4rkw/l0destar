@@ -429,3 +429,49 @@ body.track-on div#data { background: #fff; padding-bottom: 4px; }
   font-size: 12px;
   color: #999;
 }
+
+/* -- Device list ----------------------------------------------------------- */
+div.device-list {
+  max-width: 60em;
+  margin: 1em auto;
+  padding: 0 0.5em;
+}
+
+div.device-list .table-scroll {
+  overflow-x: auto;
+}
+
+div.device-list table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 0.8em;
+}
+
+div.device-list th,
+div.device-list td {
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+  padding: 0.4em 1em 0.4em 0;
+  border-bottom: 1px solid #eee;
+}
+
+div.device-list th {
+  font-size: 12px;
+  font-weight: normal;
+  color: #888;
+}
+
+div.device-list .dim {
+  font-size: 12px;
+  color: #888;
+}
+
+div.device-list p.note {
+  margin-top: 1em;
+}
+
+/* Shown in place of the map when no Maps key is configured. */
+p.map-note {
+  padding: 1em;
+}

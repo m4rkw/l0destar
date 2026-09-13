@@ -8,7 +8,7 @@ Layout::
     notify.py      pluggable outbound notifications
     telemetry.py   record parsing, storage, journeys, response building
     firmware.py    OTA manifests and the firmware HTTP server
-    listeners/     UDP (ChaCha20-Poly1305), TLS and DTLS transports
+    listeners/     UDP telemetry (ChaCha20-Poly1305), TLS firmware downloads
     web/           Flask application, passkey auth, JSON API
 
 The listeners and the web application share the telemetry layer and nothing

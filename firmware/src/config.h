@@ -13,7 +13,7 @@
 
 /* -- protocol / endpoint --------------------------------------------------- */
 #define HOSTNAME            ""
-#define UDP_PORT            65480
+#define UDP_PORT            CONFIG_APP_SERVER_PORT
 #define TLS_PORT            65481
 #define DTLS_PORT           5684
 #define UDP_PACKET_SIZE     1200

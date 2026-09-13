@@ -13,6 +13,10 @@
 #               gated by COEX0, so without that command the LNA stays off and GPS
 #               sees no satellites.  makerdiary.conf also re-parks the two app
 #               GPIOs that collide with the board's console pins (P0.11/P0.12).
+#
+# The first build also fetches the Connect Kit board definition and creates the
+# firmware signing key, and every build keeps src/ca_cert.h in step with
+# certs/ca.crt, your server's CA.  ncs_env.sh finds the SDK and its toolchain.
 set -euo pipefail
 
 if [ "${1:-}" = "pristine" ] ; then
@@ -20,7 +24,6 @@ if [ "${1:-}" = "pristine" ] ; then
 fi
 
 NCS_VERSION="${NCS_VERSION:-v3.3.0}"
-NCS_ROOT="${NCS_ROOT:-/opt/nordic/ncs/$NCS_VERSION}"
 BOARD_OVERRIDE="${BOARD:-}"   # explicit BOARD=... wins over the per-profile default
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -40,6 +43,8 @@ if [[ "$APP_DIR" == *" "* ]]; then
 		exit 1
 	fi
 fi
+
+source "$APP_DIR/ncs_env.sh"
 
 # BUILD_SUBDIR names a build directory relative to APP_DIR — use it rather
 # than an absolute BUILD_DIR so the space-free reroute above still applies
@@ -159,9 +164,16 @@ DTC_OVERLAYS=()
 # local.* files below can still override on the bench.
 if [[ "$PROFILE" == makerdiary ]]; then
 	CMAKE_ARGS+=("-DBOARD_ROOT=$APP_DIR")
+	# The board definition is Makerdiary's and not kept in this repository, so
+	# the first build fetches it.
 	if [[ ! -d "$APP_DIR/boards/makerdiary/nrf9151_connectkit" ]]; then
-		echo "WARNING: makerdiary profile selected but boards/makerdiary/nrf9151_connectkit" >&2
-		echo "         is missing — the $BOARD target won't resolve. Re-vendor the board def." >&2
+		MAKERDIARY_REPO="$APP_DIR/ifmcu/.makerdiary-repo"
+		if [[ ! -d "$MAKERDIARY_REPO" ]]; then
+			echo "Fetching the Connect Kit board definition from makerdiary/nrf9151-connectkit"
+			git clone --depth 1 https://github.com/makerdiary/nrf9151-connectkit.git "$MAKERDIARY_REPO"
+		fi
+		mkdir -p "$APP_DIR/boards"
+		cp -R "$MAKERDIARY_REPO/boards/makerdiary" "$APP_DIR/boards/"
 	fi
 	if [[ -f "$APP_DIR/makerdiary.conf" ]]; then
 		CONF_OVERLAYS+=("makerdiary.conf")
@@ -191,18 +203,70 @@ if [[ ${#DTC_OVERLAYS[@]} -gt 0 ]]; then
 	CMAKE_ARGS+=("-DEXTRA_DTC_OVERLAY_FILE=$(IFS=';'; echo "${DTC_OVERLAYS[*]}")")
 fi
 
-EXTRA_ARGS=()
-if [[ ${#CMAKE_ARGS[@]} -gt 0 ]]; then
-	EXTRA_ARGS+=("--" "${CMAKE_ARGS[@]}")
+# --- signing key -----------------------------------------------------------
+# MCUboot installs only images signed with this key.  A bench build creates it
+# if it is missing; a release (push_fw.sh sets FW_PATCH) must be signed with
+# the key the fleet's bootloaders already trust, so it stops instead.
+KEY_FILE="$APP_DIR/mcuboot_priv.pem"
+if [[ ! -f "$KEY_FILE" ]]; then
+	if [[ "$FW_PATCH" != 0 ]]; then
+		echo "Error: $KEY_FILE not found.  A release has to be signed with the key" >&2
+		echo "       your devices' bootloaders already trust." >&2
+		exit 1
+	fi
+	echo "Creating the firmware signing key: $KEY_FILE"
+	in_ncs python3 "$NCS_ROOT/bootloader/mcuboot/scripts/imgtool.py" keygen -t ecdsa-p256 -k "$KEY_FILE"
+	chmod 600 "$KEY_FILE"
+	echo "Back it up somewhere safe: boards flashed from now on only install updates signed with it."
 fi
+CMAKE_ARGS+=("-DSB_CONFIG_BOOT_SIGNATURE_KEY_FILE=\"$KEY_FILE\"")
+
+# --- the server's CA -------------------------------------------------------
+# The tracker firmware stores src/ca_cert.h in the modem on its first boot and
+# never replaces it, so a unit built with the wrong CA can never update from
+# your server.  The header is generated here from certs/ca.crt, your server's
+# CA certificate, and is not kept in the repository.  The board test,
+# provisioning and LTE test builds never store a CA, so without certs/ca.crt
+# they are given a header that holds none.
+CA_CRT="$APP_DIR/certs/ca.crt"
+CA_HEADER="$APP_DIR/src/ca_cert.h"
+if [[ -f "$CA_CRT" ]]; then
+	CA_NOTE="src/ca_cert.h updated from certs/ca.crt"
+elif [[ "${PROV:-}" == 1 || "${LTE_TEST:-}" == 1 ]] \
+	|| grep -qs '^CONFIG_APP_BOARD_TEST=y' "$APP_DIR/$LOCAL_CONF"; then
+	CA_CRT=""
+	CA_NOTE="src/ca_cert.h written without a CA, which this build never stores"
+else
+	echo "Error: certs/ca.crt not found.  Copy your server's CA certificate there first" >&2
+	echo "       (/srv/l0destar/certs/ca.crt on the server): the tracker firmware stores" >&2
+	echo "       the CA in the modem on its first boot and never replaces it." >&2
+	exit 1
+fi
+mkdir -p "$BUILD_DIR"
+{
+	echo '#ifndef CA_CERT_H'
+	echo '#define CA_CERT_H'
+	echo ''
+	if [[ -n "$CA_CRT" ]]; then
+		echo 'static const char ca_cert_pem[] ='
+		sed 's/.*/"&\\n"/' "$CA_CRT"
+		echo ';'
+	else
+		echo 'static const char ca_cert_pem[] = "";'
+	fi
+	echo ''
+	echo '#endif'
+} > "$BUILD_DIR/.ca_cert.h"
+if ! cmp -s "$BUILD_DIR/.ca_cert.h" "$CA_HEADER"; then
+	cp "$BUILD_DIR/.ca_cert.h" "$CA_HEADER"
+	echo "$CA_NOTE"
+fi
+
+EXTRA_ARGS=("--" "${CMAKE_ARGS[@]}")
 
 # `west` must run from inside the NCS workspace so it can find the manifest;
 # the app itself can live anywhere — we pass it as an absolute path.
-nrfutil sdk-manager toolchain launch \
-	--ncs-version "$NCS_VERSION" \
-	--chdir "$NCS_ROOT" \
-	-- west build -p "$PRISTINE" -b "$BOARD" -d "$BUILD_DIR" "$APP_DIR" \
-	"${EXTRA_ARGS[@]}"
+in_ncs west build -p "$PRISTINE" -b "$BOARD" -d "$BUILD_DIR" "$APP_DIR" "${EXTRA_ARGS[@]}"
 
 # Record what this build dir now holds (drives the switch check above).
 echo "$SIG" > "$MARKER"

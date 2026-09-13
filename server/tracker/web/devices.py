@@ -1,41 +1,92 @@
-"""Device resolution for web and API requests."""
+"""Device resolution for web and API requests.
+
+One server can track several vehicles, so which one a request is about has
+to be settled wherever a guess would do harm.  A read may fall back to a
+default: a map opened without naming a vehicle still lands somewhere useful.
+A write never does — a command queued, a setting changed or track mode
+switched on for the wrong vehicle is worse than an error.
+"""
 
 from flask import request
 
 from .. import config, db
 
 
-def resolve(imei=None, device_id=None, allow_default=True):
-    """Find the device a request is about.
+def _named(value):
+    return value is not None and str(value).strip() != ''
 
-    Explicit ``imei`` wins, then ``device_id``, then the ``X-Imei`` header,
-    then the configured default.  Returns None if nothing matches.
+
+def requested():
+    """The identifiers a request carries, as ``(imei, device_id, header)``:
+    the first two from the query string or a JSON body, whichever the request
+    used, the last from ``X-Imei``."""
+    body = request.get_json(silent=True) if request.is_json else None
+    body = body if isinstance(body, dict) else {}
+    return (request.args.get('imei') or body.get('imei'),
+            request.args.get('device_id') or body.get('device_id'),
+            request.headers.get('X-Imei'))
+
+
+def named():
+    """Whether the request names a device at all."""
+    return any(_named(value) for value in requested())
+
+
+def enrolled(database=None):
+    """Every enrolled device, in the order the device list shows them."""
+    database = database or db.web
+    return database.all('SELECT * FROM `device` ORDER BY `name`, `id`')
+
+
+def count(database=None):
+    database = database or db.web
+    return database.one('SELECT COUNT(*) AS `n` FROM `device`')['n']
+
+
+def default_device(database=None):
+    """The device a request that names none is about, or None.
+
+    ``default_device`` from the config when it is set and enrolled, otherwise
+    the only enrolled device.  With several enrolled and no default there is
+    no right answer, so none is given.
     """
-    device = db.lookup_device(imei=imei, device_id=device_id)
-    if device:
-        return device
-
-    header_imei = request.headers.get('X-Imei')
-    if header_imei:
-        device = db.lookup_device(imei=header_imei)
+    database = database or db.web
+    if config.DEFAULT_DEVICE_IMEI:
+        device = db.lookup_device(database, imei=config.DEFAULT_DEVICE_IMEI)
         if device:
             return device
+    rows = database.all('SELECT * FROM `device` ORDER BY `id` LIMIT 2')
+    return rows[0] if len(rows) == 1 else None
 
-    if allow_default and config.DEFAULT_DEVICE_IMEI:
-        return db.lookup_device(imei=config.DEFAULT_DEVICE_IMEI)
 
+def resolve(imei=None, device_id=None, header_imei=None, allow_default=True):
+    """Find the device a request is about.
+
+    An explicit ``imei`` wins, then ``device_id``, then the ``X-Imei``
+    header.  A request that names a device gets that device or nothing:
+    answering with another vehicle's data because an IMEI was mistyped would
+    be quietly wrong.  Only a request that names none falls back, and only
+    when ``allow_default`` is set — see :func:`default_device`.
+    """
+    if _named(imei):
+        return db.lookup_device(imei=str(imei).strip())
+    if _named(device_id):
+        return db.lookup_device(device_id=device_id)
+    if _named(header_imei):
+        return db.lookup_device(imei=header_imei.strip())
+    if allow_default:
+        return default_device()
     return None
 
 
 def from_request(allow_default=True):
-    """Resolve from query string or JSON body, whichever the request used."""
-    body = request.get_json(silent=True) if request.is_json else None
-    body = body if isinstance(body, dict) else {}
-    return resolve(
-        imei=request.args.get('imei') or body.get('imei'),
-        device_id=request.args.get('device_id') or body.get('device_id'),
-        allow_default=allow_default,
-    )
+    """Resolve the device the current request names.
+
+    Pass ``allow_default=False`` for anything that changes state.
+    """
+    imei, device_id, header_imei = requested()
+    return resolve(imei=imei, device_id=device_id, header_imei=header_imei,
+                   allow_default=allow_default)
 
 
 def latest_log(device, database=None):
@@ -210,3 +261,32 @@ def engine_running(device, log, database=None):
         except (TypeError, ValueError):
             continue
     return False
+
+
+def summary(device, database=None, log=None):
+    """A device and its latest record, as the device list shows them.
+
+    ``log`` is that record when the caller already has it — an empty dict
+    for a device that has never reported — and is looked up otherwise.
+    """
+    database = database or db.web
+    if log is None:
+        log = latest_log(device, database) or {}
+    stamp = log.get('timestamp')
+    return {
+        'id': device['id'],
+        'imei': device['imei'],
+        'name': device.get('name') or '',
+        'registration': device.get('registration') or '',
+        'last_seen': stamp.strftime('%Y-%m-%d %H:%M:%S') if stamp else None,
+        'latitude': _nullable_float(log.get('latitude')),
+        'longitude': _nullable_float(log.get('longitude')),
+        'speed': combined_speed(log) if log else None,
+        'battery_level': _nullable_float(log.get('battery_level')),
+        'ignition_state': log.get('ignition_state'),
+        'fw': log.get('fw'),
+        'rat': log.get('rat') or '',
+        'operator': db.lookup_operator(log.get('mcc'), log.get('mnc'),
+                                       database=database) or '',
+        'track_mode': 1 if device.get('track_mode') else 0,
+    }
