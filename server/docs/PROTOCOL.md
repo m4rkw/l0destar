@@ -1,8 +1,9 @@
 # Device protocol
 
 Everything a device sends is a list of newline-separated ASCII lines, and
-everything it gets back is one short comma-separated string. The three
-transports differ only in how those bytes are wrapped and authenticated.
+everything it gets back is one short comma-separated string. Both travel over
+UDP, encrypted and authenticated with the device's own key. Firmware updates
+are downloaded separately, over TLS.
 
 The format is shaped by one constraint: on LTE-M every byte is radio time, and
 radio time is the whole power budget. A field that rarely changes is not sent
@@ -154,7 +155,7 @@ Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is
 safer than replaying a `reboot` after the operator has changed their mind.
 
-## Transports
+## Transport
 
 ### UDP + ChaCha20-Poly1305 — port 65480
 
@@ -180,64 +181,7 @@ IMEIs are enrolled.
 
 The IMEI travels in the clear, because the server needs it to pick a key. An
 observer on path learns which device is reporting, though not where it is.
-That is the price of not paying for a handshake; use DTLS if it matters more
-than radio time.
-
-### TLS over TCP — port 65481
-
-```
-[2] payload length, big-endian, <= 8192
-[N] IMEI '\n' record '\n' record ...
-```
-
-The modem terminates TLS itself. The device authenticates only by presenting
-an enrolled IMEI, which is not a secret, and the port has to be open for
-firmware downloads — so telemetry frames are refused unless `tls_telemetry` is
-set, and anyone setting it should restrict who can reach the port or configure
-`tls_client_ca` for mutual TLS. The UDP transport's per-device PSK is stronger
-in that respect; current firmware reports over UDP and uses this port only to
-download updates.
-
-The handshake timeout is deliberately much longer than the read timeout. A
-device on LTE-M in weak signal has to get the certificate chain across before
-it can reply, and setting this too low shows up as repeated handshake timeouts
-on firmware downloads that never reach the HTTP layer at all.
-
-### DTLS 1.2 with Connection ID — port 65482
-
-LTE-M's Release Assistance Indication lets the device drop the radio the
-instant it has nothing more to send, which is most of what makes multi-week
-standby possible. The cost is that the operator's NAT rebinds the device to a
-new source port on the next transmission, often on every wake. A plain DTLS
-session is keyed on the 4-tuple and dies there, so every wake would pay for a
-fresh handshake — the most expensive thing the device does.
-
-Connection ID (RFC 9146) puts a session identifier in each record, so the
-server matches by CID rather than address. The session survives an arbitrary
-number of rebinds and the device pays for one handshake across its whole
-deployment.
-
-**This transport needs an out-of-tree library.** Python's `ssl` module has no
-DTLS support at all and no maintained binding exposes CID, so the listener
-drives a small C shared library wrapping mbedTLS with
-`MBEDTLS_SSL_DTLS_CONNECTION_ID` enabled. That library is not yet part of this
-repository. Point `dtls_lib` at a build of it, or leave it unset — the
-listener disables itself cleanly and the other transports are unaffected.
-
-Expected ABI:
-
-```c
-void *dtls_cid_init(const char *cert, const char *key,
-                    const char *host, int port);
-void *dtls_cid_accept(void *ctx, int timeout_ms);
-int   dtls_cid_read(void *session, void *buf, int len, int timeout_ms);
-int   dtls_cid_write(void *session, const char *buf, int len);
-void  dtls_cid_session_free(void *session);
-void  dtls_cid_free(void *ctx);
-```
-
-`dtls_cid_read` returns bytes read, 0 on timeout, negative on error. Payload
-framing inside the record matches the TLS transport.
+That is the price of not paying for a handshake.
 
 ## Firmware updates
 
@@ -261,13 +205,13 @@ fw/manifest-<imei>.txt          version=<version>
 A device with no manifest is told about no update and gets a 404 on the
 manifest, so it simply never updates. Failing to update is the safe direction.
 
-### Downloads share the telemetry TLS port
+### Downloads over TLS — port 65481
 
-The public HTTPS name may terminate elsewhere, but port 65481 is already open
-and already has a certificate the device trusts, so downloads ride it too. The
-two protocols cannot be confused: a telemetry frame starts with a big-endian
-length capped at 8192, while an HTTP request starts with `GE` or `HE` —
-`0x4745` and `0x4845`, far above the cap. The first two bytes decide.
+The device downloads manifests and images from the server's TLS listener on
+port 65481. The modem terminates TLS itself, and trusts the server only if its
+certificate was issued by the CA compiled into the firmware. The listener
+serves firmware and nothing else: a connection that does not open with `GET`
+or `HEAD` is closed without a reply.
 
 The server implements only what the nRF91 FOTA stack issues: `GET` and `HEAD`
 under `/fw/`, HTTP/1.1 keep-alive, and `Range`. The modem decodes about 2 KB
@@ -288,8 +232,13 @@ filenames count as well as manifests: a manifest is overwritten on each
 publish, an image file never is, so the filenames are the durable record of
 what has actually gone out.
 
-The download read timeout is much longer than the telemetry one because the
-device goes quiet between ranges for as long as the radio makes it. A single
+The handshake timeout is deliberately much longer than the read timeout. A
+device on LTE-M in weak signal has to get the certificate chain across before
+it can reply, and setting this too low shows up as repeated handshake timeouts
+on firmware downloads that never reach the HTTP layer at all.
+
+The download read timeout is much longer than the one for the first request,
+because the device goes quiet between ranges for as long as the radio makes it. A single
 RRC re-establishment in weak signal outlasts a short timeout, and the
 downloader has no resume — so one timed-out read costs the whole transfer and
 the next attempt restarts at byte zero.

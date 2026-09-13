@@ -35,6 +35,11 @@ preload_app = True
 # WebSockets on their own and ordinary HTTP requests are short.
 graceful_timeout = 2
 
+# gunicorn 25 added a control socket, created under $HOME by default, which
+# fails wherever the service account's home is not writable: read-only under
+# the systemd unit, and not its own in the Docker image.  Nothing uses it.
+control_socket_disable = True
+
 
 def post_fork(server, worker):
     """Drop database handles inherited across fork().

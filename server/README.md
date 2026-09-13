@@ -16,15 +16,14 @@ live on hardware you control.
 
 ## What it does
 
-- **Ingests telemetry** over UDP with ChaCha20-Poly1305, which is what current
-  firmware speaks. Modem-terminated TLS and DTLS with Connection ID are there
-  too, off unless enabled; see [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
+- **Ingests telemetry** over UDP with ChaCha20-Poly1305, under a key per
+  device; see [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
 - **Stores** positions, IMU, cell, thermal and power telemetry, and derives
   journeys from ignition transitions.
 - **Alerts** on ignition, movement and low battery, through Pushover, a
   webhook, or nothing at all.
 - **Delivers firmware** as per-device signed images with range support, over
-  the same TLS port as telemetry.
+  TLS.
 - **Serves a map** with live position over a WebSocket and journey replay.
 - **Tracks several vehicles**: a device list, a map per vehicle, and an API
   that is told which device each request is about.
@@ -38,13 +37,15 @@ Authentication is passkeys only. There is no password column in the schema.
 tracker/            application package
   config.py           configuration loading
   db.py               MySQL handles, device and operator lookup
-  logs.py             per-transport log channels
+  logs.py             per-channel log files
   notify.py           pluggable outbound notifications
   telemetry.py        parsing, storage, journeys, response building
   firmware.py         OTA manifests and the firmware HTTP server
-  listeners/          udp.py, tls.py, dtls.py
+  listeners/          udp.py (telemetry), tls.py (firmware downloads)
   web/                Flask app, passkey auth, JSON API, WebSocket
 tools/              enrolment and operations scripts
+Dockerfile          the m4rkw/l0destar image
+docker/             the image's entrypoint and database settings
 deploy/             nginx, systemd and launchd examples
 docs/PROTOCOL.md    the device-facing wire protocol
 schema.sql          MySQL schema
@@ -54,7 +55,39 @@ wsgi.py             entrypoint
 The listeners and the web application share the telemetry layer and nothing
 else; either runs without the other.
 
-## Setup
+## Running it with Docker
+
+The `m4rkw/l0destar` image runs the server together with the MariaDB it
+stores everything in, and keeps everything in the host directory mounted at
+`/data`:
+
+```sh
+sudo install -d -o "$USER" -g "$USER" /srv/l0destar
+sudo docker run -d --name l0destar --restart unless-stopped \
+    -e L0DESTAR_HOSTNAME=tracker.example.com \
+    -v /srv/l0destar:/data \
+    -p 65480:65480/udp -p 65481:65481/tcp -p 127.0.0.1:5000:5000 \
+    m4rkw/l0destar
+```
+
+The first start writes `config.yaml`, creates a CA and a certificate for
+`L0DESTAR_HOSTNAME` in `certs/`, and creates the database; every start applies
+any migrations the database has not had. The server and the database run as
+the owner of the data directory. The tools run inside the container:
+
+```sh
+sudo docker exec l0destar python tools/adddevice.py 350000000000000 "Car" AB12CDE
+```
+
+The full walkthrough is [`docs/server/installation.md`](../docs/server/installation.md),
+and [`docker/entrypoint.sh`](docker/entrypoint.sh) is what runs at start-up.
+To build and publish the image for both architectures:
+
+```sh
+docker buildx build --platform linux/amd64,linux/arm64 -t m4rkw/l0destar --push .
+```
+
+## Running it from a checkout
 
 Requires Python 3 (developed and tested on 3.12) and MySQL or MariaDB.
 
@@ -103,12 +136,12 @@ the firewall rather than proxying.
 
 ### Certificates
 
-For firmware downloads, and the TLS and DTLS transports, the device needs to
-trust the server. The firmware embeds a CA certificate, so a self-signed CA is
-the simplest thing that works and avoids depending on a public CA's renewal
-cadence for something that has to keep working with a device in a car park.
-The usual place to make it is the firmware tree, where the script writes the
-header the build embeds straight into `firmware/src/ca_cert.h`:
+For firmware downloads the device needs to trust the server. The firmware
+embeds a CA certificate, so a self-signed CA is the simplest thing that works
+and avoids depending on a public CA's renewal cadence for something that has
+to keep working with a device in a car park. The Docker image creates one on
+its first start. From a checkout, the usual place to make it is the firmware
+tree, whose build embeds `firmware/certs/ca.crt`:
 
 ```sh
 firmware/certs/gen_certs.sh tracker.example.com
@@ -116,14 +149,18 @@ firmware/certs/gen_certs.sh tracker.example.com
 
 Then copy `firmware/certs/server.crt` and `server.key` into this directory's
 `certs/` (`tls_cert` and `tls_key`). The same script is here as
-`certs/gen_certs.sh`; run from the server it leaves `certs/ca_cert.h` beside the
-keys, to copy to `firmware/src/ca_cert.h` yourself. Keys, certificates and the
-header are gitignored.
+`certs/gen_certs.sh`; run from the server, it writes everything beside itself,
+or to the directory given as its second argument, and `ca.crt` then goes to
+`firmware/certs/ca.crt` on the build machine. Keys and certificates are
+gitignored, and the firmware build generates `firmware/src/ca_cert.h` from
+`ca.crt`, so no CA is ever committed.
 
 ## Migrations
 
 `schema.sql` is the full current schema for a new database.  An existing one
-takes the ALTER statements in `migrations/`, oldest first, each applied once:
+takes the ALTER statements in `migrations/`, oldest first, each applied once.
+The Docker image does that itself at start-up, and records what it applied in
+`schema_migration`. From a checkout:
 
 ```
 mysql -u root -p tracker < migrations/2026-09-06_track_mode.sql
@@ -141,6 +178,8 @@ mysql -u root -p tracker < migrations/2026-09-06_track_mode.sql
 .venv/bin/python tools/import_plmn.py plmn.csv               # operator names for the UI
 ```
 
+With Docker, run the same tools as `sudo docker exec l0destar python tools/...`.
+
 `device.py` also renames a device, replaces its key (`rekey`) and removes it
 along with its history. `command.py` with no arguments lists every command.
 
@@ -149,7 +188,7 @@ command waits in the queue until it next reports and rides back on the response
 it was already going to receive — which at a long reporting interval can be an
 hour away.
 
-Logs are one file per transport under `log_dir`, plus `debug.log`, which only
+Logs are one file per channel under `log_dir`, plus `debug.log`, which only
 receives records carrying debug counters or a reset cause. That keeps the
 short chronological list of things that went wrong out of the bulk traffic.
 
@@ -206,8 +245,6 @@ as a device that installs a corrupt image.
 
 ## Known gaps
 
-- The DTLS Connection ID library is not in this repository. That listener
-  disables itself when `dtls_lib` is unset; UDP and TLS are unaffected.
 - Nothing here has been run against real hardware in this form. The tests
   exercise the protocol against synthetic records, which is not the same as a
   device in a car park on a marginal cell.
@@ -226,15 +263,15 @@ Certificates and private keys are gitignored too.
 
 The app trusts `X-Forwarded-*` because passkeys bind to the origin. That is
 only safe if the reverse proxy overwrites those headers and nothing else can
-reach the backend port. Bind gunicorn to loopback.
+reach the backend port. Bind gunicorn to loopback — or, with Docker, publish
+port 5000 on `127.0.0.1` only, since Docker opens the ports it publishes ahead
+of the host firewall.
 
-The TLS port has to be reachable from the internet for firmware downloads, and
-its telemetry transport identifies a device by nothing but the IMEI it
-presents, so it refuses telemetry unless `tls_telemetry` is set. Firmware
-images are built with the device's pre-shared key inside, and that port serves
-them to anyone who asks for a device's manifest - keep it closed between
-rollouts if that exposure matters, and rekey a device whose image has left your
-control (`tools/device.py rekey`).
+The TLS port has to be reachable from the internet for firmware downloads.
+Firmware images are built with the device's pre-shared key inside, and that
+port serves them to anyone who asks for a device's manifest - keep it closed
+between rollouts if that exposure matters, and rekey a device whose image has
+left your control (`tools/device.py rekey`).
 
 If you find a security problem, please report it privately rather than opening
 an issue — see the repository root.

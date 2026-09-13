@@ -1,5 +1,6 @@
-"""The TLS listener's dispatch: firmware downloads always, telemetry frames
-only when ``tls_telemetry`` is on.
+"""The TLS listener's dispatch: firmware requests are served, and anything
+else is turned away — including the length-prefixed telemetry frames the
+listener once accepted.
 
 Driven over a real socket like the firmware tests, with the handshake left
 out: what matters here is which bytes get an answer.
@@ -9,7 +10,7 @@ import socket
 import struct
 import threading
 
-from tracker import config, db, telemetry
+from tracker import telemetry
 from tracker.listeners import tls
 
 IMEI = '350000000000000'
@@ -47,7 +48,7 @@ def exchange(payload):
                 break
             received += chunk
     except ConnectionResetError:
-        # Closing with the rest of a refused frame unread resets the
+        # Closing with the rest of a refused request unread resets the
         # connection rather than ending it cleanly; either way it is over.
         pass
     client.close()
@@ -57,41 +58,22 @@ def exchange(payload):
     return received
 
 
-def frame(*lines):
-    body = '\n'.join((IMEI,) + lines).encode('ascii')
-    return struct.pack('>H', len(body)) + body
+def test_firmware_requests_are_served(fw_dir):
+    reply = exchange(b'GET /fw/published.txt HTTP/1.1\r\n'
+                     b'Host: test\r\nConnection: close\r\n\r\n')
+    assert reply.startswith(b'HTTP/1.1 200 OK\r\n')
 
 
-def test_telemetry_is_off_unless_configured():
-    assert config.TLS_TELEMETRY is False
-
-
-def test_telemetry_frame_is_refused_when_off(monkeypatch):
+def test_telemetry_frames_are_turned_away(monkeypatch):
     calls = []
     monkeypatch.setattr(telemetry, 'process_lines',
                         lambda *args: calls.append(args) or '1,0,1')
 
-    assert exchange(frame('12/08/26,00:00:00+01,51.5,-0.1')) == b''
+    body = '\n'.join((IMEI, '12/08/26,00:00:00+01,51.5,-0.1')).encode('ascii')
+    assert exchange(struct.pack('>H', len(body)) + body) == b''
     assert calls == []
 
 
-def test_telemetry_frame_is_served_when_on(monkeypatch):
-    monkeypatch.setattr(config, 'TLS_TELEMETRY', True)
-    monkeypatch.setattr(db.tls, 'one',
-                        lambda sql, params=None: {'id': 1, 'imei': IMEI, 'name': 'Car'})
-    seen = []
-
-    def process_lines(device, lines, ip, database, log):
-        seen.append((device['imei'], lines))
-        return '1,3600,1'
-
-    monkeypatch.setattr(telemetry, 'process_lines', process_lines)
-
-    assert exchange(frame('a record')) == b'1,3600,1'
-    assert seen == [(IMEI, ['a record'])]
-
-
-def test_firmware_downloads_do_not_depend_on_it(fw_dir):
-    reply = exchange(b'GET /fw/published.txt HTTP/1.1\r\n'
-                     b'Host: test\r\nConnection: close\r\n\r\n')
-    assert reply.startswith(b'HTTP/1.1 200 OK\r\n')
+def test_other_http_methods_are_turned_away(fw_dir):
+    assert exchange(b'POST /fw/published.txt HTTP/1.1\r\n'
+                    b'Host: test\r\nConnection: close\r\n\r\n') == b''

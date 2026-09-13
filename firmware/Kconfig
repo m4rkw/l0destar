@@ -435,6 +435,15 @@ config APP_SERVER_HOST
 	  Telemetry endpoint hostname (used for DNS resolution and TLS SNI).
 	  Leave empty to fall back to HOSTNAME in config.h.
 
+config APP_SERVER_PORT
+	int "Telemetry server UDP port"
+	range 1 65535
+	default 65480
+	help
+	  The port the server's UDP listener is reached on.  Leave it at the
+	  default unless the server publishes that listener under another
+	  port number.
+
 config APP_APN
 	string "Cellular APN"
 	default ""
@@ -501,11 +510,9 @@ config APP_FOTA_PORT
 	int "Update server port"
 	default 65481
 	help
-	  Defaults to the telemetry TLS port: public 443 terminates on a
-	  different host, but this port is already forwarded to the tracker
-	  server, whose TLS listener sniffs the first two bytes and serves
-	  HTTP range requests for /fw/* alongside the telemetry protocol
-	  (_handle_fw_http in the server's main.py).
+	  The server's TLS listener, which serves the manifest and the images
+	  over HTTP range requests.  Leave it at the default unless the server
+	  publishes that listener under another port number.
 
 config APP_FOTA_SEC_TAG
 	int "Modem sec_tag holding the update server's CA (-1 = plain HTTP)"

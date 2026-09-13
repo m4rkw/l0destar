@@ -67,24 +67,11 @@ UDP_PORT = int(get('udp_port', 65480))
 UDP_ENABLED = bool(get('udp_enabled', True))
 MAX_DGRAM = 2048
 
+# Firmware downloads.  Telemetry only ever arrives over UDP.
 TLS_HOST = get('tls_host', '0.0.0.0')
 TLS_PORT = int(get('tls_port', 65481))
 TLS_CERT = get('tls_cert', '')
 TLS_KEY = get('tls_key', '')
-
-# Accept telemetry frames on the TLS port.  Off by default: that transport
-# authenticates a device by nothing more than the IMEI it presents, and the
-# port has to be reachable from the internet for firmware downloads, so with
-# this on anyone who learns an IMEI can post positions and alerts as that
-# device — and collect the commands queued for it.  Current firmware reports
-# over UDP and only comes here for updates, which are served either way.
-TLS_TELEMETRY = bool(get('tls_telemetry', False))
-
-DTLS_HOST = get('dtls_host', '0.0.0.0')
-DTLS_PORT = int(get('dtls_port', 65482))
-DTLS_CERT = get('dtls_cert', '') or TLS_CERT
-DTLS_KEY = get('dtls_key', '') or TLS_KEY
-DTLS_LIB = get('dtls_lib', '')
 
 # Drop the movement_alarm response field; shortens every reply.
 SLIM_RESPONSE = bool(get('slim_response', False))

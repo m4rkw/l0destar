@@ -10,18 +10,35 @@ notifications per alert.
 
 import os
 import threading
+import time
 
 from tracker import logs
-from tracker.listeners import dtls, tls, udp
+from tracker.listeners import tls, udp
 from tracker.web import create_app
 
 app = create_app()
 
 
 def start_listeners():
-    for name, target in (('udp', udp.run), ('tls', tls.run), ('dtls', dtls.run)):
-        threading.Thread(target=target, name='listener-%s' % name,
+    ready = []
+    for name, target in (('udp', udp.run), ('tls', tls.run)):
+        event = threading.Event()
+        threading.Thread(target=target, args=(event,), name='listener-%s' % name,
                          daemon=True).start()
+        ready.append(event)
+
+    # gunicorn forks the workers as soon as this module has been imported, and
+    # a forked worker has only the thread that forked it: a lock any other
+    # thread holds at that moment stays held in the worker for good.  A worker
+    # forked while a listener was still loading its certificate or binding
+    # could hang before its first heartbeat, until gunicorn killed it.  Once
+    # bound, the listeners wait in accept() and recvfrom() holding nothing.
+    # The wait is bounded because a port the previous instance has not yet
+    # released keeps a listener retrying for longer than the web application
+    # should be held up.
+    deadline = time.monotonic() + 10
+    for event in ready:
+        event.wait(max(0, deadline - time.monotonic()))
     logs.app.info('listener threads started in pid %d', os.getpid())
 
 

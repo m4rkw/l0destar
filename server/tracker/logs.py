@@ -48,7 +48,6 @@ logging.basicConfig(
 app = logging.getLogger('tracker')
 udp = _channel('tracker.udp', 'udp.log', console=True)
 tls = _channel('tracker.tls', 'tls.log', console=True)
-dtls = _channel('tracker.dtls', 'dtls.log', console=True)
 debug = _channel('tracker.debug', 'debug.log')
 # Warnings and errors the firmware captured between sends ("L," records),
 # appended on receipt so an outage can be read back afterwards.  Each line

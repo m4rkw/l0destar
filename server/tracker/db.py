@@ -1,11 +1,11 @@
 """Minimal MySQL wrapper.
 
 One connection per thread.  pymysql connections are not thread-safe, and this
-process runs a good many threads: the UDP and DTLS listeners, one per TLS
-connection, and a pool of request threads in each gunicorn worker.  So the
-module-level handles below hand every thread its own connection rather than
-sharing a pool — the query volume is a few per device per wake, and a pool
-would be more moving parts than the load justifies.
+process runs a good many threads: the UDP listener, one per TLS connection
+downloading firmware, and a pool of request threads in each gunicorn worker.
+So the module-level handles below hand every thread its own connection rather
+than sharing a pool — the query volume is a few per device per wake, and a
+pool would be more moving parts than the load justifies.
 """
 
 import threading
@@ -117,9 +117,8 @@ class PerThread:
 web = PerThread()
 udp = PerThread()
 tls = PerThread()
-dtls = PerThread()
 
-ALL = (web, udp, tls, dtls)
+ALL = (web, udp, tls)
 
 
 def close_all():

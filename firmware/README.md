@@ -123,7 +123,7 @@ at ±250 dps.
 | `kline_obd.c` | OBD-II over the K wire: PID polling into telemetry, fault codes, engine/speed for the tracker's own logic; the fast rotating poll for track mode ([TRACK_MODE.md](TRACK_MODE.md)) |
 | `fota.c`      | Over-the-air updates: manifest check, battery gate, MCUboot image download ([FOTA.md](FOTA.md)) |
 | `led.c` · `watchdog.c` · `reboot.c` | Status LED · 32 s task watchdog (HW fallback) · reboot helper |
-| `config.h` · `pins.h` · `app.h` · `ca_cert.h` | Compile-time defaults · pins · shared API/state · server CA cert |
+| `config.h` · `pins.h` · `app.h` · `ca_cert.h` | Compile-time defaults · pins · shared API/state · server CA cert, generated from `certs/ca.crt` by `build.sh` and not in git |
 
 > `transport 2.c` (legacy ChaCha20-Poly1305 UDP envelope) and `stubs.c` are
 > **not** in `CMakeLists.txt` and are not built.

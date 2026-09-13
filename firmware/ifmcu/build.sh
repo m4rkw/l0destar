@@ -16,7 +16,6 @@
 set -euo pipefail
 
 NCS_VERSION="${NCS_VERSION:-v3.4.0}"
-NCS_ROOT="${NCS_ROOT:-/opt/nordic/ncs/$NCS_VERSION}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FIRMWARE_DIR="$(dirname "$SCRIPT_DIR")"
 
@@ -32,6 +31,8 @@ if [[ "$FIRMWARE_DIR" == *" "* ]]; then
 		exit 1
 	fi
 fi
+
+source "$FIRMWARE_DIR/ncs_env.sh"
 
 REPO_DIR="$FIRMWARE_DIR/ifmcu/.makerdiary-repo"
 BUILD_DIR="$FIRMWARE_DIR/build_ifmcu"
@@ -61,15 +62,12 @@ fi
 
 echo "Building IF MCU firmware for $BOARD"
 
-nrfutil sdk-manager toolchain launch \
-	--ncs-version "$NCS_VERSION" \
-	--chdir "$NCS_ROOT" \
-	-- west build -p auto -b "$BOARD" -d "$BUILD_DIR" "$APP_DIR" \
-	-- "-DBOARD_ROOT=$FIRMWARE_DIR"
+# The board definitions come from the same Makerdiary checkout.
+in_ncs west build -p auto -b "$BOARD" -d "$BUILD_DIR" "$APP_DIR" -- "-DBOARD_ROOT=$REPO_DIR"
 
 UF2="$BUILD_DIR/ifmcu_firmware/zephyr/zephyr.uf2"
 echo
 echo "Built: $UF2"
 echo
-echo "To flash: double-press reset on the ConnectKit, then:"
-echo "  cp $UF2 /Volumes/UF2BOOT/"
+echo "To flash: double-press reset on the Connect Kit, then copy it onto the"
+echo "UF2BOOT drive that appears."

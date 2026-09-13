@@ -214,10 +214,12 @@ fetch_published() {
     PUBLISHED="${body%$'\n'*}"
 }
 
+# The first release of a MAJOR.MINOR is patch 1: every bench build is patch 0,
+# and devices only install a strictly newer version.
 next_patch() {
     printf '%s\n' "$PUBLISHED" | awk -F. -v maj="$MAJOR" -v min="$MINOR" '
         $1 == maj && $2 == min && $3 ~ /^[0-9]+$/ && $3 + 0 >= max { max = $3 + 0; seen = 1 }
-        END { print seen ? max + 1 : 0 }
+        END { print seen ? max + 1 : 1 }
     '
 }
 
@@ -355,7 +357,7 @@ for imei in "${DEVICES[@]}"; do
     fi
 
     FILE="l0destar-$VER-$imei.bin"
-    SIZE=$(stat -f %z "$IMG")
+    SIZE=$(wc -c < "$IMG" | tr -d ' ')
     echo "publishing $VER board=$BID ($FILE, $SIZE bytes) -> $SERVER:$FW_DIR"
     scp -q "$IMG" "$SERVER:$FW_DIR/$FILE"
 

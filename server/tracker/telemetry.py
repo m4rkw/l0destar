@@ -1,9 +1,8 @@
 """Telemetry parsing, storage and response building.
 
-Everything below the transports lives here: the three listeners (UDP, TLS,
-DTLS) differ only in how bytes arrive and how they are authenticated.  Once a
-datagram or frame has been decrypted and attributed to a device, they all hand
-the same list of plaintext lines to :func:`process_lines`.
+Everything below the UDP listener lives here.  Once a datagram has been
+decrypted and attributed to a device, the listener hands its plaintext lines
+to :func:`process_lines`.
 
 Wire format
 -----------

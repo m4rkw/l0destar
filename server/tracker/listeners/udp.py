@@ -7,15 +7,12 @@ Wire format, one envelope per datagram::
 
 The AAD is the device IMEI on both directions, and the response additionally
 binds the request's nonce, so a response captured from one exchange cannot be
-replayed into another.  The plaintext is the same newline-separated CSV that
-the TLS and DTLS transports carry, so nothing downstream of decryption differs
-between them.
+replayed into another.  The plaintext is newline-separated CSV, handed to
+``telemetry.process_lines`` once it has been decrypted.
 
 The IMEI travels in the clear because the server needs it to pick a key.  That
 is a real privacy cost — an observer on path learns which device is reporting,
-though not where it is — and it is the price of not paying for a handshake.  A
-deployment that cares more about that than about radio time should use the DTLS
-transport instead.
+though not where it is — and it is the price of not paying for a handshake.
 """
 
 import secrets
@@ -182,16 +179,25 @@ def _bind():
     return None
 
 
-def run():
-    if not config.UDP_ENABLED:
-        logs.udp.info('UDP listener disabled')
-        return
+def run(ready=None):
+    """Serve datagrams until the process exits.
 
-    sock = _bind()
-    if sock is None:
-        return
+    ``ready``, if given, is set once the socket is bound, or once it is clear
+    that it will not be; see ``wsgi.start_listeners``.
+    """
+    try:
+        if not config.UDP_ENABLED:
+            logs.udp.info('UDP listener disabled')
+            return
 
-    logs.udp.info('UDP listening on %s:%d', config.UDP_HOST, config.UDP_PORT)
+        sock = _bind()
+        if sock is None:
+            return
+
+        logs.udp.info('UDP listening on %s:%d', config.UDP_HOST, config.UDP_PORT)
+    finally:
+        if ready is not None:
+            ready.set()
 
     while True:
         try:
