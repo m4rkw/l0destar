@@ -227,7 +227,9 @@ def blocked_version(imei, database=None):
     imei = str(imei or '')
     if not imei.isdigit():
         return None
-    database = database or db.DB()
+    # Asked from the TLS connection threads, which own a connection each on
+    # this handle; a fresh DB() per manifest request was never closed.
+    database = database or db.tls
     try:
         row = database.one('SELECT `fw_blocked` FROM `device` WHERE `imei` = %s',
                            (imei,))

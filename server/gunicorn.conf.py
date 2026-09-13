@@ -1,6 +1,6 @@
 """Gunicorn configuration.
 
-Two things here are load-bearing rather than tuning.
+Most of what is here is load-bearing rather than tuning.
 """
 
 import os
@@ -14,6 +14,13 @@ os.environ['GUNICORN_MASTER_PID'] = str(os.getpid())
 
 bind = os.environ.get('TRACKER_BIND', '127.0.0.1:5000')
 workers = int(os.environ.get('TRACKER_WORKERS', '2'))
+
+# Threads per worker.  An open map page holds a WebSocket for as long as it is
+# on screen, and that occupies a thread for the whole time: with single-threaded
+# workers, two open maps — two vehicles on one screen, or one left open on a
+# phone — leave nothing to answer ordinary requests.  Database connections are
+# per thread (tracker/db.py), so the threads never share one.
+threads = int(os.environ.get('TRACKER_THREADS', '16'))
 
 # Import the app once in the master before forking, so the listener threads
 # start in the master only.  Each worker then inherits the state without

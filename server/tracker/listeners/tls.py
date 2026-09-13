@@ -107,6 +107,9 @@ def handle_connection(ctx, conn, addr):
             conn.close()
         except OSError:
             pass
+        # This thread ends here, and its database connection with it, rather
+        # than lingering until the database server times it out.
+        db.tls.close()
 
 
 def _context():
