@@ -21,7 +21,8 @@ are on [Device settings and commands](/reference/device-settings.html).
 | `Kconfig`, `Kconfig.boards` | yes | Every `APP_*` symbol and its default; `Kconfig.boards` holds the per-board pin maps and hardware flags |
 | `boards/makerdiary/nrf9151_connectkit/` | no | The Connect Kit board target, gitignored; `build.sh` copies it in from makerdiary/nrf9151-connectkit on the first build |
 | `boards/nrf9151dk_nrf9151_ns.conf`, `.overlay` | yes | Applied only to nRF9151 DK builds; the overlay frees the DK's I2C2 and SPI3 pins for the application |
-| `makerdiary.conf` | no | Optional, layered onto Connect Kit builds when it exists; currently an empty hook |
+| `boards/nrf9151_connectkit_nrf9151_ns.conf` | yes | Applied only to Connect Kit builds: turns on the modem antenna library and sends `AT%XCOEX0`, which powers the Connect Kit's GNSS amplifier. Without it GNSS sees no satellites |
+| `makerdiary.conf` | no | Optional, layered onto Connect Kit builds when it exists, for settings of your own such as a band lock |
 | `local.conf` | no | Your bench build; `build.sh` stops if it is missing unless `LOCAL_CONF` is set empty |
 | `local.overlay` | no | Optional devicetree overlay, applied last |
 | `remote.conf` | no | The deployed fleet, one section per IMEI; `push_fw.sh` turns each section into `.remote/<imei>.conf` and builds with that instead of `local.conf` |
@@ -42,7 +43,7 @@ Kconfig values are merged in this order, a later file overriding an earlier one:
 
 1. The defaults in `Kconfig`, `Kconfig.boards` and the SDK's own Kconfig files.
 2. The board target's defconfig.
-3. `prj.conf`, then the application's `boards/<board>.conf` where one exists (only the DK has one).
+3. `prj.conf`, then the application's `boards/<board>.conf` where one exists (the DK and the Connect Kit each have one).
 4. The overlays `build.sh` passes, in this order: `makerdiary.conf` (Connect Kit builds, when
    present), the local fragment (`local.conf`, or whatever `LOCAL_CONF` names), `prov.conf`
    (`PROV=1`), then `lte_power_test.conf` (`LTE_TEST=1`).
