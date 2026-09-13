@@ -1136,6 +1136,21 @@ static struct kline_discovery kline_boot_disc;
  * are still there. */
 #endif
 
+/* Builds that run a bench harness in place of the tracker.  They wait in loops
+ * that never feed the watchdog, and a missed feed resets the SoC (watchdog.c),
+ * so main() arms it for the tracker only. */
+#define APP_HARNESS_BUILD                         \
+    (IS_ENABLED(CONFIG_APP_PROVISION_MODE)   ||   \
+     IS_ENABLED(CONFIG_APP_BOARD_TEST)       ||   \
+     IS_ENABLED(CONFIG_APP_KLINE_DISCOVER)   ||   \
+     IS_ENABLED(CONFIG_APP_KLINE_TEST)       ||   \
+     IS_ENABLED(CONFIG_APP_CAN_TEST)         ||   \
+     IS_ENABLED(CONFIG_APP_CAN_BENCH)        ||   \
+     IS_ENABLED(CONFIG_APP_ACCEL_TEST)       ||   \
+     IS_ENABLED(CONFIG_APP_VOLTAGE_TEST)     ||   \
+     IS_ENABLED(CONFIG_APP_L_SENSE_TEST)     ||   \
+     IS_ENABLED(CONFIG_APP_LTE_POWER_TEST))
+
 int main(void)
 {
     LOG_INF("=== l0destar firmware boot (v%s, board %s) ===",
@@ -1173,7 +1188,9 @@ int main(void)
      * couple of hundred milliseconds (task_wdt allocates the same hardware
      * channel the previous image did, so the reload lands on the running
      * one), and everything slow below already kicks as it waits. */
-    watchdog_init();
+    if (!APP_HARNESS_BUILD) {
+        watchdog_init();
+    }
 
     /* Before anything tries to update again: work out whether the update
      * staged before the last reboot is the one now running.  It queues an
