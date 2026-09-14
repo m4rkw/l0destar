@@ -71,8 +71,8 @@ CONFIG_APP_APN=""
 
 # --- accelerometer / movement ----------------------------------------------
 # CONFIG_APP_ACC_MOVEMENT_THRESHOLD=150
-# CONFIG_APP_MOVEMENT_CONFIRM_MS=3000
-# CONFIG_APP_MOVEMENT_CONFIRM_HITS=2
+# CONFIG_APP_MOVEMENT_CONFIRM_MS=10000
+# CONFIG_APP_MOVEMENT_CONFIRM_HITS=6
 # CONFIG_APP_MOVEMENT_INACTIVITY_RESET=1800
 
 # --- coast-to-stop ---------------------------------------------------------

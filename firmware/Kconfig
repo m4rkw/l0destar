@@ -422,17 +422,20 @@ config APP_PSK_HEX
 	string "32-byte device PSK as 64 hex chars"
 	default ""
 	help
-	  Pre-shared key for the ChaCha20-Poly1305 telemetry envelope.  Leave
-	  empty to fall back to PSK_HEX_DEFAULT in config.h (the placeholder
-	  all-zero key disables sends).  Real device keys should be provisioned
+	  Pre-shared key for the ChaCha20-Poly1305 telemetry envelope; the
+	  server must hold the same key for this device.  Leave empty to fall
+	  back to PSK_HEX_DEFAULT in config.h, an all-zero placeholder: the
+	  tracker still sends with it, and a server holding the device's real
+	  key cannot decrypt any of it.  Real device keys should be provisioned
 	  out-of-band, never checked in.
 
 config APP_SERVER_HOST
 	string "Telemetry server hostname"
 	default ""
 	help
-	  Telemetry endpoint hostname (used for DNS resolution and TLS SNI).
-	  Leave empty to fall back to HOSTNAME in config.h.
+	  Telemetry server hostname.  Updates are fetched from it too unless
+	  APP_FOTA_HOST names another host.  Leave empty to fall back to
+	  HOSTNAME in config.h.
 
 config APP_SERVER_PORT
 	int "Telemetry server UDP port"
@@ -518,8 +521,9 @@ config APP_FOTA_SEC_TAG
 	default 42
 	help
 	  modem_provision_tls() installs the l0destar CA from src/ca_cert.h
-	  here on first boot, so the same private CA authenticates telemetry
-	  and updates.  It is deliberately NOT the telemetry TLS_SEC_TAG:
+	  here on first boot, and the update server's certificate is checked
+	  against it; telemetry needs no CA, as the device key authenticates
+	  it.  It is deliberately NOT TLS_SEC_TAG (1), which gets the same CA:
 	  past DTLS/PSK experiments left extra credential types on tag 1 in
 	  modem NVM, and a mixed tag makes certificate-mode TLS connect()
 	  fail with EINVAL.  A dedicated tag holds one CA chain and nothing
@@ -632,8 +636,14 @@ endif # APP_FOTA
 # --- intervals (seconds) ---------------------------------------------------
 
 config APP_ENGINE_OFF_LOOP_INTERVAL
-	int "Engine-off telemetry interval (0=disabled)"
+	int "Engine-off wake interval until the server sets one (0 = ENGINE_OFF_BOOT_INTERVAL)"
 	default 0
+	help
+	  Seconds between timed engine-off wakes from boot until the first
+	  server reply replaces it with the server's own value, which may be 0
+	  to stop timed wakes.  0 here uses ENGINE_OFF_BOOT_INTERVAL (900 s,
+	  src/config.h) instead, so a unit whose first record after a reboot
+	  is lost still wakes to try again.
 
 config APP_IGNITION_ON_SLEEP_INTERVAL
 	int "Send cadence while ignition on, engine off"
@@ -738,12 +748,14 @@ config APP_IMPACT_IMMEDIATE_MG
 	  deciding whether the unit is being moved.  The confirm still runs
 	  afterwards, so a hit followed by movement raises both alerts.
 
-	  Must sit above APP_PARKED_IMPACT_MG and below the clip ceiling:
-	  sleep runs the accel at +/-2 g, so the deviation saturates around
-	  1000-1200 mg and a threshold above that can never fire.  That
-	  leaves a narrow window, which is why APP_IMPACT_IMMEDIATE_MAX_MS
-	  qualifies it by duration as well.  Set 0 to disable and always
-	  wait for the confirm.
+	  It is checked before, and independently of, APP_PARKED_IMPACT_MG,
+	  which only applies when the confirm then finds no movement and
+	  nothing was reported here, so the two need no particular order.
+	  Keep it below the clip ceiling: sleep runs the accel at +/-2 g, so a
+	  hit along one axis saturates the deviation around 1000-1200 mg.
+	  That leaves a narrow window, which is why
+	  APP_IMPACT_IMMEDIATE_MAX_MS qualifies it by duration as well.  Set 0
+	  to disable and always wait for the confirm.
 
 config APP_IMPACT_IMMEDIATE_MAX_MS
 	int "Longest event still treated as an impact (ms)"

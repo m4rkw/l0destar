@@ -29,8 +29,9 @@
 #define RESPONSE_TIMEOUT_MS 4000
 #define TLS_SEC_TAG         1
 
-/* Fallback PSK — all zeros disables sends.  Real keys go in local.conf
- * (gitignored) as CONFIG_APP_PSK_HEX. */
+/* Fallback PSK, an all-zero placeholder: the tracker still sends with it, and
+ * a server holding the device's real key cannot decrypt any of it.  Real keys
+ * go in local.conf (gitignored) as CONFIG_APP_PSK_HEX. */
 #define PSK_HEX_DEFAULT \
     "0000000000000000000000000000000000000000000000000000000000000000"
 

@@ -6,9 +6,7 @@ application Kconfig symbol, the Zephyr and MCUboot settings worth knowing about,
 constants compiled in from `src/config.h`.
 
 Values describe firmware 0.4.x as of September 2026. Paths are
-relative to the `firmware/` directory of your clone. Where an older document in the repository
-says something different, the Kconfig files and the source are what the firmware actually does -
-see [Where older documents disagree](#where-older-documents-disagree).
+relative to the `firmware/` directory of your clone.
 
 Settings the server sends to a running device, such as the engine-off interval and track mode,
 are on [Device settings and commands](/reference/device-settings.html).
@@ -555,25 +553,3 @@ These are compiled in and have no Kconfig symbol; change them in the source and 
 `ACCEL_POLL_INTERVAL` are defined but not used by firmware 0.4.x. The other macros in the file
 only give Kconfig symbols shorter names, for example `CRASH_THRESHOLD_MG` for
 `CONFIG_APP_CRASH_THRESHOLD_MG` and `UDP_PORT` for `CONFIG_APP_SERVER_PORT`.
-
-## Where older documents disagree
-
-- `firmware/README.md` describes the transport as DTLS on port 65482 and calls `APP_PSK_HEX`
-  legacy. Telemetry is plain UDP with ChaCha20-Poly1305 on 65480, and the key is required.
-- Its Kconfig table gives `APP_MOVEMENT_CONFIRM_MS` and `APP_MOVEMENT_CONFIRM_HITS` as 3000 and 2
-  (now 10000 and 6) and lists `APP_GSM_ESCALATION_POWERCYCLE`, `APP_GSM_ESCALATION_SLEEP` and
-  `APP_GSM_RECOVERY_SLEEP_INTERVAL`, which no longer exist; `APP_MODEM_STUCK_CFUN_S` and
-  `APP_MODEM_STUCK_RESET_S` replaced them. Its impact section gives `APP_PARKED_IMPACT_MG` as 1.5g
-  (the default is 800mg) and still names the LSM6DSO as the IMU.
-- `local.conf.example` suggests 3000 and 2 for the movement confirmation.
-- `QUICKSTART.md` gives the default APN as `iot.1nce.net` (`prj.conf` sets `sensor.net`) and says
-  an all-zero key disables sending, which it does not. It installs the SDKs with
-  `nrfutil sdk-manager install --ncs-version v3.3.0`, where current nRF Util takes the version as
-  a plain argument (`nrfutil sdk-manager install v3.3.0`), and opens the console with
-  `screen -L /dev/cu.usbmodem* 115200`, which matches both of the Connect Kit's serial ports: name
-  the first one instead.
-- The comment in `sysbuild.conf` describes two ~448KB slots; `pm_static.yml` pins 416KB.
-- The `APP_KLINE_DISCOVER` help says the result is sent as an alert once the modem is up, but the
-  firmware parks before starting the modem.
-- The help for `APP_IMPACT_IMMEDIATE_MG` says it must sit above `APP_PARKED_IMPACT_MG`, yet the
-  defaults are 700 and 800.

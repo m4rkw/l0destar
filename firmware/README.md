@@ -17,16 +17,17 @@ deeply when the vehicle is parked, and wakes on movement, ignition, or a timer.
 | Function          | Part / detail |
 |-------------------|---------------|
 | MCU / modem / GNSS | nRF9151 SiP (LTE-M, integrated GNSS receiver) |
-| IMU               | ASM330LHHX (automotive 6-axis, WHO_AM_I 0x6B) over bit-banged I²C - accel-only today: movement detection + hardware wake interrupt; gyro/MLC/FSM/FIFO unused |
+| IMU               | ASM330LHHX (automotive 6-axis, WHO_AM_I 0x6B) over bit-banged I²C - accelerometer for movement detection, the wake interrupt and impacts; gyro in telemetry and impact alerts; FIFO as a ring of recent samples; MLC/FSM unused |
 | Voltage monitor   | INA228 over the same I²C bus - battery / ignition-derived voltage |
 | Diagnostics       | K-wire (ISO 14230-1 K-line, KWP2000) via TJA1027T on v3.x (L9637D on v2.x); 5-baud address bit-banged, data bytes on UARTE1 — see [KWIRE.md](KWIRE.md) |
 | Ignition sense    | GPIO input (MOSFET-gated 3.3 V rail) |
 | Status LED        | board `led0` alias (LED1 on the nRF9151 DK) |
 
-Reference board is the **nRF9151 DK** (`nrf9151dk/nrf9151/ns`); production runs
-on a custom carrier around the MakerDiary nRF9151 Connect Kit module. Pin
-assignments live in `src/pins.h`; DK-specific peripheral conflicts are resolved
-in `boards/nrf9151dk_nrf9151_ns.overlay` (+ `.conf`).
+Builds target the **Makerdiary nRF9151 Connect Kit** (`nrf9151_connectkit/nrf9151/ns`),
+which every l0destar carrier board is built around; `PROFILE=dk` builds for the
+nRF9151 DK instead. Pin assignments come from `Kconfig.boards` and are given
+names in `src/pins.h`; DK-specific peripheral conflicts are resolved in
+`boards/nrf9151dk_nrf9151_ns.overlay` (+ `.conf`).
 
 ### Carrier boards
 
@@ -55,7 +56,7 @@ rail is off and only released while it is powered - a pin driven high into an
 unpowered MCP2518FD/TXS0104E would backfeed the dead rail through its ESD
 clamp diodes (abs max VDD + 0.3 V), and the CAN_INT/CAN_CS/K-line pull-ups
 live on the switched rails, so they float when the domain is down. On boards
-with transceiver standby control (v2.5C/v2.6C TCAN334, v3.0 MAX33041),
+with transceiver standby control (v2.5C/v2.6C, and v3.0 onwards),
 `src/hw_can.c` configures MCP2518FD `IOCON.XSTBYEN` at boot so sleep mode
 automatically drops the transceiver into standby - required on v2.5/v2.6
 where the CAN rail shares the GPS AUX domain and stays powered during
@@ -78,14 +79,16 @@ state machine:
 
 - **IDLE** – wait for network registration, poll ignition + battery, decide when to send.
 - **GPS_COLLECT** – acquire a GNSS fix, build and buffer a telemetry record.
-- **SEND** – transmit batched telemetry over DTLS, process any server command.
+- **SEND** – transmit batched telemetry over encrypted UDP, process any server command.
 - **IGNITION_SLEEP** – ignition on but engine off: periodic sends, watch for engine start / ignition off.
-- **SLEEP** – ignition off: peripherals powered down; wakes on LSM6DSO movement interrupt, ignition change, or telemetry timer.
+- **SLEEP** – ignition off: peripherals powered down; wakes on the IMU's movement interrupt, ignition change, or telemetry timer.
 
 Extras handled in the loop: **movement alarm** with escalating cooldowns,
 **coast-to-stop** (keep reporting briefly after ignition-off while still
-rolling), and **progressive modem recovery** (power-cycle → sleep) on repeated
-send failures.
+rolling), and **modem recovery**: registered but unable to send for
+`APP_MODEM_STUCK_CFUN_S` (10 min) brings a CFUN cycle, and for
+`APP_MODEM_STUCK_RESET_S` (30 min) a modem library restart. Losing coverage is
+left to the modem.
 
 ### Impact detection
 
@@ -95,10 +98,11 @@ desk to bench-test) and batches accel+gyro at 26 Hz into the chip's 3 KB FIFO
 ring (~9 s of history). On impact, the ring is drained and an alert is sent
 with peak g (per-axis), peak rotation rate, disturbance duration, and speed;
 the ±0.5 s waveform around the peak is dumped to the serial log. While asleep,
-an unconfirmed movement wake whose peak exceeds `APP_PARKED_IMPACT_MG`
-(default 1.5 g) raises a `parked impact` alert instead of being ignored.
-Telemetry `ax/ay/az` are **milli-g** (FS-independent); `gx/gy/gz` are raw LSB
-at ±250 dps.
+a short, sharp hit above `APP_IMPACT_IMMEDIATE_MG` (default 700 mg) is reported
+at once, and an unconfirmed movement wake whose peak exceeds
+`APP_PARKED_IMPACT_MG` (default 800 mg) raises a `parked impact` alert instead
+of being ignored. Telemetry `ax/ay/az` are **milli-g** (FS-independent);
+`gx/gy/gz` are bias-corrected LSB at ±250 dps.
 
 ### Source layout (`src/`)
 
@@ -108,12 +112,12 @@ at ±250 dps.
 | `modem.c`     | LTE-M bring-up, registration, APN, RAI, cell-info tracking, error recovery |
 | `gnss.c`      | GNSS fixes via the nRF9151's built-in receiver (`nrf_modem_gnss`) |
 | `agnss.c`     | A-GNSS assistance from **nRF Cloud REST** (device-JWT auth) |
-| `transport.c` | **DTLS-over-UDP** telemetry, offloaded to the modem |
+| `transport.c` | UDP telemetry, each datagram sealed with **ChaCha20-Poly1305** under the device key |
 | `data.c`      | Telemetry CSV record builder (position, speed, battery, ignition, accel) |
 | `commands.c`  | Server command dispatch (`key=value[,…]`) |
 | `alert.c`     | Movement/event alert queue (piggybacks on sends, or standalone) |
 | `settings.c`  | Runtime settings (in-memory; Kconfig-backed defaults) |
-| `crypto.c`    | CSPRNG + PSK hex parsing (PSK used only by the legacy transport) |
+| `crypto.c`    | ChaCha20-Poly1305 through PSA Crypto, CSPRNG, PSK hex parsing |
 | `hw_common.c` | GPIO init + bit-banged I²C bus |
 | `hw_domain.c` | Switched power-domain sequencing (park/release of pins in AUX/OBD/K domains) |
 | `hw_power.c`  | INA228 voltage, ignition read, INA shutdown/wake, AUX domain wrappers |
@@ -122,30 +126,38 @@ at ±250 dps.
 | `hw_kline.c`  | K wire: 5-baud init bit-banged, data bytes on UARTE1; vehicle discovery and the runtime session ([KWIRE.md](KWIRE.md), [KWIRE_QUICKSTART.md](KWIRE_QUICKSTART.md)) |
 | `kline_obd.c` | OBD-II over the K wire: PID polling into telemetry, fault codes, engine/speed for the tracker's own logic; the fast rotating poll for track mode ([TRACK_MODE.md](TRACK_MODE.md)) |
 | `fota.c`      | Over-the-air updates: manifest check, battery gate, MCUboot image download ([FOTA.md](FOTA.md)) |
+| `databuf.c`   | Backlog of records that could not be sent, kept until the link comes back |
+| `dbglog.c`    | Keeps warnings and errors in RAM and sends them with the next record that gets through |
+| `fatal.c`     | Fatal error handler: reboots instead of halting, leaving a note for the next record's `rst=` field |
+| `hw_selftest.c` | Boot-time switched-rail self-test (v3.1+) |
+| `board_test.c` · `lte_power_test.c` · `can_bench.c` | Bench builds only: the interactive board test run by `board_test.sh` · LTE transmit power and brown-out rig · CAN bench-test agent |
 | `led.c` · `watchdog.c` · `reboot.c` | Status LED · 32 s task watchdog (HW fallback) · reboot helper |
-| `config.h` · `pins.h` · `app.h` · `ca_cert.h` | Compile-time defaults · pins · shared API/state · server CA cert, generated from `certs/ca.crt` by `build.sh` and not in git |
-
-> `transport 2.c` (legacy ChaCha20-Poly1305 UDP envelope) and `stubs.c` are
-> **not** in `CMakeLists.txt` and are not built.
+| `config.h` · `pins.h` · `app.h` · `ca_cert.h` | Compile-time defaults · names for the `APP_PIN_*` pins · shared API/state · server CA cert, generated from `certs/ca.crt` by `build.sh` and not in git |
 
 ---
 
 ## Connectivity & telemetry
 
-Telemetry uses **DTLS 1.2 over UDP**, with the handshake, encryption and
-certificate verification offloaded to the modem (`transport.c`). The
-application sends/receives plaintext; the server is authenticated by
-certificate (`TLS_PEER_VERIFY_REQUIRED`) against the CA in `src/ca_cert.h`,
-which `modem.c` provisions into the modem at **`TLS_SEC_TAG = 1`** on first boot.
+Telemetry is **plain UDP**, each datagram sealed with **ChaCha20-Poly1305**
+under the device's 32-byte key, `CONFIG_APP_PSK_HEX` (`transport.c`,
+`crypto.c`). The server holds the same key for the device's IMEI, so a datagram
+that decrypts is authenticated as well as private.
 
-- Endpoint: `CONFIG_APP_SERVER_HOST` : `DTLS_PORT` (**65482**, fixed in `config.h`).
-- Datagram: `[2-byte big-endian length] [IMEI "\n"] [CSV record(s)]`.
-- DTLS connection ID + session caching abbreviate later handshakes; `SO_RAI`
-  hints release the radio after each exchange so GNSS can use the antenna.
+- Endpoint: `CONFIG_APP_SERVER_HOST` : `CONFIG_APP_SERVER_PORT` (**65480**).
+- Request: `[1] IMEI length` `[n] IMEI` `[12] nonce` `ciphertext` `[16] tag`, with
+  the IMEI as associated data. Response: `[12] nonce` `ciphertext` `[16] tag`,
+  bound to the IMEI and the request's nonce. See
+  [PROTOCOL.md](../server/docs/PROTOCOL.md).
+- `modem.c` enables release assistance (`AT%RAI`), so the radio is released
+  soon after each exchange and GNSS gets the shared antenna back.
+
+The CA in `src/ca_cert.h` is for updates only: `modem.c` writes it into the
+modem on first boot, and the update server's certificate is checked against it.
 
 Each telemetry record is one CSV line built in `data.c` (timestamp, lat, lon,
-speed, altitude, heading, HDOP, satellites, battery, ignition, uptime,
-accelerometer). Records batch by `BATCH_SIZE` (`CONFIG_APP_BATCH_SIZE`,
+speed, altitude, heading, HDOP, satellites, battery, ignition, uptime and
+power-on flag, then extras such as the accelerometer;
+[PROTOCOL.md](../server/docs/PROTOCOL.md) lists them all). Records batch by `BATCH_SIZE` (`CONFIG_APP_BATCH_SIZE`,
 default 3 while driving: each send costs an RRC connection and a GNSS
 re-acquisition, so three records a datagram roughly doubles the record rate
 for a page update every few seconds; ignition changes and settings syncs
@@ -172,17 +184,19 @@ malformed"`. See **[nRF Cloud device provisioning](#nrf-cloud-device-provisionin
 
 ## Building
 
-Requires [nRF Connect SDK **v3.3.0**](https://docs.nordicsemi.com/) installed at
-`/opt/nordic/ncs/v3.3.0` (override with `NCS_ROOT`). Default board is
-`nrf9151dk/nrf9151/ns` (override with `BOARD`).
+Requires [nRF Connect SDK **v3.3.0**](https://docs.nordicsemi.com/) where nRF
+Util's sdk-manager installs it: `/opt/nordic/ncs/v3.3.0` on macOS, `~/ncs/v3.3.0`
+on Linux (override with `NCS_ROOT`). Builds target the Connect Kit; `PROFILE=dk`
+builds for the nRF9151 DK, and `BOARD` overrides the target.
 
 ```sh
 ./build.sh            # incremental build  -> build/merged.hex
 ./build.sh pristine   # clean rebuild
 ```
 
-`build.sh` runs `west build` inside the NCS toolchain. It auto-overlays
-`local.conf` if present, and layers `prov.conf` when `PROV=1` is set.
+`build.sh` runs `west build` inside the NCS toolchain. It layers `local.conf`,
+and stops if there is none unless `LOCAL_CONF` is set empty; `PROV=1` adds
+`prov.conf` on top.
 
 ### Configuration layers
 
@@ -191,47 +205,61 @@ Requires [nRF Connect SDK **v3.3.0**](https://docs.nordicsemi.com/) installed at
 | `prj.conf` | yes | Zephyr/NCS subsystem config (modem, sockets, crypto, logging, PM) |
 | `Kconfig`  | yes | Application symbols + defaults (see table below) |
 | `boards/nrf9151dk_nrf9151_ns.{conf,overlay}` | yes | Board-specific Kconfig + devicetree (disables conflicting DK peripherals) |
+| `boards/nrf9151_connectkit_nrf9151_ns.conf` | yes | Connect Kit builds: turns on the modem antenna library and sends `AT%XCOEX0`, which powers the GNSS amplifier |
 | `local.conf` | **no** (git-ignored) | Per-deployment secrets / overrides |
 | `prov.conf`  | yes | Provisioning-build overlay (AT-host bridge) - enabled via `PROV=1` |
 
+The full list, with `remote.conf`, `sysbuild.conf` and `pm_static.yml`, is in
+[firmware build options](../docs/reference/firmware.md).
+
 ### local.conf
 
-`local.conf` is git-ignored; create it with at least the endpoint and APN:
+`local.conf` is git-ignored; create it with at least the board, the server, the
+APN and the device key:
 
 ```
+CONFIG_APP_BOARD_L0DESTAR_V3_4=y
 CONFIG_APP_SERVER_HOST="tracker.example.com"
 CONFIG_APP_APN="iot.example.net"
+CONFIG_APP_PSK_HEX="<64 hex characters>"
 ```
 
 Any `APP_*` symbol from `Kconfig` can be overridden here (see the reference
-table). `CONFIG_APP_PSK_HEX` is **legacy** (only the unused ChaCha20 transport
-consumed it) and is not required.
+table). `CONFIG_APP_PSK_HEX` is required: the server decrypts this device's
+telemetry with the same key, which it is given when the device is enrolled
+(`openssl rand -hex 32` makes one).
 
 ### Flashing
 
 ```sh
-west flash -d build                 # or: nrfutil device program / the nRF Connect programmer
+./flash.sh                          # program over the Connect Kit's CMSIS-DAP probe
+./reset.sh                          # reboot without reflashing
 ```
 
-(Run `west flash` inside the NCS toolchain, the same way `build.sh` invokes
-`west build`.) On Apple Silicon, flashing needs a **native arm64** SEGGER
-J-Link install - an Intel-only J-Link library cannot be loaded by the arm64
-toolchain Python.
+Both use pyocd and end with a pin reset: pyocd's default soft reset leaves the
+nRF9151 in debug interface mode, drawing milliamps while asleep.
+[QUICKSTART.md](QUICKSTART.md) explains why they also stop pyocd erasing a
+protected part.
 
 ---
 
 ## Over-the-air updates
 
 The build carries **MCUboot** (`sysbuild.conf`), which splits the 1 MB flash
-into two 416 KB slots pinned by `pm_static.yml`. `fota.c` checks a manifest on
-the telemetry host at power-on and on each engine-off telemetry wake, and
-installs anything newer - provided the battery is above
-`CONFIG_APP_FOTA_MIN_BATTERY_MV` (12.0 V). A swapped image that never finishes
-booting is rolled back automatically.
+into two 416 KB slots pinned by `pm_static.yml`. `fota.c` checks for an update
+at power-on, when sent the `fota` command, and at the next safe moment after a
+telemetry reply advertises a newer version (`fota=<version>`). It fetches its
+own manifest from the update server (`CONFIG_APP_FOTA_HOST`, by default the
+telemetry host) on TCP 65481 over TLS, and installs a newer image built for its
+board - provided the battery is above `CONFIG_APP_FOTA_MIN_BATTERY_MV`
+(12.0 V). A swapped image that never finishes booting is rolled back
+automatically.
 
-The firmware version lives in one place, the `VERSION` file: it feeds
-`<zephyr/app_version.h>`, the MCUboot image header, and the version comparison.
-Bump it before publishing.
+The firmware version lives in one place, the `VERSION` file, which holds
+`MAJOR.MINOR`; `build.sh` adds the patch number, and the result feeds
+`<zephyr/app_version.h>`, the MCUboot image header and the version comparison.
+`push_fw.sh` derives the patch number from what the server has already
+published, so bump the minor version to restart the count.
 
 > The first build with MCUboot has to be flashed over SWD - a unit running a
 > pre-MCUboot image has no bootloader to swap slots.
@@ -266,9 +294,14 @@ Writes `onboarding/*_ca.pem` / `*_prv.pem` (git-ignored - the key is secret).
 **2. Build & flash the provisioning firmware**
 
 ```sh
-PROV=1 BUILD_DIR="$PWD/build_prov" ./build.sh pristine
-west flash -d build_prov            # boots into "PROVISIONING MODE" (AT host on VCOM0)
+PROV=1 BUILD_SUBDIR=build_prov ./build.sh
+pyocd load -t nrf91 --no-reset build_prov/merged.hex
+pyocd reset -t nrf91 -m hw -O auto_unlock=false
 ```
+
+It boots into "PROVISIONING MODE", with the AT host on the console port. The
+build goes into its own directory, leaving your normal `build/` alone, and the
+two pyocd commands are what `flash.sh` does, pointed at this build.
 
 `prov.conf` enables `CONFIG_AT_HOST_LIBRARY`, disables logging (clean UART), and
 `main()` idles after `modem_init()` so the AT exchange isn't corrupted.
@@ -303,7 +336,7 @@ curl -s "https://api.nrfcloud.com/v1/devices" -H "Authorization: Bearer $NRF_CLO
 **5. Reflash the normal firmware**
 
 ```sh
-./build.sh && west flash -d build
+./flash.sh                          # build/ still holds the tracker build
 ```
 
 On the next cold boot the A-GNSS fetch authenticates with the device JWT and
@@ -322,11 +355,13 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_DEBUG_BATTERY_MV` | 0 | Force battery voltage in mV (0=live INA228) |
 | `APP_CRASH_THRESHOLD_MG` | 4000 | Impact alert threshold while awake (mg) |
 | `APP_PARKED_IMPACT_MG` | 800 | Parked-impact threshold from FIFO peak (mg) |
+| `APP_IMPACT_IMMEDIATE_MG` | 700 | Parked hit reported without waiting for the movement confirm (mg, 0 = never) |
 | `APP_DEMO_MODE` | n | Mask lat/lon in the serial log (public demos); telemetry unaffected |
 | `APP_SERVER_HOST` | "" | Telemetry hostname (else `HOSTNAME` in `config.h`) |
+| `APP_SERVER_PORT` | 65480 | Telemetry UDP port |
 | `APP_APN` | "" | Cellular APN (else `DEFAULT_APN`) |
-| `APP_PSK_HEX` | "" | **Legacy** PSK for the old ChaCha20 transport |
-| `APP_ENGINE_OFF_LOOP_INTERVAL` | 0 | Engine-off telemetry interval (0 = off) |
+| `APP_PSK_HEX` | "" | Device key, 64 hex characters: required, and must match the server's |
+| `APP_ENGINE_OFF_LOOP_INTERVAL` | 0 | Engine-off wake interval until the server sets one (s; 0 = 900) |
 | `APP_IGNITION_ON_SLEEP_INTERVAL` | 30 | Send cadence: ignition on, engine off (s) |
 | `APP_VOLTAGE_POLL_INTERVAL` | 5 | Battery sample cadence in IDLE (s) |
 | `APP_BATTERY_CHECK_INTERVAL` | 86400 | Battery check during deep sleep (s) |
@@ -338,20 +373,20 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_SLEEP_SAFETY_MV` | 12000 | Skip-send threshold while sleeping (mV) |
 | `APP_ENGINE_RUNNING_MV` | 13000 | Engine-running voltage threshold (mV) |
 | `APP_ACC_MOVEMENT_THRESHOLD` | 150 | Movement delta threshold (milli-g) |
-| `APP_MOVEMENT_CONFIRM_MS` / `_HITS` | 3000 / 2 | Movement confirmation window / samples |
+| `APP_MOVEMENT_CONFIRM_MS` / `_HITS` | 10000 / 6 | Movement confirmation window / samples |
 | `APP_MOVEMENT_INACTIVITY_RESET` | 1800 | Inactivity reset timer (s) |
 | `APP_MOVEMENT_ALARM` | n | Enable movement alarm |
 | `APP_COAST_STOP_SPEED_KMH_X10` | 50 | Coast-to-stop speed threshold (km/h ×10) |
 | `APP_COAST_MAX_ITERATIONS` | 60 | Coast-to-stop max iterations |
 | `APP_BATCH_SIZE` | 3 | Records per datagram while driving |
-| `APP_GSM_ESCALATION_POWERCYCLE` / `_SLEEP` | 3 / 5 | Send failures before power-cycle / sleep |
-| `APP_GSM_RECOVERY_SLEEP_INTERVAL` | 300 | Recovery sleep interval (s) |
+| `APP_MODEM_STUCK_CFUN_S` | 600 | Registered but unable to send this long: CFUN cycle (s) |
+| `APP_MODEM_STUCK_RESET_S` | 1800 | Registered but unable to send this long: modem restart (s) |
 
 ---
 
 ## Logging / serial
 
-The console + logs are on the nRF9151 DK's first VCOM at **115200 baud, 8-N-1**.
-Note that macOS resets a USB-serial line to 9600 on each `open()`, so a monitor
-must hold the descriptor open while running `stty … 115200` (as the project's
-`monitor.sh` logger does).
+The console and logs are on the first of the Connect Kit's two USB serial ports
+(the J-Link VCOM on the DK) at **115200 baud, 8-N-1**. macOS resets a serial
+port to 9600 baud whenever it is opened, so use a terminal that holds the port
+open, such as `screen /dev/cu.usbmodemXXXX 115200`.

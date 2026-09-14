@@ -51,8 +51,6 @@ pyocd reset -t nrf91 -m hw -O auto_unlock=false
 
 `PROV=1` layers `prov.conf` over your configuration: logging is switched off so nothing interleaves with the exchange, the modem is brought up, and the firmware then does nothing except pass commands between the console and the modem. It builds into its own directory, so your normal build is left alone. Use `BUILD_SUBDIR` rather than a relative `BUILD_DIR`, which would resolve inside the SDK directory. The two `pyocd` commands are what `flash.sh` does, pointed at this build - see [why the scripts reset the way they do](/board-setup/initial-flashing.html#why-the-scripts-reset-the-way-they-do).
 
-The repository's own notes build this with `pristine` (which also deletes your normal `build/` directory) and flash it with a `flash-md.sh` that no longer exists; the commands above replace both.
-
 On the console the board prints:
 
 ```text
