@@ -298,7 +298,7 @@ update, and `push_fw.sh` does not check it either.
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
 | `APP_FOTA` | bool | `y` | The update subsystem. Leave it on: turning it off also removes the call that confirms an image installed over the air, so MCUboot would revert such an image at the next boot |
-| `APP_FOTA_INHIBIT` | bool | `n` | Keeps the subsystem but never checks, downloads or acts on update adverts or the `fota` command, while still confirming the running image. For bench builds, whose version is `MAJOR.MINOR.0` and would otherwise be replaced by the published release within seconds of booting. Never in a published image |
+| `APP_FOTA_INHIBIT` | bool | `n` | Keeps the subsystem but never checks, downloads or acts on update adverts or the `fota` command, while still confirming the running image. For bench builds, whose version is `MAJOR.MINOR.0` and would be replaced within seconds of booting by any build published for the unit's IMEI. Never in a published image |
 | `APP_FOTA_HOST` | string | `""` | Update host; empty reuses `APP_SERVER_HOST` |
 | `APP_FOTA_PORT` | int | `65481` | Update port: the server's TLS listener, which serves firmware downloads |
 | `APP_FOTA_SEC_TAG` | int | `42` | Modem security tag holding the CA the update server is verified against. `-1` fetches over plain HTTP; the image is still signature-checked, but the manifest is not authenticated |

@@ -54,7 +54,7 @@ CONFIG_APP_FOTA_INHIBIT=y
 | `CONFIG_APP_SERVER_HOST` | Where telemetry (UDP 65480) and updates (TCP 65481) go. Use the name your server's certificate was issued for. It must resolve to an IPv4 address: the firmware does not use IPv6. |
 | `CONFIG_APP_APN` | The default in `prj.conf` (`sensor.net`) is almost certainly not your SIM provider's APN. With the wrong APN the modem can register on the network and still have no data connection. |
 | `CONFIG_APP_PSK_HEX` | The key that encrypts everything the device sends. The server gets the same key when you enrol the device. |
-| `CONFIG_APP_FOTA_INHIBIT` | A bench build is version 0.4.0, older than anything published, and the firmware checks for an update every time it boots - without this the build you are testing is replaced within seconds. An image installed over the air still confirms itself with this set. Never use it in a production build; see [OTA updates](/board-setup/ota-updates.html). |
+| `CONFIG_APP_FOTA_INHIBIT` | A bench build is version 0.4.0, older than anything published, and the firmware checks for an update every time it boots. If the server has a build published for this IMEI - a section for it in `remote.conf` - the build you are testing is replaced within seconds; a unit with no manifest is never offered one, but keep this set so a later publish cannot catch a bench unit. An image installed over the air still confirms itself with this set. Never use it in a production build; see [OTA updates](/board-setup/ota-updates.html). |
 
 Everything else keeps its default. [Firmware build options](/reference/firmware.html) lists every setting, including `CONFIG_APP_SERVER_PORT` and `CONFIG_APP_FOTA_PORT` for a server that publishes its ports under other numbers.
 
