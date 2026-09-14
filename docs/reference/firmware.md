@@ -263,8 +263,10 @@ The remaining pin symbols only apply to older or bench hardware: `APP_PIN_K2_TX`
 ### Debug overrides and test harnesses
 
 Every symbol in this table either fakes an input or replaces the tracker, and none belongs in an
-image you publish. All but the first two take over the firmware before the modem is started: a
-unit running one never reports, never checks for updates, and has to be reflashed over USB.
+image you publish. All but the first two replace the tracker: a unit running one never reports,
+never checks for updates, and has to be reflashed over USB. `APP_ACCEL_TEST` is the exception when
+no IMU is found, carrying on to the tracker, and the provisioning and LTE power test builds bring
+the modem up for their own use.
 
 | Symbol | Default | What it does | Refused by `push_fw.sh` |
 |---|---|---|---|
