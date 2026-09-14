@@ -575,5 +575,3 @@ only give Kconfig symbols shorter names, for example `CRASH_THRESHOLD_MG` for
   firmware parks before starting the modem.
 - The help for `APP_IMPACT_IMMEDIATE_MG` says it must sit above `APP_PARKED_IMPACT_MG`, yet the
   defaults are 700 and 800.
-- The help for `APP_OBD_MODE` names v3.1-v3.3 only; it applies just the same to a v3.4 built as
-  v3.3.
