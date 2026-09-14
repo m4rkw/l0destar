@@ -151,7 +151,7 @@ A healthy boot looks like this (abridged - timings and readings will differ):
 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
 *** Booting My Application v0.4.0 ***
 <inf> main: === l0destar firmware boot (v0.4.0, board v3.4+kline) ===
-<inf> main: reset cause: sw
+<inf> main: reset cause: pin
 <inf> settings: apn=your.apn user=
 <inf> settings: imei=(unset)
 <inf> hw_selftest: === power rail self-test ===
