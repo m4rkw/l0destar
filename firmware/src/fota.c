@@ -789,7 +789,11 @@ int fota_check(enum fota_ctx ctx)
     }
 
     if (err) {
-        s_fail_count++;
+        /* 10 min, doubling to 80, like every other failed check; the `fota`
+         * command overrides it.  Without it the advert in the next reply
+         * re-armed the check, and a failing download ran again every reply,
+         * each time with GNSS stopped. */
+        fail_backoff();
         led_idle();
         if (gnss_stopped) gnss_resume();
 
