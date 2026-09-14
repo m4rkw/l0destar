@@ -167,11 +167,8 @@ request's nonce, so a response captured from one exchange cannot be replayed
 into another. The key is a 32-byte per-device PSK, stored as hex in
 `device`.`psk`.
 
-Replay protection is a 1024-nonce in-memory window per device, with the most
-recent nonce persisted so a restart cannot reopen a hole for the single
-most-recently captured datagram. The window is only updated *after* the tag
-verifies — otherwise an unauthenticated packet could poison it with a nonce
-the real device is about to use.
+Replay protection keeps every nonce a device uses for 30 days in the `device_nonce`
+table, so a replayed datagram is refused even after a server restart.
 
 Every failure mode — malformed, unknown IMEI, missing key, bad tag, replay —
 looks identical from outside, so responses cannot be used to enumerate which

@@ -83,7 +83,7 @@ def database():
 
     handle = db.web
     handle.query('SET FOREIGN_KEY_CHECKS = 0')
-    for table in ('journey', 'command', 'dtc', 'log', 'device', 'plmn',
+    for table in ('journey', 'command', 'dtc', 'log', 'device_nonce', 'device', 'plmn',
                   'api_token', 'user', 'registration', 'regoptions',
                   'authoptions', 'authoptions_ip'):
         handle.query('DELETE FROM `%s`' % table)

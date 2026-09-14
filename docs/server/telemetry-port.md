@@ -18,7 +18,7 @@ response:  [12] nonce  [ciphertext]  [16] tag
 ```
 
 - The IMEI is authenticated as additional data, and a reply also binds the nonce of the request it answers, so a captured reply cannot be replayed into another exchange.
-- Each device has a replay window of its last 1024 nonces, and the most recent nonce is kept in the database so a restart does not reopen it.
+- Every nonce a device uses is kept in the database for 30 days, so a replayed datagram is refused, even after a restart. One captured more than 30 days earlier is not detected.
 - A datagram that is malformed, names an unknown IMEI, fails authentication or repeats a nonce is dropped without a reply. All of these look the same from outside, so the port does not reveal which IMEIs are enrolled.
 - Failures are logged as `decrypt failed from <address> (<n> bytes)`, rate limited per source address: the first in any minute, then every twentieth.
 - The IMEI is sent in clear so the server can choose the key. An observer on the path learns which tracker reports and when, but not what it says.
