@@ -164,7 +164,7 @@ a rail fed straight from the battery that means a continuous fault current.
 | 510R 1W 0508 resistors | S10R3, S10R4 | K and L line pull-ups. |
 | 33V TVS, PTVS33VS1UTR,115 | S10D2, S10D4 | Protection on the K and L lines. |
 | 15R 1W 0508 resistor | S15R1 | The bias-tee feed that powers an active GNSS antenna from the switched 3.3V GPS rail. |
-| RF inductor, 47-100nH with SRF above 2GHz | S15L1 | Part of the bias tee; the example is a Murata LQW18AN68NJ00D. |
+| RF inductor, 47-68nH with SRF above 2GHz | S15L1 | Part of the bias tee; the example is a Murata LQW18AN68NJ00D. |
 | TPD1E05U06DPYR ESD diodes | S15D1, S15D2 | ESD protection at the LTE and GPS antenna connectors. |
 | SMA-J-P-H-RA-TH1 and U.FL-R-SMT(01) | S15J1-S15J4 | Antenna connectors. |
 | Molex 43045-0600 | S1J1 | 6-pin Micro-Fit 3.0 vehicle connector. |

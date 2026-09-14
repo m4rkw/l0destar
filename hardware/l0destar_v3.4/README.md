@@ -381,7 +381,7 @@ separate load switches.
 | S15J3 | u.FL PCB connector | 50 ohm | [U.FL-R-SMT(01)](https://uk.farnell.com/hirose-hrs/u-fl-r-smt-01/rf-coaxial-u-fl-straight-jack/dp/3908021) | |
 | S15J4 | SMA PCB connector | 50 ohm | [SMA-J-P-H-RA-TH1](https://uk.farnell.com/samtec/sma-j-p-h-ra-th1/rf-coaxial-sma-jack-50-ohm-pcb/dp/2856817) | |
 | S15FB1 | Ferrite bead | 600 ohm | [BLM15PX601SZ1D](https://uk.farnell.com/murata/blm15px601sz1d/ferrite-bead-0-9a-0-23ohm-0402/dp/3678458) | |
-| S15L1 | RF inductor | 0603 47-100 nH, SRF > 2GHz | [LQW18AN68NJ00D](https://uk.farnell.com/murata/lqw18an68nj00d/inductor-68nh-2-2ghz-0-34a-0603/dp/3471533) | |
+| S15L1 | RF inductor | 0603 47-68 nH, SRF > 2GHz | [LQW18AN68NJ00D](https://uk.farnell.com/murata/lqw18an68nj00d/inductor-68nh-2-2ghz-0-34a-0603/dp/3471533) | |
 | S15C1 | 47pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N470J500CT](https://uk.farnell.com/multicomp-pro/0402n470j500ct/cap-47pf-50v-5-c0g-np0-0402/dp/2496804) | |
 | S15C2 | 100pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
 | S15C3 | 10nF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [GRM1555C1H103JE01D](https://uk.farnell.com/murata/grm1555c1h103je01d/cap-mlcc-0-01uf-5-c0g-50vdc-0402/dp/4803046RL) | |
@@ -541,7 +541,7 @@ buck enable divider. Quantities are per board.
 | All | 47uF 1210 capacitor | 2 | 1210 >= 10V 20% X7R | [CL32B476MPJNNNE](https://uk.farnell.com/semco/cl32b476mpjnnne/cap-mlcc-47uf-10vdc-x7r-1210/dp/5109745) | |
 | All | 47uF 2220 input capacitor | 2 | 2220 >= 50V 20% X7R | [CKG57NX7R1H476M500JH](https://uk.farnell.com/tdk/ckg57nx7r1h476m500jh/cap-stacked-47uf-50v-mlcc-2220/dp/3816888) | |
 | All | Inductor | 1 | XFL4020-222ME | [XFL4020-222MEC](https://uk.farnell.com/coilcraft/xfl4020-222mec/inductor-2-2uh-8a-20-pwr-38mhz/dp/2289216) | |
-| All | RF inductor | 1 | 0603 47-100 nH, SRF > 2GHz | [LQW18AN68NJ00D](https://uk.farnell.com/murata/lqw18an68nj00d/inductor-68nh-2-2ghz-0-34a-0603/dp/3471533) | |
+| All | RF inductor | 1 | 0603 47-68 nH, SRF > 2GHz | [LQW18AN68NJ00D](https://uk.farnell.com/murata/lqw18an68nj00d/inductor-68nh-2-2ghz-0-34a-0603/dp/3471533) | |
 | All | Ferrite bead | 1 | 600 ohm | [BLM15PX601SZ1D](https://uk.farnell.com/murata/blm15px601sz1d/ferrite-bead-0-9a-0-23ohm-0402/dp/3678458) | |
 | All | 2A fuse | 2 | 1206 2A slow blow | [0407002.WRA](https://www.digikey.co.uk/en/products/detail/littelfuse-inc/0407002-WRA/14640147) | Time-lag, one per input |
 | All | SQ2361 MOSFET | 2 | SQ2361 SOT-23 | [SQ2361CES-T1_BE3](https://uk.farnell.com/vishay/sq2361ces-t1-be3/mosfet-p-ch-60v-2-8a-sot-23/dp/4644757) | |
