@@ -206,7 +206,7 @@ Creates a bearer token for the automation API and prints it. Tokens have no scop
 regtoken.py <username> <hostname>
 ```
 
-Prints a single-use enrolment link, `https://<hostname>/register?...`, valid for 24 hours. For an existing username, the passkey registered from the new link replaces the old one.
+Prints a single-use enrolment link, `https://<hostname>/register?...`, valid for 24 hours. Creating a link cancels any earlier one for the same username. For an existing username, the passkey registered from the new link replaces the old one.
 
 ### `import_plmn.py`
 

@@ -8,7 +8,8 @@ self-service signup: the only correct number of accounts on a tracking server
 is the number the operator created deliberately.
 
 Re-running this for an existing username lets that user replace their
-credential, which is how a lost authenticator is recovered.
+credential, which is how a lost authenticator is recovered.  A new link cancels
+any earlier one for the same username, so only the latest can be used.
 """
 
 import hashlib
@@ -29,6 +30,7 @@ def main():
     username, hostname = sys.argv[1], sys.argv[2]
     token = hashlib.sha256(secrets.token_bytes(32)).hexdigest()
 
+    db.web.query('DELETE FROM `registration` WHERE `username` = %s', (username,))
     db.web.query(
         'INSERT INTO `registration` (`username`, `token`, `timestamp`) '
         'VALUES (%s, %s, %s)',
