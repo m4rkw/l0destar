@@ -220,7 +220,8 @@ K-wire interface's L line. The L pull-down is current-limited to 90mA by an AL58
 L_SENSE input (Connect Kit P0.14, an analog input) lets the firmware test for an L wire shorted to
 battery: before a 5-baud init drives L, it pulls the line low for 5ms and, if the line stays high,
 leaves L out of the init. Not every vehicle needs the L line: the reference vehicle opens its
-diagnostic session on the K wire alone.
+diagnostic session on the K wire alone. Discovery tries K alone first and reports whether L was
+needed, and the tracker drives L in its own session only with `CONFIG_APP_KLINE_USE_L`.
 
 L_SENSE classifies the line with a threshold, `CONFIG_APP_L_SENSE_LOW_MV` (default 2800mV): a line
 pulled low reads about 2.0V, while a line that is high, open or shorted to battery reads at the

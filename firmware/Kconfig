@@ -125,13 +125,16 @@ config APP_KLINE_DISCOVER
 	  sent;
 	  the result — which init worked, what protocol answered, or where
 	  the handshake stopped — is printed on the console; the modem is never
-	  started.  The run ends with a summary and the
+	  started.  Each 5-baud init goes out on K alone first, and again
+	  with the L line driven only if that gets no answer, so the summary
+	  can say whether the vehicle needs L.  The run ends with a summary and the
 	  local.conf block that makes the runtime path talk to this vehicle
 	  with no probing at all.
 
 	  This is discovery, not operation: it is slow, noisy and only worth
-	  running once per vehicle.  Polling uses APP_KLINE_ECU_ADDR and
-	  APP_KLINE_BAUD and does none of it.  Leave off in production.
+	  running once per vehicle.  Polling uses APP_KLINE_ECU_ADDR,
+	  APP_KLINE_BAUD and APP_KLINE_USE_L and does none of it.  Leave off
+	  in production.
 
 config APP_KLINE_BAUD
 	int "K-line data rate for the handshake and any session (bps)"
@@ -155,6 +158,19 @@ config APP_KLINE_ECU_ADDR
 	  on their own physical ECU addresses.  Run the discovery once and
 	  use the value its summary suggests.  Defined unconditionally:
 	  hw_kline.c reads it on every board.
+
+config APP_KLINE_USE_L
+	bool "Drive the L line in the runtime session's 5-baud init"
+	depends on APP_L_SEND_ENABLED
+	default n
+	help
+	  For a vehicle that answers the 5-baud init only with the L line
+	  driven alongside K.  Discovery sends each 5-baud init on K alone
+	  first and drives L only where that gets no answer; when L was
+	  needed, its summary says so and suggests this.  Before the session
+	  opens, the L line is tested for a short to battery on boards with
+	  L_SENSE, and left out of the init if the test fails.  Leave off for
+	  a vehicle that opens on K alone, and leave its L wire unconnected.
 
 config APP_KLINE_INIT_FAST
 	bool "Try the ISO 14230-4 fast init as well as the 5-baud init"
@@ -223,7 +239,9 @@ config APP_KLINE_INIT_SWEEP
 	help
 	  After the slow and fast inits on the OBD functional address 0x33
 	  both go unanswered, try the fast init and then the 5-baud init on
-	  every physical address 0x01-0xFE.  Up to ~15 minutes.  Turn off
+	  every physical address 0x01-0xFE.  Up to ~15 minutes, and about as
+	  long again when nothing answers on K alone and the 5-baud sweep is
+	  repeated with the L line.  Turn off
 	  when the vehicle is known to answer a generic scanner, in which
 	  case 0x33 is the only address that matters.
 

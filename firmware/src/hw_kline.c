@@ -1681,9 +1681,22 @@ int kline_vehicle_init_ex(struct kline_session *out)
 
 	uint8_t ecu = KLINE_INIT_ADDR, kb1 = 0, kb2 = 0;
 	const char *how = "slow init";
-	bool use_l = kline_can_use_l();
+	/* Every 5-baud init goes out on K alone first, and again with L driven
+	 * only if that got no answer at all.  Driving L whenever it is allowed
+	 * opens a session either way and leaves nothing to say whether the
+	 * vehicle needs it; this way use_l says exactly that, and it is what the
+	 * summary reports and APP_KLINE_USE_L carries into the runtime session. */
+	bool l_ok = kline_can_use_l();
+	bool use_l = false;
 
-	err = kline_slow_init(KLINE_INIT_ADDR, use_l, false, &kb1, &kb2);
+	err = kline_slow_init(KLINE_INIT_ADDR, false, false, &kb1, &kb2);
+	if (err == -ETIMEDOUT && l_ok) {
+		if (kline_wait_idle(300)) {
+			kline_wait_idle(300);
+		}
+		err = kline_slow_init(KLINE_INIT_ADDR, true, false, &kb1, &kb2);
+		use_l = (err != -ETIMEDOUT);
+	}
 	if (err == -ETIMEDOUT && IS_ENABLED(CONFIG_APP_KLINE_INIT_FAST)) {
 		/* Silence, not a bad handshake: try the KWP2000 fast init after
 		 * the bus has idled again. */
@@ -1727,28 +1740,37 @@ int kline_vehicle_init_ex(struct kline_session *out)
 
 		for (int i = 0; i < n_addrs; i++) {
 			uint8_t k1 = 0, k2 = 0;
+			bool with_l = false;
+			int r = -ETIMEDOUT;
 
-			if (kline_wait_idle(300)) {
-				kline_wait_idle(300);
+			/* K alone, then with L if that got no answer. */
+			for (int pass = 0; pass < (l_ok ? 2 : 1) && r == -ETIMEDOUT;
+			     pass++) {
+				with_l = (pass == 1);
+				if (kline_wait_idle(300)) {
+					kline_wait_idle(300);
+				}
+				/* The proper handshake first; only if that breaks
+				 * down fall back to recording whatever the ECU
+				 * actually says. */
+				r = IS_ENABLED(CONFIG_APP_KLINE_IDENT)
+					? kline_identify(addrs[i], with_l, &k1, &k2)
+					: kline_slow_init(addrs[i], with_l, false, &k1, &k2);
 			}
-			/* The proper handshake first; only if that breaks down
-			 * fall back to recording whatever the ECU actually says. */
-			int r = IS_ENABLED(CONFIG_APP_KLINE_IDENT)
-				? kline_identify(addrs[i], use_l, &k1, &k2)
-				: kline_slow_init(addrs[i], use_l, false, &k1, &k2);
 
 			if (r == 0) {
 				if (opened == 0) {
 					ecu = addrs[i];
 					kb1 = k1;
 					kb2 = k2;
+					use_l = with_l;
 				}
 				opened++;
 			} else if (r != -ETIMEDOUT) {
 				if (kline_wait_idle(300)) {
 					kline_wait_idle(300);
 				}
-				kline_slow_capture(addrs[i], use_l);
+				kline_slow_capture(addrs[i], with_l);
 			}
 			if (r != -ETIMEDOUT) {
 				if (out && replied < ARRAY_SIZE(out->addrs)) {
@@ -1771,9 +1793,15 @@ int kline_vehicle_init_ex(struct kline_session *out)
 	}
 	if (err == -ETIMEDOUT && IS_ENABLED(CONFIG_APP_KLINE_INIT_SWEEP)) {
 		/* Last standard combination: the slow init also carries an
-		 * address, and some makers' ECUs only wake to their own. */
+		 * address, and some makers' ECUs only wake to their own.  The
+		 * whole sweep on K alone first, and again with L only if not one
+		 * address answered that. */
 		how = "physical-address 5-baud init";
-		err = kline_slow_init_scan(use_l, out, &ecu, &kb1, &kb2);
+		err = kline_slow_init_scan(false, out, &ecu, &kb1, &kb2);
+		if (err == -ETIMEDOUT && l_ok) {
+			err = kline_slow_init_scan(true, out, &ecu, &kb1, &kb2);
+			use_l = (err != -ETIMEDOUT);
+		}
 	}
 
 out:
@@ -1784,8 +1812,9 @@ out:
 	if (err) {
 		printk("FAIL: K-line init (%d)\n", err);
 	} else {
-		printk("PASS: K-line communication established via %s, "
-		       "ECU 0x%02X (%s)\n", how, ecu, kline_kw_name(kb1, kb2));
+		printk("PASS: K-line communication established via %s%s, "
+		       "ECU 0x%02X (%s)\n", how, use_l ? " with L" : "", ecu,
+		       kline_kw_name(kb1, kb2));
 		if (out) {
 			out->rx_edges = edges;
 			out->baud = s_last_baud;
@@ -1794,6 +1823,7 @@ out:
 			out->ecu = ecu;
 			out->kb1 = kb1;
 			out->kb2 = kb2;
+			out->use_l = use_l;
 		}
 	}
 	printk("*** K-LINE INIT DONE ***\n\n");
@@ -1845,7 +1875,7 @@ static void kline_print_summary(const struct kline_discovery *d)
 	printk("  protocol       %s, %s\n", d->protocol ? d->protocol : "?",
 	       d->how ? d->how : "?");
 	printk("  data rate      %u baud\n", d->baud);
-	printk("  L wire         %s\n", d->use_l ? "driven" : "not needed");
+	printk("  L wire         %s\n", d->use_l ? "needed" : "not needed");
 	printk("  addresses      ");
 	for (int i = 0; i < d->n_ecu; i++) {
 		printk("%02X ", d->ecu[i].addr);
@@ -1912,6 +1942,7 @@ static void kline_print_summary(const struct kline_discovery *d)
 	}
 	if (d->use_l) {
 		printk("    CONFIG_APP_L_SEND_ENABLED=y\n");
+		printk("    CONFIG_APP_KLINE_USE_L=y\n");
 	}
 	printk("    CONFIG_APP_KLINE_INIT_FAST=n\n");
 	printk("    CONFIG_APP_KLINE_INIT_SWEEP=n\n");
@@ -1937,7 +1968,7 @@ int kline_discover(struct kline_discovery *out)
 	d->how      = sess.how;
 	d->protocol = sess.protocol;
 	d->baud     = sess.baud ? sess.baud : CONFIG_APP_KLINE_BAUD;
-	d->use_l    = IS_ENABLED(CONFIG_APP_L_SEND_ENABLED);
+	d->use_l    = sess.use_l;
 
 	/* The engine ECU is whichever one answered OBD mode 01; nothing else
 	 * on a K line does. */
@@ -1975,13 +2006,18 @@ int kline_session_open(void)
 	}
 	kline_calibrate();		/* the 5-baud address is still bit-banged */
 
+	/* L only for a vehicle whose discovery needed it, and only once the
+	 * line has passed the short-to-battery test.  Tested before the idle
+	 * wait, so the test's 5 ms pull is long over when the address goes out. */
+	bool use_l = IS_ENABLED(CONFIG_APP_KLINE_USE_L) && kline_can_use_l();
+
 	if (kline_wait_idle(300)) {
 		LOG_WRN("K line busy — not opening a session");
 		proge_mode_off();
 		return -EBUSY;
 	}
 
-	err = kline_slow_init((uint8_t)CONFIG_APP_KLINE_ECU_ADDR, false, true,
+	err = kline_slow_init((uint8_t)CONFIG_APP_KLINE_ECU_ADDR, use_l, true,
 			      &kb1, &kb2);
 	if (err) {
 		proge_mode_off();

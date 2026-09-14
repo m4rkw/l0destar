@@ -64,9 +64,9 @@ These are the settings most worth reviewing for a particular vehicle. Every symb
 A K-wire build needs to know which address the vehicle's engine control unit answers on, and at what data rate, before it can read engine data and fault codes. The firmware finds out with a discovery run, once per vehicle. The full reference is in [KWIRE_QUICKSTART.md](https://github.com/m4rkw/l0destar/blob/master/firmware/KWIRE_QUICKSTART.md) and [KWIRE.md](https://github.com/m4rkw/l0destar/blob/master/firmware/KWIRE.md).
 
 !!! warning "Stationary vehicles only"
-    Run discovery with the vehicle parked and the ignition on. On a vehicle that does not answer the standard address, it sweeps every address and can occupy the K line for up to 15 minutes.
+    Run discovery with the vehicle parked and the ignition on. On a vehicle that does not answer the standard address, it sweeps every address and can occupy the K line for up to 15 minutes, or about half an hour if nothing answers on K alone and it repeats the sweep with the L line.
 
-You need a K-wire board (OBD mode 2, K pads bridged) wired to the vehicle's OBD pin 7, and a laptop with the firmware toolchain connected to the tracker's USB-C port.
+You need a K-wire board (OBD mode 2, K pads bridged) wired to the vehicle's OBD pin 7 - and to pin 15 as well, if the socket has one, so discovery can try the L line when K alone gets no answer - and a laptop with the firmware toolchain connected to the tracker's USB-C port.
 
 ### 1. Build and flash a discovery image
 
@@ -89,7 +89,7 @@ The discovery image never starts the modem, so it needs no server, APN or key, a
 
 ### 2. Wait for the summary
 
-On an unknown vehicle the run can take up to 15 minutes. The board then stops instead of starting the tracker, so the output stays on the console. It ends with a summary and a suggested configuration block - on the reference vehicle, a 2006 Toyota Harrier:
+On an unknown vehicle the run can take up to 15 minutes, or about half an hour if it has to try the L line. The board then stops instead of starting the tracker, so the output stays on the console. It ends with a summary and a suggested configuration block - on the reference vehicle, a 2006 Toyota Harrier:
 
 ```text
   Suggested local.conf:
@@ -101,7 +101,7 @@ On an unknown vehicle the run can take up to 15 minutes. The board then stops in
     CONFIG_APP_KLINE_DISCOVER=n
 ```
 
-If nothing answers, the console says where the handshake stopped. The usual cause is the wiring or the interface pads rather than the protocol; see the troubleshooting section of KWIRE.md. Do not connect the L line just to try it - see [Deployment: read this first](/deployment/read-this-first.html).
+If nothing answers, the console says where the handshake stopped. The usual cause is the wiring or the interface pads rather than the protocol; see the troubleshooting section of KWIRE.md. If the vehicle answered only with the L line driven, the summary says `L wire needed` and the block also sets `CONFIG_APP_L_SEND_ENABLED=y` and `CONFIG_APP_KLINE_USE_L=y`; carry both into the device's section below.
 
 ### 3. Add the result to remote.conf
 
@@ -120,7 +120,7 @@ CONFIG_APP_KLINE_TELEMETRY=y
 CONFIG_APP_KLINE_DTC_REPORT=y
 ```
 
-Only `CONFIG_APP_KLINE_BAUD` and `CONFIG_APP_KLINE_ECU_ADDR` are used at run time; the other suggested lines only affect discovery.
+Only `CONFIG_APP_KLINE_BAUD`, `CONFIG_APP_KLINE_ECU_ADDR` and, when the summary suggests them, `CONFIG_APP_L_SEND_ENABLED` and `CONFIG_APP_KLINE_USE_L` are used at run time; the other suggested lines only affect discovery.
 
 ### 4. Put the tracker back on production firmware
 

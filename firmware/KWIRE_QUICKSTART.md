@@ -192,3 +192,8 @@ PASS: K-line communication established via 5-baud init, ECU 0x13 (ISO 14230-4 KW
 The last block is the point of the exercise: paste it into `local.conf`, add
 `CONFIG_APP_KLINE_TELEMETRY=y` and `CONFIG_APP_KLINE_DTC_REPORT=y` if you want
 OBD data and fault codes in the telemetry, and rebuild.
+
+If the vehicle only answered with the L line driven, the summary says
+`L wire needed` and the block also sets `CONFIG_APP_L_SEND_ENABLED=y` and
+`CONFIG_APP_KLINE_USE_L=y`: keep them, and connect the L wire when you install
+the tracker.

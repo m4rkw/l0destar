@@ -377,6 +377,7 @@ Runtime settings:
 | `APP_KLINE_DTC_REPORT` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. Read the stored fault codes shortly after ignition on and again whenever the stored-code count changes during a drive, and send the complete set to the server; nothing is read at ignition off, when the ECU is unpowered. Read-only: clearing codes is not implemented |
 | `APP_KLINE_DTC_ON_DELAY_MS` | int, 0-30000 | `5000` | Depends on `APP_KLINE_DTC_REPORT`. Wait after ignition on before reading codes, while the ECU boots |
 | `APP_KLINE_ECU_ADDR` | hex, 0x01-0xfe | `0x33` | Address the session opens with the 5-baud init. `0x33` is the OBD functional address; some vehicles, including the author's Toyota, answer only on a physical address, so use what discovery reports |
+| `APP_KLINE_USE_L` | bool | `n` | Depends on `APP_L_SEND_ENABLED`. Drive the L line alongside K in the session's 5-baud init, after testing it for a short to battery. Set it when discovery's summary says `L wire needed` |
 | `APP_KLINE_BAUD` | int | `10400` | Data rate for the handshake and session. Some ECUs answer at 9600; the init retries at the other rate when the sync byte does not decode |
 | `APP_KLINE_OBD` | bool, hidden | `y` when either of the first two is set | Builds the OBD-II code |
 
@@ -385,7 +386,7 @@ Discovery, run once per vehicle with the ignition on (see
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_KLINE_DISCOVER` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. At boot, try the 5-baud and fast inits on the functional address, then sweep the physical addresses, print a summary ending in the settings to use, and park. Takes up to 15 minutes and never starts the tracker, so it is a test harness |
+| `APP_KLINE_DISCOVER` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. At boot, try the 5-baud and fast inits on the functional address, then sweep the physical addresses, print a summary ending in the settings to use, and park. Each 5-baud init goes out on K alone first and is repeated with the L line driven only if that gets no answer. Takes up to 15 minutes, about half an hour when nothing answers on K alone, and never starts the tracker, so it is a test harness |
 | `APP_KLINE_INIT_FAST` | bool | `y` | Depends on `APP_KLINE_DISCOVER`. Also try the ISO 14230-4 fast init; turning it off for an ECU known to answer the 5-baud init saves about 2.5 minutes |
 | `APP_KLINE_INIT_SWEEP` | bool | `y` | Depends on `APP_KLINE_DISCOVER`. Sweep every address from 0x01 to 0xFE when 0x33 does not answer. Never on a moving vehicle |
 | `APP_KLINE_INIT_ADDRS` | string | `""` | Addresses already known to answer the 5-baud init, as comma-separated hex such as `"13,29,58,B4"`; each is tried in turn and everything it sends is captured |

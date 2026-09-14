@@ -30,8 +30,8 @@ Connecting the tracker's CAN or K-wire lines to the vehicle's diagnostic socket 
 - Firmware 0.4.x reads engine data and stored fault codes over the K wire only. It reads nothing over CAN, so there is currently no reason to connect a CAN build to a vehicle.
 - The runtime K-wire code only sends read-only OBD-II requests. Nothing in the firmware clears fault codes.
 - A firmware fault can hold the K line low until the watchdog restarts the tracker, which can take about half a minute. While the line is held, no scan tool can talk to the vehicle over it.
-- Never run the K-wire discovery on a moving vehicle: its address sweeps can occupy the bus for up to a quarter of an hour.
-- Connect the L wire only if K-wire discovery shows that the vehicle needs it.
+- Never run the K-wire discovery on a moving vehicle: its address sweeps can occupy the bus for up to a quarter of an hour, or about half an hour when it tries the L line.
+- Connect the L wire to an installed tracker only if the K-wire discovery summary says `L wire needed`.
 - Do not fit the CAN termination shunt. The vehicle's bus is already terminated.
 
 ## Mounting
