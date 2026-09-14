@@ -198,7 +198,7 @@ firmware when you are done, as described in
 | `screen could not open` the port | The port can be busy or re-enumerating for a few seconds after flashing; the script retries for up to about 20 seconds. If it still fails, the script prints what holds the port; close that and re-run. |
 | The reset fails and pyocd reports APPROTECT | The chip booted with debug access locked. `./flash.sh` is the recovery path: its load step is allowed to unlock the part and reprogram it. |
 | The boot output is too quiet to diagnose a problem | Run with `VERBOSE=1` to keep the module logs; warnings and errors always print. |
-| Test 6 prints `interrupt but no FIFO data -- hit harder?` | Bang the desk harder. |
+| Test 6 prints `interrupt but no FIFO data (src 0x..) -- hit harder?` | Bang the desk harder. |
 | Test 8 times out | Check the antenna on the GPS port is an active antenna, that the u.FL cables go GPS to GPS, and that the antenna can see the sky. |
 | Test 9 reports no SIM, or registration fails | Check the SIM is seated, that your network has LTE-M coverage where you are, and the APN. |
 
