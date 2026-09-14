@@ -113,7 +113,7 @@ The Connect Kit's USB-C port is how you watch the console and reflash the tracke
 A normally closed momentary switch - push to break - wired in series with the permanent 12V feed, after its fuse, lets you power-cycle the tracker without reaching it. Use it if the tracker stops responding, or to clear a latched over-voltage trip, which only releases once the supply to the protection stage has fallen.
 
 - The ignition input only feeds a sense circuit, so breaking the permanent feed removes all of the tracker's power.
-- Hold the button down for a few seconds so the input capacitors discharge. The tracker restarts when you let go.
+- Hold the button down for about a minute. A unit that is awake drains its input capacitors in a few seconds, but one asleep draws so little that they take much longer. The tracker restarts when you let go.
 - With a USB cable connected, the Connect Kit runs from USB and the button does not restart it.
 - Use a switch rated for 12V automotive use, and mount it discreetly: holding it down, or finding and cutting its wires, turns the tracker off.
 
