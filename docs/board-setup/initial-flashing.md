@@ -118,11 +118,11 @@ To restart the firmware without flashing it again:
 ./reset.sh
 ```
 
-`reset.sh` resets only the nRF9151, so USB and an open console stay up.
+`reset.sh` pulses the reset line, like `flash.sh`, so the serial ports disappear and come back: reopen your console afterwards.
 
 ### Why the scripts reset the way they do
 
-- Programming normally ends with a soft reset, but that leaves the nRF9151 in debug interface mode, where it draws milliamps while asleep until the next pin reset or power cycle. `flash.sh` finishes with a pin reset instead.
+- Programming normally ends with a soft reset, but that leaves the nRF9151 in debug interface mode, where it draws milliamps while asleep until the next pin reset or power cycle. `flash.sh` and `reset.sh` use a pin reset instead.
 - After a pin reset the chip's access port protection (APPROTECT) is armed again. The firmware clears it on every boot, but only while the chip's UICR register allows it. pyocd's default answer to a protected chip is a mass erase, which wipes the firmware and that register - and a board in that state erases itself again on its next reset. So both scripts tell pyocd not to erase when resetting. The programming step in `flash.sh` is the one place an erase is allowed, because it rewrites the register and the firmware straight afterwards.
 - If `./reset.sh` fails and pyocd mentions APPROTECT, run `./flash.sh`. That is the recovery.
 
@@ -143,7 +143,7 @@ On Linux the console has a fixed name. Install `screen` with `sudo apt install -
 screen /dev/serial/by-id/usb-Makerdiary_IFMCU_CMSIS-DAP_*-if00 115200
 ```
 
-Leave `screen` with Ctrl-A then K. `screen -L` also records everything to `screenlog.0`. Run `./reset.sh` in another terminal to watch a boot from the start.
+Leave `screen` with Ctrl-A then K. `screen -L` also records everything to `screenlog.0`. `./reset.sh` restarts the Connect Kit's USB as well, so reopen the console straight after it; the first lines of the boot can be missed.
 
 A healthy boot looks like this (abridged - timings and readings will differ):
 

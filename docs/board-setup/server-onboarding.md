@@ -27,7 +27,7 @@ Nothing needs building or flashing again: the server accepts the device's next d
 ./reset.sh
 ```
 
-Once the modem has registered, the device sends, and this time the server answers. The console shows the reply, and with pin 5 off the device then goes back to sleep:
+Reopen the console, which the reset disconnects. Once the modem has registered, the device sends, and this time the server answers. The console shows the reply, and with pin 5 off the device then goes back to sleep:
 
 ```text
 <inf> main: imei=350000000000000

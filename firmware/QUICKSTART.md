@@ -167,9 +167,9 @@ Reboot the board without reflashing:
 ./reset.sh
 ```
 
-It uses `sysresetreq`, which resets the nRF9151 core only and leaves USB and an
-open `screen` session alone. If it fails reporting APPROTECT, the board booted
-locked; `./flash.sh` is the recovery path.
+It pulses the reset line, as `flash.sh` does, so the nRF9151 leaves debug interface
+mode and sleeps at its proper current. USB re-enumerates, so reopen any `screen`
+session afterwards.
 
 Monitor serial output (the Connect Kit exposes a USB CDC-ACM console):
 

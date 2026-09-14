@@ -293,7 +293,14 @@ if [[ $opened -ne 1 ]]; then
 fi
 
 echo "Resetting target..."
-./reset.sh
+# A soft reset, unlike reset.sh: the console session is already open, and a pin
+# reset would re-enumerate USB underneath it.  It leaves the chip in debug
+# interface mode, which only matters for sleep current, and nothing here
+# measures that.
+if ! pyocd reset -t nrf91 -m sysresetreq -O auto_unlock=false; then
+    echo "Reset failed.  If pyocd mentioned APPROTECT, run ./flash.sh: it is the recovery." >&2
+    exit 1
+fi
 
 echo
 echo "Attaching to the console.  In the test session:"
