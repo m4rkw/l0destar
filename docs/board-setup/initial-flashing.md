@@ -97,7 +97,7 @@ Built: /home/you/l0destar/firmware/build/merged.hex  (profile: makerdiary, targe
 
 ## Flash
 
-If the bench supply's current limit is still at the 50mA used for the first power-up checks, raise it to around 300mA now. From here on the modem registers and transmits, which draws more than 50mA from the 12V input, and a supply sitting in current limit makes the board brown out and reset.
+If the bench supply's current limit is still at the 50mA used for the first power-up checks, raise it to around 300mA now. From here on the modem registers and transmits, averaging up to about 45mA from the 12V input at full transmit power with bursts above that, and a supply that hits its current limit makes the board brown out and reset.
 
 With the Connect Kit connected over USB - the 12V supply can stay on:
 
@@ -208,7 +208,7 @@ Once the engine counts as running, the supply has to stay below 13.0V for five m
 | `pyocd list` finds no probe | The cable carries data. On Linux, the udev rule from the [prerequisites](/board-setup/prerequisites.html#linux-access-to-the-connect-kit) is in place. In a virtual machine, the Connect Kit is connected to it. |
 | `flash.sh` stops with `Memory transfer fault` | Unplug USB and power the board off and on, then run `./flash.sh` again. |
 | Permission denied opening the serial port | On Linux, you are in the `dialout` group and have logged in again since adding it. |
-| The board keeps restarting | The bench supply's current limit: around 300mA once firmware is running, because at 50mA the modem's draw browns the board out. Then look for a pattern in the `reset cause:` line. |
+| The board keeps restarting | The bench supply's current limit: around 300mA once firmware is running, because the modem's transmit bursts can take a 50mA supply into its limit and brown the board out. Then look for a pattern in the `reset cause:` line. |
 | `RAIL:... fail` or `SELFTEST:` messages | A switched rail did not come up: go back to the [board test](/assembly/board-test.html). |
 | `no GPS fix` | Active antenna on the GNSS connector, with a view of the sky. An unassisted first fix can take 2 to 5 minutes. |
 | `no fix, skipping send`, and no `sent` line | Nothing is sent before the first GNSS fix since the tracker started. Check the antenna as above, then switch pin 5 on: with the ignition on it keeps searching until it has a fix. |

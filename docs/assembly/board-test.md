@@ -96,8 +96,9 @@ accelerometer, GPS, the modem and the interface loopbacks.
 - An **adjustable supply**: one test asks you to raise the voltage by at least 1V and then lower
   it by at least 1V.
 - The supply's **current limit raised to around 300mA**. The 50mA limit of the first power-up
-  catches shorts, but a modem registering and transmitting draws more than that from the 12V input,
-  and a supply sitting in current limit makes the board brown out and reset.
+  catches shorts, but a modem transmitting at full power averages up to about 45mA from the 12V
+  input, with bursts above that, and a supply that hits its current limit makes the board brown out
+  and reset.
 - A SIM card in the Connect Kit and an antenna on both SMA connectors, with the GPS antenna able
   to see the sky. The GPS test searches for an unassisted cold fix, which can take several minutes.
 - `CONFIG_APP_APN` set to your SIM's APN in `firmware/local.conf`.

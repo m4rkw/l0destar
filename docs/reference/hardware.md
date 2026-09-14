@@ -204,7 +204,7 @@ specification below should do.
 | Over-voltage protection | Trips at about 4.95V and releases at about 4.80V; latches off while the unprotected rail stays above the release threshold, so clearing a trip needs the input power to drop far enough for the buck output to fall below about 4.8V |
 | Sleep current | about 35.5µA at 12V expected for a default v3.4 build (measured on a v3.2 board with the accelerometer rework, which is the same circuit for sleep current); fitting the buck enable divider adds about 9µA |
 | Sleep consumption | about 0.85mAh per day at 35.5µA |
-| Telemetry current | about 25mA peak, about 15mA average at 12V (bench observation) |
+| Reporting current | Nordic gives the nRF9151's average current in an LTE-M connection as 45mA at the lowest transmit power and 115-125mA at the maximum, 23dBm, at 3.7V: roughly 15-45mA from a 12V input through the buck, taking it as about 85% efficient, with short transmit bursts above that. The author's bench supply showed 15-25mA while the tracker reported |
 | Battery thresholds | 11.9V low-battery warning, 13.0V engine running (firmware defaults, configurable) |
 | Vehicle interface | Optional, one at a time: classic CAN and CAN-FD (MCP2518FD controller, TCAN3414DR transceiver specified for 2, 5 and 8Mbps) or K-wire (TJA1027T transceiver, K and L lines) |
 | PCB | 66.65 x 37.55mm, 1.6mm, 4 layers |

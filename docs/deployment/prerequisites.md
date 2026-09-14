@@ -30,7 +30,7 @@ The tracker connects to the vehicle through a 6-way Molex Micro-Fit 3.0 connecto
 | Ring terminal | For the ground connection, sized for the stud or bolt you use |
 | Heat shrink, loom tape or braided sleeve, cable ties | Insulation, protection and strain relief |
 
-The tracker's current is small - the author measured about 25mA peak and 15mA on average while it reports, at 12V - so the wire size is set by the terminals and by mechanical strength rather than by current. The 2A fuses protect the wiring.
+The tracker's current is small - roughly 15-45mA from 12V while it reports, going by Nordic's figures for the modem, and 15-25mA on the author's bench supply - so the wire size is set by the terminals and by mechanical strength rather than by current. The 2A fuses protect the wiring.
 
 ## Diagnostic connection (optional)
 
