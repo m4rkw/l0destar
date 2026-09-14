@@ -138,7 +138,7 @@ Each device's settings live in its `device` row. The first three are sent to the
 |---|---|---|---|
 | `int` | `0` | `int=<seconds>` command, or `int` in `POST /api/1.0/config` | Engine-off timed wake interval in seconds; 0 means no timed wakes. |
 | `movement_alarm` | `1` | `movealarm=0` or `movealarm=1` command, or `ma` | Movement alarm flag, reported back by the tracker. Current firmware does not act on it. |
-| `track_mode` | `0` | the web interface, or `POST /api/1.0/trackmode` | Track mode switch. Cleared at ignition off, or after an hour without contact. |
+| `track_mode` | `0` | the web interface, or `POST /api/1.0/trackmode` | Track mode switch. Cleared at ignition off, or when the device is next heard from after more than an hour of silence. |
 | `alarm` | `0` | `alarm=0` or `alarm=1`, or `al` | Notify when the ignition comes on. |
 | `garage` | `0` | `garage=0` or `garage=1`, or `ga` | The vehicle is expected to move: priority 2 alerts are sent at priority 0 and the home check does not alert for it. |
 | `overnight_alarm` | `0` | `overnightalarm=0` or `overnightalarm=1`, or `oa` | Notify when the ignition comes on inside the overnight window. |
