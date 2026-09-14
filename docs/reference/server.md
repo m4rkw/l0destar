@@ -113,7 +113,7 @@ How each backend behaves is described in [Configure alerts](/deployment/alerts.h
 | `fw/` | Firmware images and manifests, published from the build machine. |
 | `logs/` | The log files. |
 
-The server and the database run as the owner of the directory, or as uid 10001 if that is root. At every start the container gives `mysql/`, `certs/` and `logs/` to that account, sets the database account's password from `config.yaml`, and applies any migrations the database has not had yet.
+The server and the database run as the owner of the directory, or as uid 10001 if that is root. At every start the container gives `mysql/`, `certs/`, `logs/` and `config.yaml` to that account, sets the database account's password from `config.yaml`, and applies any migrations the database has not had yet.
 
 ## Environment variables
 

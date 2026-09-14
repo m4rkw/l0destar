@@ -76,6 +76,11 @@ for dir in "$DATA/mysql" "$CERTS" "$DATA/logs"; do
         chown -R tracker:tracker "$dir"
     fi
 done
+# config.yaml keeps the owner it was written with, and is mode 600, so it has to
+# follow the owner of /data too or the server cannot read it.
+if [ -e "$CONFIG" ] && [ "$(stat -c %u:%g "$CONFIG")" != "$uid:$gid" ]; then
+    chown tracker:tracker "$CONFIG"
+fi
 
 # -- certificates --------------------------------------------------------------
 
