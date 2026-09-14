@@ -179,13 +179,19 @@
 #define SPEED_MIN_SATS              4
 /* Key-off means the vehicle is stopped, but GNSS speed does not settle to
  * exactly zero at a standstill: multipath and the receiver's own filter
- * leave a residual of a km/h or two, and the last fix before the key turned
- * can be a second or so old.  A record that says "ignition off at 2.4 km/h"
- * puts a phantom crawl on the end of every journey.  So on the ignition-off
- * record, and only there, a GNSS speed below this reads as stopped and goes
- * out as 0.  2 mph in km/h; above it the vehicle really was still rolling
- * (coasting to a stop, or the key cut while moving) and the figure stands. */
+ * leave a residual of a km/h or two, and the ECU speed that does read zero
+ * is unpowered.  A record that says "ignition off at 2.4 km/h" puts a phantom
+ * crawl on the end of every journey, and a parked unit's check-ins showed a
+ * 1 mph creep.  So on every ignition-off record a GNSS speed below this reads
+ * as stopped and goes out as 0.  2 mph in km/h; above it the vehicle really
+ * is rolling (coasting to a stop, a key cut while moving, a tow) and the
+ * figure stands. */
 #define IGN_OFF_STOPPED_KMH         3.22f
+/* How old a fix may be for its speed to go out in a record.  Records built
+ * from the stored position — every timed check-in while parked — would
+ * otherwise repeat the last fix's speed for as long as the unit slept.  A
+ * record built from a live fix follows it within a second or two. */
+#define SPEED_FIX_MAX_AGE_MS        10000
 
 /* -- hardware presence flags (compiled-out paths) -------------------------- */
 #define LOW_POWER_STANDBY           1

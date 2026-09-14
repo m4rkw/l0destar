@@ -15,6 +15,19 @@ registration is now owed: the loop polls every `RESEND_POLL_S` (30 s) and, once
 the modem registers, reruns the timed report — a fresh record, the backlog and
 the server's reply — before powering the modem off.
 
+### A parked unit's records no longer carry a phantom speed
+- **A speed goes out only with the fix it came from.**  Every timed check-in
+while parked reuses the stored position, and it used to repeat that fix's
+speed too, for as long as the unit slept: on 2026-09-14 the car's hourly
+records carried 0.68 mph from the fix taken after its 06:56 reboot, and the
+page showed 1 mph.  A fix older than `SPEED_FIX_MAX_AGE_MS` (10 s) now goes out
+with speed 0.
+- **Every ignition-off record reads a residual GNSS speed as stopped.**  The
+`IGN_OFF_STOPPED_KMH` cut (3.22 km/h, 2 mph) applied only to the record where
+the key turned, so a fresh fix taken while parked, such as the one after a
+reboot, still reported the receiver's standstill noise.  Above the threshold a
+roll-away or a tow reports what it measured.
+
 ## 0.4.43
 
 ### A failed A-GNSS fetch no longer leaves a cold start unassisted
