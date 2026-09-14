@@ -273,13 +273,15 @@ def _rate_limited(ip):
     row = db.web.one('SELECT * FROM `authoptions_ip` WHERE `ip` = %s', (ip,))
     now = int(time.time())
 
-    if row and row['count'] >= config.RATE_LIMIT_REQUEST_COUNT:
-        if now - row['last_request_timestamp'] < config.RATE_LIMIT_RESET_PERIOD:
-            return True
+    # The count starts again once an address has been quiet for a whole
+    # period, so abandoned attempts spread over weeks never add up to a block.
+    if row and now - row['last_request_timestamp'] >= config.RATE_LIMIT_RESET_PERIOD:
         db.web.query(
             'UPDATE `authoptions_ip` SET `count` = 1, `last_request_timestamp` = %s '
             'WHERE `ip` = %s', (now, ip))
         return False
+    if row and row['count'] >= config.RATE_LIMIT_REQUEST_COUNT:
+        return True
 
     if row:
         db.web.query(

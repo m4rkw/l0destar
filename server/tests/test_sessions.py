@@ -68,3 +68,23 @@ def test_a_login_expires_after_its_lifetime(client, logged_in, database, device)
     with client.session_transaction() as session:
         session['login_at'] = int(time.time()) - config.SESSION_LIFETIME_DAYS * 86400 - 1
     assert refused(client.get('/api/1.0/devices'))
+
+
+def test_the_challenge_count_starts_again_after_a_quiet_period(database):
+    from tracker import config
+    from tracker.web import auth
+
+    now = int(time.time())
+    blocked, quiet, fresh = '203.0.113.1', '203.0.113.2', '203.0.113.3'
+    database.query(
+        "INSERT INTO `authoptions_ip` (`ip`, `count`, `last_request_timestamp`) VALUES "
+        "(%s, %s, %s), (%s, %s, %s), (%s, 1, %s)",
+        (blocked, config.RATE_LIMIT_REQUEST_COUNT, now - 60,
+         quiet, config.RATE_LIMIT_REQUEST_COUNT - 1, now - config.RATE_LIMIT_RESET_PERIOD,
+         fresh, now - 60))
+
+    assert auth._rate_limited(blocked)
+    assert not auth._rate_limited(quiet)
+    assert not auth._rate_limited(fresh)
+    counts = {r['ip']: r['count'] for r in database.all('SELECT `ip`, `count` FROM `authoptions_ip`')}
+    assert counts[quiet] == 1 and counts[fresh] == 2
