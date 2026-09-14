@@ -16,7 +16,7 @@ sudo docker exec l0destar python tools/regtoken.py alice tracker.example.com
 
 It prints a link like `https://tracker.example.com/register?username=alice&token=...`, valid once, for 24 hours.
 
-2. Open the link **on the device that will hold the passkey** and press **register**. Registration needs the device's own authenticator with user verification - iCloud Keychain, Google Password Manager, Windows Hello and the like. Roaming security keys are refused.
+2. Open the link **on the device that will hold the passkey** and press **register**. Registration asks for the device's own authenticator, with user verification - iCloud Keychain, Google Password Manager, Windows Hello and the like - so browsers do not offer roaming security keys.
 3. When it says `passkey registered successfully`, follow **continue to login**, enter the username and approve the passkey prompt.
 
 Things to know:

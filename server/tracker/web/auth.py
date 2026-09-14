@@ -230,6 +230,7 @@ def register():
     except Exception as e:
         audit('register-error', str(e))
         return error(str(e))
+            require_user_verification=True,
 
     # Burn the invitation, then replace any existing credential for this
     # username — re-registering is how a user recovers a lost authenticator.
@@ -312,7 +313,7 @@ def authoptions():
 
     options = generate_authentication_options(
         rp_id=rp_id(),
-        user_verification=UserVerificationRequirement.PREFERRED,
+        user_verification=UserVerificationRequirement.REQUIRED,
     )
 
     db.web.query('DELETE FROM `authoptions` WHERE `session_id` = %s',
@@ -408,6 +409,7 @@ def authenticate():
         logs.app.warning('failed login for %s from %s', user['username'], client_ip())
         return json_response({'status': 'error', 'message': 'authentication failed'}, 401)
 
+            require_user_verification=True,
     db.web.query('DELETE FROM `authoptions` WHERE `session_id` = %s',
                  (session['session_id'],))
     db.web.query('UPDATE `user` SET `failed_login_count` = 0 WHERE `id` = %s',
