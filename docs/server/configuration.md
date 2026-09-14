@@ -84,7 +84,7 @@ journeys: true
 journey_resume_seconds: 300
 ```
 
-The ignition input cannot tell "key on" from "engine running". When a tracker reports engine RPM from the ECU (a K-wire build) the web interface uses that. Otherwise it shows the engine as running if any of the last `engine_stopped_count` records had the battery above `engine_running_voltage`, because only a charging alternator lifts the rail that high. These two keys only change what the web interface shows; the tracker makes its own decision using its firmware thresholds.
+The ignition input cannot tell "key on" from "engine running". When a tracker reports engine RPM from the ECU (a K-wire build) the web interface uses that. Otherwise it shows the engine as running if any of the last `engine_stopped_count` records had the battery at or above `engine_running_voltage`, because only a charging alternator lifts the rail that high. These two keys only change what the web interface shows; the tracker makes its own decision using its firmware thresholds.
 
 A journey opens on the first record with the ignition on and closes when the ignition goes off. If the ignition comes back on within `journey_resume_seconds`, the journey that just closed is reopened rather than a new one started, so a fuel stop does not split a trip in two.
 

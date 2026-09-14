@@ -53,7 +53,7 @@ The TLS listener serves firmware downloads and nothing else.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `engine_running_voltage` | `13.0` | Battery voltage above which the web interface assumes a charging alternator. |
+| `engine_running_voltage` | `13.0` | Battery voltage at or above which the web interface assumes a charging alternator. |
 | `engine_stopped_count` | `10` | How many recent records the web interface checks for that voltage before showing the engine as stopped. |
 | `journeys` | `true` | Build journeys from ignition changes. |
 | `journey_resume_seconds` | `300` | If the ignition comes back on within this many seconds, the previous journey continues. |
