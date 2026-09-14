@@ -11,6 +11,20 @@
 
 LOG_MODULE_REGISTER(cmd, CONFIG_APP_LOG_LEVEL);
 
+/* locatenow and tomtomnow build and send a record before saying where the
+ * unit is.  Awake with the ignition on, STATE_SEND has stopped GNSS for the
+ * send this reply answers, so resume it first; otherwise the collection waits
+ * out its timeout on a stopped receiver and reports the last known position.
+ * A parked unit's timed report keeps using that position. */
+static void locate_now(void)
+{
+    if (ignition == 0) {
+        gnss_resume();
+    }
+    collect_data(ignition);
+    send_data();
+}
+
 void cmd_run(char *cmd)
 {
     char *tmp;
@@ -71,8 +85,7 @@ void cmd_run(char *cmd)
     }
 
     if (strstr(cmd, "locatenow")) {
-        collect_data(ignition);
-        send_data();
+        locate_now();
         char msg[60];
         snprintf(msg, sizeof(msg), "google: %s,%s",
                  g_gnss.lat_str, g_gnss.lon_str);
@@ -85,8 +98,7 @@ void cmd_run(char *cmd)
     }
 
     if (strstr(cmd, "tomtomnow")) {
-        collect_data(ignition);
-        send_data();
+        locate_now();
         char msg[120];
         snprintf(msg, sizeof(msg), "tomtom: %s,%s",
                  g_gnss.lat_str, g_gnss.lon_str);
