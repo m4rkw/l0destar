@@ -142,14 +142,12 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>[,<movement_alarm>][,<commands>][,fota=<version>][,track=<0|1>]
+1,<interval>,<movement_alarm>[,<commands>][,fota=<version>][,track=<0|1>]
 ```
 
 The leading `1` is the ack the firmware checks before clearing its send
-buffer. `slim_response` drops the movement_alarm field, and with it everything
-that follows: current firmware applies a reply only when it carries both the
-interval and movement_alarm, so a slim reply delivers no settings, commands,
-OTA indication or track-mode switch. Leave it off.
+buffer. The firmware applies a reply only when it carries both the interval
+and movement_alarm.
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is

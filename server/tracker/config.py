@@ -73,9 +73,6 @@ TLS_PORT = int(get('tls_port', 65481))
 TLS_CERT = get('tls_cert', '')
 TLS_KEY = get('tls_key', '')
 
-# Drop the movement_alarm response field; shortens every reply.
-SLIM_RESPONSE = bool(get('slim_response', False))
-
 # -- storage -----------------------------------------------------------------
 
 DATABASE = require('database')

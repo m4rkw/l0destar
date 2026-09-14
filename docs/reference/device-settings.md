@@ -24,7 +24,7 @@ When the tracker reads a reply it:
 1. applies `<int>` and `<ma>` - unless it has changed them itself since its last record, in which case it sends its own values (`int=<n>;ma=<n>`) with its next record and the server adopts them;
 2. acts on everything after `<ma>`: the queued commands, the update advert (`fota=`) and the track mode switch (`track=`).
 
-It reads at most 127 characters after `<ma>`, so do not queue more than a few commands at once. The server's `slim_response` option leaves out `<ma>` and everything after it; current firmware then ignores the whole reply, so leave that option `false`.
+It reads at most 127 characters after `<ma>`, so do not queue more than a few commands at once.
 
 Settings live in the tracker's RAM. After a restart, until the first reply arrives, it uses:
 

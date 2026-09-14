@@ -81,12 +81,6 @@ tls_handshake_timeout: 45
 # the downloader has no resume, so a timeout costs the whole transfer.
 fw_download_timeout: 120
 
-# Drop movement_alarm from the response to shorten every reply.  Keep this
-# false with current firmware: it applies a reply only when it carries both
-# the interval and movement_alarm, so a slim reply delivers no settings, no
-# commands, no update indication and no track-mode switch.
-slim_response: false
-
 # ---------------------------------------------------------------------------
 # Behaviour
 # ---------------------------------------------------------------------------

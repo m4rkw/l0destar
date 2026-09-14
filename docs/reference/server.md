@@ -49,12 +49,6 @@ The TLS listener serves firmware downloads and nothing else.
 | `tls_read_timeout` | `10` | Seconds to wait for a request once the handshake is done. |
 | `fw_download_timeout` | `120` | Read timeout, in seconds, while serving a firmware download. |
 
-### Replies
-
-| Key | Default | Meaning |
-|---|---|---|
-| `slim_response` | `false` | Shorten replies by leaving out the movement alarm field, update adverts and the track mode switch. Must stay `false`: current firmware ignores a reply without the movement alarm field, including any commands in it. |
-
 ### Behaviour
 
 | Key | Default | Meaning |

@@ -73,12 +73,6 @@ The server listens for trackers on two ports:
 
 Both are on without any settings: the TLS listener starts once `tls_cert` and `tls_key` are set, which the first start does. Keep both ports at their defaults, in `config.yaml` and in the `-p` options of `docker run`, because both numbers are compiled into the firmware.
 
-```yaml
-slim_response: false
-```
-
-`slim_response` must stay `false`. Current firmware ignores a reply without the movement alarm field, so settings, queued commands, update adverts and the track mode switch would never reach a tracker.
-
 The TLS timeouts (`tls_read_timeout`, `tls_handshake_timeout` and `fw_download_timeout`) are tuned for LTE-M in weak signal and are best left alone. Opening the ports is covered in [Telemetry port](/server/telemetry-port.html).
 
 ## Engine state and journeys

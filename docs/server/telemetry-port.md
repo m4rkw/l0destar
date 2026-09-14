@@ -98,7 +98,7 @@ A working tracker appears in `udp.log` as `<n> records from <imei> (<address>)` 
 |---|---|
 | Nothing in `udp.log` when the tracker sends | wrong `CONFIG_APP_SERVER_HOST`, no A record, port forwarding or the provider's firewall, carrier-grade NAT, or the tracker is not registered on the mobile network |
 | `decrypt failed from ...` every time the tracker sends | the key built into the firmware is not the device's key on the server, or the device is not enrolled |
-| Records arrive but settings and commands never take effect | `slim_response` is on, or replies do not get back through NAT or an outbound firewall |
+| Records arrive but settings and commands never take effect | replies do not get back through NAT or an outbound firewall |
 | It worked until the server's public address changed | trackers resolve the hostname once per boot; power-cycle them |
 | Update checks fail on the tracker while telemetry works | TCP 65481 is not reachable; on the tracker's console a failed TLS connection can show as error 22 (`EINVAL`) rather than a timeout |
 | `TLS handshake failed` or handshake timeouts in `tls.log` during updates | weak signal; keep `tls_handshake_timeout` at its default of 45 seconds or raise it |
