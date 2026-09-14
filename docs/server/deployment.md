@@ -127,8 +127,9 @@ The `log` table gains a row for every record a tracker sends, and nothing ever r
 Journeys refer to ranges of `log` rows, so deleting old rows loses the replay for those journeys. If you want a retention limit, delete by id in batches, which uses the primary key rather than scanning the table:
 
 ```sql
--- the first row to keep
-SELECT MIN(id) FROM log WHERE timestamp >= NOW() - INTERVAL 2 YEAR;
+-- the first row to keep: reads the primary key from the oldest row and stops
+-- at the cut-off, rather than reading the whole table
+SELECT id FROM log WHERE timestamp >= NOW() - INTERVAL 2 YEAR ORDER BY id LIMIT 1;
 -- repeat until it affects no rows
 DELETE FROM log WHERE id < <that id> LIMIT 10000;
 ```
