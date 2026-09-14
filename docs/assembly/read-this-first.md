@@ -31,8 +31,8 @@ These pages describe the **l0destar v3.4** board.
 - **v3.4 is designed but has not yet been built or tested.** Every row of the test table in the
   [v3.4 README](https://github.com/m4rkw/l0destar/blob/master/hardware/l0destar_v3.4/README.md)
   reads NOT TESTED.
-- **v3.3 is the most recent board that has been built and bench tested.** v3.4 changes the
-  accelerometer footprint (see below), makes the buck converter's enable divider an optional
+- **v3.3 is the most recent board that has been built and bench tested.** v3.4 fixes the
+  accelerometer footprint, makes the buck converter's enable divider an optional
   part that is not fitted by default, adds test points, enlarges the holes for the Connect Kit power
   lead and specifies a TCAN3414DR CAN transceiver in place of the MAX33041E (same footprint and
   pinout).
@@ -65,7 +65,7 @@ That means your own due diligence on part selection, assembly, fusing, wiring an
 
 ## Known defects on older boards
 
-If you are working with a board older than v3.4, two defects matter.
+If you are working with a board older than v3.3, one defect matters.
 
 ### The L wire on every board before v3.3
 
@@ -83,15 +83,6 @@ past the module's absolute maximum and can destroy it.
     wire at all. v3.3 fixed the defect: an AL5809-90 limits the pull-down to 90mA and shuts down
     thermally, a 47K resistor limits fault current into the GPIO, and a new L_SENSE input lets
     the firmware detect a short to battery before it tries to drive the line.
-
-### The accelerometer on v3.0 to v3.3
-
-On every board from v3.0 to v3.3 the ASM330LHHXTR's pins 10 and 11, which the datasheet marks
-NC, were tied to the ground pour through a symbol error. With those pins grounded the part never
-enters its low-power state, so the board draws far more while asleep: a v3.2 board measured
-~140.8µA before the rework and ~35.5µA at 12V after it. v3.4 fixes the footprint. An existing
-board can be reworked - see
-[reworking the accelerometer](/assembly/assembly-guide.html#reworking-the-accelerometer-on-v30-to-v33).
 
 ## Hazards while you build
 
