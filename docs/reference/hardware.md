@@ -217,8 +217,9 @@ specification below should do.
 
 `CONFIG_APP_L_SEND_ENABLED`, on by default for v3.3 and v3.4 builds, lets the firmware drive the
 K-wire interface's L line. The L pull-down is current-limited to 90mA by an AL5809-90, and the
-L_SENSE input (Connect Kit P0.14, an analog input) lets the firmware detect an L wire shorted to
-battery before driving it. Not every vehicle needs the L line: the reference vehicle opens its
+L_SENSE input (Connect Kit P0.14, an analog input) lets the firmware test for an L wire shorted to
+battery: before a 5-baud init drives L, it pulls the line low for 5ms and, if the line stays high,
+leaves L out of the init. Not every vehicle needs the L line: the reference vehicle opens its
 diagnostic session on the K wire alone.
 
 L_SENSE classifies the line with a threshold, `CONFIG_APP_L_SENSE_LOW_MV` (default 2800mV): a line
