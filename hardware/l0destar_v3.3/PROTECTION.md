@@ -245,9 +245,9 @@ v3.3 breaks that chain in three places:
   intended endpoint rather than an accident. The fold-back time, and what the
   L line does while it folds back, are bench items - they are not derived
   anywhere in this document.
-- S10R7, 4.7K, is new in the gate lead between L_SEND and S10Q1. In v3.2 the
+- S10R7, 47K, is new in the gate lead between L_SEND and S10Q1. In v3.2 the
   gate sat directly on the GPIO. If the FET ever does fail drain-gate, the pin
-  now sees about 2 mA once its clamp conducts rather than an unlimited 12 V
+  now sees about 0.2 mA once its clamp conducts rather than an unlimited 12 V
   source. This is not a substitute for the current limit; it removes the
   specific failure mode that cost modules rather than boards.
 - The FET is no longer the sacrificial element. At 90 mA and Vgs 3.3 V a
