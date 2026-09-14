@@ -147,6 +147,9 @@ static char    s_pending_report[64]; /* "F,fota,..." waiting for a link */
  * image on every wake — which with the engine off is a battery flattened by
  * a 300 KB download an hour. */
 #define FOTA_ATTEMPT_MAGIC  0x10DEF07Au
+/* The same record once its revert has been reported, so a warm reset that
+ * finds it again neither alerts nor reports a second time. */
+#define FOTA_ATTEMPT_REPORTED 0x10DEF07Bu
 #define FOTA_MAX_ATTEMPTS   2
 
 static __noinit struct {
@@ -448,6 +451,14 @@ static const char *ver_str_of(uint32_t v, char *buf, size_t len)
  * "F,fota,failed,<staged>,<running>" is that statement. */
 void fota_verdict_on_boot(void)
 {
+    if (s_attempt.magic == FOTA_ATTEMPT_REPORTED && s_attempt.version != 0) {
+        /* Reverted and already reported: keep refusing a version that has
+         * used up its attempts, but raise nothing again. */
+        if (s_attempt.attempts >= FOTA_MAX_ATTEMPTS) {
+            s_denied_ver = s_attempt.version;
+        }
+        return;
+    }
     if (s_attempt.magic != FOTA_ATTEMPT_MAGIC || s_attempt.version == 0) {
         s_attempt.magic = 0;      /* power-on, or nothing was staged */
         return;
@@ -482,6 +493,7 @@ void fota_verdict_on_boot(void)
     alert_enqueue(msg, 0);
     s_pending_report[0] = '\0';
     strncpy(s_pending_report, line, sizeof(s_pending_report) - 1);
+    s_attempt.magic = FOTA_ATTEMPT_REPORTED;
 
     if (s_attempt.attempts >= FOTA_MAX_ATTEMPTS) {
         s_denied_ver = s_attempt.version;
@@ -832,7 +844,8 @@ int fota_check(enum fota_ctx ctx)
      * it took: same version running means success, anything else means
      * MCUboot reverted it.  Consecutive attempts at the same version are
      * counted; a different version starts again from one. */
-    if (s_attempt.magic != FOTA_ATTEMPT_MAGIC ||
+    if ((s_attempt.magic != FOTA_ATTEMPT_MAGIC &&
+         s_attempt.magic != FOTA_ATTEMPT_REPORTED) ||
         s_attempt.version != available) {
         s_attempt.attempts = 0;
     }
