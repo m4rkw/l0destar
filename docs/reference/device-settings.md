@@ -83,7 +83,7 @@ A request to queue a command must name the device, with `imei`, `device_id` or a
 |---|---|---|
 | `int=<seconds>` | Sets the engine-off interval. `0` stops timed reports; 1 to 9 become 10. Reported back with the next record. | `engine-off interval changed; <old> -> <new>` |
 | `movealarm=0`, `movealarm=1` | Sets the movement alarm flag, which firmware 0.4.x does not act on. Reported back with the next record. | `movement alarm OFF`, `movement alarm ON` |
-| `movereset` | Resets the movement alert back-off, and restores the engine-off interval if a movement alert had changed it. | `movement alarm reset` |
+| `movereset` | Resets the movement alert back-off, and restores the engine-off interval the tracker had when it last went to sleep; the next reply from the server replaces it with the server's value. | `movement alarm reset` |
 | `locate` | Reports the last known position; no new fix is taken. | `google: <lat>,<lon>` |
 | `locatenow` | Builds and sends a record first, then reports the position. While driving that is a fresh fix; on a parked unit's timed report it is the last known position. | `google: <lat>,<lon>` |
 | `tomtom`, `tomtomnow` | As `locate` and `locatenow`, with a TomTom link. | `tomtom: <lat>,<lon>` |
