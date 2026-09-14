@@ -32,7 +32,8 @@ somewhere to report to while you bring it up on the bench.
 - Position, speed, battery voltage and ignition state every few seconds while driving (3-5
   seconds on LTE-M in the author's vehicle), and on a timer while parked if you want it.
 - An optional vehicle diagnostic interface, CAN-FD or K-wire. Over the K wire the firmware reads
-  engine data and fault codes; the CAN-FD interface has been bench tested from 125kbps up to 8Mbps,
+  engine data and fault codes. The CAN-FD interface was bench tested on a v3.1 board from 125kbps
+  up to 8Mbps - beyond that board's transceiver rating at 8Mbps, where 2 bit errors were retried -
   but the firmware does not read vehicle data over CAN yet.
 - Firmware that updates itself over the air, with a separate signed image for every device.
 - A server that stores the history, splits it into journeys, shows a live map and journey

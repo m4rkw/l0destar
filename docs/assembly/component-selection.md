@@ -37,6 +37,8 @@ To see what your vehicle uses, look at its OBD socket: CAN diagnostics use pins 
   both classic CAN and CAN-FD. On a v3.1 board, with the MAX33041E transceiver that earlier boards
   fit, it passed about 60,000 frames in both modes from 125kbps up to an 8Mbps FD data phase (see
   the [CAN bench test report](https://github.com/m4rkw/l0destar/blob/master/firmware/CAN_BENCH_REPORT.md)).
+  8Mbps is beyond the MAX33041E's 5Mbps rating, and there it logged 2 data-phase bit errors, both
+  retried and delivered; the TCAN3414DR that v3.4 specifies has not been tested.
   The firmware powers it, puts it to sleep and has bench tests for it, but **firmware 0.4.x does
   not read any vehicle data over CAN**, and the interface has not been tried in a vehicle. Build it
   if you intend to work on CAN support.
