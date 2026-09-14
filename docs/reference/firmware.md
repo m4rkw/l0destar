@@ -374,7 +374,7 @@ Runtime settings:
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
 | `APP_KLINE_TELEMETRY` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. Add the OBD-II values the ECU supports to each record: engine speed, road speed, coolant and intake temperature, load, throttle, mass air flow, timing, fuel trims, fuel system status, lamp and stored code count. The diagnostic session is opened once and held for the drive |
-| `APP_KLINE_DTC_REPORT` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. Read the stored fault codes shortly after ignition on and again at ignition off, and send the complete set to the server. Read-only: clearing codes is not implemented |
+| `APP_KLINE_DTC_REPORT` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. Read the stored fault codes shortly after ignition on and again whenever the stored-code count changes during a drive, and send the complete set to the server; nothing is read at ignition off, when the ECU is unpowered. Read-only: clearing codes is not implemented |
 | `APP_KLINE_DTC_ON_DELAY_MS` | int, 0-30000 | `5000` | Depends on `APP_KLINE_DTC_REPORT`. Wait after ignition on before reading codes, while the ECU boots |
 | `APP_KLINE_ECU_ADDR` | hex, 0x01-0xfe | `0x33` | Address the session opens with the 5-baud init. `0x33` is the OBD functional address; some vehicles, including the author's Toyota, answer only on a physical address, so use what discovery reports |
 | `APP_KLINE_BAUD` | int | `10400` | Data rate for the handshake and session. Some ECUs answer at 9600; the init retries at the other rate when the sync byte does not decode |

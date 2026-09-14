@@ -30,7 +30,7 @@ To see what your vehicle uses, look at its OBD socket: CAN diagnostics use pins 
 - **K-wire.** The firmware opens a KWP2000 (ISO 14230) session over the K wire and can report
   engine RPM, vehicle speed, coolant and intake temperature, load, throttle, mass air flow, timing
   advance, fuel trims, fuel system status and the check-engine lamp with every record, and send
-  the stored fault codes when the ignition changes. The same wire carries ISO 9141-2 and
+  the stored fault codes after the ignition comes on and whenever they change during a drive. The same wire carries ISO 9141-2 and
   manufacturer-specific pre-OBD protocols such as VAG KW1281, which the firmware does not speak.
   Each vehicle needs a one-off discovery run first.
 - **CAN-FD.** The CAN block - an MCP2518FD CAN-FD controller and a CAN-FD transceiver - handles

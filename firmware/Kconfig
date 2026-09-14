@@ -260,7 +260,7 @@ config APP_KLINE_TELEMETRY
 	  run APP_KLINE_DISCOVER once to find them.
 
 config APP_KLINE_DTC_REPORT
-	bool "Read and report stored fault codes at ignition transitions"
+	bool "Read and report stored fault codes"
 	depends on APP_BOARD_HAS_KLINE
 	default n
 	help
