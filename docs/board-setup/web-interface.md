@@ -157,11 +157,11 @@ sudo docker exec l0destar python tools/command.py 350000000000000 locate
 
 A tracker that stops reporting while parked at home is hard to notice: its last record looks exactly like a car parked at home. The home check catches the opposite case - the last known position is not where the vehicle should be.
 
-List each vehicle's home in `home_check` in the server's configuration (see [server configuration](/server/configuration.html)), then call the endpoint from a scheduled job at a time the vehicles should be home:
+List each vehicle's home in `home_check` in the server's configuration (see [server configuration](/server/configuration.html)), then call the endpoint on a schedule from the server itself, at a time the vehicles should be home - [server deployment](/server/deployment.html#scheduling-the-home-check) has the details:
 
-```sh
-# crontab: every night at 02:00
-0 2 * * * curl -s -X POST -H "Authorization: Bearer <token>" https://tracker.example.com/api/1.0/home
+```text
+# /etc/cron.d/l0destar-home-check: every night at 03:00
+0 3 * * * nobody curl -fsS -X POST -H "Authorization: Bearer <token>" http://127.0.0.1:5000/api/1.0/home > /dev/null
 ```
 
 It checks every configured vehicle, or only the one `?imei=` names (an IMEI with no `home_check` entry fails with `no home_check entry for <imei>`), and returns a `devices` list with each vehicle's `imei`, `name`, `at_home`, `distance_m` and `garage` flag. A vehicle that cannot be checked carries an `error` instead - `device not found` or `no position recorded`. A vehicle away from home that is not in garage mode raises `<name>: tracker may be stalled - vehicle is <n>m from home`.
