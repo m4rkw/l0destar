@@ -620,7 +620,8 @@ config APP_FOTA_DOWNLOAD_TIMEOUT_S
 	int "Image download timeout (seconds)"
 	default 1200
 	help
-	  Upper bound on the whole download.  A ~300 KB image over LTE-M
+	  Upper bound on one update check's download, every attempt included.
+	  A ~300 KB image over LTE-M
 	  typically takes 2-5 minutes; the watchdog is fed throughout.
 
 config APP_FOTA_FRAGMENT_SIZE

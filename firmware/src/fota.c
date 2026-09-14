@@ -304,8 +304,12 @@ static bool battery_permits_update(void)
 }
 
 /* -- download -------------------------------------------------------------- */
-static int download_image(void)
+static int download_image(int64_t deadline)
 {
+    if (k_uptime_get() >= deadline) {
+        return -ETIMEDOUT;
+    }
+
     int err;
 
     if (!s_dl_init_done) {
@@ -330,14 +334,13 @@ static int download_image(void)
     }
 
     /* The download runs on the downloader thread and can take minutes over
-     * LTE-M, so wait in short slices and keep the watchdog fed. */
-    int64_t deadline =
-        k_uptime_get() + (int64_t)CONFIG_APP_FOTA_DOWNLOAD_TIMEOUT_S * 1000;
+     * LTE-M, so wait in short slices and keep the watchdog fed, until the
+     * deadline the caller shares across every attempt of this check. */
 
     while (k_sem_take(&s_dl_done, K_SECONDS(5)) != 0) {
         watchdog_kick();
         if (k_uptime_get() >= deadline) {
-            LOG_ERR("download timed out after %ds",
+            LOG_ERR("download timed out (%ds budget)",
                     CONFIG_APP_FOTA_DOWNLOAD_TIMEOUT_S);
             (void)fota_download_cancel();
             (void)k_sem_take(&s_dl_done, K_SECONDS(30));
@@ -746,16 +749,17 @@ int fota_check(enum fota_ctx ctx)
      * stall into a short delay instead of a wait for the next wake. */
     int err = -EIO;
 
-    /* APP_FOTA_DOWNLOAD_TIMEOUT_S bounds a single attempt; it also bounds the
-     * retry sequence, so adding attempts cannot multiply how long the unit
-     * stays awake with GNSS stopped.  A fast failure — the interesting case,
-     * a dropped connection — leaves nearly the whole budget for another go,
-     * while an attempt that grinds through the budget is not repeated. */
+    /* APP_FOTA_DOWNLOAD_TIMEOUT_S bounds the whole retry sequence: every
+     * attempt shares one deadline, so adding attempts cannot multiply how long
+     * the unit stays awake with GNSS stopped.  A fast failure — the
+     * interesting case, a dropped connection — leaves nearly the whole budget
+     * for another go, while an attempt that grinds through the budget ends
+     * the check. */
     int64_t budget_end =
         k_uptime_get() + (int64_t)CONFIG_APP_FOTA_DOWNLOAD_TIMEOUT_S * 1000;
 
     for (int attempt = 1; attempt <= FOTA_DL_ATTEMPTS; attempt++) {
-        err = download_image();
+        err = download_image(budget_end);
         if (err == 0) {
             break;
         }

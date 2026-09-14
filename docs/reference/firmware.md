@@ -312,7 +312,7 @@ update, and `push_fw.sh` does not check it either.
 | `APP_FOTA_RESCAN_TIMEOUT_S` | int, 10-600 | `90` | Registration wait after a re-scan |
 | `APP_FOTA_RETRY_HOLDOFF_S` | int | `600` | Wait after a failed attempt before trying again, doubling with each consecutive failure up to eight times this. The bare `fota` command overrides it |
 | `APP_FOTA_MANIFEST_TIMEOUT_S` | int | `30` | Manifest request timeout |
-| `APP_FOTA_DOWNLOAD_TIMEOUT_S` | int | `1200` | Limit on a whole download |
+| `APP_FOTA_DOWNLOAD_TIMEOUT_S` | int | `1200` | Limit on one update check's download, every attempt included |
 | `APP_FOTA_FRAGMENT_SIZE` | int | `0` | Range request size handed to the download library; `0` asks for one continuous response. `FOTA.md` notes that over the modem's TLS the image arrives in 2KB ranges regardless |
 
 ### Intervals and timeouts
