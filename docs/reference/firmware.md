@@ -148,8 +148,8 @@ the APN and the impact threshold - and builds with that. From `local.conf` it re
 | `NCS_ROOT` | `/opt/nordic/ncs/$NCS_VERSION` or `~/ncs/$NCS_VERSION`, whichever exists | SDK workspace |
 
 It clones makerdiary/nrf9151-connectkit into `ifmcu/.makerdiary-repo` when that is missing, refuses
-a checkout that predates the upstream power fix (PR #20), builds with that checkout as its board
-root and writes `build_ifmcu/ifmcu_firmware/zephyr/zephyr.uf2`.
+a clone that lacks the upstream power fix (PR #20) or has local changes, builds with that clone as
+its board root and writes `build_ifmcu/ifmcu_firmware/zephyr/zephyr.uf2`.
 
 `flash.sh` and `reset.sh` read no variables. `flash.sh` always programs `build/merged.hex`. On a
 locked chip the load can stop with a memory transfer fault just after the erase that unlocks it,

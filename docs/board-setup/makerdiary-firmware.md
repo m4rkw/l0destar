@@ -40,13 +40,12 @@ ifmcu/build.sh
 
 The script builds Makerdiary's repository, unmodified, from the copy your first tracker build fetched into `ifmcu/.makerdiary-repo` (it clones the repository itself if that is missing), taking the board definition from the same copy. Set `NCS_VERSION` or `NCS_ROOT` if your SDK is elsewhere.
 
-It refuses to build a checkout from before #20 was merged. Update the clone and run it again:
+It refuses to build a clone that doesn't include #20, or that has local changes - an older `ifmcu/build.sh` patched the clone itself, and that patch made a clone from before #20 look fixed. Discard any changes, update the clone and run the script again:
 
 ```sh
+git -C ifmcu/.makerdiary-repo checkout -- .
 git -C ifmcu/.makerdiary-repo pull
 ```
-
-If that clone ever had the old l0destar patch applied by hand, discard those edits first with `git -C ifmcu/.makerdiary-repo checkout -- .`.
 
 The image is written to `build_ifmcu/ifmcu_firmware/zephyr/zephyr.uf2`.
 
