@@ -24,7 +24,7 @@ When the tracker reads a reply it:
 1. applies `<int>` and `<ma>` - unless it has changed them itself since its last record, in which case it sends its own values (`int=<n>;ma=<n>`) with its next record and the server adopts them;
 2. acts on everything after `<ma>`: the queued commands, the update advert (`fota=`) and the track mode switch (`track=`).
 
-It reads at most 127 characters after `<ma>`, so do not queue more than a few commands at once. The server's `slim_response` option leaves out `<ma>` and everything after it; current firmware then ignores the whole reply, so leave that option `false`.
+It reads at most 127 characters after `<ma>`, so do not queue more than a few commands at once.
 
 Settings live in the tracker's RAM. After a restart, until the first reply arrives, it uses:
 
@@ -41,7 +41,7 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 | Track mode | `track=` | `device.track_mode` | `0` | GNSS off, engine and IMU data streamed quickly |
 | Update advert | `fota=` | per-device manifest | - | See [OTA updates](/board-setup/ota-updates.html) |
 
-- A timed report while parked sends the last known position. GNSS is only started for it when movement has been detected since the previous one. Ignition, movement, impact and tilt wake the tracker whatever the interval is.
+- A timed report while parked sends the last known position. GNSS is only started for it when movement has been detected since the previous one, or when the tracker has had no fix since it started. Ignition, movement, impact and tilt wake the tracker whatever the interval is.
 - Movement, impact and tilt alerts are raised whatever the movement alarm flag says. Use the priority settings in [Configure alerts](/deployment/alerts.html) to quieten them.
 - Track mode is switched from the web page (see [Web interface and API](/board-setup/web-interface.html)). The server clears it when the ignition goes off, or when a device is heard from after an hour of silence, and the tracker ignores `track=1` while the ignition is off.
 
@@ -83,15 +83,15 @@ A request to queue a command must name the device, with `imei`, `device_id` or a
 |---|---|---|
 | `int=<seconds>` | Sets the engine-off interval. `0` stops timed reports; 1 to 9 become 10. Reported back with the next record. | `engine-off interval changed; <old> -> <new>` |
 | `movealarm=0`, `movealarm=1` | Sets the movement alarm flag, which firmware 0.4.x does not act on. Reported back with the next record. | `movement alarm OFF`, `movement alarm ON` |
-| `movereset` | Resets the movement alert back-off, and restores the engine-off interval if a movement alert had changed it. | `movement alarm reset` |
+| `movereset` | Resets the movement alert back-off, and restores the engine-off interval the tracker had when it last went to sleep; the next reply from the server replaces it with the server's value. | `movement alarm reset` |
 | `locate` | Reports the last known position; no new fix is taken. | `google: <lat>,<lon>` |
 | `locatenow` | Builds and sends a record first, then reports the position. While driving that is a fresh fix; on a parked unit's timed report it is the last known position. | `google: <lat>,<lon>` |
 | `tomtom`, `tomtomnow` | As `locate` and `locatenow`, with a TomTom link. | `tomtom: <lat>,<lon>` |
 | `config` | Reports its firmware version, settings, battery, ignition and uptime. | `fw=<version> int=<n> ma=<n> tm=<n> bat=<volts>V ign=<on or off> up=<seconds>s` |
-| `fota` | Checks for an update at once, ignoring the retry holdoff and clearing any version it had given up on. | `fota: check queued` |
+| `fota` | Checks for an update at once, or once the engine stops if it is running, ignoring the retry holdoff and clearing any version it had given up on. | `fota: check queued`, or `fota: updates inhibited` on a unit built with `CONFIG_APP_FOTA_INHIBIT` |
 | `reboot` | Restarts the next time its main loop runs: straight away while driving, at engine start or key-off when the ignition is on with the engine off, and at the next ignition-on for a parked unit. | `rebooting` |
 | `track=0`, `track=1` | Sent by the server on every reply. Acted on only when it changes the mode; `track=1` is ignored while the ignition is off. | `track mode OFF`, `track mode ON` |
-| `fota=<version>` | Sent by the server when a newer build is published. The tracker compares it with its own version and downloads only a newer one. | None; see the `fota:` alerts |
+| `fota=<version>` | Sent by the server on every reply while a build is published for the device and not withheld. The tracker compares it with its own version and downloads only a newer one. | None; see the `fota:` alerts |
 
 - The tracker finds each command by its name anywhere in the reply, so the order does not matter and a command runs at most once per reply.
 - Positions in `google:` and `tomtom:` replies arrive as tappable links in Pushover.

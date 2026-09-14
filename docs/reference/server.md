@@ -49,17 +49,11 @@ The TLS listener serves firmware downloads and nothing else.
 | `tls_read_timeout` | `10` | Seconds to wait for a request once the handshake is done. |
 | `fw_download_timeout` | `120` | Read timeout, in seconds, while serving a firmware download. |
 
-### Replies
-
-| Key | Default | Meaning |
-|---|---|---|
-| `slim_response` | `false` | Shorten replies by leaving out the movement alarm field, update adverts and the track mode switch. Must stay `false`: current firmware ignores a reply without the movement alarm field, including any commands in it. |
-
 ### Behaviour
 
 | Key | Default | Meaning |
 |---|---|---|
-| `engine_running_voltage` | `13.0` | Battery voltage above which the web interface assumes a charging alternator. |
+| `engine_running_voltage` | `13.0` | Battery voltage at or above which the web interface assumes a charging alternator. |
 | `engine_stopped_count` | `10` | How many recent records the web interface checks for that voltage before showing the engine as stopped. |
 | `journeys` | `true` | Build journeys from ignition changes. |
 | `journey_resume_seconds` | `300` | If the ignition comes back on within this many seconds, the previous journey continues. |
@@ -119,7 +113,7 @@ How each backend behaves is described in [Configure alerts](/deployment/alerts.h
 | `fw/` | Firmware images and manifests, published from the build machine. |
 | `logs/` | The log files. |
 
-The server and the database run as the owner of the directory, or as uid 10001 if that is root. At every start the container gives `mysql/`, `certs/` and `logs/` to that account, sets the database account's password from `config.yaml`, and applies any migrations the database has not had yet.
+The server and the database run as the owner of the directory, or as uid 10001 if that is root. At every start the container gives `mysql/`, `certs/`, `logs/` and `config.yaml` to that account, sets the database account's password from `config.yaml`, and applies any migrations the database has not had yet.
 
 ## Environment variables
 
@@ -144,7 +138,7 @@ Each device's settings live in its `device` row. The first three are sent to the
 |---|---|---|---|
 | `int` | `0` | `int=<seconds>` command, or `int` in `POST /api/1.0/config` | Engine-off timed wake interval in seconds; 0 means no timed wakes. |
 | `movement_alarm` | `1` | `movealarm=0` or `movealarm=1` command, or `ma` | Movement alarm flag, reported back by the tracker. Current firmware does not act on it. |
-| `track_mode` | `0` | the web interface, or `POST /api/1.0/trackmode` | Track mode switch. Cleared at ignition off, or after an hour without contact. |
+| `track_mode` | `0` | the web interface, or `POST /api/1.0/trackmode` | Track mode switch. Cleared at ignition off, or when the device is next heard from after more than an hour of silence. |
 | `alarm` | `0` | `alarm=0` or `alarm=1`, or `al` | Notify when the ignition comes on. |
 | `garage` | `0` | `garage=0` or `garage=1`, or `ga` | The vehicle is expected to move: priority 2 alerts are sent at priority 0 and the home check does not alert for it. |
 | `overnight_alarm` | `0` | `overnightalarm=0` or `overnightalarm=1`, or `oa` | Notify when the ignition comes on inside the overnight window. |
@@ -153,7 +147,7 @@ Each device's settings live in its `device` row. The first three are sent to the
 
 An `int=` or `movealarm=` command is queued for the tracker, which applies it and reports the new value; `POST /api/1.0/config` changes the column directly and the next reply carries it. Either way the `int` and `movement_alarm` columns follow what the tracker reports. The server-side settings take effect immediately. What each setting does on the tracker, and every command, is in [Device settings and commands](/reference/device-settings.html#commands).
 
-The other columns identify the device (`imei`, `name`, `registration`), hold its key (`psk`) and replay state (`last_nonce`), and track firmware updates (`fw_staged`, `fw_staged_at`, `fw_blocked`, `fw_fail_count`); `command.py <imei> fota-retry` clears the update state.
+The other columns identify the device (`imei`, `name`, `registration`), hold its key (`psk`), and track firmware updates (`fw_staged`, `fw_staged_at`, `fw_blocked`, `fw_fail_count`); `command.py <imei> fota-retry` clears the update state.
 
 ## Tools
 
@@ -212,7 +206,7 @@ Creates a bearer token for the automation API and prints it. Tokens have no scop
 regtoken.py <username> <hostname>
 ```
 
-Prints a single-use enrolment link, `https://<hostname>/register?...`, valid for 24 hours. For an existing username, the passkey registered from the new link replaces the old one.
+Prints a single-use enrolment link, `https://<hostname>/register?...`, valid for 24 hours. Creating a link cancels any earlier one for the same username. For an existing username, the passkey registered from the new link replaces the old one.
 
 ### `import_plmn.py`
 
@@ -228,9 +222,9 @@ All in `/srv/l0destar/logs` (`log_dir`):
 
 | File | Contents |
 |---|---|
-| `app.log` | Application errors. |
+| `app.log` | Application errors, and every notification the server sends, whatever the backend. |
 | `udp.log` | The UDP listener: records received per exchange, commands delivered, alerts relayed, update reports, decryption failures. Also in the container's output. |
-| `tls.log` | The TLS listener: handshakes and firmware requests. Also in the container's output. |
+| `tls.log` | The TLS listener: failed handshakes, firmware requests and update confirmations. Also in the container's output. |
 | `debug.log` | Records that carry debug counters or a reset cause, one line each: a short list of incidents. |
 | `device.log` | Warnings and errors the firmware captured between sends, stamped with the time the tracker logged them. |
 | `audit.log` | Enrolment, login and logout attempts in the web interface, with client address and username. |
@@ -246,6 +240,7 @@ All in `/srv/l0destar/logs` (`log_dir`):
 | `journey` | Each ignition-on to ignition-off period, with the range of `log` rows it covers and its distance. |
 | `dtc` | Fault codes reported over the K wire, with when each was raised and cleared. |
 | `command` | Commands waiting for a tracker's next reply. Deleted as they are delivered. |
+| `device_nonce` | Every nonce each tracker has used in the last 30 days, for replay protection. Prunes itself. |
 | `plmn` | Mobile network operator names. Optional. |
 | `user` | Web interface users and their passkey public keys. |
 | `registration` | Enrolment links not yet used. |
@@ -253,7 +248,7 @@ All in `/srv/l0destar/logs` (`log_dir`):
 | `api_token` | Bearer tokens for the automation API. |
 | `schema_migration` | The files from `migrations/` the database has had. Kept by the container's start-up; the server itself does not use it. |
 
-Deleting a `device` row deletes its `log`, `journey`, `dtc` and `command` rows with it.
+Deleting a `device` row deletes its `log`, `journey`, `dtc`, `command` and `device_nonce` rows with it. The `last_nonce` column is no longer used.
 
 `schema.sql` creates the current schema. A database created from an older version needs the files in `migrations/` that are newer than it, oldest first. The container applies them itself at start-up, logging `l0destar: applying migration <file>` for each:
 
@@ -261,6 +256,7 @@ Deleting a `device` row deletes its `log`, `journey`, `dtc` and `command` rows w
 |---|---|
 | `2026-09-06_track_mode.sql` | the track mode switch, and the track mode columns of `log` |
 | `2026-09-12_fota_state.sql` | per-device update state, so a failing image is not downloaded over and over |
+| `2026-09-14_device_nonce.sql` | replay protection that survives a restart |
 
 ## HTTP endpoints
 
@@ -310,6 +306,6 @@ Served by the TLS listener on port 65481, not by the web application.
 
 | Path | Purpose |
 |---|---|
-| `/fw/manifest.txt?imei=<imei>&v=<version>` | The manifest published for that device, or `status=blocked` for a version withheld from it. |
+| `/fw/manifest.txt?imei=<imei>&v=<version>` | The manifest published for that device, or `status=blocked` for a version withheld from it. A request whose `v=` is the version staged for that device marks the update as installed; nothing authenticates it. |
 | `/fw/<file>` | A firmware image, with range requests. |
 | `/fw/published.txt` | Every version ever published; `push_fw.sh` uses it to number the next release. |

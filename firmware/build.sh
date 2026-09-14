@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
-# Build the tracker firmware (NCS v3.3.0).  Two board profiles, auto-selected by
-# which debug probe is attached — override with PROFILE=dk|makerdiary:
+# Build the tracker firmware (NCS v3.3.0).  Two board profiles — override with
+# PROFILE=dk|makerdiary:
 #
-#   dk          Nordic nRF9151 DK (default).  Console on the J-Link VCOM pins
+#   makerdiary  Makerdiary nRF9151 Connect Kit: the default, whether or not its
+#               CMSIS-DAP probe is attached.  Builds the vendored
+#               nrf9151_connectkit board target (boards/makerdiary/, found via
+#               BOARD_ROOT) so the console pins match the hardware.  That board
+#               target does NOT default CONFIG_MODEM_ANTENNA on (only Nordic's
+#               own boards do), so the committed
+#               boards/nrf9151_connectkit_nrf9151_ns.conf enables it and sends
+#               AT%XCOEX0=1,1,1565,1586 — the Connect Kit's GNSS LNA LDO is gated
+#               by COEX0, so without that command the LNA stays off and GPS sees
+#               no satellites.  makerdiary.conf, when present, is layered on top
+#               for settings of your own.
+#   dk          Nordic nRF9151 DK.  Console on the J-Link VCOM pins
 #               (P0.27/P0.26) via the committed boards/nrf9151dk overlay.
-#   makerdiary  Makerdiary nRF9151 Connect Kit, detected via its CMSIS-DAP probe.
-#               Builds the vendored nrf9151_connectkit board target (boards/
-#               makerdiary/, found via BOARD_ROOT) so the console pins match the
-#               hardware.  That board target does NOT default CONFIG_MODEM_ANTENNA
-#               on (only the DK target does), so makerdiary.conf re-enables it and
-#               sends AT%XCOEX0=1,1,1565,1586 — the Connect Kit's GNSS LNA LDO is
-#               gated by COEX0, so without that command the LNA stays off and GPS
-#               sees no satellites.  makerdiary.conf also re-parks the two app
-#               GPIOs that collide with the board's console pins (P0.11/P0.12).
 #
 # The first build also fetches the Connect Kit board definition and creates the
 # firmware signing key, and every build keeps src/ca_cert.h in step with
@@ -158,10 +160,11 @@ CMAKE_ARGS=()
 CONF_OVERLAYS=()
 DTC_OVERLAYS=()
 
-# Makerdiary profile: the board target supplies the console pins and GNSS
-# antenna default, so we only need BOARD_ROOT (to find the vendored board def)
-# and makerdiary.conf for the app GPIO re-park.  Layered first so the personal
-# local.* files below can still override on the bench.
+# Makerdiary profile: the board target supplies the console pins, and Zephyr
+# applies boards/nrf9151_connectkit_nrf9151_ns.conf (the GNSS antenna setup) to
+# it by itself, so we only need BOARD_ROOT (to find the vendored board def) and
+# makerdiary.conf when it exists.  Layered first so the personal local.* files
+# below can still override on the bench.
 if [[ "$PROFILE" == makerdiary ]]; then
 	CMAKE_ARGS+=("-DBOARD_ROOT=$APP_DIR")
 	# The board definition is Makerdiary's and not kept in this repository, so

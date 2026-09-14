@@ -160,7 +160,9 @@ gitignored, and the firmware build generates `firmware/src/ca_cert.h` from
 `schema.sql` is the full current schema for a new database.  An existing one
 takes the ALTER statements in `migrations/`, oldest first, each applied once.
 The Docker image does that itself at start-up, and records what it applied in
-`schema_migration`. From a checkout:
+`schema_migration`; a database without that record, such as one restored from
+an older dump, gets every migration, skipping any change it already has. From a
+checkout:
 
 ```
 mysql -u root -p tracker < migrations/2026-09-06_track_mode.sql

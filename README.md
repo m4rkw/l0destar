@@ -7,11 +7,9 @@ Inspired by the [Geolink Opentracker](https://github.com/geolink/opentracker/) a
 ## Status
 
 Prototyping / design phase. The v2.1 layout worked on a bench, and v2.6 (CAN,
-K-line and micro), v3.0 and v3.1 have since been built and tested working,
-with every recorded bench test passing - see the test status table in each
-board's README. v3.2 is designed but untested, pending arrival of the first
-batch of boards and v3.3 is an initial draft and may change slightly before
-the boards are ordered.
+K-line and micro), v3.0, v3.1, v3.2 and v3.3 have since been built and bench
+tested - see the test status table in each board's README. v3.4 is designed
+but not yet built or tested.
 
 <strong>All boards before v3.3 have a serious defect in the K-wire circuit
 if the L wire is connected. If any of these prototypes are built the L wire

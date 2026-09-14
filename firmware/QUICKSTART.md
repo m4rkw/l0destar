@@ -47,7 +47,8 @@ is on a `main` that includes #20 and build
 
 Flash via UF2 bootloader:
 
-1. Double-press the Connect Kit reset button - a `UF2BOOT` mass-storage
+1. Hold the Connect Kit's DFU/RST button while plugging in USB (with the 12V
+   supply off if it is on the carrier board) - a `UF2BOOT` mass-storage
    volume appears.
 2. Copy the built image:
    ```bash
@@ -61,54 +62,48 @@ firmware the nRF52820 stays awake at ~2 mA.
 
 ## 2. Install nRF tooling
 
-Install `nrfutil` and its required subcommands:
+Install [nRF Util](https://www.nordicsemi.com/Products/Development-tools/nRF-Util),
+then let it install the SDKs (v3.3.0 for the tracker firmware, v3.4.0 for the IF
+MCU) with their toolchains:
 
 ```bash
-brew install --cask nordicsemiconductor/nrfutil/nrfutil   # or: pip install nrfutil
-nrfutil install device
-nrfutil install toolchain-manager
+nrfutil install sdk-manager
+nrfutil sdk-manager install v3.3.0
+nrfutil sdk-manager install v3.4.0
 ```
 
-Install the NCS SDK (v3.3.0 for the tracker firmware, v3.4.0 for IF MCU):
+Nordic publishes no toolchain for arm64 Linux. There, install the SDKs with west
+as the [prerequisites](../docs/board-setup/prerequisites.md) and
+[Makerdiary firmware](../docs/board-setup/makerdiary-firmware.md) pages describe.
+
+Install pyocd for SWD flashing, with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-nrfutil sdk-manager install --ncs-version v3.3.0
-nrfutil sdk-manager install --ncs-version v3.4.0
-```
-
-Install pyocd for SWD flashing:
-
-```bash
-pip install pyocd
+uv tool install --python 3.12 pyocd
 ```
 
 ## 3. Configure
 
-Create `local.conf` (gitignored) with three required settings and a board
-selection:
+Create `local.conf` (gitignored) with a board selection, the server, your APN
+and the device key:
 
 ```kconfig
-# Board - pick the carrier PCB variant:
-#   APP_BOARD_L0DESTAR_V2_5_CAN, APP_BOARD_L0DESTAR_V2_5_KLINE,
-#   APP_BOARD_L0DESTAR_V2_5_MICRO, APP_BOARD_L0DESTAR_V2_6_CAN,
-#   APP_BOARD_L0DESTAR_V2_6_KLINE, APP_BOARD_L0DESTAR_V2_6_MICRO,
-#   APP_BOARD_L0DESTAR_V3_0
-# See Kconfig.boards for the full list.
-CONFIG_APP_BOARD_L0DESTAR_V2_6_KLINE=y
+# Board - the carrier PCB revision (Kconfig.boards lists the others)
+CONFIG_APP_BOARD_L0DESTAR_V3_4=y
+# The OBD interface fitted: 0 none, 1 CAN, 2 K-wire (0 is safe on any board)
+CONFIG_APP_OBD_MODE=0
 
-# Server hostname (DTLS endpoint - server setup documented separately)
+# Your telemetry server, as named in its certificate
 CONFIG_APP_SERVER_HOST="tracker.example.com"
 
-# Device PSK - 32-byte key as 64 hex characters.
-# All-zeros disables sending; generate a real key per device.
-CONFIG_APP_PSK_HEX="0000000000000000000000000000000000000000000000000000000000000000"
-```
-
-The APN defaults to `iot.1nce.net` (from `prj.conf`). Override it in
-`local.conf` if needed:
-
-```kconfig
+# Your SIM provider's APN; the default in prj.conf is sensor.net
 CONFIG_APP_APN="your.apn.here"
+
+# Device key - 32 bytes as 64 hex characters, from `openssl rand -hex 32`.
+# The server needs the same key when you enrol the device. With any other key,
+# including the all-zero default, the device still sends but the server cannot
+# decrypt it.
+CONFIG_APP_PSK_HEX="<64 hex characters>"
 ```
 
 ### A-GNSS provisioning (optional, one-time)
@@ -116,13 +111,16 @@ CONFIG_APP_APN="your.apn.here"
 For faster first fix, onboard the device to nRF Cloud for A-GNSS:
 
 ```bash
-PROV=1 BUILD_DIR="$PWD/build_prov" ./build.sh pristine
-pyocd load -t nrf91 build_prov/merged.hex
+PROV=1 BUILD_SUBDIR=build_prov ./build.sh
+pyocd load -t nrf91 --no-reset build_prov/merged.hex
+pyocd reset -t nrf91 -m hw -O auto_unlock=false
 ```
 
-Then run `nrf_cloud_onboard` / `device_credentials_installer` over the AT
-console to write credentials to modem NVM. Re-flash the normal firmware
-afterwards - credentials persist across reflashes.
+Then run `device_credentials_installer` on the console port to write the
+credentials to modem NVM, and `nrf_cloud_onboard` to add the device to your
+account (both in [README.md](README.md#nrf-cloud-device-provisioning)). Flash
+the normal firmware afterwards with `./flash.sh` - credentials persist across
+reflashes.
 
 ## 4. Build and flash
 
@@ -166,12 +164,13 @@ Reboot the board without reflashing:
 ./reset.sh
 ```
 
-It uses `sysresetreq`, which resets the nRF9151 core only and leaves USB and an
-open `screen` session alone. If it fails reporting APPROTECT, the board booted
-locked; `./flash.sh` is the recovery path.
+It pulses the reset line, as `flash.sh` does, so the nRF9151 leaves debug interface
+mode and sleeps at its proper current. USB re-enumerates, so reopen any `screen`
+session afterwards.
 
-Monitor serial output (the Connect Kit exposes a USB CDC-ACM console):
+Monitor serial output on the first of the Connect Kit's two USB serial ports:
 
 ```bash
-screen -L /dev/cu.usbmodem* 115200
+ls /dev/cu.usbmodem*
+screen /dev/cu.usbmodemXXXX 115200
 ```

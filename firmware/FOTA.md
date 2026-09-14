@@ -4,7 +4,7 @@
 
 The tracker pulls updates; the server never pushes - and it doesn't poll
 either. Every telemetry response carries `fota=<latest>` (appended by
-`_process_telemetry` in the server from `fw/manifest.txt`), the device
+the server from that device's `fw/manifest-<imei>.txt`), the device
 compares that against its running build locally, and only when the server has
 something newer does it GET the manifest and image over HTTPS. The steady
 state costs zero extra requests.
@@ -14,8 +14,8 @@ the manifest atomically, and verifies the endpoint. Devices pick the release
 up on their next telemetry exchange (or power-on) and install it unattended.
 
 **Every device gets its own build.** Units differ in carrier board and in
-which interfaces are populated - a v3.0 lays out both CAN and K-line and is
-fitted with one - and MCUboot checks only the signature, not the hardware the
+which interfaces are populated - a v3.4 lays out both CAN and K-wire and is
+built with one - and MCUboot checks only the signature, not the hardware the
 image expects, so an image for the wrong unit installs cleanly and then
 misbehaves. `remote.conf` describes the fleet by IMEI; `push_fw.sh` builds one
 image per device from it and never layers `local.conf` into a published image.
@@ -27,9 +27,9 @@ uses it: no manifest fetch at power-on, no download, and a server advertising
 a newer version or sending a manual `fota` command is ignored.
 
 A bench build needs it.  The power-on check is unconditional and a local build
-carries no patch number, so it reports a version below whatever the fleet is
-running and is replaced within seconds of booting — the change under test
-never gets to run.
+carries no patch number, so if the server has a build published for its IMEI
+it reports a lower version and is replaced within seconds of booting — the
+change under test never gets to run.
 
 Use this rather than `CONFIG_APP_FOTA=n`.  Turning the subsystem off also
 stubs out `fota_confirm_image()`, and an image installed over the air boots on
@@ -44,8 +44,8 @@ Never set it in a production image; the unit would never take another update.
 
 | Trigger | Where |
 |---|---|
-| **Power-on** - the one unconditional check, so a freshly flashed or long-offline unit converges without waiting for a response | `main()`, after `watchdog_init()` |
-| **Telemetry response advertised a newer version** (`fota=X.Y.Z` → `fota_notify_available`) | serviced from `STATE_IDLE` or the `do_sleep()` telemetry wake, right after response processing |
+| **Power-on** - the one unconditional check, so a freshly flashed or long-offline unit converges without waiting for a response | `main()`, once start-up has finished |
+| **Telemetry response advertised a newer version** (`fota=X.Y.Z` → `fota_notify_available`) | serviced at the next safe moment: `STATE_IDLE` while the engine is not running, after a send in `do_ignition_sleep()`, at key-off before sleeping, and on the `do_sleep()` telemetry wake |
 | Bare `fota` command from the server (manual force, skips the failure holdoff) | same |
 
 Failed attempts set a holdoff (`CONFIG_APP_FOTA_RETRY_HOLDOFF_S`, 10 min
@@ -76,12 +76,11 @@ that device's Kconfig fragment verbatim.
 [common]
 CONFIG_APP_SERVER_HOST="tracker.example.com"
 
-[355025936386877]
+[350000000000000]
 name    = car
 profile = makerdiary
-CONFIG_APP_BOARD_L0DESTAR_V3_1=y
-CONFIG_APP_BOARD_HAS_CAN=n
-CONFIG_APP_BOARD_HAS_KLINE=y
+CONFIG_APP_BOARD_L0DESTAR_V3_4=y
+CONFIG_APP_OBD_MODE=2
 ```
 
 `./push_fw.sh --list` prints the resolved config per device without building.
@@ -103,12 +102,14 @@ that are not bench-specific by name still reach a deployed build though
 
 The device has always sent its IMEI here; the server now uses it, rewriting
 the request onto `fw/manifest-<imei>.txt` and 404ing when there is no such
-file. Deployed firmware needed no change for this.
+file. Deployed firmware needed no change for this. For a version that failed to
+boot on that device it answers `version=<that version>` and `status=blocked`
+instead, so the device refuses that build and still takes a newer one.
 
 ```
 version=0.5.0
-file=fw/l0destar-0.5.0-355025936386877.bin
-board=v3.0+kline
+file=fw/l0destar-0.5.0-350000000000000.bin
+board=v3.4+kline
 ```
 
 One `key=value` per line; `#` comments, blank lines and unknown keys are
@@ -131,40 +132,47 @@ goes out under the next number.
 
 ## Server side
 
-Everything lives on machine `a` in `/var/www/tracker`:
+The public server in `server/` keeps firmware in its `fw_dir`, `/srv/l0destar/fw`
+in the Docker installation, and `server/tracker/firmware.py` does the rest:
 
 - **`fw/manifest-<imei>.txt` + `fw/l0destar-<ver>-<imei>.bin`** - written by
-  `push_fw.sh`, one pair per device.
-- **`fota=<version>` indication** - `_process_telemetry()` in `main.py` reads
-  *that device's* manifest (`_latest_fw_version(imei)`, cached on mtime) and
-  appends the version to every telemetry response, over UDP, TLS and DTLS
-  alike. A device with no manifest gets no `fota=` at all. Old firmware
-  ignores the unknown key.
-- **`fw/published.txt`** - synthesised per request by `_handle_fw_http()` from
-  the image filenames and manifests in `fw/`; every `MAJOR.MINOR.PATCH` ever
-  published, oldest first. This is how `push_fw.sh` picks the next patch
-  number without shell access on the server.
-- **The download endpoint** - public 443 terminates on a different host, so
-  the firmware is served on the telemetry TLS port **65481**, the one
-  forwarded TCP path to the server. `handle_tls_connection()` sniffs the
-  first two bytes after the handshake: telemetry frames start with a 2-byte
-  length ≤ 8192, HTTP starts with `GE`/`HE`, so the two protocols share the
-  port and certificate. `push_fw.sh` reads through this same endpoint rather
+  `push_fw.sh` over ssh (`FW_SERVER`, `FW_DIR`), one pair per device.
+- **`fota=<version>` indication** - every telemetry reply to a device with a
+  manifest carries the version that manifest names (`latest_version(imei)`,
+  cached on mtime), newer or not, unless that version has failed to boot on the
+  device. A device with no manifest gets no `fota=` at all. Old firmware ignores
+  the unknown key.
+- **Failed updates** - the device's `F,fota,staged` line records what it staged.
+  The server confirms the update, and raises `fota: updated to <version>`, when
+  the device reports that version running. `F,fota,failed`, or another version
+  still running ten minutes after staging, withholds that version from the
+  device until a newer one is published or it is retried.
+- **`fw/published.txt`** - synthesised per request from the image filenames and
+  manifests in `fw/`; every `MAJOR.MINOR.PATCH` ever published, oldest first.
+  This is how `push_fw.sh` picks the next patch number without shell access on
+  the server.
+- **The download endpoint** - the TLS listener on **65481**, which serves
+  firmware and nothing else: a connection that does not open with `GET` or
+  `HEAD` is closed. It implements exactly what the nRF91's FOTA stack needs:
+  GET/HEAD on `/fw/*`, HTTP/1.1 keep-alive, and Range support - over
+  modem-offloaded TLS the modem decodes ~2 KB at a time, so the downloader
+  fetches the image as sequential 2048-byte ranged GETs and expects `206` +
+  `Content-Range` for each. `push_fw.sh` reads through this same endpoint rather
   than over ssh, so its checks exercise the port forward a device depends on
   instead of loopback on the server; ssh is left doing only the writes (upload
-  and manifest swap). `_handle_fw_http()` implements exactly what the nRF91's
-  FOTA stack needs: GET/HEAD on `/fw/*`, HTTP/1.1 keep-alive, and
-  Range support - over modem-offloaded TLS the modem decodes ~2 KB at a time,
-  so the downloader fetches the image as sequential 2048-byte ranged GETs and
-  expects `206` + `Content-Range` for each.
+  and manifest swap).
 
-TLS uses the existing private CA: the listener serves `certs/server.{crt,key}`
-(CN matching `CONFIG_APP_SERVER_HOST`, ECDSA P-256, issued by that CA), and
-the device trusts it via a **dedicated FOTA sec_tag** (`APP_FOTA_SEC_TAG`,
-default 42) that `modem_provision_tls()` fills with `src/ca_cert.h` on first
-boot.  It is deliberately not the telemetry `TLS_SEC_TAG` (1): past DTLS/PSK
-experiments left extra credential types on tag 1 in modem NVM, and a tag
-mixing PSK and CA entries makes certificate-mode TLS `connect()` fail.  No
+[`server/docs/PROTOCOL.md`](../server/docs/PROTOCOL.md) describes the requests in
+full.
+
+TLS uses the server's private CA: the listener serves `certs/server.crt` and
+`certs/server.key`, issued by that CA for the hostname in
+`CONFIG_APP_SERVER_HOST`, and the device trusts it via a **dedicated FOTA
+sec_tag** (`APP_FOTA_SEC_TAG`, default 42) that `modem_provision_tls()` fills
+with `src/ca_cert.h` on first boot.  It is deliberately not `TLS_SEC_TAG` (1),
+which gets the same CA: past DTLS/PSK experiments left extra credential types
+on tag 1 in modem NVM, and a tag mixing PSK and CA entries makes
+certificate-mode TLS `connect()` fail.  No
 manual provisioning needed either way.
 
 One field gotcha worth recording: on mfw 2.0.4 a TLS `connect()` that cannot
@@ -242,7 +250,8 @@ to the `config` command; the server stores it on every `log` row by carrying
 the last value forward. The
 update itself is visible as three alerts: `fota: x -> y available, downloading`
 as the transfer starts, `fota: x -> y, rebooting` before the swap and
-`fota: updated to y` from the new image after it confirms. The first is raised
+`fota: updated to y` from the server once the device reports running it. The
+first is raised
 once per advertised version, so a download that has to be retried on a later
 wake does not repeat it; a download that fails every attempt in a wake raises
 `fota: x -> y failed after N attempts`, also once per version.
@@ -259,7 +268,8 @@ wake does not repeat it; a download that fails every attempt in a wake raises
    device reboots.
 5. MCUboot swaps the slots and boots the new image.
 6. The new image runs its whole init sequence, then calls
-   `boot_write_img_confirmed()` and raises a `fota: updated to y` alert.
+   `boot_write_img_confirmed()`. The server raises `fota: updated to y` once
+   the device reports that version running.
 
 Step 6 is the safety net: **an image that hangs or faults during bring-up never
 confirms itself, and MCUboot reverts to the previous one on the next boot.** A
@@ -269,7 +279,7 @@ count backs the retry off, and GNSS is restarted.
 ## Flash layout
 
 MCUboot splits the 1 MB flash into two 416 KB slots (`pm_static.yml`); TF-M
-plus the application is ~277 KB today.
+plus the application is about 300 KB today.
 
 **The first build with MCUboot must be flashed over SWD.** A unit running a
 pre-MCUboot image has no bootloader to swap slots and cannot update itself into
@@ -282,19 +292,16 @@ there costs application space in 32 KB steps.
 
 ## Signing key
 
-Left unconfigured, MCUboot signs with the public test key in the mcuboot repo,
-which anyone can use to forge an image; the build prints a warning. Before
-shipping, generate a project key and point `SB_CONFIG_BOOT_SIGNATURE_KEY_FILE`
-in `sysbuild.conf` at it:
+MCUboot installs only images signed with the project key, `mcuboot_priv.pem`
+beside `build.sh` (gitignored), which `build.sh` passes to sysbuild as
+`SB_CONFIG_BOOT_SIGNATURE_KEY_FILE`. A bench build creates the key with the
+SDK's imgtool when it is missing. A release (`push_fw.sh`, which sets
+`FW_PATCH`) stops instead, because it has to be signed with the key the fleet's
+bootloaders already trust.
 
-```sh
-uv pip install imgtool
-imgtool keygen -t ecdsa-p256 -k mcuboot_priv.pem
-```
-
-`mcuboot_priv.pem` is gitignored. Back it up - the public half is baked into
-every deployed bootloader, so losing the private half means no device already in
-the field can ever be updated again.
+Back it up - the public half is baked into every deployed bootloader, so losing
+the private half means no device already in the field can ever be updated
+again.
 
 ## Configuration
 
@@ -302,7 +309,7 @@ the field can ever be updated again.
 |---|---|---|
 | `APP_FOTA` | `y` | Master switch; pulls in the FOTA libraries |
 | `APP_FOTA_HOST` | `""` | Update host; empty reuses `APP_SERVER_HOST` |
-| `APP_FOTA_PORT` | `65481` | The telemetry TLS port doubles as the fw endpoint |
+| `APP_FOTA_PORT` | `65481` | The server's TLS listener, which serves firmware only |
 | `APP_FOTA_SEC_TAG` | `42` | Modem sec_tag holding the server CA; `-1` = plain HTTP |
 | `APP_FOTA_MANIFEST_PATH` | `/fw/manifest.txt` | |
 | `APP_FOTA_MIN_BATTERY_MV` | `12000` | Below this, defer the download |

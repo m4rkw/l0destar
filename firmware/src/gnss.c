@@ -30,6 +30,12 @@ static bool s_agnss_needed;
 static int  s_tracked_sv;
 static bool s_blocked;
 
+/* Consecutive epochs without a fix that the receiver flagged as short of
+ * radio time (NRF_MODEM_GNSS_PVT_FLAG_NOT_ENOUGH_WINDOW_TIME).  Counted in
+ * the event handler, which runs in interrupt context and so cannot make the
+ * priority request itself; gnss_collect() acts on it from the thread. */
+static atomic_t s_starved_epochs;
+
 static void pvt_to_fix(const struct nrf_modem_gnss_pvt_data_frame *pvt,
                        struct gnss_fix *out)
 {
@@ -133,11 +139,19 @@ static void on_gnss_event(int event)
         if ((pvt.flags & NRF_MODEM_GNSS_PVT_FLAG_FIX_VALID) && in_fix > 0) {
             s_pvt = pvt;
             s_have_fix = true;
+            atomic_set(&s_starved_epochs, 0);
             pvt_to_fix(&pvt, &g_gnss);
             k_sem_give(&s_fix_sem);
-        } else if (!s_have_fix && !s_blocked) {
-            LOG_INF("searching: %d SVs tracked, best cn0=%d.%d",
-                    tracked, best_cn0 / 10, best_cn0 % 10);
+        } else {
+            if (pvt.flags & NRF_MODEM_GNSS_PVT_FLAG_NOT_ENOUGH_WINDOW_TIME) {
+                atomic_inc(&s_starved_epochs);
+            } else {
+                atomic_set(&s_starved_epochs, 0);
+            }
+            if (!s_have_fix && !s_blocked) {
+                LOG_INF("searching: %d SVs tracked, best cn0=%d.%d",
+                        tracked, best_cn0 / 10, best_cn0 % 10);
+            }
         }
         break;
     }
@@ -183,6 +197,7 @@ int gnss_start(void)
 {
     s_have_fix = false;
     s_blocked = false;
+    atomic_set(&s_starved_epochs, 0);
     k_sem_reset(&s_fix_sem);
     int err = nrf_modem_gnss_start();
     if (err) LOG_ERR("start: %d", err);
@@ -196,6 +211,7 @@ int gnss_stop(void)
 
 int gnss_resume(void)
 {
+    atomic_set(&s_starved_epochs, 0);
     k_sem_reset(&s_fix_sem);
     int err = nrf_modem_gnss_start();
     if (err) LOG_ERR("resume: %d", err);
@@ -224,26 +240,43 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
         LOG_INF("cold start: timeout extended to %ds", timeout_ms / 1000);
     }
 
+    /* Fallback path: the receiver asked for something specific after the
+     * boot-time fetch.  The request is only cleared once a fetch actually
+     * succeeds — clearing it first meant one timeout cost the assistance for
+     * the whole cold start.  A failure is retried from the wait below while
+     * the receiver keeps searching: a single attempt still left the search
+     * unassisted, because nothing asked again until the next cold collect. */
+    int agnss_left = 0;
+    int64_t agnss_next_ms = 0;
+
     if (cold && s_agnss_needed) {
-        /* Fallback path: the receiver asked for something specific after
-         * the boot-time fetch.  The request is only cleared once the fetch
-         * actually succeeds — clearing it first meant one timeout cost the
-         * assistance for the whole cold start, with no retry until the
-         * receiver happened to ask again. */
         if (agnss_fetch(&s_agnss_req) == 0) {
             s_agnss_needed = false;
+        } else if (timeout_ms > AGNSS_RETRY_INTERVAL_MS) {
+            agnss_left = AGNSS_RETRIES;
+            agnss_next_ms = k_uptime_get() + AGNSS_RETRY_INTERVAL_MS;
+            LOG_WRN("A-GNSS fetch failed — %d retries, %d s apart",
+                    AGNSS_RETRIES, AGNSS_RETRY_INTERVAL_MS / 1000);
         } else {
             LOG_WRN("A-GNSS fetch failed — request kept for a retry");
         }
     }
 
-    if (cold) {
-        nrf_modem_gnss_prio_mode_enable();
-    }
+    /* Priority mode is the fallback for PSM and eDRX being off (see
+     * apply_link_settings()): idle-mode paging then leaves the receiver only
+     * short windows, which can starve a search that has no ephemerides yet.
+     * But it takes the radio from LTE's idle-mode work, and this used to hold
+     * it for the whole of every cold start by re-arming it every 30 s — over
+     * two minutes on 2026-09-13, during which the modem dropped off the
+     * network.  So, as Nordic documents, it is only requested once the
+     * receiver reports it is being starved, and the modem's own 40 s limit
+     * ends each window. */
+    int64_t prio_at_ms = 0;
+    bool prio_logged = false;
 
     int remaining = timeout_ms;
     int err = -EAGAIN;
-    int since_prio = 0;
+    int since_log = 0;
     const int tick = s_tick_cb ? 1000 : 10000;
 
     while (remaining > 0) {
@@ -253,16 +286,53 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
             break;
         }
         remaining -= chunk;
-        since_prio += chunk;
+        since_log += chunk;
         watchdog_kick();
 
         if (s_tick_cb) {
             s_tick_cb();
         }
 
-        if (cold && since_prio >= 30000) {
-            nrf_modem_gnss_prio_mode_enable();
-            since_prio = 0;
+        if (!cold) {
+            continue;
+        }
+
+        if (s_agnss_needed && agnss_left > 0 &&
+            k_uptime_get() >= agnss_next_ms && modem_is_registered()) {
+            agnss_left--;
+            if (agnss_fetch(&s_agnss_req) == 0) {
+                s_agnss_needed = false;
+                LOG_WRN("A-GNSS fetched on retry %d",
+                        AGNSS_RETRIES - agnss_left);
+            } else if (agnss_left > 0) {
+                agnss_next_ms = k_uptime_get() + AGNSS_RETRY_INTERVAL_MS;
+                LOG_WRN("A-GNSS retry failed — %d left", agnss_left);
+            } else {
+                LOG_WRN("A-GNSS retries failed — searching unassisted");
+            }
+        }
+
+        int64_t now = k_uptime_get();
+        int starved = (int)atomic_get(&s_starved_epochs);
+
+        if (starved >= GNSS_PRIO_STARVED_EPOCHS &&
+            (prio_at_ms == 0 || now - prio_at_ms >= GNSS_PRIO_WINDOW_MS)) {
+            atomic_set(&s_starved_epochs, 0);
+            if (nrf_modem_gnss_prio_mode_enable() == 0) {
+                prio_at_ms = now;
+                if (!prio_logged) {
+                    prio_logged = true;
+                    LOG_WRN("GNSS starved for %d epochs — priority for "
+                            "up to %d s", starved,
+                            GNSS_PRIO_WINDOW_MS / 1000);
+                } else {
+                    LOG_INF("GNSS still starved — priority again");
+                }
+            }
+        }
+
+        if (since_log >= 30000) {
+            since_log = 0;
             LOG_INF("cold start: %ds remaining, %d SVs%s",
                     remaining / 1000, s_tracked_sv,
                     s_blocked ? " (blocked)" : "");

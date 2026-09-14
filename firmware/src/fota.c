@@ -147,6 +147,9 @@ static char    s_pending_report[64]; /* "F,fota,..." waiting for a link */
  * image on every wake — which with the engine off is a battery flattened by
  * a 300 KB download an hour. */
 #define FOTA_ATTEMPT_MAGIC  0x10DEF07Au
+/* The same record once its revert has been reported, so a warm reset that
+ * finds it again neither alerts nor reports a second time. */
+#define FOTA_ATTEMPT_REPORTED 0x10DEF07Bu
 #define FOTA_MAX_ATTEMPTS   2
 
 static __noinit struct {
@@ -304,8 +307,12 @@ static bool battery_permits_update(void)
 }
 
 /* -- download -------------------------------------------------------------- */
-static int download_image(void)
+static int download_image(int64_t deadline)
 {
+    if (k_uptime_get() >= deadline) {
+        return -ETIMEDOUT;
+    }
+
     int err;
 
     if (!s_dl_init_done) {
@@ -330,14 +337,13 @@ static int download_image(void)
     }
 
     /* The download runs on the downloader thread and can take minutes over
-     * LTE-M, so wait in short slices and keep the watchdog fed. */
-    int64_t deadline =
-        k_uptime_get() + (int64_t)CONFIG_APP_FOTA_DOWNLOAD_TIMEOUT_S * 1000;
+     * LTE-M, so wait in short slices and keep the watchdog fed, until the
+     * deadline the caller shares across every attempt of this check. */
 
     while (k_sem_take(&s_dl_done, K_SECONDS(5)) != 0) {
         watchdog_kick();
         if (k_uptime_get() >= deadline) {
-            LOG_ERR("download timed out after %ds",
+            LOG_ERR("download timed out (%ds budget)",
                     CONFIG_APP_FOTA_DOWNLOAD_TIMEOUT_S);
             (void)fota_download_cancel();
             (void)k_sem_take(&s_dl_done, K_SECONDS(30));
@@ -361,6 +367,10 @@ static int download_image(void)
  * and the failure holdoff from the server. */
 void fota_request_check(void)
 {
+    if (IS_ENABLED(CONFIG_APP_FOTA_INHIBIT)) {
+        LOG_WRN("ignoring `fota` command — updates inhibited");
+        return;
+    }
     if (s_denied_ver) {
         LOG_INF("manual retry — clearing the block on the failed version");
     }
@@ -372,10 +382,6 @@ void fota_request_check(void)
     s_fail_count = 0;
     s_next_check_ms = 0;
 
-    if (IS_ENABLED(CONFIG_APP_FOTA_INHIBIT)) {
-        LOG_WRN("ignoring `fota` command — updates inhibited");
-        return;
-    }
     /* Manual `fota` command: check now, even inside a failure holdoff. */
     s_forced = true;
     s_next_check_ms = 0;
@@ -445,6 +451,14 @@ static const char *ver_str_of(uint32_t v, char *buf, size_t len)
  * "F,fota,failed,<staged>,<running>" is that statement. */
 void fota_verdict_on_boot(void)
 {
+    if (s_attempt.magic == FOTA_ATTEMPT_REPORTED && s_attempt.version != 0) {
+        /* Reverted and already reported: keep refusing a version that has
+         * used up its attempts, but raise nothing again. */
+        if (s_attempt.attempts >= FOTA_MAX_ATTEMPTS) {
+            s_denied_ver = s_attempt.version;
+        }
+        return;
+    }
     if (s_attempt.magic != FOTA_ATTEMPT_MAGIC || s_attempt.version == 0) {
         s_attempt.magic = 0;      /* power-on, or nothing was staged */
         return;
@@ -479,6 +493,7 @@ void fota_verdict_on_boot(void)
     alert_enqueue(msg, 0);
     s_pending_report[0] = '\0';
     strncpy(s_pending_report, line, sizeof(s_pending_report) - 1);
+    s_attempt.magic = FOTA_ATTEMPT_REPORTED;
 
     if (s_attempt.attempts >= FOTA_MAX_ATTEMPTS) {
         s_denied_ver = s_attempt.version;
@@ -746,16 +761,19 @@ int fota_check(enum fota_ctx ctx)
      * stall into a short delay instead of a wait for the next wake. */
     int err = -EIO;
 
-    /* APP_FOTA_DOWNLOAD_TIMEOUT_S bounds a single attempt; it also bounds the
-     * retry sequence, so adding attempts cannot multiply how long the unit
-     * stays awake with GNSS stopped.  A fast failure — the interesting case,
-     * a dropped connection — leaves nearly the whole budget for another go,
-     * while an attempt that grinds through the budget is not repeated. */
+    /* APP_FOTA_DOWNLOAD_TIMEOUT_S bounds the whole retry sequence: every
+     * attempt shares one deadline, so adding attempts cannot multiply how long
+     * the unit stays awake with GNSS stopped.  A fast failure — the
+     * interesting case, a dropped connection — leaves nearly the whole budget
+     * for another go, while an attempt that grinds through the budget ends
+     * the check. */
     int64_t budget_end =
         k_uptime_get() + (int64_t)CONFIG_APP_FOTA_DOWNLOAD_TIMEOUT_S * 1000;
 
+    int attempts = 0;
     for (int attempt = 1; attempt <= FOTA_DL_ATTEMPTS; attempt++) {
-        err = download_image();
+        attempts = attempt;
+        err = download_image(budget_end);
         if (err == 0) {
             break;
         }
@@ -789,7 +807,11 @@ int fota_check(enum fota_ctx ctx)
     }
 
     if (err) {
-        s_fail_count++;
+        /* 10 min, doubling to 80, like every other failed check; the `fota`
+         * command overrides it.  Without it the advert in the next reply
+         * re-armed the check, and a failing download ran again every reply,
+         * each time with GNSS stopped. */
+        fail_backoff();
         led_idle();
         if (gnss_stopped) gnss_resume();
 
@@ -805,7 +827,7 @@ int fota_check(enum fota_ctx ctx)
             char msg[96];
             snprintf(msg, sizeof(msg),
                      "fota: %s -> %s failed after %d attempts (err %d, cause %d)",
-                     APP_VERSION_STRING, ver_str, FOTA_DL_ATTEMPTS,
+                     APP_VERSION_STRING, ver_str, attempts,
                      err, s_dl_cause);
             alert_enqueue(msg, 0);
         }
@@ -822,7 +844,8 @@ int fota_check(enum fota_ctx ctx)
      * it took: same version running means success, anything else means
      * MCUboot reverted it.  Consecutive attempts at the same version are
      * counted; a different version starts again from one. */
-    if (s_attempt.magic != FOTA_ATTEMPT_MAGIC ||
+    if ((s_attempt.magic != FOTA_ATTEMPT_MAGIC &&
+         s_attempt.magic != FOTA_ATTEMPT_REPORTED) ||
         s_attempt.version != available) {
         s_attempt.attempts = 0;
     }

@@ -15,6 +15,7 @@ anything that changes state has to name its device.
 """
 
 import math
+import re
 
 from flask import Blueprint, redirect, request
 
@@ -54,6 +55,43 @@ CONFIG_FIELDS = {
     'oaf': 'overnight_alarm_hour_from',
     'oat': 'overnight_alarm_hour_to',
 }
+
+# The values each setting's column can hold.
+SETTING_RANGES = {
+    'int': (0, 4294967295),
+    'movement_alarm': (0, 1),
+    'alarm': (0, 1),
+    'garage': (0, 1),
+    'overnight_alarm': (0, 1),
+    'overnight_alarm_hour_from': (0, 23),
+    'overnight_alarm_hour_to': (0, 23),
+}
+
+
+def _setting(column, value):
+    """``value`` as an int if it is a whole number in the column's range, else
+    None.  A boolean or a fraction is refused rather than turned into 1 or
+    truncated, and an out-of-range number is refused before the database
+    rejects it."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str) and re.fullmatch(r'\s*[+-]?\d+\s*', value):
+        value = int(value)
+    if not isinstance(value, int):
+        return None
+    low, high = SETTING_RANGES[column]
+    return value if low <= value <= high else None
+
+
+def _setting_error(key, column):
+    low, high = SETTING_RANGES[column]
+    return error('%s must be a whole number from %d to %d' % (key, low, high))
+
+
+def _flag(name):
+    """A query-string switch: 1, true, yes or on turn it on; anything else,
+    0 and false included, leaves it off."""
+    return request.args.get(name, '').strip().lower() in ('1', 'true', 'yes', 'on')
 
 
 def bearer_ok():
@@ -128,8 +166,14 @@ def journeys():
     if failure:
         return failure
 
-    per_page = min(int(request.args.get('per_page', 50)), 200)
-    page = max(int(request.args.get('page', 0)), 0)
+    try:
+        per_page = int(request.args.get('per_page', 50))
+        page = int(request.args.get('page', 0))
+    except ValueError:
+        return error('page and per_page must be whole numbers')
+    if page < 0 or per_page < 1:
+        return error('page must be 0 or more, and per_page 1 or more')
+    per_page = min(per_page, 200)
 
     rows = db.web.all(
         'SELECT `id`, `start_time`, `end_time`, `from_latitude`, `from_longitude`, '
@@ -216,12 +260,12 @@ def track_link():
         return error('no records for device')
 
     coords = '%s,%s' % (row['latitude'], row['longitude'])
-    if request.args.get('google'):
+    if _flag('google'):
         url = 'https://maps.google.com/maps/place/%s/' % coords
     else:
         url = 'maps:ll=%s&q=%s' % (coords, device.get('name') or 'vehicle')
 
-    if request.args.get('return'):
+    if _flag('return'):
         return ok({'url': url})
     return redirect(url)
 
@@ -319,10 +363,10 @@ def update_config():
     updates = []
     for key, column in CONFIG_FIELDS.items():
         if key in data:
-            try:
-                updates.append((column, int(data[key])))
-            except (TypeError, ValueError):
-                return error('%s must be an integer' % key)
+            value = _setting(column, data[key])
+            if value is None:
+                return _setting_error(key, column)
+            updates.append((column, value))
 
     if updates:
         assignments = ', '.join('`%s` = %%s' % column for column, _ in updates)
@@ -393,10 +437,10 @@ def queue_command():
         for part in server_side:
             key, value = part.split('=', 1)
             assignments.append('`%s` = %%s' % SERVER_SIDE_SETTINGS[key])
-            try:
-                values.append(int(value))
-            except ValueError:
-                return error('%s must be an integer' % key)
+            number = _setting(SERVER_SIDE_SETTINGS[key], value)
+            if number is None:
+                return _setting_error(key, SERVER_SIDE_SETTINGS[key])
+            values.append(number)
         values.append(device['id'])
         db.web.query(
             'UPDATE `device` SET %s WHERE `id` = %%s' % ', '.join(assignments),

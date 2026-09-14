@@ -120,10 +120,10 @@ Stages, each only if the previous got no reply, each gated by Kconfig:
 
 | Stage | Option | What it sends |
 |-------|--------|---------------|
-| 5-baud init on 0x33 | always | address 0x33 at 5 baud on K (+L if `APP_L_SEND_ENABLED`); expects 0x55, two key bytes, sends ~KB2, expects ~0x33 |
+| 5-baud init on 0x33 | always | address 0x33 at 5 baud on K alone, then again with L driven if that gets no answer and `APP_L_SEND_ENABLED` allows it; expects 0x55, two key bytes, sends ~KB2, expects ~0x33 |
 | fast init on 0x33 | `APP_KLINE_INIT_FAST` (default y) | 25 ms low / 25 ms high, then StartCommunication `C1 33 F1 81 66`, once with 5 ms between bytes and once back to back |
-| known addresses | `APP_KLINE_INIT_ADDRS` (e.g. `"13,29,58,B4"`) | the 5-baud handshake on each; if one breaks down partway, a raw hex capture of what that address sends, with inter-byte gaps (`APP_KLINE_INIT_ACK` controls whether ~KB2 is sent during capture) |
-| sweeps | `APP_KLINE_INIT_SWEEP` (default y) | fast init, then 5-baud init, on every address 0x01-0xFE — up to 15 min |
+| known addresses | `APP_KLINE_INIT_ADDRS` (e.g. `"13,29,58,B4"`) | the 5-baud handshake on each, on K alone first and with L as above; if one breaks down partway, a raw hex capture of what that address sends, with inter-byte gaps (`APP_KLINE_INIT_ACK` controls whether ~KB2 is sent during capture) |
+| sweeps | `APP_KLINE_INIT_SWEEP` (default y) | fast init, then 5-baud init, on every address 0x01-0xFE — up to 15 min; the 5-baud sweep is repeated with L driven if no address answered on K alone, which takes about as long again |
 | identify | `APP_KLINE_IDENT` (default n) | for each address that handshakes: StartDiagnosticSession in five modes, ReadEcuIdentification (0x1A) in seven variants, OBD mode 01 supported-PIDs / MIL+DTC count / RPM / coolant, mode 09 VIN, then StopCommunication |
 | fault codes | `APP_KLINE_DTC` (default n, needs `APP_KLINE_IDENT`) | OBD mode 03 stored, 07 pending, 0A permanent; multi-frame responses read until the bus goes quiet, each code decoded to its P/C/B/U form |
 
@@ -172,14 +172,20 @@ The run ends like this:
 Addresses that complete the handshake but never answer a request are listed
 as `inert`, because they are exactly what the runtime config should leave out.
 
+`L wire` says whether the handshake needed the L line: `needed` only when K
+alone got no answer and the same init with L driven did.  The suggested block
+then also sets `CONFIG_APP_L_SEND_ENABLED=y` and `CONFIG_APP_KLINE_USE_L=y`,
+which make the runtime session drive L too.
+
 Discovery parks the board when it finishes.  The console log is the whole
 product of the run, and continuing into the tracker would let the power-on
 FOTA check swap the image out mid-investigation.
 
 ### The runtime session
 
-`APP_KLINE_ECU_ADDR` and `APP_KLINE_BAUD` are all the runtime path reads, and
-both are defined unconditionally because `hw_kline.c` is compiled for every
+`APP_KLINE_ECU_ADDR` and `APP_KLINE_BAUD` are what the runtime path reads, with
+`APP_KLINE_USE_L` for a vehicle that needs the L line; the first two are
+defined unconditionally because `hw_kline.c` is compiled for every
 board.  The API is three calls:
 
 ```c
@@ -414,7 +420,7 @@ CONFIG_APP_KLINE_INIT_ADDRS="13"
 CONFIG_APP_KLINE_INIT_FAST=n
 CONFIG_APP_KLINE_INIT_SWEEP=n
 CONFIG_APP_KLINE_INIT_DIAG=n
-# L not needed on this vehicle; leave APP_L_SEND_ENABLED at its default (off).
+# L not needed on this vehicle: no APP_KLINE_USE_L, and the L wire stays unconnected.
 
 # Runtime: poll OBD each cycle, read fault codes at ignition transitions.
 CONFIG_APP_KLINE_ECU_ADDR=0x13
@@ -519,7 +525,8 @@ The risks worth engineering against are not the polling itself:
   path already powers the K domain off.
 
 Never run the address sweeps on a moving vehicle: they send 254
-initialisations and monopolise the bus for a quarter of an hour.
+initialisations, and the 5-baud sweep as many again when it is repeated with L,
+and monopolise the bus for a quarter of an hour or more.
 
 ### Bringing up a new vehicle
 
@@ -530,8 +537,11 @@ initialisations and monopolise the bus for a quarter of an hour.
    `APP_KLINE_INIT_ADDRS`, set `APP_KLINE_BAUD` to whatever the sync line
    reported, turn the sweeps and (if unanswered) the fast init off.  A run
    then takes about 20 s.
-3. Only enable `APP_L_SEND_ENABLED` if K alone gets no reply *and* the L wire
-   has been checked for a short to battery — see "The L line" below.
+3. If the summary says `L wire needed`, keep `CONFIG_APP_KLINE_USE_L=y` from
+   its block and connect the L wire when the tracker is installed.  On a board
+   before v3.3, discovery only tries L once `APP_L_SEND_ENABLED` is on, which
+   should wait until the L wire has been checked for a short to battery — see
+   "The L line" below.
 
 ## Troubleshooting
 
@@ -619,7 +629,9 @@ so `src/hw_kline.c` drives the SAADC through nrfx.
 
 `kline_l_line_probe()` pulses the pulldown for 5 ms and reports whether the
 line actually went low - a line that stays high is being held up by something
-low-impedance, i.e. shorted to battery, and the init must not be attempted.
+low-impedance, i.e. shorted to battery, so L is left out and the init goes
+ahead on K alone.  Discovery runs the probe before any init that drives L, and
+so does the runtime session when `APP_KLINE_USE_L` is set.
 
 **Pin requirement:** the SAADC can only sample AIN0-AIN7, which are P0.13 to
 P0.20 on the nRF9151. v3.3 puts L_SENSE on P0.14 (AIN1) and moves the

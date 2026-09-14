@@ -73,12 +73,6 @@ The server listens for trackers on two ports:
 
 Both are on without any settings: the TLS listener starts once `tls_cert` and `tls_key` are set, which the first start does. Keep both ports at their defaults, in `config.yaml` and in the `-p` options of `docker run`, because both numbers are compiled into the firmware.
 
-```yaml
-slim_response: false
-```
-
-`slim_response` must stay `false`. Current firmware ignores a reply without the movement alarm field, so settings, queued commands, update adverts and the track mode switch would never reach a tracker.
-
 The TLS timeouts (`tls_read_timeout`, `tls_handshake_timeout` and `fw_download_timeout`) are tuned for LTE-M in weak signal and are best left alone. Opening the ports is covered in [Telemetry port](/server/telemetry-port.html).
 
 ## Engine state and journeys
@@ -90,7 +84,7 @@ journeys: true
 journey_resume_seconds: 300
 ```
 
-The ignition input cannot tell "key on" from "engine running". When a tracker reports engine RPM from the ECU (a K-wire build) the web interface uses that. Otherwise it shows the engine as running if any of the last `engine_stopped_count` records had the battery above `engine_running_voltage`, because only a charging alternator lifts the rail that high. These two keys only change what the web interface shows; the tracker makes its own decision using its firmware thresholds.
+The ignition input cannot tell "key on" from "engine running". When a tracker reports engine RPM from the ECU (a K-wire build) the web interface uses that. Otherwise it shows the engine as running if any of the last `engine_stopped_count` records had the battery at or above `engine_running_voltage`, because only a charging alternator lifts the rail that high. These two keys only change what the web interface shows; the tracker makes its own decision using its firmware thresholds.
 
 A journey opens on the first record with the ignition on and closes when the ignition goes off. If the ignition comes back on within `journey_resume_seconds`, the journey that just closed is reopened rather than a new one started, so a fuel stop does not split a trip in two.
 
@@ -105,7 +99,7 @@ notify:
   expire: 300
 ```
 
-`backend` is `none` (the default: alerts are only logged), `pushover`, or `webhook` with a `url` and an optional `token` sent as a bearer token. Which alerts exist, and how to set up each backend, is covered in [Configure alerts](/deployment/alerts.html).
+`backend` is `none` (the default: nothing is sent, but every notification is written to `app.log`), `pushover`, or `webhook` with a `url` and an optional `token` sent as a bearer token. Which alerts exist, and how to set up each backend, is covered in [Configure alerts](/deployment/alerts.html).
 
 ## Home check
 

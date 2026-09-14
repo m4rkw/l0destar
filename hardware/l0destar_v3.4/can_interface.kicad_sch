@@ -1563,7 +1563,7 @@
 					(justify left top)
 				)
 			)
-			(property "Footprint" "SOIC127P600X175-8N"
+			(property "Footprint" "libs:SOIC127P600X175-8N"
 				(at 24.13 -94.92 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -1575,7 +1575,7 @@
 					(justify left top)
 				)
 			)
-			(property "Datasheet" "https://datasheets.maximintegrated.com/en/ds/MAX33040E-MAX33041E.pdf"
+			(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tcan3414.pdf"
 				(at 24.13 -194.92 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -1587,7 +1587,7 @@
 					(justify left top)
 				)
 			)
-			(property "Description" "+3.3V, 5Mbps CAN Transceiver with ?40V Fault Protection"
+			(property "Description" "3.3-V CAN FD transceiver with shut-down and standby mode"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -4289,7 +4289,7 @@
 				)
 			)
 		)
-		(property "Footprint" "SOIC127P600X175-8N"
+		(property "Footprint" "libs:SOIC127P600X175-8N"
 			(at 105.41 136.83 0)
 			(hide yes)
 			(show_name no)
@@ -4301,7 +4301,7 @@
 				(justify left top)
 			)
 		)
-		(property "Datasheet" "https://datasheets.maximintegrated.com/en/ds/MAX33040E-MAX33041E.pdf"
+		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tcan3414.pdf"
 			(at 105.41 236.83 0)
 			(hide yes)
 			(show_name no)
@@ -4313,7 +4313,7 @@
 				(justify left top)
 			)
 		)
-		(property "Description" "+3.3V, 5Mbps CAN Transceiver with ?40V Fault Protection"
+		(property "Description" "3.3-V CAN FD transceiver with shut-down and standby mode"
 			(at 81.28 41.91 0)
 			(hide yes)
 			(show_name no)

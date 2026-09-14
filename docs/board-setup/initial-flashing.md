@@ -33,8 +33,8 @@ Then create `firmware/local.conf`, the configuration for the board on your bench
 
 # Carrier board
 CONFIG_APP_BOARD_L0DESTAR_V3_4=y
-# The OBD interface you built: 0 none, 1 CAN, 2 K-wire
-CONFIG_APP_OBD_MODE=2
+# The OBD interface you built: 0 none, 1 CAN, 2 K-wire (0 is safe on any board)
+CONFIG_APP_OBD_MODE=0
 
 # Your server, as named in its certificate
 CONFIG_APP_SERVER_HOST="tracker.example.com"
@@ -49,12 +49,12 @@ CONFIG_APP_FOTA_INHIBIT=y
 
 | Setting | What it does |
 |---|---|
-| `CONFIG_APP_BOARD_L0DESTAR_V3_4` | Selects the carrier board: its GPIO map, the parts it has and how its switched power rails are sequenced. Other revisions have their own symbol, listed in the [hardware reference](/reference/hardware.html). |
+| `CONFIG_APP_BOARD_L0DESTAR_V3_4` | Selects the carrier board: its GPIO map, the parts it has and how its switched power rails are sequenced. Other revisions have their own symbol, listed in [firmware build options](/reference/firmware.html#board-selection). |
 | `CONFIG_APP_OBD_MODE` | Must match the [interface selection pads](/reference/hardware.html#interface-selection-pads) you bridged: `0` none, `1` CAN, `2` K-wire. It decides which OBD rails are powered and which driver starts. `0` powers no OBD circuitry at all, so it is safe on any board while you check the rest. |
 | `CONFIG_APP_SERVER_HOST` | Where telemetry (UDP 65480) and updates (TCP 65481) go. Use the name your server's certificate was issued for. It must resolve to an IPv4 address: the firmware does not use IPv6. |
 | `CONFIG_APP_APN` | The default in `prj.conf` (`sensor.net`) is almost certainly not your SIM provider's APN. With the wrong APN the modem can register on the network and still have no data connection. |
 | `CONFIG_APP_PSK_HEX` | The key that encrypts everything the device sends. The server gets the same key when you enrol the device. |
-| `CONFIG_APP_FOTA_INHIBIT` | A bench build is version 0.4.0, older than anything published, and the firmware checks for an update every time it boots - without this the build you are testing is replaced within seconds. An image installed over the air still confirms itself with this set. Never use it in a production build; see [OTA updates](/board-setup/ota-updates.html). |
+| `CONFIG_APP_FOTA_INHIBIT` | A bench build is version 0.4.0, older than anything published, and the firmware checks for an update every time it boots. If the server has a build published for this IMEI - a section for it in `remote.conf` - the build you are testing is replaced within seconds; a unit with no manifest is never offered one, but keep this set so a later publish cannot catch a bench unit. An image installed over the air still confirms itself with this set. Never use it in a production build; see [OTA updates](/board-setup/ota-updates.html). |
 
 Everything else keeps its default. [Firmware build options](/reference/firmware.html) lists every setting, including `CONFIG_APP_SERVER_PORT` and `CONFIG_APP_FOTA_PORT` for a server that publishes its ports under other numbers.
 
@@ -97,7 +97,7 @@ Built: /home/you/l0destar/firmware/build/merged.hex  (profile: makerdiary, targe
 
 ## Flash
 
-If the bench supply's current limit is still at the 50mA used for the first power-up checks, raise it to around 300mA now. From here on the modem registers and transmits, which draws more than 50mA from the 12V input, and a supply sitting in current limit makes the board brown out and reset.
+If the bench supply's current limit is still at the 50mA used for the first power-up checks, raise it to around 300mA now. From here on the modem registers and transmits, averaging up to about 45mA from the 12V input at full transmit power with bursts above that, and a supply that hits its current limit makes the board brown out and reset.
 
 With the Connect Kit connected over USB - the 12V supply can stay on:
 
@@ -118,11 +118,11 @@ To restart the firmware without flashing it again:
 ./reset.sh
 ```
 
-`reset.sh` resets only the nRF9151, so USB and an open console stay up.
+`reset.sh` pulses the reset line, like `flash.sh`, so the serial ports disappear and come back: reopen your console afterwards.
 
 ### Why the scripts reset the way they do
 
-- Programming normally ends with a soft reset, but that leaves the nRF9151 in debug interface mode, where it draws milliamps while asleep until the next pin reset or power cycle. `flash.sh` finishes with a pin reset instead.
+- Programming normally ends with a soft reset, but that leaves the nRF9151 in debug interface mode, where it draws milliamps while asleep until the next pin reset or power cycle. `flash.sh` and `reset.sh` use a pin reset instead.
 - After a pin reset the chip's access port protection (APPROTECT) is armed again. The firmware clears it on every boot, but only while the chip's UICR register allows it. pyocd's default answer to a protected chip is a mass erase, which wipes the firmware and that register - and a board in that state erases itself again on its next reset. So both scripts tell pyocd not to erase when resetting. The programming step in `flash.sh` is the one place an erase is allowed, because it rewrites the register and the firmware straight afterwards.
 - If `./reset.sh` fails and pyocd mentions APPROTECT, run `./flash.sh`. That is the recovery.
 
@@ -143,7 +143,7 @@ On Linux the console has a fixed name. Install `screen` with `sudo apt install -
 screen /dev/serial/by-id/usb-Makerdiary_IFMCU_CMSIS-DAP_*-if00 115200
 ```
 
-Leave `screen` with Ctrl-A then K. `screen -L` also records everything to `screenlog.0`. Run `./reset.sh` in another terminal to watch a boot from the start.
+Leave `screen` with Ctrl-A then K. `screen -L` also records everything to `screenlog.0`. `./reset.sh` restarts the Connect Kit's USB as well, so reopen the console straight after it; the first lines of the boot can be missed.
 
 A healthy boot looks like this (abridged - timings and readings will differ):
 
@@ -151,20 +151,20 @@ A healthy boot looks like this (abridged - timings and readings will differ):
 *** Booting MCUboot v2.3.0-dev-fce4dac2e629 ***
 *** Booting My Application v0.4.0 ***
 <inf> main: === l0destar firmware boot (v0.4.0, board v3.4+kline) ===
-<inf> main: reset cause: sw
+<inf> main: reset cause: pin
 <inf> settings: apn=your.apn user=
 <inf> settings: imei=(unset)
 <inf> hw_selftest: === power rail self-test ===
 <inf> hw_selftest: self-test: all rails OK
 <inf> main: ignition=OFF battery=12.01V
 <inf> modem: init ok
+<inf> main: imei=350000000000000
 <inf> modem: TLS CA provisioned (sec_tag 1)
 <inf> modem: FOTA CA provisioned (sec_tag 42)
 <inf> modem: connecting (this can take 30s+)...
 <wrn> lte_lc: Registration rejected, EMM cause: 15, Cell ID: 366868, Tracking area: 12296, LTE mode: 7
 <inf> modem: nw reg status: 5
 <inf> modem: connected
-<inf> main: imei=350000000000000
 <wrn> fota: updates inhibited (APP_FOTA_INHIBIT) — running 0.4.0
 <inf> modem: PLMN: mcc=234 mnc=30
 <inf> transport: sent 552 bytes
@@ -175,15 +175,16 @@ What to look for:
 - **`board v3.4+kline`** - the board and interface you configured (`+can` for CAN, nothing after the version for no interface).
 - **`self-test: all rails OK`** - the switched rails came up. `RAIL:` or `SELFTEST:` failures send you back to the [board test](/assembly/board-test.html).
 - **`battery=`** close to your supply voltage, and **`ignition=`** following the switch on pin 5.
-- **`connected`** followed by **`imei=`**. Write the IMEI down: you need it on the next page.
-- **`sent N bytes`** - a datagram went to your server.
+- **`imei=`** straight after `init ok`. Write the IMEI down: you need it on the next page.
+- **`connected`** - the modem has registered on the network.
+- **`sent N bytes`** - a datagram went to your server. A record needs a position, so nothing is sent until the GNSS antenna has had its first fix since the tracker started: `no fix, skipping send` means it is still waiting.
 - With pin 5 off, **`entering sleep`** a few seconds later. The `registration lost (status 0)` warning after `sleep: modem power off` is the modem being switched off, not a fault.
 
 A roaming SIM often sees a few `Registration rejected` warnings from networks it may not use before `nw reg status: 5` (registered, roaming) - that took about 50 seconds on the author's bench. The two `CA provisioned` lines appear on the tracker firmware's first boot only; later boots, and boards that already hold a CA, print `TLS CA already provisioned (sec_tag 1)`.
 
-### No imei= line
+### No connected line
 
-The firmware reads the IMEI once, after the modem registers during start-up. If `connected` never appears, the IMEI stays unset for that whole boot and every send is dropped with `IMEI not set, dropping packet` - even if the modem registers later. Check that the SIM is inserted and active, the APN, that the antenna is on the LTE connector and that there is LTE-M coverage, then `./reset.sh`.
+The modem has not registered within a minute of starting. The firmware leaves it searching and carries on as soon as it registers. If it never connects, check that the SIM is inserted and active, the APN, that the antenna is on the LTE connector and that there is LTE-M coverage, then `./reset.sh`.
 
 ### Expected at this stage
 
@@ -195,7 +196,7 @@ These are worth knowing when you check telemetry later:
 
 | Bench state | What the firmware does |
 |---|---|
-| Pin 5 off (ignition off) | Sends a record, then sleeps. It wakes on ignition, movement, knocks and tilt, and every 15 minutes until the server has told it how often to report. |
+| Pin 5 off (ignition off) | Sends a record, then sleeps. It wakes on ignition, movement, knocks and tilt, and every 15 minutes until the server has told it how often to report. Without a fix since it started it sends nothing and sleeps, then looks for a fix again on timed wakes: after 15 and 30 minutes, 1, 2 and 4 hours, then every 4 hours. |
 | Pin 5 on, supply below 13.0V | Ignition on with the engine stopped: sends a record about every 30 seconds and reads the server's reply each time. |
 | Pin 5 on, supply at 13.0V or above | The engine counts as running: it tracks continuously and sends three records per datagram. |
 
@@ -208,7 +209,8 @@ Once the engine counts as running, the supply has to stay below 13.0V for five m
 | `pyocd list` finds no probe | The cable carries data. On Linux, the udev rule from the [prerequisites](/board-setup/prerequisites.html#linux-access-to-the-connect-kit) is in place. In a virtual machine, the Connect Kit is connected to it. |
 | `flash.sh` stops with `Memory transfer fault` | Unplug USB and power the board off and on, then run `./flash.sh` again. |
 | Permission denied opening the serial port | On Linux, you are in the `dialout` group and have logged in again since adding it. |
-| The board keeps restarting | The bench supply's current limit: around 300mA once firmware is running, because at 50mA the modem's draw browns the board out. Then look for a pattern in the `reset cause:` line. |
+| The board keeps restarting | The bench supply's current limit: around 300mA once firmware is running, because the modem's transmit bursts can take a 50mA supply into its limit and brown the board out. Then look for a pattern in the `reset cause:` line. |
 | `RAIL:... fail` or `SELFTEST:` messages | A switched rail did not come up: go back to the [board test](/assembly/board-test.html). |
 | `no GPS fix` | Active antenna on the GNSS connector, with a view of the sky. An unassisted first fix can take 2 to 5 minutes. |
+| `no fix, skipping send`, and no `sent` line | Nothing is sent before the first GNSS fix since the tracker started. Check the antenna as above, then switch pin 5 on: with the ignition on it keeps searching until it has a fix. |
 | `battery=0.00V` or a silly reading | 12V on pin 4, and the INA228 stage of the board test. |

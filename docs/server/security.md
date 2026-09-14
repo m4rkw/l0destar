@@ -53,9 +53,9 @@ If you prefer nginx in front, bind it to the server's Tailscale address rather t
 There are no passwords anywhere in the server.
 
 - **Enrolment** is by invitation only. `tools/regtoken.py` creates a link that works once, within 24 hours, and there is no sign-up page.
-- **Registration** requires a platform authenticator with user verification and a discoverable credential: a passkey kept by the phone or computer itself, such as the platform's password manager or Windows Hello, created on the device that will use it. Hardware security keys cannot be registered.
-- **Re-enrolment** replaces a user's passkey. Running `regtoken.py` again for an existing username is how a lost phone is recovered - which also means anyone who can run the tools on the server can take over any account. Shell access to the server, as the owner of `/srv/l0destar` or as anyone who can run `docker`, is access to every vehicle.
-- **Login** asks for the username, then issues a challenge that is valid for five minutes and bound to the IP address and browser that asked for it. Each IP address gets `rate_limit_request_count` challenges (5) per `rate_limit_reset_period` (an hour); a successful login resets the count.
+- **Registration** asks the browser for a passkey kept by the phone or computer itself - the platform's password manager or Windows Hello - as a discoverable credential, created on the device that will use it. The server insists on user verification at registration and at every login, but it cannot tell a platform passkey from a hardware security key, so a browser that offers a security key anyway can register one.
+- **Re-enrolment** replaces a user's passkey and ends every session the old one had. Running `regtoken.py` again for an existing username is how a lost phone is recovered - which also means anyone who can run the tools on the server can take over any account. Shell access to the server, as the owner of `/srv/l0destar` or as anyone who can run `docker`, is access to every vehicle.
+- **Login** asks for the username, then issues a challenge that is valid for five minutes and bound to that username's passkey and to the IP address and browser that asked for it. Each IP address gets `rate_limit_request_count` challenges (5) per `rate_limit_reset_period` (an hour); a successful login resets the count.
 - **Lockout**: five failed passkey verifications lock the account, and any session the account already has stops working as well.
 - **Removing a user** is `DELETE FROM user WHERE username = 'alice';`. Every request checks the account, so their existing sessions stop working at their next request, and a map page they have open is disconnected within a minute.
 
@@ -67,7 +67,7 @@ UPDATE user SET locked = 0, failed_login_count = 0 WHERE username = 'alice';
 
 `audit.log` in `/srv/l0destar/logs` records every enrolment, login and logout attempt with the client address and username. It is a plain file rather than a table, so it survives problems with the database. Keep it, and read it after anything suspicious.
 
-Sessions last `session_lifetime_days` (30). Changing `session_secret` logs everyone out.
+A login lasts `session_lifetime_days` (30) from when it was made, however often it is used. Changing `session_secret` logs everyone out.
 
 ## API tokens
 
@@ -96,7 +96,7 @@ The MCUboot signing key belongs on the build machine, not on the server, and the
 ## Device transports
 
 - **UDP, port 65480**, carries all telemetry. Every datagram is encrypted and authenticated with ChaCha20-Poly1305 under the device's own 32-byte key, with replay protection, and each reply is bound to the request it answers. Datagrams that fail any check are dropped without a reply, so the port cannot be used to find out which IMEIs are enrolled. The IMEI itself travels in clear, because the server needs it to choose the key: someone on the network path can see which tracker reports and when, but not what it says.
-- **TLS, port 65481**, serves firmware downloads and nothing else: it never accepts telemetry. What it does serve still needs care, as the next section explains.
+- **TLS, port 65481**, serves firmware downloads and never accepts telemetry. Nothing on it is authenticated, though: anyone who can reach it can fetch a device's manifest and image (next section), tell from the answers which IMEIs have a manifest, and, knowing the version staged for a device, mark that update as installed, which sends the `fota: updated to` notification and would hide a revert.
 
 ## Firmware images contain device keys
 
@@ -107,7 +107,7 @@ The MCUboot signing key belongs on the build machine, not on the server, and the
 
 With current firmware:
 
-- Keep TCP 65481 closed except while you roll out an update, at the router or your provider's firewall ([Telemetry port](/server/telemetry-port.html)). A firewall on the server itself, such as ufw, cannot close a port Docker publishes. Trackers check for updates at power-on and when a reply advertises one; a check that cannot connect fails and is retried later.
+- Keep TCP 65481 closed except while you roll out an update, at the router or your provider's firewall ([Telemetry port](/server/telemetry-port.html)). That also stops anyone listing which IMEIs have a manifest or confirming a staged update. A firewall on the server itself, such as ufw, cannot close a port Docker publishes. Trackers check for updates at power-on and when a reply advertises one; a check that cannot connect fails and is retried later.
 - Delete superseded images from `/srv/l0destar/fw`, keeping the one each device's manifest names.
 - If an image may have leaked, give the device a new key with `tools/device.py rekey` and reflash it ([Onboarding devices into the server](/board-setup/server-onboarding.html)).
 

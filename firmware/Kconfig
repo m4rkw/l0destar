@@ -124,14 +124,17 @@ config APP_KLINE_DISCOVER
 	  finally the 5-baud init swept the same way.  No other request is
 	  sent;
 	  the result — which init worked, what protocol answered, or where
-	  the handshake stopped — is printed on the console and sent as an
-	  alert once the modem is up.  The run ends with a summary and the
+	  the handshake stopped — is printed on the console; the modem is never
+	  started.  Each 5-baud init goes out on K alone first, and again
+	  with the L line driven only if that gets no answer, so the summary
+	  can say whether the vehicle needs L.  The run ends with a summary and the
 	  local.conf block that makes the runtime path talk to this vehicle
 	  with no probing at all.
 
 	  This is discovery, not operation: it is slow, noisy and only worth
-	  running once per vehicle.  Polling uses APP_KLINE_ECU_ADDR and
-	  APP_KLINE_BAUD and does none of it.  Leave off in production.
+	  running once per vehicle.  Polling uses APP_KLINE_ECU_ADDR,
+	  APP_KLINE_BAUD and APP_KLINE_USE_L and does none of it.  Leave off
+	  in production.
 
 config APP_KLINE_BAUD
 	int "K-line data rate for the handshake and any session (bps)"
@@ -155,6 +158,19 @@ config APP_KLINE_ECU_ADDR
 	  on their own physical ECU addresses.  Run the discovery once and
 	  use the value its summary suggests.  Defined unconditionally:
 	  hw_kline.c reads it on every board.
+
+config APP_KLINE_USE_L
+	bool "Drive the L line in the runtime session's 5-baud init"
+	depends on APP_L_SEND_ENABLED
+	default n
+	help
+	  For a vehicle that answers the 5-baud init only with the L line
+	  driven alongside K.  Discovery sends each 5-baud init on K alone
+	  first and drives L only where that gets no answer; when L was
+	  needed, its summary says so and suggests this.  Before the session
+	  opens, the L line is tested for a short to battery on boards with
+	  L_SENSE, and left out of the init if the test fails.  Leave off for
+	  a vehicle that opens on K alone, and leave its L wire unconnected.
 
 config APP_KLINE_INIT_FAST
 	bool "Try the ISO 14230-4 fast init as well as the 5-baud init"
@@ -223,7 +239,9 @@ config APP_KLINE_INIT_SWEEP
 	help
 	  After the slow and fast inits on the OBD functional address 0x33
 	  both go unanswered, try the fast init and then the 5-baud init on
-	  every physical address 0x01-0xFE.  Up to ~15 minutes.  Turn off
+	  every physical address 0x01-0xFE.  Up to ~15 minutes, and about as
+	  long again when nothing answers on K alone and the 5-baud sweep is
+	  repeated with the L line.  Turn off
 	  when the vehicle is known to answer a generic scanner, in which
 	  case 0x33 is the only address that matters.
 
@@ -260,20 +278,19 @@ config APP_KLINE_TELEMETRY
 	  run APP_KLINE_DISCOVER once to find them.
 
 config APP_KLINE_DTC_REPORT
-	bool "Read and report stored fault codes at ignition transitions"
+	bool "Read and report stored fault codes"
 	depends on APP_BOARD_HAS_KLINE
 	default n
 	help
 	  Read the stored diagnostic trouble codes (OBD-II mode 03) shortly
-	  after ignition-on and again when ignition goes off, and send the
+	  after ignition-on, and again during a drive whenever the stored-code
+	  count the ECU reports in mode 01 PID 01 changes, and send the
 	  complete current set to the server, which diffs it against what it
 	  already holds and alerts on codes appearing and clearing.
 
-	  Ignition-on captures what the ECU has persisted; ignition-off
-	  captures anything raised during the drive.  Nothing is read while
-	  driving, so a fault raised mid-drive is reported when the engine
-	  stops rather than immediately — codes persist, so nothing is lost,
-	  and the bus stays quiet.
+	  Nothing is read at ignition-off: the engine ECU is unpowered by then,
+	  so the read would time out, and an empty report would wrongly clear
+	  live faults.
 
 	  Read-only.  Mode 04, which erases codes and the emissions readiness
 	  data with them, is not implemented anywhere in this firmware.
@@ -423,17 +440,20 @@ config APP_PSK_HEX
 	string "32-byte device PSK as 64 hex chars"
 	default ""
 	help
-	  Pre-shared key for the ChaCha20-Poly1305 telemetry envelope.  Leave
-	  empty to fall back to PSK_HEX_DEFAULT in config.h (the placeholder
-	  all-zero key disables sends).  Real device keys should be provisioned
+	  Pre-shared key for the ChaCha20-Poly1305 telemetry envelope; the
+	  server must hold the same key for this device.  Leave empty to fall
+	  back to PSK_HEX_DEFAULT in config.h, an all-zero placeholder: the
+	  tracker still sends with it, and a server holding the device's real
+	  key cannot decrypt any of it.  Real device keys should be provisioned
 	  out-of-band, never checked in.
 
 config APP_SERVER_HOST
 	string "Telemetry server hostname"
 	default ""
 	help
-	  Telemetry endpoint hostname (used for DNS resolution and TLS SNI).
-	  Leave empty to fall back to HOSTNAME in config.h.
+	  Telemetry server hostname.  Updates are fetched from it too unless
+	  APP_FOTA_HOST names another host.  Leave empty to fall back to
+	  HOSTNAME in config.h.
 
 config APP_SERVER_PORT
 	int "Telemetry server UDP port"
@@ -519,8 +539,9 @@ config APP_FOTA_SEC_TAG
 	default 42
 	help
 	  modem_provision_tls() installs the l0destar CA from src/ca_cert.h
-	  here on first boot, so the same private CA authenticates telemetry
-	  and updates.  It is deliberately NOT the telemetry TLS_SEC_TAG:
+	  here on first boot, and the update server's certificate is checked
+	  against it; telemetry needs no CA, as the device key authenticates
+	  it.  It is deliberately NOT TLS_SEC_TAG (1), which gets the same CA:
 	  past DTLS/PSK experiments left extra credential types on tag 1 in
 	  modem NVM, and a mixed tag makes certificate-mode TLS connect()
 	  fail with EINVAL.  A dedicated tag holds one CA chain and nothing
@@ -620,7 +641,8 @@ config APP_FOTA_DOWNLOAD_TIMEOUT_S
 	int "Image download timeout (seconds)"
 	default 1200
 	help
-	  Upper bound on the whole download.  A ~300 KB image over LTE-M
+	  Upper bound on one update check's download, every attempt included.
+	  A ~300 KB image over LTE-M
 	  typically takes 2-5 minutes; the watchdog is fed throughout.
 
 config APP_FOTA_FRAGMENT_SIZE
@@ -632,8 +654,14 @@ endif # APP_FOTA
 # --- intervals (seconds) ---------------------------------------------------
 
 config APP_ENGINE_OFF_LOOP_INTERVAL
-	int "Engine-off telemetry interval (0=disabled)"
+	int "Engine-off wake interval until the server sets one (0 = ENGINE_OFF_BOOT_INTERVAL)"
 	default 0
+	help
+	  Seconds between timed engine-off wakes from boot until the first
+	  server reply replaces it with the server's own value, which may be 0
+	  to stop timed wakes.  0 here uses ENGINE_OFF_BOOT_INTERVAL (900 s,
+	  src/config.h) instead, so a unit whose first record after a reboot
+	  is lost still wakes to try again.
 
 config APP_IGNITION_ON_SLEEP_INTERVAL
 	int "Send cadence while ignition on, engine off"
@@ -738,12 +766,14 @@ config APP_IMPACT_IMMEDIATE_MG
 	  deciding whether the unit is being moved.  The confirm still runs
 	  afterwards, so a hit followed by movement raises both alerts.
 
-	  Must sit above APP_PARKED_IMPACT_MG and below the clip ceiling:
-	  sleep runs the accel at +/-2 g, so the deviation saturates around
-	  1000-1200 mg and a threshold above that can never fire.  That
-	  leaves a narrow window, which is why APP_IMPACT_IMMEDIATE_MAX_MS
-	  qualifies it by duration as well.  Set 0 to disable and always
-	  wait for the confirm.
+	  It is checked before, and independently of, APP_PARKED_IMPACT_MG,
+	  which only applies when the confirm then finds no movement and
+	  nothing was reported here, so the two need no particular order.
+	  Keep it below the clip ceiling: sleep runs the accel at +/-2 g, so a
+	  hit along one axis saturates the deviation around 1000-1200 mg.
+	  That leaves a narrow window, which is why
+	  APP_IMPACT_IMMEDIATE_MAX_MS qualifies it by duration as well.  Set 0
+	  to disable and always wait for the confirm.
 
 config APP_IMPACT_IMMEDIATE_MAX_MS
 	int "Longest event still treated as an impact (ms)"

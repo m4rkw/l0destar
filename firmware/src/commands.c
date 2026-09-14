@@ -11,6 +11,20 @@
 
 LOG_MODULE_REGISTER(cmd, CONFIG_APP_LOG_LEVEL);
 
+/* locatenow and tomtomnow build and send a record before saying where the
+ * unit is.  Awake with the ignition on, STATE_SEND has stopped GNSS for the
+ * send this reply answers, so resume it first; otherwise the collection waits
+ * out its timeout on a stopped receiver and reports the last known position.
+ * A parked unit's timed report keeps using that position. */
+static void locate_now(void)
+{
+    if (ignition == 0) {
+        gnss_resume();
+    }
+    collect_data(ignition);
+    send_data();
+}
+
 void cmd_run(char *cmd)
 {
     char *tmp;
@@ -48,7 +62,7 @@ void cmd_run(char *cmd)
      * device converges on its setting after a reboot or a missed reply;
      * only a change is acted on, so the routine repeat is silent. */
     tmp = strstr(cmd, "track=");
-    if (tmp) {
+    if (tmp && IS_ENABLED(CONFIG_APP_TRACK_MODE)) {
         int8_t want = atoi(tmp + strlen("track=")) ? 1 : 0;
         if (want && ignition != 0) {
             /* Track mode is meaningless with the ignition off, and the
@@ -71,8 +85,7 @@ void cmd_run(char *cmd)
     }
 
     if (strstr(cmd, "locatenow")) {
-        collect_data(ignition);
-        send_data();
+        locate_now();
         char msg[60];
         snprintf(msg, sizeof(msg), "google: %s,%s",
                  g_gnss.lat_str, g_gnss.lon_str);
@@ -85,8 +98,7 @@ void cmd_run(char *cmd)
     }
 
     if (strstr(cmd, "tomtomnow")) {
-        collect_data(ignition);
-        send_data();
+        locate_now();
         char msg[120];
         snprintf(msg, sizeof(msg), "tomtom: %s,%s",
                  g_gnss.lat_str, g_gnss.lon_str);
@@ -119,6 +131,9 @@ void cmd_run(char *cmd)
             }
             ver[n] = '\0';
             fota_notify_available(ver);
+        } else if (IS_ENABLED(CONFIG_APP_FOTA_INHIBIT)) {
+            /* A bench build never checks, so do not claim one is queued. */
+            alert_enqueue("fota: updates inhibited", 0);
         } else {
             fota_request_check();
             alert_enqueue("fota: check queued", 0);

@@ -14,6 +14,7 @@ database with anything in it.
 
 import os
 import tempfile
+import time
 
 import pytest
 import yaml
@@ -82,7 +83,7 @@ def database():
 
     handle = db.web
     handle.query('SET FOREIGN_KEY_CHECKS = 0')
-    for table in ('journey', 'command', 'dtc', 'log', 'device', 'plmn',
+    for table in ('journey', 'command', 'dtc', 'log', 'device_nonce', 'device', 'plmn',
                   'api_token', 'user', 'registration', 'regoptions',
                   'authoptions', 'authoptions_ip'):
         handle.query('DELETE FROM `%s`' % table)
@@ -150,6 +151,8 @@ def logged_in(client, database):
     )
     with client.session_transaction() as session:
         session['username'] = 'tester'
+        session['credential_id'] = 'tester-credential'
+        session['login_at'] = int(time.time())
     return client
 
 

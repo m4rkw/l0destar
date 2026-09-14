@@ -20,9 +20,9 @@
 # WHY PER-DEVICE
 # --------------
 # A single published image is only correct for units whose hardware matches
-# whatever was on the bench when it was built.  It isn't: v3.0 boards ship
-# with CAN and K-line both laid out and only one populated, and local.conf
-# carries bench-only debug settings besides.  MCUboot won't save you — it
+# whatever was on the bench when it was built.  It isn't: a board lays out
+# CAN and K-wire and is built with one of them, and local.conf carries
+# bench-only debug settings besides.  MCUboot won't save you — it
 # checks the signature, not the hardware the image expects — so a CAN build
 # installs cleanly on a K-line unit and then misbehaves in the field.
 #
@@ -40,14 +40,13 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-SERVER="${FW_SERVER:-a}"                 # ssh host
-FW_DIR="${FW_DIR:-/var/www/tracker/fw}"
+SERVER="${FW_SERVER:-}"                  # ssh destination; required to publish
+FW_DIR="${FW_DIR:-/srv/l0destar/fw}"     # the server's fw_dir
 REMOTE_CONF="${REMOTE_CONF:-remote.conf}"
 FRAG_DIR=.remote                         # generated Kconfig fragments
-# Devices fetch from the telemetry TLS port (65481) — the only forwarded TCP
-# path to the server; its listener doubles as the /fw/ HTTP endpoint.  Every
-# read here goes to that endpoint the same way a tracker does: public
-# hostname, private CA, no shell access.  So the checks exercise the path a
+# Devices fetch firmware from the server's TLS listener on 65481, which serves
+# /fw/ and nothing else.  Every read here goes to that endpoint the same way a
+# tracker does: public hostname, private CA, no shell access.  So the checks exercise the path a
 # device actually takes, port forward included, rather than loopback on the
 # server.  ssh is used only for the writes — upload and manifest swap — since
 # there is no HTTP write API and there should not be one.
@@ -75,6 +74,14 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
+
+# Publishing copies over ssh, so it has to know where to; --list only reads.
+if [[ $LIST -eq 0 && -z $SERVER ]]; then
+    echo "error: set FW_SERVER to your server's ssh destination (for example" >&2
+    echo "       you@tracker.example.com), and FW_DIR if its firmware directory" >&2
+    echo "       is not $FW_DIR." >&2
+    exit 1
+fi
 
 [[ -f $REMOTE_CONF ]] || {
     echo "error: $REMOTE_CONF not found — copy remote.conf.example and fill in" >&2
@@ -208,7 +215,7 @@ fetch_published() {
     code=${body##*$'\n'}
     if [[ $code != 200 ]]; then
         echo "error: $VERIFY_URL/fw/published.txt returned HTTP $code" >&2
-        echo "       — the server needs the main.py that serves it." >&2
+        echo "       — is that the l0destar server's firmware port, and is the server current?" >&2
         return 1
     fi
     PUBLISHED="${body%$'\n'*}"
@@ -251,7 +258,7 @@ if [[ $BUILD -eq 1 ]]; then
         echo "         and the count restarts from 0." >&2
         exit 1
     fi
-    echo "version $SRC_VER (patch derived from $SERVER:$FW_DIR)"
+    echo "version $SRC_VER (patch derived from what $FW_HOST has published)"
 else
     # Nothing is being rebuilt, so the images already carry a version — adopt
     # it rather than inventing a new one.  Read it below from the first

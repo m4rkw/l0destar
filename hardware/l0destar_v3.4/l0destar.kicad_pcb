@@ -6136,7 +6136,7 @@
 				(pins "1" "2")
 			)
 		)
-		(attr smd)
+		(attr smd dnp)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
 			(start -0.153641 -0.38)
@@ -9905,7 +9905,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://datasheets.maximintegrated.com/en/ds/MAX33040E-MAX33041E.pdf"
+		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tcan3414.pdf"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -9916,7 +9916,7 @@
 				)
 			)
 		)
-		(property "Description" "+3.3V, 5Mbps CAN Transceiver with ?40V Fault Protection"
+		(property "Description" "3.3-V CAN FD transceiver with shut-down and standby mode"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -10001,7 +10001,7 @@
 				(pins "1" "2" "3" "4" "8" "7" "6" "5")
 			)
 		)
-		(attr smd dnp)
+		(attr smd)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
 			(start 1.6 2.45)
@@ -13861,7 +13861,7 @@
 				(pins "1" "2")
 			)
 		)
-		(attr smd)
+		(attr smd dnp)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
 			(start -0.153641 -0.38)
@@ -14228,7 +14228,7 @@
 				(pins "1" "2")
 			)
 		)
-		(attr smd)
+		(attr smd dnp)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
 			(start -0.153641 -0.38)
@@ -15987,7 +15987,7 @@
 				(pins "1" "2")
 			)
 		)
-		(attr smd)
+		(attr smd dnp)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
 			(start -0.153641 0.38)
@@ -17244,7 +17244,7 @@
 				(pins "1" "2")
 			)
 		)
-		(attr smd)
+		(attr smd dnp)
 		(duplicate_pad_numbers_are_jumpers no)
 		(fp_line
 			(start -0.153641 -0.38)

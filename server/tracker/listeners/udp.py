@@ -22,41 +22,43 @@ import time
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+import pymysql
 
 from .. import config, db, logs, telemetry
 
 NONCE_BYTES = 12
 TAG_BYTES = 16
 
-# Replay window per device.  The most recent nonce is also persisted so that a
-# restart cannot open a hole for the single most-recently captured packet.
-_NONCE_WINDOW = 1024
-_seen_nonces = {}
-_seen_lock = threading.Lock()
+# Replay protection.  Every nonce a device uses is kept in device_nonce for
+# NONCE_RETENTION_SECONDS, and the primary key turns a second use into a failed
+# insert, so a captured datagram replayed after a restart is refused as well.
+NONCE_RETENTION_SECONDS = 30 * 86400
+_PRUNE_INTERVAL_SECONDS = 3600
+_last_prune = 0.0
 
 
 def _nonce_seen(device_id, nonce):
-    """True if this nonce has already been used by this device."""
-    with _seen_lock:
-        window = _seen_nonces.get(device_id)
-        if window is None:
-            row = db.udp.one('SELECT `last_nonce` FROM `device` WHERE `id` = %s',
-                             (device_id,))
-            seed = row.get('last_nonce') if row else None
-            window = [bytes(seed)] if seed else []
-            _seen_nonces[device_id] = window
-
-        if nonce in window:
-            return True
-        window.append(nonce)
-        if len(window) > _NONCE_WINDOW:
-            del window[0]
-
+    """True if this device has already used this nonce, or if that could not be
+    checked: a datagram that cannot be checked is not accepted."""
+    global _last_prune
+    now = time.time()
     try:
-        db.udp.query('UPDATE `device` SET `last_nonce` = %s WHERE `id` = %s',
-                     (nonce, device_id))
+        db.udp.query('INSERT INTO `device_nonce` (`device_id`, `nonce`, `seen_at`) '
+                     'VALUES (%s, %s, %s)', (device_id, nonce, int(now)))
+    except pymysql.err.IntegrityError as e:
+        if not (e.args and e.args[0] == 1062):
+            logs.udp.exception('failed to record a nonce for device %s', device_id)
+        return True
     except Exception:
-        logs.udp.exception('failed to persist last_nonce for device %s', device_id)
+        logs.udp.exception('failed to record a nonce for device %s', device_id)
+        return True
+    if now - _last_prune >= _PRUNE_INTERVAL_SECONDS:
+        _last_prune = now
+        try:
+            db.udp.query('DELETE FROM `device_nonce` WHERE `seen_at` < %s',
+                         (int(now) - NONCE_RETENTION_SECONDS,))
+        except Exception:
+            logs.udp.exception('failed to prune old nonces')
     return False
 
 

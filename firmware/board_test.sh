@@ -27,6 +27,13 @@
 #   CONFIG_APP_CRASH_THRESHOLD_MG      impact threshold (default 1200 mg here:
 #                                      a firm desk bang is 1.5-3 g)
 set -euo pipefail
+
+# The console is attached with GNU screen: find out now, not after a build and
+# a flash.
+if ! command -v screen >/dev/null 2>&1; then
+    echo "board_test.sh needs GNU screen: sudo apt install -y screen on Linux, or Homebrew or MacPorts on macOS." >&2
+    exit 1
+fi
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 FRAGMENT=board_test.conf
@@ -179,8 +186,8 @@ CRASH_MG="${CRASH_MG:-1200}"
         echo "# restores the module logs; warnings and errors always print."
         echo "CONFIG_APP_LOG_LEVEL=2"
     fi
-    echo "# bounded registration attempt for the bench (default is 600 s)"
-    echo "CONFIG_LTE_NETWORK_TIMEOUT=180"
+    echo "# longer registration wait for the bench (default is 60 s)"
+    echo "CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT=180"
     echo "# desk-bang friendly impact threshold"
     echo "CONFIG_APP_CRASH_THRESHOLD_MG=$CRASH_MG"
     [[ -n "$APN" ]] && echo "CONFIG_APP_APN=\"$APN\""
@@ -263,6 +270,7 @@ done
 # The DAPLink CDC port can report busy (or drop and re-enumerate) for a few
 # seconds after pyocd has been at the probe, so retry rather than giving up on
 # the first attempt.
+screen_start=$SECONDS
 opened=0
 for _ in $(seq 1 20); do
     if [[ -e "$PORT" ]]; then
@@ -276,7 +284,7 @@ for _ in $(seq 1 20); do
     sleep 0.5
 done
 if [[ $opened -ne 1 ]]; then
-    echo "screen could not open $PORT after 10 s." >&2
+    echo "screen could not open $PORT after $((SECONDS - screen_start)) s." >&2
     if [[ -e "$PORT" ]]; then
         holder="$(lsof "$PORT" 2>/dev/null | tail -n +2)"
         if [[ -n "$holder" ]]; then
@@ -293,7 +301,14 @@ if [[ $opened -ne 1 ]]; then
 fi
 
 echo "Resetting target..."
-./reset.sh
+# A soft reset, unlike reset.sh: the console session is already open, and a pin
+# reset would re-enumerate USB underneath it.  It leaves the chip in debug
+# interface mode, which only matters for sleep current, and nothing here
+# measures that.
+if ! pyocd reset -t nrf91 -m sysresetreq -O auto_unlock=false; then
+    echo "Reset failed.  If pyocd mentioned APPROTECT, run ./flash.sh: it is the recovery." >&2
+    exit 1
+fi
 
 echo
 echo "Attaching to the console.  In the test session:"

@@ -656,10 +656,7 @@ def build_response(device, database, log, firmware_version=None):
     replaying a `poweroff` the operator has since changed their mind about.
     """
     settings = device_config(device)
-    if config.SLIM_RESPONSE:
-        response = '1,%s' % settings['int']
-    else:
-        response = '1,%s,%s' % (settings['int'], settings['ma'])
+    response = '1,%s,%s' % (settings['int'], settings['ma'])
 
     commands = database.all(
         'SELECT `id`, `command` FROM `command` WHERE `device_id` = %s ORDER BY `id`',
@@ -674,16 +671,14 @@ def build_response(device, database, log, firmware_version=None):
         log.info('delivered %d commands to %s: %s',
                  len(commands), device['imei'], command_string)
 
-    # The OTA indication rides the command field, so a slim response — which
-    # has no command field — cannot carry it.
-    if firmware_version and not config.SLIM_RESPONSE:
+    # The OTA indication rides the command field.
+    if firmware_version:
         response += ',fota=%s' % firmware_version
 
     # Track mode rides the same way, on every response, so a device that
     # rebooted or missed a reply converges on the setting.  The firmware
     # acts only on a change, so the repeat costs nothing but the bytes.
-    if not config.SLIM_RESPONSE:
-        response += ',track=%d' % (1 if device.get('track_mode') else 0)
+    response += ',track=%d' % (1 if device.get('track_mode') else 0)
 
     return response
 

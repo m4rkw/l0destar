@@ -616,7 +616,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "28c8535e-eb3d-4ce6-9273-4f336183a54d")
 		(property "Reference" "S5R3"
@@ -696,7 +696,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "42d99372-76e9-4a4c-881f-ce26e5cd2ccc")
 		(property "Reference" "S5R1"
@@ -776,7 +776,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "7d28bde8-130a-4e4f-a507-539d4d120514")
 		(property "Reference" "S5R4"
@@ -856,7 +856,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "9045738f-982c-4c37-aef0-c31418304692")
 		(property "Reference" "S5R5"
@@ -936,7 +936,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "a58b2131-bf36-466d-b2d5-71aefbc64981")
 		(property "Reference" "S5R2"

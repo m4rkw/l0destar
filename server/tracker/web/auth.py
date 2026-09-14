@@ -53,18 +53,28 @@ def current_user():
     """The logged-in user's row, or None.
 
     A signed session cookie outlives anything that happens to its account, so
-    a user removed from the table, or locked after failed logins, would keep
-    their access until the cookie expired.  Every authenticated request looks
-    the account up instead — one indexed query — and a session whose user is
-    gone or locked is cleared.
+    a user removed from the table, locked after failed logins, or re-enrolled
+    after losing a phone would keep their access until the cookie expired.
+    Every authenticated request looks the account up instead — one indexed
+    query — and a session whose user is gone, locked or holds a different
+    passkey is cleared.
     """
     username = session.get('username')
     if not username:
         return None
-    user = db.web.one('SELECT `id`, `username`, `locked` FROM `user` '
+    user = db.web.one('SELECT `id`, `username`, `user_id`, `locked` FROM `user` '
                       'WHERE `username` = %s', (username,))
-    if not user or user['locked']:
-        session.pop('username', None)
+    # `user_id` holds the passkey's credential id, which every registration
+    # replaces, so a session logged in with an earlier passkey no longer
+    # matches.
+    # A login lasts session_lifetime_days from when it was made.  The cookie is
+    # re-issued on every request, so its own expiry only measures idleness.
+    expired = (time.time() - session.get('login_at', 0)
+               >= config.SESSION_LIFETIME_DAYS * 86400)
+    if (not user or user['locked'] or expired
+            or user['user_id'] != session.get('credential_id')):
+        for key in ('username', 'credential_id', 'login_at'):
+            session.pop(key, None)
         return None
     return user
 
@@ -220,6 +230,7 @@ def register():
             expected_challenge=json.loads(stored['regoptions'])['challenge'].encode(),
             expected_origin=origin(),
             expected_rp_id=rp_id(),
+            require_user_verification=True,
         )
     except Exception as e:
         audit('register-error', str(e))
@@ -262,13 +273,15 @@ def _rate_limited(ip):
     row = db.web.one('SELECT * FROM `authoptions_ip` WHERE `ip` = %s', (ip,))
     now = int(time.time())
 
-    if row and row['count'] >= config.RATE_LIMIT_REQUEST_COUNT:
-        if now - row['last_request_timestamp'] < config.RATE_LIMIT_RESET_PERIOD:
-            return True
+    # The count starts again once an address has been quiet for a whole
+    # period, so abandoned attempts spread over weeks never add up to a block.
+    if row and now - row['last_request_timestamp'] >= config.RATE_LIMIT_RESET_PERIOD:
         db.web.query(
             'UPDATE `authoptions_ip` SET `count` = 1, `last_request_timestamp` = %s '
             'WHERE `ip` = %s', (now, ip))
         return False
+    if row and row['count'] >= config.RATE_LIMIT_REQUEST_COUNT:
+        return True
 
     if row:
         db.web.query(
@@ -298,15 +311,15 @@ def authoptions():
 
     user = db.web.one('SELECT * FROM `user` WHERE `username` = %s', (username,))
     if not user:
-        audit('authoptions-error', 'user not found')
+        audit('authoptions-error', 'user not found: %s' % username)
         return json_response({'status': 'error', 'message': 'user not found'}, 401)
     if user['locked']:
-        audit('authoptions-error', 'account locked')
+        audit('authoptions-error', 'account locked: %s' % username)
         return json_response({'status': 'error', 'message': 'account locked'}, 401)
 
     options = generate_authentication_options(
         rp_id=rp_id(),
-        user_verification=UserVerificationRequirement.PREFERRED,
+        user_verification=UserVerificationRequirement.REQUIRED,
     )
 
     db.web.query('DELETE FROM `authoptions` WHERE `session_id` = %s',
@@ -340,6 +353,15 @@ def authenticate():
     if not pending:
         audit('login-error', 'no challenge for session')
         return json_response({'status': 'error', 'message': 'no challenge for session'}, 401)
+
+    # The challenge was issued for the username typed in; a passkey belonging
+    # to any other account is refused before it can count against that
+    # account's failed logins.
+    if data.get('user_id') != pending['user_id']:
+        asked = db.web.one('SELECT `username` FROM `user` WHERE `user_id` = %s',
+                           (pending['user_id'],))
+        audit('login-error', 'passkey is not %s\'s' % (asked['username'] if asked else 'the requested account'))
+        return json_response({'status': 'error', 'message': 'authentication failed'}, 401)
 
     user = db.web.one('SELECT * FROM `user` WHERE `user_id` = %s',
                       (data.get('user_id'),))
@@ -387,6 +409,7 @@ def authenticate():
             expected_rp_id=rp_id(),
             credential_public_key=base64.b64decode(stored['public_key']),
             credential_current_sign_count=stored['sign_count'],
+            require_user_verification=True,
         )
     except Exception as e:
         # Every way this can fail — a bad signature, a malformed assertion, a
@@ -398,7 +421,8 @@ def authenticate():
             'UPDATE `user` SET `failed_login_count` = %s, `locked` = %s WHERE `id` = %s',
             (failed, 1 if failed >= MAX_FAILED_LOGINS else user['locked'], user['id']),
         )
-        audit('login-error', 'verification failed: %s (count=%d)' % (e, failed))
+        audit('login-error', 'verification failed for %s: %s (count=%d)'
+              % (user['username'], e, failed))
         logs.app.warning('failed login for %s from %s', user['username'], client_ip())
         return json_response({'status': 'error', 'message': 'authentication failed'}, 401)
 
@@ -410,5 +434,7 @@ def authenticate():
                  (client_ip(),))
 
     session['username'] = user['username']
+    session['credential_id'] = user['user_id']
+    session['login_at'] = int(time.time())
     audit('login-success', user['username'])
     return ok({'message': 'authentication successful'})

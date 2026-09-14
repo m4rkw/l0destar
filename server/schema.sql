@@ -22,8 +22,8 @@ CREATE TABLE `device` (
   -- Pre-shared key for the UDP transport: 32 bytes as 64 hex characters.
   -- NULL disables the UDP transport for this device.
   `psk`           CHAR(64)     DEFAULT NULL,
-  -- Most recent accepted nonce, so a restart cannot reopen a replay window
-  -- for the single most-recently captured datagram.
+  -- No longer used: replay protection is device_nonce.  Kept so an existing
+  -- database needs no destructive migration.
   `last_nonce`    VARBINARY(12) DEFAULT NULL,
 
   -- Settings the device syncs and applies.
@@ -187,6 +187,19 @@ CREATE TABLE `journey` (
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+
+-- Every nonce each device has used in the last 30 days.  The primary key turns a
+-- second use into a failed insert, so a replayed datagram is refused even after
+-- a restart.  The UDP listener deletes rows older than that.
+CREATE TABLE `device_nonce` (
+  `device_id`     INT UNSIGNED NOT NULL,
+  `nonce`         BINARY(12)   NOT NULL,
+  `seen_at`       INT UNSIGNED NOT NULL COMMENT 'unix time',
+  PRIMARY KEY (`device_id`, `nonce`),
+  KEY `seen_at` (`seen_at`),
+  CONSTRAINT `device_nonce_device` FOREIGN KEY (`device_id`) REFERENCES `device` (`id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Commands waiting for a device to check in.  Rows are deleted as they are
 -- handed over, so delivery is at-most-once: a command lost to a dropped reply

@@ -2,8 +2,8 @@
 
 The reference deployment uses Pushover, but nothing above this module knows
 that: callers pass a message, a title and a priority, and the configured
-backend decides what to do with them.  ``none`` is a valid choice — the server
-runs fine with alerts only going to ``udp.log``.
+backend decides what to do with them.  ``none`` is a valid choice: every
+notification is written to ``app.log`` whichever backend is set.
 
 Backends are selected in config.yaml::
 
@@ -18,6 +18,9 @@ gets the number verbatim and can map it however it likes.
 """
 
 import json
+import queue
+import threading
+import time
 
 import requests
 
@@ -74,26 +77,65 @@ _BACKENDS = {
     'webhook': _send_webhook,
 }
 
+# Deliveries happen on a thread of their own.  The callers are the UDP and TLS
+# listeners and the web workers, and a request to Pushover or a webhook can take
+# its whole 10 s timeout, which no tracker waiting seconds for a reply can wait.
+_queue = queue.Queue(maxsize=1000)
+_worker = None
+_worker_lock = threading.Lock()
+
+
+def _deliver():
+    while True:
+        handler, args = _queue.get()
+        try:
+            handler(*args)
+        except Exception:
+            logs.app.exception('notification failed: %s', args[1])
+        finally:
+            _queue.task_done()
+
+
+def _start_worker():
+    # Started on first use rather than at import: gunicorn forks its workers
+    # after loading the app, and a thread does not survive the fork.
+    global _worker
+    with _worker_lock:
+        if _worker is None or not _worker.is_alive():
+            _worker = threading.Thread(target=_deliver, name='notify', daemon=True)
+            _worker.start()
+
+
+def wait_idle(timeout=10):
+    """Wait until every queued notification has been attempted, or timeout."""
+    deadline = time.monotonic() + timeout
+    while _queue.unfinished_tasks and time.monotonic() < deadline:
+        time.sleep(0.01)
+
 
 def send(message, title='Tracker', priority=0, url=None, url_title=None):
-    """Deliver a notification.  Never raises — a dead notification service
-    must not cost a telemetry record."""
+    """Deliver a notification in the background.  Never raises and never
+    blocks: the UDP listener calls this while a tracker waits a few seconds for
+    its reply, so a slow or dead notification service must not hold it up."""
+    logs.notify.info('%s, priority %d: %s', title, priority, message)
     handler = _BACKENDS.get(_backend)
     if handler is None:
         if _backend != 'none':
             logs.app.error('unknown notify backend %r', _backend)
         return
+    _start_worker()
     try:
-        handler(message, title, priority, url, url_title)
-    except Exception:
-        logs.app.exception('notification failed: %s', title)
+        _queue.put_nowait((handler, (message, title, priority, url, url_title)))
+    except queue.Full:
+        logs.app.error('notification queue full, dropped: %s', title)
 
 
 # Deep links the firmware can request by prefixing an alert.  `locate` sends
 # `google: <lat>,<lon>` and `tomtom` sends `tomtom: <lat>,<lon>`; turning those
 # into a tappable link is the whole point of asking the device for a position.
 _DEEP_LINKS = {
-    'google: ': (lambda c: 'comgooglemaps://?q=%s' % c, 'Open in Google Maps'),
+    'google: ': (lambda c: 'https://www.google.com/maps/search/?api=1&query=%s' % c,
+                 'Open in Google Maps'),
     'tomtom: ': (lambda c: 'tomtomgo://x-callback-url/navigate?destination=%s' % c,
                  'Open in TomTom'),
 }

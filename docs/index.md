@@ -27,12 +27,13 @@ somewhere to report to while you bring it up on the bench.
 
 ## What you end up with
 
-- A tracker that sleeps at around 35.5µA from the vehicle battery and wakes on the ignition,
+- A tracker expected to sleep at about 35.5µA from the vehicle battery that wakes on the ignition,
   movement, an impact or a slow tilt such as a tow or a jack.
 - Position, speed, battery voltage and ignition state every few seconds while driving (3-5
   seconds on LTE-M in the author's vehicle), and on a timer while parked if you want it.
 - An optional vehicle diagnostic interface, CAN-FD or K-wire. Over the K wire the firmware reads
-  engine data and fault codes; the CAN-FD interface has been bench tested from 125kbps up to 8Mbps,
+  engine data and fault codes. The CAN-FD interface was bench tested on a v3.1 board from 125kbps
+  up to 8Mbps - beyond that board's transceiver rating at 8Mbps, where 2 bit errors were retried -
   but the firmware does not read vehicle data over CAN yet.
 - Firmware that updates itself over the air, with a separate signed image for every device.
 - A server that stores the history, splits it into journeys, shows a live map and journey
@@ -53,13 +54,11 @@ somewhere to report to while you bring it up on the bench.
 
 - **Board:** v3.4 is the current design and has not been built or tested yet. v3.3, which differs
   only in details covered in the assembly section, is built and bench tested. The guides assume
-  v3.4 and point out where older boards differ.
+  v3.4.
 - **Firmware:** 0.4.x, built with nRF Connect SDK v3.3.0. OBD-II data and fault codes are read over
   the K wire. The CAN-FD interface is supported as hardware and bench tested in classic CAN and
   CAN-FD modes, but the firmware does not read vehicle data over CAN yet.
-- **Server:** a public reference implementation derived from the author's private deployment. It
-  has tests but has not been run end to end against real hardware in this form, so treat it as
-  something to review and adapt.
+- **Server:** a public reference implementation of a tracking telemetry server.
 
 These pages describe the [l0destar repository](https://github.com/m4rkw/l0destar) as of September
 2026. Where they disagree with the repository, the repository is right - please report it.

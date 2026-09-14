@@ -8,7 +8,7 @@ Every device gets its own build. Boards differ in revision and in which OBD inte
 
 1. You run `push_fw.sh` on your build machine. For each device in `remote.conf` it builds an image, uploads it to the server's firmware directory as `l0destar-<version>-<imei>.bin` and writes that device's `manifest-<imei>.txt`.
 2. From then on, every reply the server sends that device carries `fota=<version>`, and the device compares it with the version it is running.
-3. When the published version is newer, the device checks for the update at the next safe moment: from its main loop, on a timed engine-off wake, or on the way to sleep when the ignition is switched off. It also checks every time it boots, and when it is sent the `fota` command.
+3. When the published version is newer, the device checks for the update at the next safe moment: from its main loop while the engine is not running, on a timed engine-off wake, or on the way to sleep when the ignition is switched off. It also checks every time it boots, and when it is sent the `fota` command.
 4. It fetches `/fw/manifest.txt?imei=<imei>&v=<running version>` from `CONFIG_APP_SERVER_HOST` on TCP port 65481 over TLS, checking the server's certificate against the CA stored in its modem. It installs only a strictly newer version whose `board=` matches its own build (for example `v3.4+kline`), and waits while the vehicle battery reads below 12.0V.
 5. It raises the alert `fota: <old> -> <new> available, downloading`, stops GNSS (which shares the radio front end) and downloads the image into its second flash slot in 2KB pieces: up to three attempts per check, within a 20 minute budget.
 6. It tells the server the image is staged, raises `fota: <old> -> <new>, rebooting` and restarts.
@@ -78,7 +78,7 @@ export FW_DIR=/srv/l0destar/fw
 ./push_fw.sh
 ```
 
-`FW_SERVER` is the SSH destination and `FW_DIR` the firmware directory on the server. Always set both: the defaults are the author's own server. The script takes the hostname to verify against from `CONFIG_APP_SERVER_HOST` in `[common]`.
+`FW_SERVER` is the SSH destination and `FW_DIR` the firmware directory on the server. The script stops without `FW_SERVER`; `FW_DIR` defaults to `/srv/l0destar/fw`, the Docker installation's. The script takes the hostname to verify against from `CONFIG_APP_SERVER_HOST` in `[common]`.
 
 `--list` prints the version it would publish and each device's resolved configuration without building anything. Then, for each device, `push_fw.sh`:
 
@@ -104,9 +104,9 @@ done: 1 device(s) will pull 0.4.13 on their next telemetry
 
 ### Version numbers
 
-`firmware/VERSION` holds only the major and minor version (`0.4`). The patch number is worked out from what your server has already published - it lists every version it holds at `/fw/published.txt` - plus one, so there is nothing to bump by hand and two machines cannot reuse a number. The first release of a minor version is patch 1: patch 0 is what every bench build gets, and a device only installs a version newer than the one it runs. If that list cannot be fetched, the script stops rather than guess.
+`firmware/VERSION` holds only the major and minor version (`0.4`). The patch number is worked out from what your server has already published - it lists every version it holds at `/fw/published.txt` - plus one, so there is nothing to bump by hand, and machines publishing one after another never reuse a number (nothing stops two publishing at the same moment). The first release of a minor version is patch 1: patch 0 is what every bench build gets, and a device only installs a version newer than the one it runs. If that list cannot be fetched, the script stops rather than guess.
 
-Devices install only strictly newer versions, and each part of the version runs from 0 to 255. When the patch number would pass 255, raise the minor version in `VERSION` (for example to `0.5`) and patches start again from 1. To roll a device back, check out the old code and publish it: it goes out under the next number.
+Devices install only strictly newer versions, and each part of the version runs from 0 to 255. When the patch number would pass 255, raise the minor version in `VERSION` (for example to `0.5`) and patches start again from 1. To roll a device back, check out the old code but keep the current `VERSION` file, or raise it, then publish: the old code goes out under the next number. With its own, older `VERSION` it would build a version the device will not install, and `push_fw.sh` refuses it.
 
 ## Watching an update
 
@@ -124,7 +124,7 @@ On the server, `tls.log` shows the manifest request and the first and last range
 
 | What you see | What happened | What to do |
 |---|---|---|
-| `fota: <old> -> <new> failed after 3 attempts (err ..., cause ...)` | The download did not complete. | Check TCP 65481 is reachable from outside and the certificate is valid. The device retries by itself; the `fota` command retries now. |
+| `fota: <old> -> <new> failed after <n> attempts (err <e>, cause <c>)` | The download did not complete. | Check TCP 65481 is reachable from outside and the certificate is valid. The device retries by itself; the `fota` command retries now. |
 | `<name>: fota: <version> failed to boot (running <old>) — updates withheld until retried` | The image installed but did not start, and MCUboot reverted it. | Publish a fixed, newer version (offered automatically), or retry the same one with `command.py <imei> fota-retry`. |
 | Console: `manifest targets board '...', this unit is '...' — refusing` | The device's section in `remote.conf` does not match its hardware. | Correct the section and publish again. |
 | Console: `battery ... — deferring update` | The vehicle battery reads below 12.0V. | Nothing: it tries again at the next check. |
@@ -140,7 +140,7 @@ That clears the server's block and queues the `fota` command, which clears the d
 
 ## Bench units
 
-- Build bench units with `CONFIG_APP_FOTA_INHIBIT=y`, as in [minimal config and initial flashing](/board-setup/initial-flashing.html). The unit skips the check at boot and ignores update adverts and the `fota` command.
+- Build bench units with `CONFIG_APP_FOTA_INHIBIT=y`, as in [minimal config and initial flashing](/board-setup/initial-flashing.html). The unit skips the check at boot, ignores update adverts, and answers the `fota` command with `fota: updates inhibited`.
 - Never use `CONFIG_APP_FOTA=n` instead. That also removes the call that confirms an image, so a build that did arrive over the air would be reverted on its next boot.
 - Keep bench units out of `remote.conf`. A device with no manifest on the server is never offered anything.
 

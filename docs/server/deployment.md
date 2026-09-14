@@ -127,8 +127,9 @@ The `log` table gains a row for every record a tracker sends, and nothing ever r
 Journeys refer to ranges of `log` rows, so deleting old rows loses the replay for those journeys. If you want a retention limit, delete by id in batches, which uses the primary key rather than scanning the table:
 
 ```sql
--- the first row to keep
-SELECT MIN(id) FROM log WHERE timestamp >= NOW() - INTERVAL 2 YEAR;
+-- the first row to keep: reads the primary key from the oldest row and stops
+-- at the cut-off, rather than reading the whole table
+SELECT id FROM log WHERE timestamp >= NOW() - INTERVAL 2 YEAR ORDER BY id LIMIT 1;
 -- repeat until it affects no rows
 DELETE FROM log WHERE id < <that id> LIMIT 10000;
 ```
@@ -158,6 +159,13 @@ To restore a dump into the running server:
 gunzip -c tracker-2026-09-13.sql.gz | sudo docker exec -i l0destar mariadb tracker
 ```
 
+A dump from an installation older than the Docker image has no record of its migrations, and restoring it leaves the container's record in place. Drop that record and restart, and the start-up applies whatever the restored tables lack:
+
+```sh
+sudo docker exec l0destar mariadb tracker -e 'DROP TABLE schema_migration'
+sudo docker restart l0destar
+```
+
 Restore into a test installation now and then to be sure the backups work.
 
 ## Upgrading
@@ -173,6 +181,8 @@ sudo docker run -d --name l0destar --restart unless-stopped \
 ```
 
 The new container carries on with everything in `/srv/l0destar`. As it starts it applies any database migrations the new version brings, logging `l0destar: applying migration <file>` for each. Take a backup first, and look for new settings by comparing your `config.yaml` with the new image's example, `sudo docker exec l0destar cat config.yaml.example`.
+
+If you [built the image yourself](/server/installation.html#building-the-image-yourself), pull the repository and build it again in place of `docker pull`.
 
 ## Scheduling the home check
 

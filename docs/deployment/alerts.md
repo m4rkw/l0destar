@@ -8,11 +8,11 @@ The `notify` section of `config.yaml` selects the backend; every key is listed i
 
 | Backend | What happens |
 |---|---|
-| `none` | Nothing is sent. Device alerts are still written to the transport's log, such as `udp.log`. |
+| `none` | Nothing is sent. Every notification is still written to `app.log`, and device alerts to the transport's log as well, such as `udp.log`. |
 | `pushover` | Push notifications through [Pushover](https://pushover.net/). |
 | `webhook` | A JSON `POST` to a URL of your choice. |
 
-A notification that fails is logged in `app.log` and never stops the telemetry being stored.
+Notifications go out in the background, so a slow or failing backend never delays a tracker's reply or stops its telemetry being stored; a failed delivery is logged in `app.log`.
 
 ### Pushover
 
@@ -39,7 +39,7 @@ Alert priorities are passed to Pushover as they are:
 | 1 | High priority, bypasses quiet hours |
 | 2 | Emergency: repeated every `retry` seconds until acknowledged or until `expire` seconds have passed |
 
-Pushover requires `retry` to be at least 30 seconds and `expire` to be no more than 10800 seconds. Position replies (`google:` and `tomtom:`) arrive with a link that opens the Google Maps or TomTom app.
+Pushover requires `retry` to be at least 30 seconds and `expire` to be no more than 10800 seconds. Position replies arrive with a link: `google:` opens Google Maps - the app where it is installed, a browser otherwise - and `tomtom:` opens the TomTom GO app, which has to be installed on the phone.
 
 ### Webhook
 
@@ -62,7 +62,7 @@ Every alert is sent as a `POST` with a JSON body and a 10 second timeout:
 }
 ```
 
-`priority` uses the same -2 to 2 scale as Pushover; map it to whatever your receiver understands. `url` and `url_title` carry the map link for position replies. Anything that accepts a JSON `POST` will do - a home automation webhook, a small script, a chat bridge. To check your receiver before involving the tracker:
+`priority` uses the same -2 to 2 scale as Pushover; map it to whatever your receiver understands. `url` and `url_title` carry the map link for position replies. `title` is `Tracker` for every notification except the home check's, which is `Tracker home check`. Anything that accepts a JSON `POST` will do - a home automation webhook, a small script, a chat bridge. To check your receiver before involving the tracker:
 
 ```sh
 curl -X POST https://example.invalid/hook \
@@ -105,7 +105,7 @@ The movement alarm setting (`ma`, `movealarm=`) does not affect any of these in 
 | `fota: <old> -> <new> failed after <n> attempts (err <e>, cause <c>)` | 0 | Every download attempt in one check failed. Once per version. |
 | `fota: <staged> failed to boot, reverted to <running>` | 0 | The new image did not confirm itself and MCUboot put the previous one back. |
 
-The self-test and rail alerts come from boards with rail sensing (v3.1 and later) and mean a hardware fault; the [board test](/assembly/board-test.html) is the place to chase it.
+The self-test and rail alerts mean a hardware fault; the [board test](/assembly/board-test.html) is the place to chase it.
 
 ### Replies to commands
 
@@ -118,6 +118,7 @@ The self-test and rail alerts come from boards with rail sensing (v3.1 and later
 | `tomtom: <lat>,<lon>` | 0 | `tomtom`, `tomtomnow` |
 | `fw=<version> int=<n> ma=<n> tm=<n> bat=<volts>V ign=<on or off> up=<seconds>s` | 0 | `config` |
 | `fota: check queued` | 0 | `fota` |
+| `fota: updates inhibited` | 0 | `fota`, on a unit built with `CONFIG_APP_FOTA_INHIBIT` |
 | `rebooting` | 0 | `reboot` |
 | `track mode ON`, `track mode OFF` | 0 | Track mode switched from the web page |
 

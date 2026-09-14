@@ -18,7 +18,7 @@ response:  [12] nonce  [ciphertext]  [16] tag
 ```
 
 - The IMEI is authenticated as additional data, and a reply also binds the nonce of the request it answers, so a captured reply cannot be replayed into another exchange.
-- Each device has a replay window of its last 1024 nonces, and the most recent nonce is kept in the database so a restart does not reopen it.
+- Every nonce a device uses is kept in the database for 30 days, so a replayed datagram is refused, even after a restart. One captured more than 30 days earlier is not detected.
 - A datagram that is malformed, names an unknown IMEI, fails authentication or repeats a nonce is dropped without a reply. All of these look the same from outside, so the port does not reveal which IMEIs are enrolled.
 - Failures are logged as `decrypt failed from <address> (<n> bytes)`, rate limited per source address: the first in any minute, then every twentieth.
 - The IMEI is sent in clear so the server can choose the key. An observer on the path learns which tracker reports and when, but not what it says.
@@ -29,7 +29,7 @@ The wire format is described in full in [PROTOCOL.md](https://github.com/m4rkw/l
 
 ## What the firmware has built in
 
-- **The port numbers.** 65480 is `UDP_PORT` in `firmware/src/config.h`, and 65481 is `CONFIG_APP_FOTA_PORT`. The container listens on those ports and `docker run` publishes them under the same numbers; keep it that way, because changing them means rebuilding every tracker.
+- **The port numbers.** 65480 and 65481 are the defaults of `CONFIG_APP_SERVER_PORT` and `CONFIG_APP_FOTA_PORT`, compiled into every tracker image. The container listens on those ports and `docker run` publishes them under the same numbers; keep it that way, because changing them means rebuilding every tracker with the new numbers.
 - **IPv4 only.** The firmware looks the hostname up for IPv4 addresses and nothing else. The server needs a public IPv4 address and the hostname needs an A record; an AAAA record on its own does not work.
 - **One DNS lookup per boot.** A tracker resolves `CONFIG_APP_SERVER_HOST` the first time it sends and keeps using that address until it restarts. If the server's public address changes, running trackers carry on sending to the old one, so use a static address. A tracker that has lost the server this way needs a power cycle.
 - **The certificate name.** The update client checks the TLS certificate against your CA and the hostname, so the certificate must be issued for `CONFIG_APP_SERVER_HOST` - the `L0DESTAR_HOSTNAME` the server was first started with ([Server installation](/server/installation.html)).
@@ -61,7 +61,7 @@ Never publish the web application's port (5000) on anything but `127.0.0.1`.
 
 ### Opening TCP 65481 only for updates
 
-Firmware images contain device keys, and nothing authenticates who downloads them ([Server security](/server/security.html)). If that matters to you, keep TCP 65481 closed and open it only while you publish and roll out an update. Do it where the port reaches the server - the router's port forwarding rule, or the provider's firewall - or leave `-p 65481:65481/tcp` out of `docker run` and create the container again with it for a rollout.
+Firmware images contain device keys, and nothing authenticates who downloads them, or who reports a staged update as installed ([Server security](/server/security.html)). If that matters to you, keep TCP 65481 closed and open it only while you publish and roll out an update. Do it where the port reaches the server - the router's port forwarding rule, or the provider's firewall - or leave `-p 65481:65481/tcp` out of `docker run` and create the container again with it for a rollout.
 
 A tracker that checks for an update while the port is closed fails the check and tries again later.
 
@@ -98,7 +98,7 @@ A working tracker appears in `udp.log` as `<n> records from <imei> (<address>)` 
 |---|---|
 | Nothing in `udp.log` when the tracker sends | wrong `CONFIG_APP_SERVER_HOST`, no A record, port forwarding or the provider's firewall, carrier-grade NAT, or the tracker is not registered on the mobile network |
 | `decrypt failed from ...` every time the tracker sends | the key built into the firmware is not the device's key on the server, or the device is not enrolled |
-| Records arrive but settings and commands never take effect | `slim_response` is on, or replies do not get back through NAT or an outbound firewall |
+| Records arrive but settings and commands never take effect | replies do not get back through NAT or an outbound firewall |
 | It worked until the server's public address changed | trackers resolve the hostname once per boot; power-cycle them |
 | Update checks fail on the tracker while telemetry works | TCP 65481 is not reachable; on the tracker's console a failed TLS connection can show as error 22 (`EINVAL`) rather than a timeout |
 | `TLS handshake failed` or handshake timeouts in `tls.log` during updates | weak signal; keep `tls_handshake_timeout` at its default of 45 seconds or raise it |

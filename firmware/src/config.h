@@ -29,8 +29,9 @@
 #define RESPONSE_TIMEOUT_MS 4000
 #define TLS_SEC_TAG         1
 
-/* Fallback PSK — all zeros disables sends.  Real keys go in local.conf
- * (gitignored) as CONFIG_APP_PSK_HEX. */
+/* Fallback PSK, an all-zero placeholder: the tracker still sends with it, and
+ * a server holding the device's real key cannot decrypt any of it.  Real keys
+ * go in local.conf (gitignored) as CONFIG_APP_PSK_HEX. */
 #define PSK_HEX_DEFAULT \
     "0000000000000000000000000000000000000000000000000000000000000000"
 
@@ -56,8 +57,32 @@
 #define BATTERY_CHECK_INTERVAL      CONFIG_APP_BATTERY_CHECK_INTERVAL
 #define NETWORK_REGISTRATION_TIMEOUT CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT
 #define NETWORK_RETRY_INTERVAL      CONFIG_APP_NETWORK_RETRY_INTERVAL
+/* How often a parked unit that owes a timed report checks whether the modem
+ * has registered.  On 2026-09-14 the 07:57 wake gave up after the 60 s
+ * registration timeout, the modem registered at 08:00:31 with the radio left
+ * searching, and the sleep loop powered it off at 08:00:57 with the record
+ * still in the backlog; it went out at 08:59.  Matches the default tilt poll,
+ * so a unit polling for tilt anyway wakes no more often. */
+#define RESEND_POLL_S               30
 #define GPS_FIX_TIMEOUT_MS          CONFIG_APP_GPS_FIX_TIMEOUT_MS
 #define GPS_COLD_FIX_TIMEOUT_MS     CONFIG_APP_GPS_COLD_FIX_TIMEOUT_MS
+
+/* -- cold-start GNSS: A-GNSS retries, priority mode ------------------------ */
+/* A failed A-GNSS fetch used to leave the whole cold search unassisted:
+ * nothing asked again until the next cold gnss_collect(), after a fix or the
+ * cold timeout.  On 2026-09-13 a single -116 (HTTP 0, no response) at key-on
+ * left a search that took 2 min 23 s, with no telemetry meanwhile.  Retries
+ * run from inside the fix wait, so GNSS keeps searching between attempts;
+ * each attempt still pauses it for up to the 20 s REST timeout. */
+#define AGNSS_RETRIES               2
+#define AGNSS_RETRY_INTERVAL_MS     15000
+/* GNSS priority takes the radio from LTE's idle-mode work (paging, cell
+ * measurements), and the modem ends it after the first fix or 40 s.  It is
+ * only requested once the receiver has flagged NOT_ENOUGH_WINDOW_TIME for
+ * this many epochs in a row, the threshold Nordic's location library uses,
+ * and never again while a window may still be running. */
+#define GNSS_PRIO_STARVED_EPOCHS    5
+#define GNSS_PRIO_WINDOW_MS         40000
 
 /* -- voltage thresholds (Kconfig uses mV, code uses float V) -------------- */
 #define BATTERY_WARNING_LEVEL       (CONFIG_APP_BATTERY_WARNING_MV / 1000.0f)
@@ -154,13 +179,19 @@
 #define SPEED_MIN_SATS              4
 /* Key-off means the vehicle is stopped, but GNSS speed does not settle to
  * exactly zero at a standstill: multipath and the receiver's own filter
- * leave a residual of a km/h or two, and the last fix before the key turned
- * can be a second or so old.  A record that says "ignition off at 2.4 km/h"
- * puts a phantom crawl on the end of every journey.  So on the ignition-off
- * record, and only there, a GNSS speed below this reads as stopped and goes
- * out as 0.  2 mph in km/h; above it the vehicle really was still rolling
- * (coasting to a stop, or the key cut while moving) and the figure stands. */
+ * leave a residual of a km/h or two, and the ECU speed that does read zero
+ * is unpowered.  A record that says "ignition off at 2.4 km/h" puts a phantom
+ * crawl on the end of every journey, and a parked unit's check-ins showed a
+ * 1 mph creep.  So on every ignition-off record a GNSS speed below this reads
+ * as stopped and goes out as 0.  2 mph in km/h; above it the vehicle really
+ * is rolling (coasting to a stop, a key cut while moving, a tow) and the
+ * figure stands. */
 #define IGN_OFF_STOPPED_KMH         3.22f
+/* How old a fix may be for its speed to go out in a record.  Records built
+ * from the stored position — every timed check-in while parked — would
+ * otherwise repeat the last fix's speed for as long as the unit slept.  A
+ * record built from a live fix follows it within a second or two. */
+#define SPEED_FIX_MAX_AGE_MS        10000
 
 /* -- hardware presence flags (compiled-out paths) -------------------------- */
 #define LOW_POWER_STANDBY           1

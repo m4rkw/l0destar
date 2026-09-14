@@ -11,8 +11,9 @@
 #
 # Output: build_ifmcu/ifmcu_firmware/zephyr/zephyr.uf2
 #
-# Flash by double-pressing the ConnectKit reset button (enters UF2
-# bootloader), then copying the .uf2 to the mass-storage device.
+# Flash by holding the Connect Kit's DFU/RST button while plugging in USB
+# (enters the UF2 bootloader; switch the 12V off first if it is on the carrier
+# board), then copying the .uf2 to the mass-storage device.
 set -euo pipefail
 
 NCS_VERSION="${NCS_VERSION:-v3.4.0}"
@@ -48,15 +49,25 @@ fi
 
 APP_DIR="$REPO_DIR/applications/ifmcu_firmware"
 
-# The whole reason we build this ourselves: refuse a checkout that predates
-# the power fix, otherwise we'd silently produce ~2 mA firmware.  #20 is the
-# one that introduced ifmcu_system_off(); a clone with only #19 (which named
-# its helper enter_system_off) still has the charger-poll race.
-if ! grep -q "ifmcu_system_off" "$APP_DIR/src/main.c"; then
-	echo "Error: $REPO_DIR predates makerdiary/nrf9151-connectkit#20 (the IF MCU power fix)." >&2
-	echo "Update it, then re-run.  If the clone has local edits (e.g. the old" >&2
-	echo "l0destar patch), discard them first:" >&2
+# The whole reason we build this ourselves: refuse a checkout without the power
+# fix, otherwise we'd silently produce ~2 mA firmware.  The fix is
+# makerdiary/nrf9151-connectkit#20, so its merge commit has to be in the clone's
+# history, and the clone must be unmodified: the l0destar patch an older copy of
+# this script applied named its helper ifmcu_system_off too, so a patched
+# pre-#20 clone used to pass a check for that name.
+PR20_MERGE=4698a5f54481551aad5ccb7103f49ab6e0a7a584
+if [[ -n "$(git -C "$REPO_DIR" status --porcelain --untracked-files=no)" ]]; then
+	echo "Error: $REPO_DIR has local changes, so it is not Makerdiary's code." >&2
+	echo "Discard them and update it, then re-run:" >&2
 	echo "  git -C $REPO_DIR checkout -- . && git -C $REPO_DIR pull" >&2
+	exit 1
+fi
+if [[ "$(git -C "$REPO_DIR" rev-parse --is-shallow-repository)" == true ]]; then
+	git -C "$REPO_DIR" fetch --quiet --unshallow || true
+fi
+if ! git -C "$REPO_DIR" merge-base --is-ancestor "$PR20_MERGE" HEAD 2>/dev/null; then
+	echo "Error: $REPO_DIR predates makerdiary/nrf9151-connectkit#20 (the IF MCU power fix)." >&2
+	echo "Update it, then re-run:  git -C $REPO_DIR pull" >&2
 	exit 1
 fi
 
@@ -69,5 +80,5 @@ UF2="$BUILD_DIR/ifmcu_firmware/zephyr/zephyr.uf2"
 echo
 echo "Built: $UF2"
 echo
-echo "To flash: double-press reset on the Connect Kit, then copy it onto the"
-echo "UF2BOOT drive that appears."
+echo "To flash: hold DFU/RST on the Connect Kit while plugging in USB (12V off"
+echo "if it is on the carrier board), then copy it onto the UF2BOOT drive."

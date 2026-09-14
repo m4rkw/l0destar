@@ -439,6 +439,28 @@ static void obd_service(void)
 }
 #endif
 
+/* A last known position exists once there has been a fix since boot; without
+ * one collect_data() cannot build a record. */
+static bool have_position(void)
+{
+    return g_gnss.lat_str[0] != '\0' && g_gnss.lon_str[0] != '\0';
+}
+
+/* Timed wakes that go looking for a first fix: the 1st, 2nd, 4th, 8th and
+ * 16th, then every 16th.  At the 900 s boot interval that is 15 and 30
+ * minutes, 1, 2 and 4 hours, then every 4 hours. */
+static unsigned s_nofix_wakes;
+
+static bool nofix_search_due(void)
+{
+    unsigned n = ++s_nofix_wakes;
+
+    if (n <= 16) {
+        return (n & (n - 1)) == 0;
+    }
+    return (n % 16) == 0;
+}
+
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
@@ -487,6 +509,15 @@ static void do_sleep(void)
     int  tow_last_tilt = -1;      /* tenths, for the "still" test */
     int  tow_stable_secs = 0;
 
+    /* A timed report that could not go out because the modem had not
+     * registered.  modem_connect() leaves the radio searching when it gives
+     * up, so registration often arrives a minute or two later — and the next
+     * pass used to power the modem straight off, leaving the record in the
+     * backlog until the following timed wake an hour on.  Owed until the
+     * modem registers or the next timed report runs. */
+    bool    resend_owed = false;
+    int64_t resend_failed_ms = 0;
+
     if (s_saved_loop_interval < 0) {
         s_saved_loop_interval = g_settings.loop_interval;
     }
@@ -508,6 +539,8 @@ static void do_sleep(void)
             sleep_secs = s_move_cooldown_secs;
         if (TOW_TILT_DEG > 0 && sleep_secs > TOW_POLL_S)
             sleep_secs = TOW_POLL_S;   /* slow-tilt poll cadence */
+        if (resend_owed && sleep_secs > RESEND_POLL_S)
+            sleep_secs = RESEND_POLL_S;   /* notice the registration */
         if (sleep_secs < 1) sleep_secs = 1;
 
         k_sem_reset(&s_wake_sem);
@@ -744,8 +777,11 @@ static void do_sleep(void)
                 }
                 /* This branch continues past the bottom-of-loop power-off,
                  * so drop the modem here if anything above raised it —
-                 * whether or not the connect actually registered. */
-                if (modem_raised || network_ready) {
+                 * whether or not the connect actually registered — unless
+                 * it has registered with a timed report still owed, which
+                 * the next pass sends first. */
+                if ((modem_raised || network_ready) &&
+                    !(resend_owed && modem_is_registered())) {
                     lte_lc_power_off();
                     network_ready = false;
                 }
@@ -803,8 +839,20 @@ static void do_sleep(void)
             accel_read_baseline();
         }
 
+        /* --- owed timed report --- */
+        if (resend_owed && modem_is_registered()) {
+            resend_owed = false;
+            if (g_settings.loop_interval > 0) {
+                LOG_WRN("registered — sending the timed report that failed "
+                        "%lld s ago",
+                        (k_uptime_get() - resend_failed_ms) / 1000);
+                telemetry_remaining = 0;
+            }
+        }
+
         /* --- timer telemetry --- */
         if (telemetry_remaining <= 0 && g_settings.loop_interval > 0) {
+            resend_owed = false;
             LOG_INF("sleep: INA228 wake for voltage read");
             hw_power_wake();
             float v = battery_read_voltage();
@@ -828,7 +876,14 @@ static void do_sleep(void)
             if (reg != 1 && reg != 5) modem_connect();
             modem_update_cell_info();
 
-            if (s_move_needs_gps) {
+            /* No position since boot means no record can be built, so a unit
+             * restarted somewhere GNSS cannot reach would stay silent until
+             * something moved it.  Search on timed wakes too, backing off so
+             * one parked underground does not spend its battery on it. */
+            bool search_gps = s_move_needs_gps ||
+                              (!have_position() && nofix_search_due());
+
+            if (search_gps) {
                 /* the GPS antenna bias tee lives on the AUX domain */
                 hw_domain_request(HW_DOMAIN_AUX, HW_DOMAIN_USER_GNSS);
                 gnss_start();
@@ -846,11 +901,17 @@ static void do_sleep(void)
                     pending_server_cmd[0] = '\0';
                     if (alert_count > 0) alert_send();
                 }
-                if (!last_send_ok) modem_recover();
+                if (!last_send_ok) {
+                    modem_recover();
+                    if (!modem_is_registered()) {
+                        resend_owed = true;
+                        resend_failed_ms = k_uptime_get();
+                    }
+                }
             }
             data_reset();
 
-            if (s_move_needs_gps) {
+            if (search_gps) {
                 gnss_stop();
                 hw_domain_release(HW_DOMAIN_AUX, HW_DOMAIN_USER_GNSS);
                 s_move_needs_gps = false;
@@ -874,8 +935,11 @@ static void do_sleep(void)
             telemetry_remaining = g_settings.loop_interval;
         }
 
-        /* power modem back off if any alert or telemetry path woke it */
-        if (modem_raised || network_ready) {
+        /* power modem back off if any alert or telemetry path woke it —
+         * except a registration that has just arrived with a timed report
+         * owed: the next pass, at most RESEND_POLL_S away, sends it first */
+        if ((modem_raised || network_ready) &&
+            !(resend_owed && modem_is_registered())) {
             lte_lc_power_off();
             network_ready = false;
         }
@@ -1136,6 +1200,33 @@ static struct kline_discovery kline_boot_disc;
  * are still there. */
 #endif
 
+/* Builds that run a bench harness in place of the tracker.  They wait in loops
+ * that never feed the watchdog, and a missed feed resets the SoC (watchdog.c),
+ * so main() arms it for the tracker only. */
+#define APP_HARNESS_BUILD                         \
+    (IS_ENABLED(CONFIG_APP_PROVISION_MODE)   ||   \
+     IS_ENABLED(CONFIG_APP_BOARD_TEST)       ||   \
+     IS_ENABLED(CONFIG_APP_KLINE_DISCOVER)   ||   \
+     IS_ENABLED(CONFIG_APP_KLINE_TEST)       ||   \
+     IS_ENABLED(CONFIG_APP_CAN_TEST)         ||   \
+     IS_ENABLED(CONFIG_APP_CAN_BENCH)        ||   \
+     IS_ENABLED(CONFIG_APP_ACCEL_TEST)       ||   \
+     IS_ENABLED(CONFIG_APP_VOLTAGE_TEST)     ||   \
+     IS_ENABLED(CONFIG_APP_L_SENSE_TEST)     ||   \
+     IS_ENABLED(CONFIG_APP_LTE_POWER_TEST))
+
+/* Every datagram and the update check carry the IMEI.  Reading it needs no
+ * network. */
+static void read_imei(void)
+{
+    char imei[32] = {0};
+
+    if (modem_get_imei(imei, sizeof(imei)) == 0) {
+        strncpy(g_settings.imei, imei, sizeof(g_settings.imei) - 1);
+        LOG_INF("imei=%s", g_settings.imei);
+    }
+}
+
 int main(void)
 {
     LOG_INF("=== l0destar firmware boot (v%s, board %s) ===",
@@ -1173,7 +1264,9 @@ int main(void)
      * couple of hundred milliseconds (task_wdt allocates the same hardware
      * channel the previous image did, so the reload lands on the running
      * one), and everything slow below already kicks as it waits. */
-    watchdog_init();
+    if (!APP_HARNESS_BUILD) {
+        watchdog_init();
+    }
 
     /* Before anything tries to update again: work out whether the update
      * staged before the last reboot is the one now running.  It queues an
@@ -1313,6 +1406,10 @@ int main(void)
         LOG_ERR("modem init failed");
         return 0;
     }
+    /* Before connecting: a modem that registers after the start-up wait
+     * would otherwise leave the IMEI unset, and every send dropped, for the
+     * whole boot. */
+    read_imei();
     if (modem_provision_tls()) {
         LOG_ERR("TLS provisioning failed");
         return 0;
@@ -1327,10 +1424,8 @@ int main(void)
 
     led_boot_animation();
     if (modem_connect() == 0) {
-        char imei[32] = {0};
-        if (modem_get_imei(imei, sizeof(imei)) == 0) {
-            strncpy(g_settings.imei, imei, sizeof(g_settings.imei) - 1);
-            LOG_INF("imei=%s", g_settings.imei);
+        if (g_settings.imei[0] == '\0') {
+            read_imei();   /* the read above failed */
         }
         transport_open();
         transport_teardown();
@@ -1548,8 +1643,13 @@ int main(void)
              * `fota` command, or a power-on check that hit a dead link and
              * is still pending.  Serviced here so the download happens
              * between sends rather than mid-collection; a no-op (single
-             * flag test) when nothing is pending. */
-            fota_check(FOTA_CTX_AWAKE);
+             * flag test) when nothing is pending.  Not while the engine runs:
+             * a download stops GNSS and telemetry for minutes and ends in a
+             * reboot, so a drive keeps its tracking and the update waits for
+             * the engine to stop, key-off (STATE_SEND) or a timed wake. */
+            if (!engine_running) {
+                fota_check(FOTA_CTX_AWAKE);
+            }
 
             if (should_send_data()) {
                 LOG_INF("collecting GPS fix (%d/%d)",
@@ -1594,7 +1694,16 @@ int main(void)
                  * position at all, where no valid record can be produced no
                  * matter how often it retries. */
                 previous_ignition = ignition;
-                s_state = STATE_IDLE;
+                /* With the ignition off and no position since boot there is
+                 * nothing to send, and sleep is only entered from STATE_SEND,
+                 * so idling here would keep the unit awake, GNSS searching,
+                 * until a fix turned up.  Sleep instead: do_sleep() searches
+                 * again on timed wakes. */
+                if (ignition != 0 && !have_position()) {
+                    s_state = STATE_SLEEP;
+                } else {
+                    s_state = STATE_IDLE;
+                }
                 break;
             }
             s_buffered_records++;

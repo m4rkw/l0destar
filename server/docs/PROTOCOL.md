@@ -17,7 +17,7 @@ ts,lat,lon,spd,alt,hdg,hdop,sat,bat,ign,up,pon[,extras...]
 
 | Field | Meaning |
 |---|---|
-| `ts` | modem clock, `dd/mm/yy,HH:MM:SS+NN` — **contains a comma** |
+| `ts` | modem clock in UTC, `dd/mm/yy,HH:MM:SS.uuuuuu+00` — **contains a comma** |
 | `lat`, `lon` | decimal degrees |
 | `spd` | km/h (the server stores mph) |
 | `alt` | metres |
@@ -31,7 +31,7 @@ ts,lat,lon,spd,alt,hdg,hdop,sat,bat,ign,up,pon[,extras...]
 
 Records built in track mode send `0` for `hdop` and `sat`, and `1` for `ign`.
 
-`+NN` in the timestamp is quarter-hours east of UTC, per 3GPP `AT+CCLK`.
+The timestamp is always UTC: the firmware converts the modem's clock, appends microseconds and writes the offset as `+00`.
 
 ### Extras
 
@@ -142,14 +142,12 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>[,<movement_alarm>][,<commands>][,fota=<version>][,track=<0|1>]
+1,<interval>,<movement_alarm>[,<commands>][,fota=<version>][,track=<0|1>]
 ```
 
 The leading `1` is the ack the firmware checks before clearing its send
-buffer. `slim_response` drops the movement_alarm field, and with it everything
-that follows: current firmware applies a reply only when it carries both the
-interval and movement_alarm, so a slim reply delivers no settings, commands,
-OTA indication or track-mode switch. Leave it off.
+buffer. The firmware applies a reply only when it carries both the interval
+and movement_alarm.
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is
@@ -169,11 +167,8 @@ request's nonce, so a response captured from one exchange cannot be replayed
 into another. The key is a 32-byte per-device PSK, stored as hex in
 `device`.`psk`.
 
-Replay protection is a 1024-nonce in-memory window per device, with the most
-recent nonce persisted so a restart cannot reopen a hole for the single
-most-recently captured datagram. The window is only updated *after* the tag
-verifies — otherwise an unauthenticated packet could poison it with a nonce
-the real device is about to use.
+Replay protection keeps every nonce a device uses for 30 days in the `device_nonce`
+table, so a replayed datagram is refused even after a server restart.
 
 Every failure mode — malformed, unknown IMEI, missing key, bad tag, replay —
 looks identical from outside, so responses cannot be used to enumerate which
@@ -185,9 +180,9 @@ That is the price of not paying for a handshake.
 
 ## Firmware updates
 
-Every telemetry response carries `fota=<version>` when a newer build is
-published for that unit. The device compares it against its own running
-version locally and fetches nothing unless there is something newer — the
+Every telemetry response carries `fota=<version>` while a build is published
+for that unit and not withheld from it, newer or not. The device compares it
+against its own running version locally and fetches nothing unless there is something newer — the
 steady state costs no extra requests from the field.
 
 Each unit gets its own image. Carrier board revision and fitted interfaces

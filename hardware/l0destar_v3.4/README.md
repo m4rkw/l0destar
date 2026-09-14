@@ -31,7 +31,7 @@ yourself rather than taking them on trust.
   to ~35.5 µA at 12V.
 - The buck enable divider added in v3.3 is now an optional extra, DNP by
   default. S6R4 is a 0R jumper by default, so the expected sleep current is
-  ~35.5 µA at 12V; fitting the divider adds around ~12 µA.
+  ~35.5 µA at 12V; fitting the divider adds around ~9 µA.
 - Added test points for easier assembly/testing
 - Slightly increased the size of the holes for the 2-pin power connector
 
@@ -88,9 +88,8 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 | Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
 | LT8609 | 4.2V output | NOT TESTED | |
 | LT8609 | UVLO thresholds | NOT TESTED | |
-| MCU OVP | 4.2V passes through at nominal voltage | NOT TESTED | S11Q1 on, S12TP6 ≈ S12TP7 |
-| MCU OVP | Cuts off when S12TP7 is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
-| MCU OVP | Fault injection via S11TP1 | NOT TESTED | Short S11TP1 to the unprotected rail, PP4V2 should drop |
+| MCU OVP | 4.2V passes through at nominal voltage | NOT TESTED | S11Q1 on, S12TP2 ≈ the buck output at S6C5 |
+| MCU OVP | Cuts off when the buck output (S6C5) is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
 | MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | NOT TESTED | |
 | GPS auxiliary 3.3V rail | Switches on enable signal | NOT TESTED | |
 | CAN auxiliary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
@@ -105,7 +104,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 | K-wire | L-line sensing via L_SENSE | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Expected ~35.5 µA at 12V with the default build (measured on a v3.2 board with the accelerometer NC pads lifted, which is electrically the same as v3.4 with S6R4 fitted as a 0R jumper). Fitting the optional enable divider adds around ~12 µA |
+| Board | Quiescent current | NOT TESTED | Expected ~35.5 µA at 12V with the default build (measured on a v3.2 board with the accelerometer NC pads lifted, which is electrically the same as v3.4 with S6R4 fitted as a 0R jumper). Fitting the optional enable divider adds around ~9 µA |
 
 ## Features
 
@@ -141,7 +140,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 - Made the LT8609 enable divider (S6R4/S6R5/S6R6, added in v3.3) an optional
   extra, DNP by default. S6R4 is now fitted as a 0R jumper by default so EN is
   tied straight to VIN and the buck runs whenever the input is present; S6R5
-  and S6R6 are DNP. Fitting the divider costs around ~12 µA of sleep current on
+  and S6R6 are DNP. Fitting the divider costs around ~9 µA of sleep current on
   top of the ~35.5 µA baseline, so the default build sits at ~35.5 µA at 12V.
   See [Optional: buck enable divider](#optional-buck-enable-divider-s6r4s6r5s6r6)
   for the fitted values.
@@ -382,7 +381,7 @@ separate load switches.
 | S15J3 | u.FL PCB connector | 50 ohm | [U.FL-R-SMT(01)](https://uk.farnell.com/hirose-hrs/u-fl-r-smt-01/rf-coaxial-u-fl-straight-jack/dp/3908021) | |
 | S15J4 | SMA PCB connector | 50 ohm | [SMA-J-P-H-RA-TH1](https://uk.farnell.com/samtec/sma-j-p-h-ra-th1/rf-coaxial-sma-jack-50-ohm-pcb/dp/2856817) | |
 | S15FB1 | Ferrite bead | 600 ohm | [BLM15PX601SZ1D](https://uk.farnell.com/murata/blm15px601sz1d/ferrite-bead-0-9a-0-23ohm-0402/dp/3678458) | |
-| S15L1 | RF inductor | 0603 47-100 nH, SRF > 2GHz | [LQW18AN68NJ00D](https://uk.farnell.com/murata/lqw18an68nj00d/inductor-68nh-2-2ghz-0-34a-0603/dp/3471533) | |
+| S15L1 | RF inductor | 0603 47-68 nH, SRF > 2GHz | [LQW18AN68NJ00D](https://uk.farnell.com/murata/lqw18an68nj00d/inductor-68nh-2-2ghz-0-34a-0603/dp/3471533) | |
 | S15C1 | 47pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N470J500CT](https://uk.farnell.com/multicomp-pro/0402n470j500ct/cap-47pf-50v-5-c0g-np0-0402/dp/2496804) | |
 | S15C2 | 100pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
 | S15C3 | 10nF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [GRM1555C1H103JE01D](https://uk.farnell.com/murata/grm1555c1h103je01d/cap-mlcc-0-01uf-5-c0g-50vdc-0402/dp/4803046RL) | |
@@ -400,7 +399,7 @@ S6R4/S6R5/S6R6 form a 3-resistor divider on the LT8609 EN/UV pin that gives
 the buck a defined under-voltage lockout with hysteresis: it won't start until
 the supply reaches ~5.6V and will shut off if the supply falls to ~4.3V, then
 needs ~5.6V again to restart. This is aimed at ISO 16750-2 low-voltage and
-drop-out tests. The divider draws around ~12 µA continuously from the 12V
+drop-out tests. The divider draws around ~9 µA continuously from the 12V
 input, on top of the ~35.5 µA the rest of the board draws asleep, so it is
 DNP by default.
 
@@ -503,13 +502,15 @@ Can be omitted if K-wire is not required
 
 Aggregated from the bills of materials above. The `All` rows are the required
 build; add the `CAN` rows and/or the `K-wire` rows on top of those depending
-on which interfaces are fitted. Quantities are per board.
+on which interfaces are fitted, and the `Optional` rows only if you fit the
+buck enable divider. Quantities are per board.
 
 | Build | Item | Quantity | Specification | Example | Notes |
 |-------|------|----------|---------------|---------|-------|
 | All | MCU and GSM/GPS 40pin board | 1 | nRF9151 Connect Kit | [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) | |
 | All | Molex Micro-fit 3.0 2x03 PCB connector | 1 | 43045-0600 | [43045-0600](https://uk.farnell.com/molex/43045-0600/conn-r-a-pcb-hdr-6pos-2row-3mm/dp/1012252) | |
 | All | 20-pin 2.54mm header | 2 | 20-pin 2.54mm header | [20-pin pcb header](https://www.aliexpress.com/item/1005003610333849.html) | |
+| All | 0R 0402 jumper | 1 | 0402 0R | Any 0402 0R jumper | S6R4, the buck enable jumper |
 | All | 15R 0508 resistor | 1 | 0508 15R 5% 1W | [3430A2F15RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f15rtdf/res-15r-1w-thick-film-0508-wide/dp/4206818) | |
 | All | 1K 0402 resistor | 3 | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
 | All | Accelerometer ferrite bead | 1 | Ferrite 600R 300mA | [BLM15AG601SH1D](https://uk.farnell.com/murata/blm15ag601sh1d/ferrite-bead-0-6ohm-0-3a-0402/dp/2470354) | |
@@ -521,11 +522,9 @@ on which interfaces are fitted. Quantities are per board.
 | All | 100K 0402 resistor | 5 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | All | 180K 0402 resistor | 1 | 0402 180K 5% | [MCWR04X1803FTL](https://uk.farnell.com/multicomp-pro/mcwr04x1803ftl/res-180k-1-0-0625w-thick-film/dp/2447116) | |
 | All | 226K 0402 anti-sulfur resistor | 1 | 0402 226K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V, sets output voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
-| All | 243K 0402 anti-sulfur resistor | 1 | 0402 243K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2433FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2433ftl/res-243k-1-0-0625w-0402-ceramic/dp/2072824) | Sets enable/disable voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | All | 1M 0402 resistor 1% | 1 | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | All | 1M 0402 resistor 5% | 2 | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
-| All | 1M 0402 anti-sulfur resistor | 3 | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Regulator output / trip point, keep 1%, anti-sulfur AEC-Q200 recommended |
-| All | 3.92M 1% resistor | 1 | 0402 3.92M 1% | [CRCW04023M92FKED](https://uk.farnell.com/vishay/crcw04023m92fked/res-3m92-1-0-063w-0402-thick-film/dp/2141113) | |
+| All | 1M 0402 anti-sulfur resistor | 2 | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Regulator output / trip point, keep 1%, anti-sulfur AEC-Q200 recommended |
 | All | 1.05M 0402 resistor | 1 | 0402 1.05M 1% | [RC0402FR-071M05L](https://uk.farnell.com/yageo/rc0402fr-071m05l/res-1m05-1-0-063w-thick-film-0402/dp/3951647) | Sets trip point, keep 1% |
 | All | 33M 0603 resistor | 1 | 0603 33M 5% | [MCHVR03JTHX3305](https://uk.farnell.com/multicomp-pro/mchvr03jthx3305/res-33m-5-0-1w-0603-thick-film/dp/2825824) | |
 | All | 3.3pF 0402 capacitor | 1 | 0402 >= 50V ±0.25pF C0G / NP0 | [CGA2B2C0G1H3R3C050BA](https://uk.farnell.com/tdk/cga2b2c0g1h3r3c050ba/cap-3-3pf-50v-c0g-np0-0402/dp/2210780) | |
@@ -542,7 +541,7 @@ on which interfaces are fitted. Quantities are per board.
 | All | 47uF 1210 capacitor | 2 | 1210 >= 10V 20% X7R | [CL32B476MPJNNNE](https://uk.farnell.com/semco/cl32b476mpjnnne/cap-mlcc-47uf-10vdc-x7r-1210/dp/5109745) | |
 | All | 47uF 2220 input capacitor | 2 | 2220 >= 50V 20% X7R | [CKG57NX7R1H476M500JH](https://uk.farnell.com/tdk/ckg57nx7r1h476m500jh/cap-stacked-47uf-50v-mlcc-2220/dp/3816888) | |
 | All | Inductor | 1 | XFL4020-222ME | [XFL4020-222MEC](https://uk.farnell.com/coilcraft/xfl4020-222mec/inductor-2-2uh-8a-20-pwr-38mhz/dp/2289216) | |
-| All | RF inductor | 1 | 0603 47-100 nH, SRF > 2GHz | [LQW18AN68NJ00D](https://uk.farnell.com/murata/lqw18an68nj00d/inductor-68nh-2-2ghz-0-34a-0603/dp/3471533) | |
+| All | RF inductor | 1 | 0603 47-68 nH, SRF > 2GHz | [LQW18AN68NJ00D](https://uk.farnell.com/murata/lqw18an68nj00d/inductor-68nh-2-2ghz-0-34a-0603/dp/3471533) | |
 | All | Ferrite bead | 1 | 600 ohm | [BLM15PX601SZ1D](https://uk.farnell.com/murata/blm15px601sz1d/ferrite-bead-0-9a-0-23ohm-0402/dp/3678458) | |
 | All | 2A fuse | 2 | 1206 2A slow blow | [0407002.WRA](https://www.digikey.co.uk/en/products/detail/littelfuse-inc/0407002-WRA/14640147) | Time-lag, one per input |
 | All | SQ2361 MOSFET | 2 | SQ2361 SOT-23 | [SQ2361CES-T1_BE3](https://uk.farnell.com/vishay/sq2361ces-t1-be3/mosfet-p-ch-60v-2-8a-sot-23/dp/4644757) | |
@@ -598,6 +597,9 @@ on which interfaces are fitted. Quantities are per board.
 | K-wire | 12V load switch | 1 | Active high 12v load switch | [ITS4060SSJNXUMA1](https://uk.farnell.com/infineon/its4060ssjnxuma1/power-load-sw-aec-q100-13-5v-soic/dp/2710048) | |
 | K-wire | Reverse-blocking load switch | 1 | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://uk.farnell.com/vishay/sip32431dr3-t1ge3/ic-load-switch-1-1v-5-5v-1a-sc70/dp/2361509) | |
 | K-wire | AL5809-90 LED driver | 1 | AL5809-90P1-7 | [AL5809-90P1-7](https://uk.farnell.com/diodes-inc/al5809-90p1-7/led-drvr-constant-current-powerdi/dp/2543512) | |
+| Optional | 1M 0402 anti-sulfur resistor | 1 | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Buck enable divider: S6R4, in place of the 0R jumper |
+| Optional | 243K 0402 anti-sulfur resistor | 1 | 0402 243K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2433FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2433ftl/res-243k-1-0-0625w-0402-ceramic/dp/2072824) | Buck enable divider: S6R5 |
+| Optional | 3.92M 1% resistor | 1 | 0402 3.92M 1% | [CRCW04023M92FKED](https://uk.farnell.com/vishay/crcw04023m92fked/res-3m92-1-0-063w-0402-thick-film/dp/2141113) | Buck enable divider: S6R6 |
 
 ## Images
 

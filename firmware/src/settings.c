@@ -36,7 +36,7 @@ static void settings_defaults(void)
         psk_hex = PSK_HEX_DEFAULT;
     }
     if (!crypto_psk_from_hex(psk_hex, g_settings.psk)) {
-        LOG_ERR("PSK_HEX malformed — refusing to send");
+        LOG_ERR("PSK_HEX malformed — sending with an all-zero key");
         memset(g_settings.psk, 0, sizeof(g_settings.psk));
     }
 }

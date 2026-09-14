@@ -15,15 +15,15 @@ firmware toolchain.
 
 v3.4 has seven test points. Readings below are with 12V applied to the board.
 
-| Test point | Label | Net | Expected |
-|---|---|---|---|
-| S12TP1 | `GND` | GND | Ground reference for every reading |
-| S12TP2 | `4.2V protected` | PP4V2 | 4.2V whenever the input is powered: the buck, the OVP MOSFET S11Q1 and the ideal diode S11U1 are all passing the rail |
-| S12TP3 | `3.3V` | PP3V3 | 3.3V only with the Connect Kit fitted - it comes from the Connect Kit |
-| S12TP4 | `3.3V GPS` | PP3V3_GPS | 0V until the firmware switches the GPS rail on |
-| S12TP5 | `3.3V CAN` | PP3V3_CAN | 0V until the firmware switches the CAN rail on |
-| S12TP6 | `3.3V K` | PP3V3_K | 0V until the firmware switches the K-wire rails on |
-| S12TP7 | `12V K` | PP12V_K | 0V until the firmware switches the K-wire rails on |
+| Test point | Net | Expected |
+|---|---|---|
+| S12TP1 | GND | Ground reference for every reading |
+| S12TP2 | PP4V2 | 4.2V whenever the input is powered: the buck, the OVP MOSFET S11Q1 and the ideal diode S11U1 are all passing the rail |
+| S12TP3 | PP3V3 | 3.3V only with the Connect Kit fitted - it comes from the Connect Kit |
+| S12TP4 | PP3V3_GPS | 0V until the firmware switches the GPS rail on |
+| S12TP5 | PP3V3_CAN | 0V until the firmware switches the CAN rail on |
+| S12TP6 | PP3V3_K | 0V until the firmware switches the K-wire rails on |
+| S12TP7 | PP12V_K | 0V until the firmware switches the K-wire rails on |
 
 The unprotected buck output has no test point on v3.4; measure it at the non-ground pad of S6C5.
 
@@ -55,7 +55,7 @@ the ignition input. Pins 3 and 6 are the interface bus lines and pin 1 is unused
    nothing is driving their enable signals.
 5. Turn the board over and measure the voltage on every pin of both 20-pin headers. Every pin
    should read below 3.3V, and none may read 12V. Nothing on the headers is powered until the Connect
-   Kit supplies the 3.3V rail; the 4.2V supply reaches the Connect Kit through the power header S1J4,
+   Kit supplies the 3.3V rail; the 4.2V supply reaches the Connect Kit through the power lead in S1J4,
    not through the headers.
 
 !!! danger "Any 12V on a header pin means stop"
@@ -74,7 +74,7 @@ Carry out the [final assembly](/assembly/assembly-guide.html#final-assembly) ste
    S12TP7 (K) to 12V.
 
 A short after one of the auxiliary rail load switches will not show up until the firmware enables
-that rail. v3.1 and later boards sense each rail, so the firmware detects a rail that fails to come
+that rail. The board senses each rail, so the firmware detects a rail that fails to come
 up, and the firmware board test below checks every one.
 
 ## Stage 4: the firmware board test
@@ -96,8 +96,9 @@ accelerometer, GPS, the modem and the interface loopbacks.
 - An **adjustable supply**: one test asks you to raise the voltage by at least 1V and then lower
   it by at least 1V.
 - The supply's **current limit raised to around 300mA**. The 50mA limit of the first power-up
-  catches shorts, but a modem registering and transmitting draws more than that from the 12V input,
-  and a supply sitting in current limit makes the board brown out and reset.
+  catches shorts, but a modem transmitting at full power averages up to about 45mA from the 12V
+  input, with bursts above that, and a supply that hits its current limit makes the board brown out
+  and reset.
 - A SIM card in the Connect Kit and an antenna on both SMA connectors, with the GPS antenna able
   to see the sky. The GPS test searches for an unassisted cold fix, which can take several minutes.
 - `CONFIG_APP_APN` set to your SIM's APN in `firmware/local.conf`.
@@ -123,10 +124,8 @@ CONFIG_APP_APN="your.apn"
 
 The script asks three things:
 
-1. **Board version.** There is no v3.4 entry: **choose v3.3 for a v3.4 board.** The two boards
-   connect the Connect Kit's pins identically; the only differences between their PCBs are the
-   accelerometer pads and net names.
-2. **OBD interface** (v3.1 and later): none, CAN or K-wire (ISO 14230), matching the parts and pads
+1. **Board version.** Choose the revision you built: **v3.4** for a v3.4 board.
+2. **OBD interface**: none, CAN or K-wire (ISO 14230), matching the parts and pads
    you fitted.
 3. **APN.** It shows the APN it found and where it found it. It only asks if it finds none, and
    leaving the answer empty skips the modem test.
@@ -195,11 +194,11 @@ firmware when you are done, as described in
 |---|---|
 | `No Connect Kit serial port found` | Check the USB-C cable carries data and the Connect Kit enumerates (`pyocd list` should show its probe). If the Connect Kit LED isn't lit it may not be getting power or the 3.3V rail might be shorted to ground. On Linux, check the access set up in [Board setup prerequisites](/board-setup/prerequisites.html#linux-access-to-the-connect-kit). |
 | The console stays silent | The Connect Kit exposes two serial ports and the script uses the first. Run again with `SERIAL=/dev/cu.usbmodemXXXX ./board_test.sh`, naming the other port. |
-| `screen: command not found` | The script needs GNU screen: `sudo apt install -y screen` on Linux, or Homebrew or MacPorts on macOS. |
-| `screen could not open` the port | The port can be busy or re-enumerating for a few seconds after flashing; the script retries for 10 seconds. If it still fails, the script prints what holds the port; close that and re-run. |
+| `board_test.sh needs GNU screen` | Install it: `sudo apt install -y screen` on Linux, or Homebrew or MacPorts on macOS. |
+| `screen could not open` the port | The port can be busy or re-enumerating for a few seconds after flashing; the script retries for up to about 20 seconds. If it still fails, the script prints what holds the port; close that and re-run. |
 | The reset fails and pyocd reports APPROTECT | The chip booted with debug access locked. `./flash.sh` is the recovery path: its load step is allowed to unlock the part and reprogram it. |
 | The boot output is too quiet to diagnose a problem | Run with `VERBOSE=1` to keep the module logs; warnings and errors always print. |
-| Test 6 prints `interrupt but no FIFO data -- hit harder?` | Bang the desk harder. |
+| Test 6 prints `interrupt but no FIFO data (src 0x..) -- hit harder?` | Bang the desk harder. |
 | Test 8 times out | Check the antenna on the GPS port is an active antenna, that the u.FL cables go GPS to GPS, and that the antenna can see the sky. |
 | Test 9 reports no SIM, or registration fails | Check the SIM is seated, that your network has LTE-M coverage where you are, and the APN. |
 

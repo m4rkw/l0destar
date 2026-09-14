@@ -5,10 +5,8 @@ the order they are applied in, the environment variables the build scripts read,
 application Kconfig symbol, the Zephyr and MCUboot settings worth knowing about, and the
 constants compiled in from `src/config.h`.
 
-Values come from the l0destar repository at commit `de3ee46` (firmware 0.4.x). Paths are
-relative to the `firmware/` directory of your clone. Where an older document in the repository
-says something different, the Kconfig files and the source are what the firmware actually does -
-see [Where older documents disagree](#where-older-documents-disagree).
+Values describe firmware 0.4.x as of September 2026. Paths are
+relative to the `firmware/` directory of your clone.
 
 Settings the server sends to a running device, such as the engine-off interval and track mode,
 are on [Device settings and commands](/reference/device-settings.html).
@@ -21,7 +19,8 @@ are on [Device settings and commands](/reference/device-settings.html).
 | `Kconfig`, `Kconfig.boards` | yes | Every `APP_*` symbol and its default; `Kconfig.boards` holds the per-board pin maps and hardware flags |
 | `boards/makerdiary/nrf9151_connectkit/` | no | The Connect Kit board target, gitignored; `build.sh` copies it in from makerdiary/nrf9151-connectkit on the first build |
 | `boards/nrf9151dk_nrf9151_ns.conf`, `.overlay` | yes | Applied only to nRF9151 DK builds; the overlay frees the DK's I2C2 and SPI3 pins for the application |
-| `makerdiary.conf` | no | Optional, layered onto Connect Kit builds when it exists; currently an empty hook |
+| `boards/nrf9151_connectkit_nrf9151_ns.conf` | yes | Applied only to Connect Kit builds: turns on the modem antenna library and sends `AT%XCOEX0`, which powers the Connect Kit's GNSS amplifier. Without it GNSS sees no satellites |
+| `makerdiary.conf` | no | Optional, layered onto Connect Kit builds when it exists, for settings of your own such as a band lock |
 | `local.conf` | no | Your bench build; `build.sh` stops if it is missing unless `LOCAL_CONF` is set empty |
 | `local.overlay` | no | Optional devicetree overlay, applied last |
 | `remote.conf` | no | The deployed fleet, one section per IMEI; `push_fw.sh` turns each section into `.remote/<imei>.conf` and builds with that instead of `local.conf` |
@@ -42,7 +41,7 @@ Kconfig values are merged in this order, a later file overriding an earlier one:
 
 1. The defaults in `Kconfig`, `Kconfig.boards` and the SDK's own Kconfig files.
 2. The board target's defconfig.
-3. `prj.conf`, then the application's `boards/<board>.conf` where one exists (only the DK has one).
+3. `prj.conf`, then the application's `boards/<board>.conf` where one exists (the DK and the Connect Kit each have one).
 4. The overlays `build.sh` passes, in this order: `makerdiary.conf` (Connect Kit builds, when
    present), the local fragment (`local.conf`, or whatever `LOCAL_CONF` names), `prov.conf`
    (`PROV=1`), then `lte_power_test.conf` (`LTE_TEST=1`).
@@ -101,8 +100,8 @@ over-the-air updates.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `FW_SERVER` | `a` | ssh host the images and manifests are copied to. The default is the author's - set yours |
-| `FW_DIR` | `/var/www/tracker/fw` | Directory on that host; it must be the server's `fw_dir` |
+| `FW_SERVER` | none | ssh destination the images and manifests are copied to; required except with `--list` |
+| `FW_DIR` | `/srv/l0destar/fw` | Directory on that host; it must be the server's `fw_dir` |
 | `REMOTE_CONF` | `remote.conf` | The fleet description |
 | `FW_HOST` | `CONFIG_APP_SERVER_HOST` from `[common]` | Hostname the published release is verified against |
 | `VERIFY_PORT` | `65481` | Port of the server's firmware endpoint |
@@ -133,7 +132,7 @@ other than `-1`, `CONFIG_APP_DEBUG_BATTERY_MV` other than `0`, or any of `CONFIG
 | `PROFILE`, `BOARD` | - | Passed through to `build.sh` |
 
 The script does not layer `local.conf`. It writes `board_test.conf` - the board selection,
-`APP_OBD_MODE`, `APP_BOARD_TEST=y`, `CONFIG_LOG_MODE_IMMEDIATE=y`, `CONFIG_LTE_NETWORK_TIMEOUT=180`,
+`APP_OBD_MODE`, `APP_BOARD_TEST=y`, `CONFIG_LOG_MODE_IMMEDIATE=y`, `CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT=180`,
 the APN and the impact threshold - and builds with that. From `local.conf` it reads only
 `CONFIG_APP_APN` (falling back to `makerdiary.conf`, then `prj.conf`, then asking),
 `CONFIG_APP_DEMO_MODE`, `CONFIG_APP_BOARD_TEST_HIDE_COORDS` and `CONFIG_APP_CRASH_THRESHOLD_MG`
@@ -147,8 +146,8 @@ the APN and the impact threshold - and builds with that. From `local.conf` it re
 | `NCS_ROOT` | `/opt/nordic/ncs/$NCS_VERSION` or `~/ncs/$NCS_VERSION`, whichever exists | SDK workspace |
 
 It clones makerdiary/nrf9151-connectkit into `ifmcu/.makerdiary-repo` when that is missing, refuses
-a checkout that predates the upstream power fix (PR #20), builds with that checkout as its board
-root and writes `build_ifmcu/ifmcu_firmware/zephyr/zephyr.uf2`.
+a clone that lacks the upstream power fix (PR #20) or has local changes, builds with that clone as
+its board root and writes `build_ifmcu/ifmcu_firmware/zephyr/zephyr.uf2`.
 
 `flash.sh` and `reset.sh` read no variables. `flash.sh` always programs `build/merged.hex`. On a
 locked chip the load can stop with a memory transfer fault just after the erase that unlocks it,
@@ -194,21 +193,21 @@ same decision see [Hardware](/reference/hardware.html#interface-selection-pads).
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_BOARD_HAS_CAN` | bool | `y` on v2.1, v2.5C, v2.6C and v3.0; on v3.1-v3.3 when `APP_OBD_MODE=1`; otherwise `n` | MCP2518FD CAN controller fitted. On v3.0, which lays out both interfaces, set the one you did not populate to `n` |
-| `APP_BOARD_HAS_KLINE` | bool | `y` on the bench, v2.1, v2.5K, v2.6K and v3.0; on v3.1-v3.3 when `APP_OBD_MODE=2`; otherwise `n` | K-wire transceiver fitted |
-| `APP_L_SEND_ENABLED` | bool | `y` on v3.3 and the bench, `n` on every other board | Allows the firmware to drive the L line. Boards before v3.3 switch the L pull-down straight onto the wire, and an L wire shorted to battery destroys the transistor and can take the nRF9151 with it, so leave it off on those unless you know the wire is safe |
+| `APP_BOARD_HAS_CAN` | bool | `y` on v2.1, v2.5C, v2.6C and v3.0; on v3.1-v3.4 when `APP_OBD_MODE=1`; otherwise `n` | MCP2518FD CAN controller fitted. On v3.0, which lays out both interfaces, set the one you did not populate to `n` |
+| `APP_BOARD_HAS_KLINE` | bool | `y` on the bench, v2.1, v2.5K, v2.6K and v3.0; on v3.1-v3.4 when `APP_OBD_MODE=2`; otherwise `n` | K-wire transceiver fitted |
+| `APP_L_SEND_ENABLED` | bool | `y` on v3.3, v3.4 and the bench, `n` on every other board | Allows the firmware to drive the L line. Boards before v3.3 switch the L pull-down straight onto the wire, and an L wire shorted to battery destroys the transistor and can take the nRF9151 with it, so leave it off on those unless you know the wire is safe |
 | `APP_BOARD_HAS_AIO` | bool | `y` on v2.1 | 0-30V AIO inputs fitted; adds `+aio` to the board identity |
-| `APP_BOARD_HAS_L_SENSE` | bool | `y` on v3.3 | L-line sense input fitted, read through the ADC to detect an L wire shorted to battery |
+| `APP_BOARD_HAS_L_SENSE` | bool | `y` on v3.3 and v3.4 | L-line sense input fitted, read through the ADC to detect an L wire shorted to battery |
 | `APP_L_SENSE_LOW_MV` | int | `2800` | Depends on `APP_BOARD_HAS_L_SENSE`. Below this the L line counts as pulled low; a line that is high, open or shorted to battery reads at the 3.6V full scale |
-| `APP_BOARD_HAS_RAIL_SENSE` | bool | `y` on v3.1-v3.3 | Switched-rail status inputs fitted, so the boot self-test and the `RAIL:` alerts can tell a rail that did not come up |
+| `APP_BOARD_HAS_RAIL_SENSE` | bool | `y` on v3.1-v3.4 | Switched-rail status inputs fitted, so the boot self-test and the `RAIL:` alerts can tell a rail that did not come up |
 | `APP_BOARD_CAN_ON_AUX` | bool, hidden | `y` on v2.1, v2.5C and v2.6C | The CAN circuit is powered from the AUX domain |
 | `APP_BOARD_KLINE_ON_AUX` | bool, hidden | `y` on v2.1 | The whole K-line circuit is powered from the AUX domain |
 | `APP_BOARD_KLINE_SHIFT_ON_AUX` | bool, hidden | `y` on v2.5K and v2.6K | The level shifter is on AUX and the transceiver rails on `K_EN`; the K-line pins are released only while both are up |
 | `APP_BOARD_OBD_DOMAIN` | bool, hidden | `y` on v3.0 | CAN and K-line share one switched OBD domain |
-| `APP_BOARD_SPLIT_OBD_DOMAIN` | bool, hidden | `y` on v3.1-v3.3 | CAN and K-line rails are switched independently |
-| `APP_BOARD_CAN_XSTBY` | bool, hidden | `y` on v2.5C, v2.6C and v3.0-v3.3 | The CAN transceiver's standby pin is driven by the MCP2518FD, so putting the controller to sleep puts the transceiver in standby |
+| `APP_BOARD_SPLIT_OBD_DOMAIN` | bool, hidden | `y` on v3.1-v3.4 | CAN and K-line rails are switched independently |
+| `APP_BOARD_CAN_XSTBY` | bool, hidden | `y` on v2.5C, v2.6C and v3.0-v3.4 | The CAN transceiver's standby pin is driven by the MCP2518FD, so putting the controller to sleep puts the transceiver in standby |
 | `APP_BOARD_IGN_EXT_PULLUP` | bool, hidden | `y` on every l0destar board | The ignition sense line has an external pull-up, so the nRF9151's internal one stays off |
-| `APP_BOARD_RAIL_ST_12V_ACTIVE_LOW` | bool, hidden | `y` on v3.1-v3.3 | The 12V K rail sense reads low while the rail is up |
+| `APP_BOARD_RAIL_ST_12V_ACTIVE_LOW` | bool, hidden | `y` on v3.1-v3.4 | The 12V K rail sense reads low while the rail is up |
 | `APP_LED_ACTIVE_LOW` | bool | `y` for a bench build on the DK, otherwise `n` | Status LED polarity |
 
 The domain flags tell the firmware which pins end inside a switched rail. Those pins are parked
@@ -262,8 +261,10 @@ The remaining pin symbols only apply to older or bench hardware: `APP_PIN_K2_TX`
 ### Debug overrides and test harnesses
 
 Every symbol in this table either fakes an input or replaces the tracker, and none belongs in an
-image you publish. All but the first two take over the firmware before the modem is started: a
-unit running one never reports, never checks for updates, and has to be reflashed over USB.
+image you publish. All but the first two replace the tracker: a unit running one never reports,
+never checks for updates, and has to be reflashed over USB. `APP_ACCEL_TEST` is the exception when
+no IMU is found, carrying on to the tracker, and the provisioning and LTE power test builds bring
+the modem up for their own use.
 
 | Symbol | Default | What it does | Refused by `push_fw.sh` |
 |---|---|---|---|
@@ -297,7 +298,7 @@ update, and `push_fw.sh` does not check it either.
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
 | `APP_FOTA` | bool | `y` | The update subsystem. Leave it on: turning it off also removes the call that confirms an image installed over the air, so MCUboot would revert such an image at the next boot |
-| `APP_FOTA_INHIBIT` | bool | `n` | Keeps the subsystem but never checks, downloads or acts on update adverts or the `fota` command, while still confirming the running image. For bench builds, whose version is `MAJOR.MINOR.0` and would otherwise be replaced by the published release within seconds of booting. Never in a published image |
+| `APP_FOTA_INHIBIT` | bool | `n` | Keeps the subsystem but never checks, downloads or acts on update adverts or the `fota` command, while still confirming the running image. For bench builds, whose version is `MAJOR.MINOR.0` and would be replaced within seconds of booting by any build published for the unit's IMEI. Never in a published image |
 | `APP_FOTA_HOST` | string | `""` | Update host; empty reuses `APP_SERVER_HOST` |
 | `APP_FOTA_PORT` | int | `65481` | Update port: the server's TLS listener, which serves firmware downloads |
 | `APP_FOTA_SEC_TAG` | int | `42` | Modem security tag holding the CA the update server is verified against. `-1` fetches over plain HTTP; the image is still signature-checked, but the manifest is not authenticated |
@@ -311,7 +312,7 @@ update, and `push_fw.sh` does not check it either.
 | `APP_FOTA_RESCAN_TIMEOUT_S` | int, 10-600 | `90` | Registration wait after a re-scan |
 | `APP_FOTA_RETRY_HOLDOFF_S` | int | `600` | Wait after a failed attempt before trying again, doubling with each consecutive failure up to eight times this. The bare `fota` command overrides it |
 | `APP_FOTA_MANIFEST_TIMEOUT_S` | int | `30` | Manifest request timeout |
-| `APP_FOTA_DOWNLOAD_TIMEOUT_S` | int | `1200` | Limit on a whole download |
+| `APP_FOTA_DOWNLOAD_TIMEOUT_S` | int | `1200` | Limit on one update check's download, every attempt included |
 | `APP_FOTA_FRAGMENT_SIZE` | int | `0` | Range request size handed to the download library; `0` asks for one continuous response. `FOTA.md` notes that over the modem's TLS the image arrives in 2KB ranges regardless |
 
 ### Intervals and timeouts
@@ -373,9 +374,10 @@ Runtime settings:
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
 | `APP_KLINE_TELEMETRY` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. Add the OBD-II values the ECU supports to each record: engine speed, road speed, coolant and intake temperature, load, throttle, mass air flow, timing, fuel trims, fuel system status, lamp and stored code count. The diagnostic session is opened once and held for the drive |
-| `APP_KLINE_DTC_REPORT` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. Read the stored fault codes shortly after ignition on and again at ignition off, and send the complete set to the server. Read-only: clearing codes is not implemented |
+| `APP_KLINE_DTC_REPORT` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. Read the stored fault codes shortly after ignition on and again whenever the stored-code count changes during a drive, and send the complete set to the server; nothing is read at ignition off, when the ECU is unpowered. Read-only: clearing codes is not implemented |
 | `APP_KLINE_DTC_ON_DELAY_MS` | int, 0-30000 | `5000` | Depends on `APP_KLINE_DTC_REPORT`. Wait after ignition on before reading codes, while the ECU boots |
 | `APP_KLINE_ECU_ADDR` | hex, 0x01-0xfe | `0x33` | Address the session opens with the 5-baud init. `0x33` is the OBD functional address; some vehicles, including the author's Toyota, answer only on a physical address, so use what discovery reports |
+| `APP_KLINE_USE_L` | bool | `n` | Depends on `APP_L_SEND_ENABLED`. Drive the L line alongside K in the session's 5-baud init, after testing it for a short to battery. Set it when discovery's summary says `L wire needed` |
 | `APP_KLINE_BAUD` | int | `10400` | Data rate for the handshake and session. Some ECUs answer at 9600; the init retries at the other rate when the sync byte does not decode |
 | `APP_KLINE_OBD` | bool, hidden | `y` when either of the first two is set | Builds the OBD-II code |
 
@@ -384,13 +386,13 @@ Discovery, run once per vehicle with the ignition on (see
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_KLINE_DISCOVER` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. At boot, try the 5-baud and fast inits on the functional address, then sweep the physical addresses, print a summary ending in the settings to use, and park. Takes up to 15 minutes and never starts the tracker, so it is a test harness |
+| `APP_KLINE_DISCOVER` | bool | `n` | Depends on `APP_BOARD_HAS_KLINE`. At boot, try the 5-baud and fast inits on the functional address, then sweep the physical addresses, print a summary ending in the settings to use, and park. Each 5-baud init goes out on K alone first and is repeated with the L line driven only if that gets no answer. Takes up to 15 minutes, about half an hour when nothing answers on K alone, and never starts the tracker, so it is a test harness |
 | `APP_KLINE_INIT_FAST` | bool | `y` | Depends on `APP_KLINE_DISCOVER`. Also try the ISO 14230-4 fast init; turning it off for an ECU known to answer the 5-baud init saves about 2.5 minutes |
 | `APP_KLINE_INIT_SWEEP` | bool | `y` | Depends on `APP_KLINE_DISCOVER`. Sweep every address from 0x01 to 0xFE when 0x33 does not answer. Never on a moving vehicle |
 | `APP_KLINE_INIT_ADDRS` | string | `""` | Addresses already known to answer the 5-baud init, as comma-separated hex such as `"13,29,58,B4"`; each is tried in turn and everything it sends is captured |
 | `APP_KLINE_INIT_ACK` | bool | `y` | Depends on `APP_KLINE_DISCOVER`. During a capture, reply with the inverted second byte as a tester would |
 | `APP_KLINE_INIT_DIAG` | bool | `n` | Depends on `APP_KLINE_DISCOVER`. Before the init, hold the L pull-down on for 5 seconds and listen on K for 20 seconds, so the wiring can be checked with a meter |
-| `APP_KLINE_IDENT` | bool | `n` | Depends on `APP_KLINE_DISCOVER`. Ask each address that completes the handshake to identify itself: ECU identification, supported PIDs, engine speed, coolant temperature and VIN |
+| `APP_KLINE_IDENT` | bool | `n` | Depends on `APP_KLINE_DISCOVER`. Ask each address in `APP_KLINE_INIT_ADDRS` whose 5-baud handshake completes to identify itself: ECU identification, supported PIDs, engine speed, coolant temperature and VIN |
 | `APP_KLINE_DTC` | bool | `n` | Depends on `APP_KLINE_IDENT`. Also read stored, pending and permanent fault codes |
 
 `APP_L_SEND_ENABLED` is under [Fitted hardware and power domains](#fitted-hardware-and-power-domains).
@@ -530,9 +532,12 @@ These are compiled in and have no Kconfig symbol; change them in the source and 
 | `PSK_HEX_DEFAULT` | 64 zeros | Fallback for an empty `APP_PSK_HEX` |
 | `TLS_SEC_TAG` | `1` | The other modem tag the CA certificate is written to |
 | `ENGINE_OFF_BOOT_INTERVAL` | `900` | Timed wake interval, in seconds, from boot until the first server reply when `APP_ENGINE_OFF_LOOP_INTERVAL` is 0 |
+| `RESEND_POLL_S` | `30` | How often a parked unit that owes a timed report - one that failed because the modem had not registered - checks for registration, so the report goes out as soon as it has rather than at the next timed wake |
 | `ENGINE_STOPPED_HOLD_S` | `300` | Seconds of low voltage and standstill before the voltage fallback calls the engine stopped |
 | `ENGINE_MOVING_KMH` | `3.0` | GNSS speed above which the vehicle counts as moving, restarting that hold |
 | `ENGINE_FIX_MAX_AGE_S` | `180` | Oldest fix still counted as evidence of movement |
+| `AGNSS_RETRIES`, `AGNSS_RETRY_INTERVAL_MS` | `2`, `15000` | Further A-GNSS fetches during a cold search when the first fails, and the gap between them; GNSS keeps searching between attempts |
+| `GNSS_PRIO_STARVED_EPOCHS`, `GNSS_PRIO_WINDOW_MS` | `5`, `40000` | GNSS priority mode, which takes the radio from LTE, is requested only after this many consecutive epochs the receiver reports as starved of radio time, and not again while a window this long may still be running |
 | `BATTERY_WARN_SETTLE_S` | `60` | Seconds the ignition must have been off before a low reading can raise `low battery`, since cranking sags the rail |
 | `IMPLAUSIBLE_VOLTAGE` | `5.0` | Readings below this mean no INA228 rather than a flat battery |
 | `BATTERY_SAMPLES`, `BATTERY_SAMPLE_GAP_MS` | `8`, `3` | INA228 conversions averaged per battery reading, and the milliseconds between them |
@@ -545,34 +550,11 @@ These are compiled in and have no Kconfig symbol; change them in the source and 
 | `BATCH_HEADROOM` | `400` | Room kept for one more record and the log lines that ride along |
 | `BATCH_FLUSH_BYTES` | `736` | `UDP_PACKET_SIZE - 64 - BATCH_HEADROOM`: a batch is sent once it reaches this size |
 | `SPEED_MIN_SATS` | `4` | Satellites needed before the GNSS speed counts as evidence of movement or rest |
-| `IGN_OFF_STOPPED_KMH` | `3.22` | On the ignition-off record, GNSS speeds below this (2mph) are sent as 0 |
+| `IGN_OFF_STOPPED_KMH` | `3.22` | With the ignition off, a GNSS speed below this (2mph) is sent as 0: standstill noise rather than motion. A roll-away or a tow above it reports what was measured |
+| `SPEED_FIX_MAX_AGE_MS` | `10000` | Oldest fix whose speed still goes out in a record. A record built from the stored position, such as a parked unit's timed report, sends speed 0 rather than repeating the last fix's figure |
 | `GYRO_REST_KMH`, `GYRO_AUTOZERO_SAMPLES`, `GYRO_AUTOZERO_GAP_MS`, `GYRO_AUTOZERO_REJECT_LSB`, `GYRO_AUTOZERO_EMA_SHIFT` | `1.0`, `16`, `5`, `250`, `2` | Learning the gyro's temperature-dependent zero-rate offset while stationary with a good fix |
 
 `TLS_PORT` (65481), `DTLS_PORT` (5684), `LOW_POWER_STANDBY`, `NO_MOVEMENT_GPS_SKIP` and
 `ACCEL_POLL_INTERVAL` are defined but not used by firmware 0.4.x. The other macros in the file
 only give Kconfig symbols shorter names, for example `CRASH_THRESHOLD_MG` for
 `CONFIG_APP_CRASH_THRESHOLD_MG` and `UDP_PORT` for `CONFIG_APP_SERVER_PORT`.
-
-## Where older documents disagree
-
-- `firmware/README.md` describes the transport as DTLS on port 65482 and calls `APP_PSK_HEX`
-  legacy. Telemetry is plain UDP with ChaCha20-Poly1305 on 65480, and the key is required.
-- Its Kconfig table gives `APP_MOVEMENT_CONFIRM_MS` and `APP_MOVEMENT_CONFIRM_HITS` as 3000 and 2
-  (now 10000 and 6) and lists `APP_GSM_ESCALATION_POWERCYCLE`, `APP_GSM_ESCALATION_SLEEP` and
-  `APP_GSM_RECOVERY_SLEEP_INTERVAL`, which no longer exist; `APP_MODEM_STUCK_CFUN_S` and
-  `APP_MODEM_STUCK_RESET_S` replaced them. Its impact section gives `APP_PARKED_IMPACT_MG` as 1.5g
-  (the default is 800mg) and still names the LSM6DSO as the IMU.
-- `local.conf.example` suggests 3000 and 2 for the movement confirmation.
-- `QUICKSTART.md` gives the default APN as `iot.1nce.net` (`prj.conf` sets `sensor.net`) and says
-  an all-zero key disables sending, which it does not. It installs the SDKs with
-  `nrfutil sdk-manager install --ncs-version v3.3.0`, where current nRF Util takes the version as
-  a plain argument (`nrfutil sdk-manager install v3.3.0`), and opens the console with
-  `screen -L /dev/cu.usbmodem* 115200`, which matches both of the Connect Kit's serial ports: name
-  the first one instead.
-- The comment in `sysbuild.conf` describes two ~448KB slots; `pm_static.yml` pins 416KB.
-- The `APP_KLINE_DISCOVER` help says the result is sent as an alert once the modem is up, but the
-  firmware parks before starting the modem.
-- The help for `APP_IMPACT_IMMEDIATE_MG` says it must sit above `APP_PARKED_IMPACT_MG`, yet the
-  defaults are 700 and 800.
-- The help for `APP_OBD_MODE` names v3.1-v3.3 only; it applies just the same to a v3.4 built as
-  v3.3.

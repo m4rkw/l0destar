@@ -261,15 +261,26 @@ int collect_data(int ignitionState)
      * motion, which is wrong for a vehicle that has just been switched off. */
     float speed = stale ? 0.0f : g_gnss.speed_kmh;
     long  sats  = stale ? 0     : g_gnss.sats;
-    /* Ignition on last record, off on this one: the key has just turned, so
-     * the vehicle is stopped and a residual GNSS speed is noise, not motion
-     * — see IGN_OFF_STOPPED_KMH.  Only the transition record, and only a
-     * GNSS speed: a genuine roll-away or a key cut while moving still
-     * reports what it measured. */
-    if (ignitionState != 0 && s_ign_last == 0 && speed > 0.0f &&
-        speed < IGN_OFF_STOPPED_KMH) {
-        LOG_INF("ignition off at %.2f km/h — reporting stopped",
-                (double)speed);
+    /* A speed is only true at the moment of its fix.  Records built from the
+     * stored position — every timed check-in while parked — repeated the
+     * last fix's figure for as long as the unit slept: on 2026-09-14 the
+     * car's hourly records carried 0.68 mph from the fix after its 06:56
+     * reboot, and the page showed 1 mph.  See SPEED_FIX_MAX_AGE_MS. */
+    if (speed > 0.0f &&
+        k_uptime_get() - g_gnss.fix_uptime_ms > SPEED_FIX_MAX_AGE_MS) {
+        speed = 0.0f;
+    }
+    /* With the ignition off a residual GNSS speed is noise, not motion — see
+     * IGN_OFF_STOPPED_KMH.  Every ignition-off record, not only the one where
+     * the key turned, so a fresh fix taken while parked (after a reboot, say)
+     * reads as stopped too; and only a GNSS speed below the threshold, so a
+     * roll-away, a tow or a key cut while moving still reports what it
+     * measured. */
+    if (ignitionState != 0 && speed > 0.0f && speed < IGN_OFF_STOPPED_KMH) {
+        if (s_ign_last == 0) {
+            LOG_INF("ignition off at %.2f km/h — reporting stopped",
+                    (double)speed);
+        }
         speed = 0.0f;
     }
     n = snprintf(&data_current[data_index], remaining,

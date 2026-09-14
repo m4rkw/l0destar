@@ -10,8 +10,9 @@ part was chosen. These decisions have been re-litigated several times and
 always land in the same place, so the reasoning is written down here.
 
 Everything below was checked against the schematic, the PCB netlist and the
-part datasheets on 21 Aug 2026. PCB DRC is clean with zero unconnected
-items.
+part datasheets on 21 Aug 2026, except "The L line pull-down", which was
+added to the v3.3 document and checked on 28 Aug 2026. PCB DRC is clean with
+zero unconnected items.
 
 ## The protection chain
 
@@ -223,6 +224,42 @@ If either divider is ever changed, re-check the gate voltage at 39 V (the
 pulse 2a rail peak) and 35 V (load dump), and keep the 100 nF on the
 ignition divider.
 
+## The L line pull-down: current-limited in v3.3
+
+Up to v3.2 the L line was pulled down by a bare 2N7002 (S10Q1) with
+its gate wired straight to the L_SEND GPIO. If the external L wire was shorted
+to battery while the firmware drove a 5-baud init, the FET was switched hard
+into that short. A 2N7002 at Vgs 3.3 V saturates somewhere between about
+100 mA and 1 A depending on brand and threshold spread, so it dissipated
+roughly 1 to 12 W in a SOT-23 and failed inside the first address bit. Roughly
+half of those failures take the gate with them, and a drain-gate short puts
+battery voltage directly onto L_SEND, past the nRF9151 absolute maximum. That
+is a module kill, not just a dead transistor.
+
+v3.3 breaks that chain in three places:
+
+- S10U2, an AL5809-90 constant-current regulator, is now in series between the
+  L pin and the FET drain, so fault current is capped at 90 mA instead of
+  whatever the FET happens to pass. The regulator absorbs the fault voltage
+  instead: at 12 to 16 V and 90 mA that is about 1.1 to 1.4 W, which no small
+  SMD package sustains continuously, so the part's own thermal shutdown is the
+  intended endpoint rather than an accident. The fold-back time, and what the
+  L line does while it folds back, are bench items - they are not derived
+  anywhere in this document.
+- S10R7, 47K, is new in the gate lead between L_SEND and S10Q1. In v3.2 the
+  gate sat directly on the GPIO. If the FET ever does fail drain-gate, the pin
+  now sees about 0.2 mA once its clamp conducts rather than an unlimited 12 V
+  source. This is not a substitute for the current limit; it removes the
+  specific failure mode that cost modules rather than boards.
+- The FET is no longer the sacrificial element. At 90 mA and Vgs 3.3 V a
+  2N7002 drops about 0.7 V and dissipates under 100 mW. The 3.3 V logic note
+  in "The 2N7002 sensing transistors" above still applies unchanged.
+
+S10D5 and S10R8 add the L_SENSE readback, taken off the regulator output
+rather than the L pin. The diode is oriented cathode to the L side so an
+external 12 V is blocked rather than injected, and the 47K limits the pin to
+about 250 uA if that diode ever fails short.
+
 ## The blocking FET during pulse 2a: resolved by the SQJ457EP
 
 The current that charges the bulk capacitors during pulse 2a flows through
@@ -268,13 +305,18 @@ bulk charging current and never needed the swap.
   at risk from pulse 2a and from hot-plug inrush.
 - The battery blocking FET is the SQJ457EP in PowerPAK SO-8L. Do not revert
   it to the SQ2361ES to recover the smaller footprint.
+- The AL5809-90 (S10U2) stays in series with the L line pull-down, and S10R7
+  stays in the S10Q1 gate lead. Removing either restores the v3.2 defect: the
+  board looks and behaves identically until the first short to battery.
 - No damping electrolytic is needed for hot-plug ringing.
 - 2N7002 gate dividers are in spec for any manufacturer after the 180K
   re-ratio. No zeners.
-- The LM66100 on the buck output has its CE pin tied to VOUT. This is a
-  TI-documented configuration for reverse current blocking (it protects the
-  buck if an external supply is attached to the VCC header), not a wiring
-  error.
+- The LM66100 (S11U1) sits between PP4V2_OVP_PROTECTED and PP4V2, after
+  the OVP MOSFET. Its CE pin is tied to its own output (PP4V2). This is a
+  TI-documented configuration for reverse current blocking — it prevents
+  downstream capacitors from back-driving the rail when the OVP trips, and
+  blocks reverse current if an external supply is attached to the VCC
+  header. Not a wiring error.
 
 ## Known accepted limitations
 
@@ -306,6 +348,7 @@ bulk charging current and never needed the swap.
 | On-board fuse (S2F1, S2F2) | 0407002.WRA, 2 A time-lag, 63 V, 50 A interrupting, 0.100 ohm |
 | On-board fuse nominal melting I2t | 0.870 A2Sec vs about 0.03 to 0.1 A2Sec for pulse 2a |
 | OBD sense gate, worst case | about 14 V |
+| L line fault current, external short to battery | 90 mA, set by the AL5809-90 |
 
 ## References
 
@@ -313,6 +356,7 @@ bulk charging current and never needed the swap.
 - [SQ2361ES datasheet, Vishay](https://www.mouser.com/datasheet/2/427/VISH_S_A0001811243_1-2567854.pdf)
 - [SQJ457EP datasheet, Vishay](https://www.vishay.com/docs/76628/sqj457ep.pdf)
 - [2N7002 datasheet, Nexperia](https://assets.nexperia.com/documents/data-sheet/2N7002.pdf)
+- [AL5809 datasheet, Diodes Incorporated](https://www.diodes.com/assets/Datasheets/AL5809.pdf)
 - [ITS4060S-SJ-N datasheet, Infineon](https://www.infineon.com/assets/row/public/documents/10/49/infineon-its4060s-sj-n-datasheet-en.pdf)
 - [LT8609A datasheet, ADI](https://www.mouser.com/pdfDocs/LT8609-8609A.pdf)
 - [LM66100 datasheet, TI](https://www.ti.com/lit/ds/symlink/lm66100.pdf)

@@ -46,5 +46,14 @@ moved into the [archive](archive/).
   defect present in v3.0-v3.2 (pulldown current limited to 90 mA via an
   AL5809-90, gate-fault current into the nRF limited) and adds L-line fault
   sensing so a 12V short can be detected. Buck converter tuned to shut off
-  cleanly below ~4.3V and restart only above ~5.6V to avoid flapping. Not
-  tested; quiescent estimated ~143 µA.
+  cleanly below ~4.3V and restart only above ~5.6V to avoid flapping. Built and
+  bench tested: 146.2 µA quiescent as built, 43.7 µA with the accelerometer's
+  NC pads scraped off.
+
+### v3.4 - accelerometer fix
+
+- **[l0destar v3.4](l0destar_v3.4/)** - v3.3 with the accelerometer's NC pins
+  left unconnected (grounded on v3.0-v3.3, which kept the part out of its
+  low-power state), the buck enable divider made optional, test points added
+  and a TCAN3414DR CAN transceiver specified. Not yet built or tested; ~35.5 µA
+  quiescent expected at 12V.

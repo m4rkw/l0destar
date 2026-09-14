@@ -1,10 +1,13 @@
 #!/bin/bash
 # Reset the Makerdiary Connect Kit's nRF9151 via its CMSIS-DAP probe.
 #
-# sysresetreq resets only the nRF9151 core; the default reset kind doesn't
-# reboot it, and `-m hw` pulses the board-level reset line, which also resets
-# the DAPLink interface MCU -- USB re-enumerates and any attached serial
-# session (screen) loses the port.
+# `-m hw` pulses the board-level reset line, as flash.sh does.  A sysresetreq
+# (soft) reset would keep USB and an attached console up, but it leaves the SoC
+# in debug interface mode, drawing milliamps while asleep until the next pin
+# reset or power cycle.  The pin reset also reboots the DAPLink interface MCU,
+# so USB re-enumerates and any attached serial session (screen) loses the port
+# and has to be reopened.  board_test.sh, which attaches first and then resets,
+# keeps a soft reset of its own.
 #
 # auto_unlock=false is not optional here. pyocd defaults it to true, and every
 # pyocd connect to an nRF91 runs check_flash_security before anything else: it
@@ -26,13 +29,12 @@
 # A reset must never erase. With auto_unlock off pyocd warns and fails instead.
 set -e
 
-if ! pyocd reset -t nrf91 -m sysresetreq -O auto_unlock=false ; then
+if ! pyocd reset -t nrf91 -m hw -O auto_unlock=false ; then
     cat >&2 <<'EOF'
 
 Reset failed. If pyocd logged "APPROTECT enabled", the nRF9151 booted with
-debug access locked, so there is no AHB-AP to write AIRCR through. That means
-UICR.APPROTECT is not Unprotected (0x50FA50FA), which is the state a previous
-mass erase leaves behind.
+debug access locked. That means UICR.APPROTECT is not Unprotected
+(0x50FA50FA), which is the state a previous mass erase leaves behind.
 
 Recover with ./flash.sh -- its load step is allowed to unlock by mass erase,
 restores UICR, and reprograms the firmware in the same run.

@@ -1,9 +1,7 @@
 # Assembly guide
 
 How to assemble a l0destar v3.4 board by hand. The board has not been built yet in this
-revision, so treat this as a guide based on the v3.3 build and the v3.4 design files; earlier v3.x
-boards are close enough that most of it applies, but their test points and over-voltage
-protection designators differ.
+revision, so treat this as a guide based on the v3.3 build and the v3.4 design files.
 
 Before you start, have the [prerequisites](/assembly/prerequisites.html) to hand, decide which
 interface you are building ([component selection](/assembly/component-selection.html)) and open
@@ -26,18 +24,20 @@ are on the right, as in this render of v3.4:
   and `K` on the silkscreen. They select which interface the connector's two bus pins are routed
   to.
 - **Top middle**: the 2-pin CAN termination header S9J1, marked `CAN-T`.
-- **Bottom left**, beside the lower 20-pin header: the OVP bypass pad S5R5, the 2-pin Connect Kit
-  power header S1J4 (marked `+` and `-`), and the test points S12TP1 (`GND`) and S12TP2 (`4.2V`,
-  the protected rail that feeds the Connect Kit).
-- **Top right**: test points S12TP3 (`3.3V`), S12TP4 (`3.3V GPS`) and S12TP5 (`3.3V CAN`).
-- **Right, between the SMA connectors**: test points S12TP6 (`3.3V K`) and S12TP7 (`12V K`).
+- **Left edge**, between the two 20-pin headers: the OVP bypass pad S5R5, the holes for the
+  Connect Kit power lead, S1J4 (marked `+` and `-`), and the test points S12TP1 (ground) and S12TP2 (the
+  protected 4.2V rail that feeds the Connect Kit).
+- **Top right**: test points S12TP3 (3.3V), S12TP4 (the 3.3V GPS rail) and S12TP5 (the 3.3V CAN rail).
+- **Right, between the SMA connectors**: test points S12TP6 (the 3.3V K-wire rail) and S12TP7 (the 12V K-wire rail).
 - **Right edge**: the GPS (top) and LTE (bottom) u.FL and SMA connectors.
 - The two 20-pin Connect Kit headers run horizontally across the middle and the bottom of the
   board.
 
-This annotated photo is of a v3.3 board, which looks the same apart from three things: v3.3 fits
-the buck under-voltage divider that is optional on v3.4, it has a MAX33041 CAN transceiver where
-v3.4 specifies a TCAN3414DR, and it lacks the v3.4 test points.
+This annotated photo is of a v3.3 board, which looks the same apart from its test points and two
+parts: v3.3 fits the buck under-voltage divider that is optional on v3.4, and has a MAX33041 CAN
+transceiver where v3.4 specifies a TCAN3414DR. v3.3 has three test points of its own - S12TP6 and
+S12TP7 on the protected and unprotected 4.2V rails, and S11TP1 for OVP fault injection - so S12TP6
+and S12TP7 mean something different on the two boards.
 
 ![Annotated l0destar v3.3 board](../img/pcb_v3.3_features.png)
 
@@ -65,7 +65,7 @@ can put the full input voltage on its output, which would destroy the Connect Ki
 
 Fit S6R4 as a 0402 0R jumper for the default build, or fit the optional enable divider (S6R4 1M,
 S6R5 243K, S6R6 3.92M) if you want the buck to cut out below about 4.3V and restart above about
-5.6V. The divider adds around 12µA of sleep current; see
+5.6V (calculated; a v3.3 board measured 4.47V and 5.14V). The divider adds around 9µA of sleep current at 12V; see
 [component selection](/assembly/component-selection.html#optional-parts).
 
 Do **not** place the over-voltage protection stage yet - the S11 designators, including the
@@ -113,10 +113,13 @@ and only exists for boards built without the S11 stage, which is not recommended
 With all the SMD parts in place, fit the through-hole parts in order of height, starting with the
 Molex Micro-Fit connector S1J1.
 
-### 6. Fit the power and termination headers
+### 6. Fit the power lead and the termination header
 
-Next fit the 2-pin Connect Kit power header S1J4 and, on CAN builds, the 2-pin termination header
-S9J1. Only fit a shunt on S9J1 if the tracker is going to be at the end of the CAN bus. A tracker
+Next solder the bare end of the MX1.25 power lead into S1J4, with the wire that goes to the positive
+pin of its plug in the `+` hole and the other in `-`. Work out which wire is which with a meter
+before you solder - see the polarity warning under [final assembly](#final-assembly). On CAN
+builds, also fit the 2-pin termination header S9J1. Only fit a shunt on S9J1 if the tracker is
+going to be at the end of the CAN bus. A tracker
 connected to a vehicle's OBD socket normally is not, because the vehicle's bus is already
 terminated.
 
@@ -204,8 +207,8 @@ correctly. The remaining powered checks are on the [board test](/assembly/board-
 The 3D-printable enclosure in
 [`hardware/enclosure/v3.3/`](https://github.com/m4rkw/l0destar/tree/master/hardware/enclosure/v3.3)
 has a top and a bottom, in a variant with the l0destar logo embossed in the top and a plain one;
-they are otherwise identical. It was designed for v3.2 and v3.3 boards, and the board outline has
-not changed since v3.0.
+they are otherwise identical. It was designed for the v3.3 board, whose outline v3.4
+keeps.
 
 ![The printed enclosure](../img/enclosure5.jpg)
 

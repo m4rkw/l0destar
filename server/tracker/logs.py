@@ -46,6 +46,11 @@ logging.basicConfig(
 )
 
 app = logging.getLogger('tracker')
+# Every notification, whatever the backend, so one that went nowhere can still
+# be read back.  INFO on a logger of its own: it propagates to app.log's
+# handler, which otherwise only ever sees errors.
+notify = logging.getLogger('tracker.notify')
+notify.setLevel(logging.INFO)
 udp = _channel('tracker.udp', 'udp.log', console=True)
 tls = _channel('tracker.tls', 'tls.log', console=True)
 debug = _channel('tracker.debug', 'debug.log')

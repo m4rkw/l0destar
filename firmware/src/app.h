@@ -269,6 +269,7 @@ struct kline_session {
 	uint8_t kb1, kb2;
 	int rx_edges;           /* K edges seen in the listen window, -1 if not run */
 	uint32_t baud;          /* ECU bit rate measured from its sync byte */
+	bool use_l;             /* the init that worked needed the L line */
 	uint8_t addrs[8];       /* every address that completed a 5-baud handshake */
 	int n_addrs;
 };

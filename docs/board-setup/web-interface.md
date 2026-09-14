@@ -14,15 +14,15 @@ The server uses passkeys only - there are no passwords.
 sudo docker exec l0destar python tools/regtoken.py alice tracker.example.com
 ```
 
-It prints a link like `https://tracker.example.com/register?username=alice&token=...`, valid once, for 24 hours.
+It prints a link like `https://tracker.example.com/register?username=alice&token=...`, valid once, for 24 hours. Creating another link for the same username cancels this one.
 
-2. Open the link **on the device that will hold the passkey** and press **register**. Registration needs the device's own authenticator with user verification - iCloud Keychain, Google Password Manager, Windows Hello and the like. Roaming security keys are refused.
+2. Open the link **on the device that will hold the passkey** and press **register**. Registration asks for the device's own authenticator, with user verification - iCloud Keychain, Google Password Manager, Windows Hello and the like - so browsers do not offer roaming security keys.
 3. When it says `passkey registered successfully`, follow **continue to login**, enter the username and approve the passkey prompt.
 
 Things to know:
 
 - **Hostname.** A passkey belongs to the hostname it was created on. Always open the interface on the same hostname that was in the sign-up link: a Tailscale name and a public name are different sites as far as passkeys are concerned.
-- **Lost phone.** Create a new link for the same username. Registering replaces the old passkey.
+- **Lost phone.** Create a new link for the same username. Registering replaces the old passkey and signs the lost phone out.
 - **Sessions** last 30 days (`session_lifetime_days`). **logout** ends one.
 - **Lockouts.** Five failed passkey verifications lock the account. Separately, after five sign-in attempts from one address without a successful login, further attempts get `too many requests` until an hour after the last one. [Server security](/server/security.html) covers unlocking an account.
 
@@ -115,7 +115,7 @@ A token is not limited to particular devices or actions: anything holding one ca
 |---|---|
 | `GET /api/1.0/track` | Redirects to a map at the device's last position: an Apple Maps link by default, Google Maps with `google=1`. With `return=1` it returns `{"url": ...}` instead of redirecting. |
 | `GET /api/1.0/config` | The device's settings: `int`, `ma`, `al` (alarm), `ga` (garage), `oa` (overnight alarm), `oaf` and `oat` (overnight window hours). |
-| `POST /api/1.0/config` | Sets any of those fields. Values must be integers. |
+| `POST /api/1.0/config` | Sets any of those fields. Values must be whole numbers: 0 or 1 for the switches, 0-23 for the hours. |
 | `POST /api/1.0/command` | Queues a command for the device, or applies a server-side setting. |
 | `POST /api/1.0/home` | The home check (below). |
 
@@ -151,17 +151,17 @@ sudo docker exec l0destar python tools/command.py 350000000000000 locate
 
 ### Live stream
 
-`/ws/carpos?imei=<imei>` is the WebSocket the map page uses. It needs a signed-in session, so it is for browsers rather than scripts. On connecting it sends the latest record, then every new record as it arrives, each as a JSON position with the same fields as `carpos` - coordinates, speeds, heading, timestamp, battery, ignition, operator, the OBD and IMU readings, and in track mode the unpacked motion burst. When nothing new has arrived for 10 seconds it sends `{"ping": true, "track_mode": 0}` so the connection is not dropped.
+`/ws/carpos?imei=<imei>` is the WebSocket the map page uses. It needs a signed-in session, so it is for browsers rather than scripts. On connecting it sends the latest record, then every new record as it arrives, each as the `position` object that `carpos` returns - coordinates, speeds, heading, timestamp, battery, ignition, operator, the OBD and IMU readings, and in track mode the unpacked motion burst - but not `carpos`'s `accel_baseline`. When nothing new has arrived for 10 seconds it sends `{"ping": true, "track_mode": 0}`, carrying the track mode switch, so the connection is not dropped.
 
 ### Home check
 
 A tracker that stops reporting while parked at home is hard to notice: its last record looks exactly like a car parked at home. The home check catches the opposite case - the last known position is not where the vehicle should be.
 
-List each vehicle's home in `home_check` in the server's configuration (see [server configuration](/server/configuration.html)), then call the endpoint from a scheduled job at a time the vehicles should be home:
+List each vehicle's home in `home_check` in the server's configuration (see [server configuration](/server/configuration.html)), then call the endpoint on a schedule from the server itself, at a time the vehicles should be home - [server deployment](/server/deployment.html#scheduling-the-home-check) has the details:
 
-```sh
-# crontab: every night at 02:00
-0 2 * * * curl -s -X POST -H "Authorization: Bearer <token>" https://tracker.example.com/api/1.0/home
+```text
+# /etc/cron.d/l0destar-home-check: every night at 03:00
+0 3 * * * nobody curl -fsS -X POST -H "Authorization: Bearer <token>" http://127.0.0.1:5000/api/1.0/home > /dev/null
 ```
 
 It checks every configured vehicle, or only the one `?imei=` names (an IMEI with no `home_check` entry fails with `no home_check entry for <imei>`), and returns a `devices` list with each vehicle's `imei`, `name`, `at_home`, `distance_m` and `garage` flag. A vehicle that cannot be checked carries an `error` instead - `device not found` or `no position recorded`. A vehicle away from home that is not in garage mode raises `<name>: tracker may be stalled - vehicle is <n>m from home`.

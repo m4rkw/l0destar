@@ -30,13 +30,15 @@ To see what your vehicle uses, look at its OBD socket: CAN diagnostics use pins 
 - **K-wire.** The firmware opens a KWP2000 (ISO 14230) session over the K wire and can report
   engine RPM, vehicle speed, coolant and intake temperature, load, throttle, mass air flow, timing
   advance, fuel trims, fuel system status and the check-engine lamp with every record, and send
-  the stored fault codes when the ignition changes. The same wire carries ISO 9141-2 and
+  the stored fault codes after the ignition comes on and whenever they change during a drive. The same wire carries ISO 9141-2 and
   manufacturer-specific pre-OBD protocols such as VAG KW1281, which the firmware does not speak.
   Each vehicle needs a one-off discovery run first.
 - **CAN-FD.** The CAN block - an MCP2518FD CAN-FD controller and a CAN-FD transceiver - handles
   both classic CAN and CAN-FD. On a v3.1 board, with the MAX33041E transceiver that earlier boards
   fit, it passed about 60,000 frames in both modes from 125kbps up to an 8Mbps FD data phase (see
   the [CAN bench test report](https://github.com/m4rkw/l0destar/blob/master/firmware/CAN_BENCH_REPORT.md)).
+  8Mbps is beyond the MAX33041E's 5Mbps rating, and there it logged 2 data-phase bit errors, both
+  retried and delivered; the TCAN3414DR that v3.4 specifies has not been tested.
   The firmware powers it, puts it to sleep and has bench tests for it, but **firmware 0.4.x does
   not read any vehicle data over CAN**, and the interface has not been tried in a vehicle. Build it
   if you intend to work on CAN support.
@@ -88,9 +90,9 @@ board:
 **Buck enable divider (S6R4, S6R5, S6R6).** By default S6R4 is a 0402 0R jumper and S6R5 and S6R6
 are not fitted, so the buck runs whenever input voltage is present and relies on the LT8609A's own
 internal under-voltage lockout. Fitting the divider instead (S6R4 1M, S6R5 243K, S6R6 3.92M, all
-1%) makes the buck start only above about 5.6V and shut off below about 4.3V, which gives clean
-behaviour in ISO 16750-2 style low-voltage and drop-out events. It costs around 12µA of sleep
-current, which is why it is not fitted by default. Values and formula are in the
+1%) makes the buck start only above about 5.6V and shut off below about 4.3V by calculation (a v3.3 board measured 5.14V on and 4.47V off), which gives clean
+behaviour in ISO 16750-2 style low-voltage and drop-out events. It costs around 9µA of sleep
+current at 12V, which is why it is not fitted by default. Values and formula are in the
 [hardware reference](/reference/hardware.html#buck-enable-divider).
 
 **CAN common-mode choke (S9FL1).** An ACT1210-101-2P-TL00 in series with CAN high and CAN low,
@@ -153,16 +155,16 @@ a rail fed straight from the battery that means a continuous fault current.
 
 | Part | Designators | Why it matters |
 |---|---|---|
-| TCAN3414DR CAN transceiver | S9U1 | Fully rated for CAN-FD, with timing specified at 2, 5 and 8Mbps. The MAX33041EASA+ fitted on v3.0 to v3.3 has the same footprint and pinout and can be fitted instead; it is rated to 5Mbps. |
+| TCAN3414DR CAN transceiver | S9U1 | Fully rated for CAN-FD, with timing specified at 2, 5 and 8Mbps. The MAX33041EASA+ fitted on v3.3 has the same footprint and pinout and can be fitted instead; it is rated to 5Mbps. |
 | MCP2518FD controller with a 40MHz crystal | S9U2, S9Y1 (ECS-400-18-33-JGN-TR3), S9C2, S9C3 | CAN-FD controller on SPI. |
 | NUP2105L | S9D1 | CAN bus protection. |
 | NXP TJA1027T/20 transceiver | S10U1 | It has no transmit dominant time-out, which is what lets it hold the K wire low for the 200ms bits of a 5-baud init. A LIN transceiver with a time-out cannot do that. |
-| Diodes Inc. AL5809-90P1-7 | S10U2 | Caps the L-line pull-down at 90mA and shuts down thermally - the fix for the L-line defect of older boards. |
+| Diodes Inc. AL5809-90P1-7 | S10U2 | Caps the L-line pull-down at 90mA and shuts down thermally, so an L wire shorted to battery cannot destroy the pull-down transistor or the nRF9151. |
 | ITS4060SSJNXUMA1 12V load switch | S7U3 | Switches the K-wire 12V rail. Its 40V absolute maximum is the lowest rating on the 12V rail. |
 | 510R 1W 0508 resistors | S10R3, S10R4 | K and L line pull-ups. |
 | 33V TVS, PTVS33VS1UTR,115 | S10D2, S10D4 | Protection on the K and L lines. |
 | 15R 1W 0508 resistor | S15R1 | The bias-tee feed that powers an active GNSS antenna from the switched 3.3V GPS rail. |
-| RF inductor, 47-100nH with SRF above 2GHz | S15L1 | Part of the bias tee; the example is a Murata LQW18AN68NJ00D. |
+| RF inductor, 47-68nH with SRF above 2GHz | S15L1 | Part of the bias tee; the example is a Murata LQW18AN68NJ00D. |
 | TPD1E05U06DPYR ESD diodes | S15D1, S15D2 | ESD protection at the LTE and GPS antenna connectors. |
 | SMA-J-P-H-RA-TH1 and U.FL-R-SMT(01) | S15J1-S15J4 | Antenna connectors. |
 | Molex 43045-0600 | S1J1 | 6-pin Micro-Fit 3.0 vehicle connector. |
