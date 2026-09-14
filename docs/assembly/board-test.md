@@ -123,9 +123,7 @@ CONFIG_APP_APN="your.apn"
 
 The script asks three things:
 
-1. **Board version.** There is no v3.4 entry: **choose v3.3 for a v3.4 board.** The two boards
-   connect the Connect Kit's pins identically; the only differences between their PCBs are the
-   accelerometer pads and net names.
+1. **Board version.** Choose the revision you built: **v3.4** for a v3.4 board.
 2. **OBD interface**: none, CAN or K-wire (ISO 14230), matching the parts and pads
    you fitted.
 3. **APN.** It shows the APN it found and where it found it. It only asks if it finds none, and
