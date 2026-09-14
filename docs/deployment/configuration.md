@@ -22,7 +22,7 @@ CONFIG_APP_OBD_MODE=2
 
 - `CONFIG_APP_APN` belongs here even if it is already in your `local.conf`. Without it the image falls back to the APN in `prj.conf`, which is not your SIM's.
 - `CONFIG_APP_PSK_HEX` goes in each device's own section, because the server gives every device its own key.
-- `CONFIG_APP_BOARD_L0DESTAR_V3_4=y` selects a v3.4 board (a v3.3 board uses `..._V3_3`); other revisions are listed in [Hardware](/reference/hardware.html).
+- `CONFIG_APP_BOARD_L0DESTAR_V3_4=y` selects a v3.4 board (a v3.3 board uses `..._V3_3`); other revisions are listed in [Firmware build options](/reference/firmware.html#board-selection).
 - `CONFIG_APP_OBD_MODE` must match the board's interface selection pads: `0` for none, `1` for CAN, `2` for K-wire.
 
 Never put these in a deployed unit's configuration:

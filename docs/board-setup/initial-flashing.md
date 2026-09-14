@@ -49,7 +49,7 @@ CONFIG_APP_FOTA_INHIBIT=y
 
 | Setting | What it does |
 |---|---|
-| `CONFIG_APP_BOARD_L0DESTAR_V3_4` | Selects the carrier board: its GPIO map, the parts it has and how its switched power rails are sequenced. Other revisions have their own symbol, listed in the [hardware reference](/reference/hardware.html). |
+| `CONFIG_APP_BOARD_L0DESTAR_V3_4` | Selects the carrier board: its GPIO map, the parts it has and how its switched power rails are sequenced. Other revisions have their own symbol, listed in [firmware build options](/reference/firmware.html#board-selection). |
 | `CONFIG_APP_OBD_MODE` | Must match the [interface selection pads](/reference/hardware.html#interface-selection-pads) you bridged: `0` none, `1` CAN, `2` K-wire. It decides which OBD rails are powered and which driver starts. `0` powers no OBD circuitry at all, so it is safe on any board while you check the rest. |
 | `CONFIG_APP_SERVER_HOST` | Where telemetry (UDP 65480) and updates (TCP 65481) go. Use the name your server's certificate was issued for. It must resolve to an IPv4 address: the firmware does not use IPv6. |
 | `CONFIG_APP_APN` | The default in `prj.conf` (`sensor.net`) is almost certainly not your SIM provider's APN. With the wrong APN the modem can register on the network and still have no data connection. |
