@@ -138,7 +138,7 @@ openssl rand -hex 32
 
 The device still uses its old key, so it sees the update in its replies and installs it as normal.
 
-3. When the new image starts, it uses the new key and the server rejects its records. Its update check at start-up still reaches the server over TLS, which confirms the update and sends `Car: fota: updated to <version>`. That is your signal.
+3. When the new image starts, it uses the new key and the server rejects its records. Its update check at start-up still reaches the server over TLS, which confirms the update and sends `Car: fota: updated to <version>`. That is your signal. If it has not arrived within about 15 minutes of the download finishing, look at the server's logs instead: `decrypt failed` lines in `udp.log` from the address the device reports from mean it is already sending with the new key, and a `/fw/manifest.txt` request in `tls.log` after the download's last range means it has restarted.
 4. Straight away, give the server the same key:
 
 ```sh
