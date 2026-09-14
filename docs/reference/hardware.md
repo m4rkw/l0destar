@@ -109,7 +109,7 @@ under-voltage lockout with hysteresis.
 | Build | S6R4 | S6R5 | S6R6 | Behaviour |
 |---|---|---|---|---|
 | Default | 0402 0R | not fitted | not fitted | EN tied to the input; the buck runs whenever input voltage is present and relies on its own internal under-voltage lockout |
-| With divider | 0402 1M 1%, anti-sulfur AEC-Q200 | 0402 243K 1%, anti-sulfur AEC-Q200 | 0402 3.92M 1% | Starts only once the supply reaches about 5.6V; shuts off if it falls to about 4.3V, then needs about 5.6V again |
+| With divider | 0402 1M 1%, anti-sulfur AEC-Q200 | 0402 243K 1%, anti-sulfur AEC-Q200 | 0402 3.92M 1% | Starts only once the supply reaches about 5.6V; shuts off if it falls to about 4.3V, then needs about 5.6V again (calculated; a v3.3 board measured 5.14V on and 4.47V off) |
 
 With the EN threshold at 1.05V rising and 1.00V falling and an output of 4.24V:
 
@@ -120,7 +120,7 @@ With the EN threshold at 1.05V rising and 1.00V falling and an output of 4.24V:
 Across the EN/UV threshold's specified tolerance band the turn-off point stays within about 3.97V to
 4.61V, above the roughly 3.4V at which the board browns out under peak LTE load. The divider exists
 for the ISO 16750-2 tests that require clearly defined behaviour during low-voltage and drop-out
-events. It draws around 12µA continuously from the 12V input, which is why it is not fitted by
+events. It draws around 9µA continuously from a 12V input, which is why it is not fitted by
 default.
 
 ### CAN common-mode choke
@@ -202,7 +202,7 @@ specification below should do.
 | Fusing | 2A time-lag on each 12V input on the board, as a backstop; external 2A harness fuses on both feeds are required |
 | Module rail | 4.2V (4.24V nominal) from an LT8609A synchronous buck at 2MHz |
 | Over-voltage protection | Trips at about 4.95V and releases at about 4.80V; latches off while the unprotected rail stays above the release threshold, so clearing a trip needs the input power to drop far enough for the buck output to fall below about 4.8V |
-| Sleep current | about 35.5µA at 12V expected for a default v3.4 build (measured on a v3.2 board with the accelerometer rework, which is the same circuit for sleep current; 31.5µA on a 12.8V supply); fitting the buck enable divider adds about 12µA |
+| Sleep current | about 35.5µA at 12V expected for a default v3.4 build (measured on a v3.2 board with the accelerometer rework, which is the same circuit for sleep current); fitting the buck enable divider adds about 9µA |
 | Sleep consumption | about 0.85mAh per day at 35.5µA |
 | Telemetry current | about 25mA peak, about 15mA average at 12V (bench observation) |
 | Battery thresholds | 11.9V low-battery warning, 13.0V engine running (firmware defaults, configurable) |

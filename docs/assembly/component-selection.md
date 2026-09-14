@@ -88,9 +88,9 @@ board:
 **Buck enable divider (S6R4, S6R5, S6R6).** By default S6R4 is a 0402 0R jumper and S6R5 and S6R6
 are not fitted, so the buck runs whenever input voltage is present and relies on the LT8609A's own
 internal under-voltage lockout. Fitting the divider instead (S6R4 1M, S6R5 243K, S6R6 3.92M, all
-1%) makes the buck start only above about 5.6V and shut off below about 4.3V, which gives clean
-behaviour in ISO 16750-2 style low-voltage and drop-out events. It costs around 12µA of sleep
-current, which is why it is not fitted by default. Values and formula are in the
+1%) makes the buck start only above about 5.6V and shut off below about 4.3V by calculation (a v3.3 board measured 5.14V on and 4.47V off), which gives clean
+behaviour in ISO 16750-2 style low-voltage and drop-out events. It costs around 9µA of sleep
+current at 12V, which is why it is not fitted by default. Values and formula are in the
 [hardware reference](/reference/hardware.html#buck-enable-divider).
 
 **CAN common-mode choke (S9FL1).** An ACT1210-101-2P-TL00 in series with CAN high and CAN low,

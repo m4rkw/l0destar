@@ -63,7 +63,7 @@ can put the full input voltage on its output, which would destroy the Connect Ki
 
 Fit S6R4 as a 0402 0R jumper for the default build, or fit the optional enable divider (S6R4 1M,
 S6R5 243K, S6R6 3.92M) if you want the buck to cut out below about 4.3V and restart above about
-5.6V. The divider adds around 12µA of sleep current; see
+5.6V (calculated; a v3.3 board measured 4.47V and 5.14V). The divider adds around 9µA of sleep current at 12V; see
 [component selection](/assembly/component-selection.html#optional-parts).
 
 Do **not** place the over-voltage protection stage yet - the S11 designators, including the

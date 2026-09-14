@@ -31,7 +31,7 @@ yourself rather than taking them on trust.
   to ~35.5 µA at 12V.
 - The buck enable divider added in v3.3 is now an optional extra, DNP by
   default. S6R4 is a 0R jumper by default, so the expected sleep current is
-  ~35.5 µA at 12V; fitting the divider adds around ~12 µA.
+  ~35.5 µA at 12V; fitting the divider adds around ~9 µA.
 - Added test points for easier assembly/testing
 - Slightly increased the size of the holes for the 2-pin power connector
 
@@ -105,7 +105,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 | K-wire | L-line sensing via L_SENSE | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Expected ~35.5 µA at 12V with the default build (measured on a v3.2 board with the accelerometer NC pads lifted, which is electrically the same as v3.4 with S6R4 fitted as a 0R jumper). Fitting the optional enable divider adds around ~12 µA |
+| Board | Quiescent current | NOT TESTED | Expected ~35.5 µA at 12V with the default build (measured on a v3.2 board with the accelerometer NC pads lifted, which is electrically the same as v3.4 with S6R4 fitted as a 0R jumper). Fitting the optional enable divider adds around ~9 µA |
 
 ## Features
 
@@ -141,7 +141,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 - Made the LT8609 enable divider (S6R4/S6R5/S6R6, added in v3.3) an optional
   extra, DNP by default. S6R4 is now fitted as a 0R jumper by default so EN is
   tied straight to VIN and the buck runs whenever the input is present; S6R5
-  and S6R6 are DNP. Fitting the divider costs around ~12 µA of sleep current on
+  and S6R6 are DNP. Fitting the divider costs around ~9 µA of sleep current on
   top of the ~35.5 µA baseline, so the default build sits at ~35.5 µA at 12V.
   See [Optional: buck enable divider](#optional-buck-enable-divider-s6r4s6r5s6r6)
   for the fitted values.
@@ -400,7 +400,7 @@ S6R4/S6R5/S6R6 form a 3-resistor divider on the LT8609 EN/UV pin that gives
 the buck a defined under-voltage lockout with hysteresis: it won't start until
 the supply reaches ~5.6V and will shut off if the supply falls to ~4.3V, then
 needs ~5.6V again to restart. This is aimed at ISO 16750-2 low-voltage and
-drop-out tests. The divider draws around ~12 µA continuously from the 12V
+drop-out tests. The divider draws around ~9 µA continuously from the 12V
 input, on top of the ~35.5 µA the rest of the board draws asleep, so it is
 DNP by default.
 
