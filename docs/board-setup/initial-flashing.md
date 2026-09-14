@@ -33,8 +33,8 @@ Then create `firmware/local.conf`, the configuration for the board on your bench
 
 # Carrier board
 CONFIG_APP_BOARD_L0DESTAR_V3_4=y
-# The OBD interface you built: 0 none, 1 CAN, 2 K-wire
-CONFIG_APP_OBD_MODE=2
+# The OBD interface you built: 0 none, 1 CAN, 2 K-wire (0 is safe on any board)
+CONFIG_APP_OBD_MODE=0
 
 # Your server, as named in its certificate
 CONFIG_APP_SERVER_HOST="tracker.example.com"
