@@ -68,7 +68,7 @@ With the default batch of three, the firmware builds roughly 0.6 records a secon
 
 ### Gaps in a journey
 
-Set `@journey` to the id of the drive from the query above:
+Set `@journey` to the id of the drive from the query above. This query uses a window function, so it needs MySQL 8 or MariaDB 10.2 or later:
 
 ```sql
 SET @journey = 7;
