@@ -27,6 +27,13 @@
 #   CONFIG_APP_CRASH_THRESHOLD_MG      impact threshold (default 1200 mg here:
 #                                      a firm desk bang is 1.5-3 g)
 set -euo pipefail
+
+# The console is attached with GNU screen: find out now, not after a build and
+# a flash.
+if ! command -v screen >/dev/null 2>&1; then
+    echo "board_test.sh needs GNU screen: sudo apt install -y screen on Linux, or Homebrew or MacPorts on macOS." >&2
+    exit 1
+fi
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 FRAGMENT=board_test.conf
@@ -263,6 +270,7 @@ done
 # The DAPLink CDC port can report busy (or drop and re-enumerate) for a few
 # seconds after pyocd has been at the probe, so retry rather than giving up on
 # the first attempt.
+screen_start=$SECONDS
 opened=0
 for _ in $(seq 1 20); do
     if [[ -e "$PORT" ]]; then
@@ -276,7 +284,7 @@ for _ in $(seq 1 20); do
     sleep 0.5
 done
 if [[ $opened -ne 1 ]]; then
-    echo "screen could not open $PORT after 10 s." >&2
+    echo "screen could not open $PORT after $((SECONDS - screen_start)) s." >&2
     if [[ -e "$PORT" ]]; then
         holder="$(lsof "$PORT" 2>/dev/null | tail -n +2)"
         if [[ -n "$holder" ]]; then

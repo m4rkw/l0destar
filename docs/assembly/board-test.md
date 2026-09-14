@@ -193,8 +193,8 @@ firmware when you are done, as described in
 |---|---|
 | `No Connect Kit serial port found` | Check the USB-C cable carries data and the Connect Kit enumerates (`pyocd list` should show its probe). If the Connect Kit LED isn't lit it may not be getting power or the 3.3V rail might be shorted to ground. On Linux, check the access set up in [Board setup prerequisites](/board-setup/prerequisites.html#linux-access-to-the-connect-kit). |
 | The console stays silent | The Connect Kit exposes two serial ports and the script uses the first. Run again with `SERIAL=/dev/cu.usbmodemXXXX ./board_test.sh`, naming the other port. |
-| `screen: command not found` | The script needs GNU screen: `sudo apt install -y screen` on Linux, or Homebrew or MacPorts on macOS. |
-| `screen could not open` the port | The port can be busy or re-enumerating for a few seconds after flashing; the script retries for 10 seconds. If it still fails, the script prints what holds the port; close that and re-run. |
+| `board_test.sh needs GNU screen` | Install it: `sudo apt install -y screen` on Linux, or Homebrew or MacPorts on macOS. |
+| `screen could not open` the port | The port can be busy or re-enumerating for a few seconds after flashing; the script retries for up to about 20 seconds. If it still fails, the script prints what holds the port; close that and re-run. |
 | The reset fails and pyocd reports APPROTECT | The chip booted with debug access locked. `./flash.sh` is the recovery path: its load step is allowed to unlock the part and reprogram it. |
 | The boot output is too quiet to diagnose a problem | Run with `VERBOSE=1` to keep the module logs; warnings and errors always print. |
 | Test 6 prints `interrupt but no FIFO data -- hit harder?` | Bang the desk harder. |
