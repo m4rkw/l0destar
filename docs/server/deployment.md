@@ -159,6 +159,13 @@ To restore a dump into the running server:
 gunzip -c tracker-2026-09-13.sql.gz | sudo docker exec -i l0destar mariadb tracker
 ```
 
+A dump from an installation older than the Docker image has no record of its migrations, and restoring it leaves the container's record in place. Drop that record and restart, and the start-up applies whatever the restored tables lack:
+
+```sh
+sudo docker exec l0destar mariadb tracker -e 'DROP TABLE schema_migration'
+sudo docker restart l0destar
+```
+
 Restore into a test installation now and then to be sure the backups work.
 
 ## Upgrading

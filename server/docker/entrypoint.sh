@@ -190,8 +190,11 @@ if [ "$tables" = 0 ]; then
     sql tracker < /app/schema.sql
     apply=0
 elif [ "$ledger" = 0 ]; then
-    log "the database has no record of its migrations; assuming it has every one in migrations/"
-    apply=0
+    # A database from before the ledger existed - restored from a dump, say.  It
+    # may have some of the migrations or none, so each is applied and errors
+    # that only say its change is already there are accepted.
+    log "the database has no record of its migrations; applying any it lacks"
+    apply=tolerant
 else
     apply=1
 fi
@@ -207,6 +210,13 @@ for path in /app/migrations/*.sql; do
     if [ "$apply" = 1 ]; then
         log "applying migration $name"
         sql tracker < "$path"
+    elif [ "$apply" = tolerant ]; then
+        log "applying migration $name where it is missing"
+        # --force carries on past each error.  Accepted: 1050 table exists,
+        # 1060 duplicate column, 1061 duplicate key, 1091 nothing to drop.
+        errors=$(sql --force tracker < "$path" 2>&1 >/dev/null) || true
+        unexpected=$(printf '%s\n' "$errors" | grep '^ERROR' | grep -Ev '^ERROR (1050|1060|1061|1091) ' || true)
+        [ -z "$unexpected" ] || die "migration $name failed: $unexpected"
     fi
     sql tracker -e "INSERT INTO schema_migration (name) VALUES ('$name')"
 done
