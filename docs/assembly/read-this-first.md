@@ -36,8 +36,6 @@ These pages describe the **l0destar v3.4** board.
   part that is not fitted by default, adds test points, enlarges the holes for the Connect Kit power
   lead and specifies a TCAN3414DR CAN transceiver in place of the MAX33041E (same footprint and
   pinout).
-- Earlier v3.x boards are close enough that most of the assembly guide still applies, but the
-  test points and the designators in the over-voltage protection stage differ.
 
 ## Test results are the author's own, and unverified
 
@@ -62,27 +60,6 @@ That means your own due diligence on part selection, assembly, fusing, wiring an
 - Anything connected to OBD or CAN can interfere with systems you want working while the
   vehicle is moving, or cause irreparable damage to very expensive computers in the car.
 - 24V vehicles are not supported.
-
-## Known defects on older boards
-
-If you are working with a board older than v3.3, one defect matters.
-
-### The L wire on every board before v3.3
-
-Every board before v3.3 switches the K-wire interface's L-line pull-down transistor (a 2N7002)
-straight onto the vehicle's L wire, with nothing limiting the current. An L wire shorted to
-battery looks exactly like a healthy idle one - both sit at 12-16V - and driving the pull-down
-into that short makes the transistor dissipate roughly 1-12W in a SOT-23. It fails within the
-first 200ms address bit of a 5-baud init. Roughly half of those failures involve the gate, and
-a drain-gate short puts battery voltage directly onto the nRF9151 GPIO that drives it, which is
-past the module's absolute maximum and can destroy it.
-
-!!! danger "Never connect the vehicle's L wire to a board before v3.3"
-    The firmware leaves L-line driving disabled by default on those boards
-    (`CONFIG_APP_L_SEND_ENABLED`), but the only safe hardware position is not to connect the L
-    wire at all. v3.3 fixed the defect: an AL5809-90 limits the pull-down to 90mA and shuts down
-    thermally, a 47K resistor limits fault current into the GPIO, and a new L_SENSE input lets
-    the firmware detect a short to battery before it tries to drive the line.
 
 ## Hazards while you build
 

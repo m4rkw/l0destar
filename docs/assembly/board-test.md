@@ -74,7 +74,7 @@ Carry out the [final assembly](/assembly/assembly-guide.html#final-assembly) ste
    S12TP7 (K) to 12V.
 
 A short after one of the auxiliary rail load switches will not show up until the firmware enables
-that rail. v3.1 and later boards sense each rail, so the firmware detects a rail that fails to come
+that rail. The board senses each rail, so the firmware detects a rail that fails to come
 up, and the firmware board test below checks every one.
 
 ## Stage 4: the firmware board test
@@ -126,7 +126,7 @@ The script asks three things:
 1. **Board version.** There is no v3.4 entry: **choose v3.3 for a v3.4 board.** The two boards
    connect the Connect Kit's pins identically; the only differences between their PCBs are the
    accelerometer pads and net names.
-2. **OBD interface** (v3.1 and later): none, CAN or K-wire (ISO 14230), matching the parts and pads
+2. **OBD interface**: none, CAN or K-wire (ISO 14230), matching the parts and pads
    you fitted.
 3. **APN.** It shows the APN it found and where it found it. It only asks if it finds none, and
    leaving the answer empty skips the modem test.

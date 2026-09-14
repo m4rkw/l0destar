@@ -17,9 +17,6 @@ different Connect Kit pins and switches its power rails differently. Select the 
 |---|---|---|---|---|
 | v3.4 | Designed, not yet built or tested | `CONFIG_APP_BOARD_L0DESTAR_V3_4=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.4`, `v3.4+can`, `v3.4+kline` |
 | v3.3 | Built and bench tested | `CONFIG_APP_BOARD_L0DESTAR_V3_3=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.3`, `v3.3+can`, `v3.3+kline` |
-| v3.2 | Built and bench tested | `CONFIG_APP_BOARD_L0DESTAR_V3_2=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.2`, `v3.2+can`, `v3.2+kline` |
-| v3.1 | Built and bench tested | `CONFIG_APP_BOARD_L0DESTAR_V3_1=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.1`, `v3.1+can`, `v3.1+kline` |
-| v3.0 | Archived | `CONFIG_APP_BOARD_L0DESTAR_V3_0=y` | `CONFIG_APP_BOARD_HAS_CAN` and `CONFIG_APP_BOARD_HAS_KLINE`, both on by default; turn off the one not populated | `v3.0+can+kline` by default |
 
 v3.4 has its own board definition, but it is the v3.3 one under a new name: the Connect Kit
 headers and the power header carry identical nets on the two PCBs - the only differences are the
@@ -27,7 +24,7 @@ renamed bus nets and the accelerometer's NC pads - so the pin map and the rail t
 It exists so that update images stay tied to the revision: a v3.4 unit reports the FOTA board id
 `v3.4` and installs only images built for it. Pick v3.4 in the interactive board test.
 
-`CONFIG_APP_OBD_MODE` tells v3.1 and later firmware which interface is populated, and with it
+`CONFIG_APP_OBD_MODE` tells the firmware which interface is populated, and with it
 which rails to switch and which drivers to start:
 
 | Value | Interface | Pads bridged | Rails used |
@@ -35,9 +32,6 @@ which rails to switch and which drivers to start:
 | `0` | None (the default) | none | - |
 | `1` | CAN | S5R1 and S5R3 | 3.3V CAN rail |
 | `2` | K-wire | S5R2 and S5R4 | 3.3V K and 12V K rails |
-
-Older boards (v2.x) have their own `CONFIG_APP_BOARD_L0DESTAR_*` entries; see
-[firmware build options](/reference/firmware.html).
 
 ## Interface selection pads
 
@@ -85,10 +79,6 @@ OBD socket, CAN high is pin 6 and CAN low pin 14; the K line is pin 7 and the L 
 - The ignition input only feeds a sense divider; the board is powered from pin 4.
 - Check the pin numbering against the Molex drawing for the housing you use, and check every wire
   with a meter before connecting the board.
-
-!!! danger "The L wire on older boards"
-    Never connect the vehicle's L wire to a board older than v3.3. See
-    [Assembly: read this first](/assembly/read-this-first.html).
 
 ## Other headers
 
@@ -221,20 +211,14 @@ specification below should do.
 | Mounting | 4 x M2 holes, 2.2mm |
 | Smallest passive | 0402 |
 | Module | Makerdiary nRF9151 Connect Kit on two 20-pin 2.54mm headers |
-| Enclosure | 72.5 x 43.4 x 28.5mm, 3D printed; designed for v3.2 and v3.3, and the board outline is unchanged since v3.0 |
+| Enclosure | 72.5 x 43.4 x 28.5mm, 3D printed; designed for v3.3, whose board outline v3.4 keeps |
 
 ## L-line driving on K-wire boards
 
-Whether the firmware may drive the K-wire interface's L line is a board-level decision, set by
-`CONFIG_APP_L_SEND_ENABLED`:
-
-| Board | Default | Why |
-|---|---|---|
-| v3.3 and v3.4 | On | The L pull-down is current-limited to 90mA by an AL5809-90, and the L_SENSE input (Connect Kit P0.14, an analog input) lets the firmware detect an L wire shorted to battery before driving it |
-| Every board before v3.3 | Off | A short from the L wire to battery can destroy the pull-down transistor and the nRF9151 |
-
-On boards before v3.3 the pin stays parked low and nothing asserts it. The advice for those boards
-is never to connect the L wire at all. Not every vehicle needs it: the reference vehicle opens its
+`CONFIG_APP_L_SEND_ENABLED`, on by default for v3.3 and v3.4 builds, lets the firmware drive the
+K-wire interface's L line. The L pull-down is current-limited to 90mA by an AL5809-90, and the
+L_SENSE input (Connect Kit P0.14, an analog input) lets the firmware detect an L wire shorted to
+battery before driving it. Not every vehicle needs the L line: the reference vehicle opens its
 diagnostic session on the K wire alone.
 
 L_SENSE classifies the line with a threshold, `CONFIG_APP_L_SENSE_LOW_MV` (default 2800mV): a line

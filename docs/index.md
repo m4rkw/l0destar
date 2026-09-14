@@ -53,7 +53,7 @@ somewhere to report to while you bring it up on the bench.
 
 - **Board:** v3.4 is the current design and has not been built or tested yet. v3.3, which differs
   only in details covered in the assembly section, is built and bench tested. The guides assume
-  v3.4 and point out where older boards differ.
+  v3.4.
 - **Firmware:** 0.4.x, built with nRF Connect SDK v3.3.0. OBD-II data and fault codes are read over
   the K wire. The CAN-FD interface is supported as hardware and bench tested in classic CAN and
   CAN-FD modes, but the firmware does not read vehicle data over CAN yet.

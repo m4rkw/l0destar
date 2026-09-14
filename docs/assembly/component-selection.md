@@ -153,11 +153,11 @@ a rail fed straight from the battery that means a continuous fault current.
 
 | Part | Designators | Why it matters |
 |---|---|---|
-| TCAN3414DR CAN transceiver | S9U1 | Fully rated for CAN-FD, with timing specified at 2, 5 and 8Mbps. The MAX33041EASA+ fitted on v3.0 to v3.3 has the same footprint and pinout and can be fitted instead; it is rated to 5Mbps. |
+| TCAN3414DR CAN transceiver | S9U1 | Fully rated for CAN-FD, with timing specified at 2, 5 and 8Mbps. The MAX33041EASA+ fitted on v3.3 has the same footprint and pinout and can be fitted instead; it is rated to 5Mbps. |
 | MCP2518FD controller with a 40MHz crystal | S9U2, S9Y1 (ECS-400-18-33-JGN-TR3), S9C2, S9C3 | CAN-FD controller on SPI. |
 | NUP2105L | S9D1 | CAN bus protection. |
 | NXP TJA1027T/20 transceiver | S10U1 | It has no transmit dominant time-out, which is what lets it hold the K wire low for the 200ms bits of a 5-baud init. A LIN transceiver with a time-out cannot do that. |
-| Diodes Inc. AL5809-90P1-7 | S10U2 | Caps the L-line pull-down at 90mA and shuts down thermally - the fix for the L-line defect of older boards. |
+| Diodes Inc. AL5809-90P1-7 | S10U2 | Caps the L-line pull-down at 90mA and shuts down thermally, so an L wire shorted to battery cannot destroy the pull-down transistor or the nRF9151. |
 | ITS4060SSJNXUMA1 12V load switch | S7U3 | Switches the K-wire 12V rail. Its 40V absolute maximum is the lowest rating on the 12V rail. |
 | 510R 1W 0508 resistors | S10R3, S10R4 | K and L line pull-ups. |
 | 33V TVS, PTVS33VS1UTR,115 | S10D2, S10D4 | Protection on the K and L lines. |

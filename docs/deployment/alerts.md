@@ -105,7 +105,7 @@ The movement alarm setting (`ma`, `movealarm=`) does not affect any of these in 
 | `fota: <old> -> <new> failed after <n> attempts (err <e>, cause <c>)` | 0 | Every download attempt in one check failed. Once per version. |
 | `fota: <staged> failed to boot, reverted to <running>` | 0 | The new image did not confirm itself and MCUboot put the previous one back. |
 
-The self-test and rail alerts come from boards with rail sensing (v3.1 and later) and mean a hardware fault; the [board test](/assembly/board-test.html) is the place to chase it.
+The self-test and rail alerts mean a hardware fault; the [board test](/assembly/board-test.html) is the place to chase it.
 
 ### Replies to commands
 

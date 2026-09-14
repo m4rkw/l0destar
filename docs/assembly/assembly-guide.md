@@ -1,9 +1,7 @@
 # Assembly guide
 
 How to assemble a l0destar v3.4 board by hand. The board has not been built yet in this
-revision, so treat this as a guide based on the v3.3 build and the v3.4 design files; earlier v3.x
-boards are close enough that most of it applies, but their test points and over-voltage
-protection designators differ.
+revision, so treat this as a guide based on the v3.3 build and the v3.4 design files.
 
 Before you start, have the [prerequisites](/assembly/prerequisites.html) to hand, decide which
 interface you are building ([component selection](/assembly/component-selection.html)) and open
@@ -207,8 +205,8 @@ correctly. The remaining powered checks are on the [board test](/assembly/board-
 The 3D-printable enclosure in
 [`hardware/enclosure/v3.3/`](https://github.com/m4rkw/l0destar/tree/master/hardware/enclosure/v3.3)
 has a top and a bottom, in a variant with the l0destar logo embossed in the top and a plain one;
-they are otherwise identical. It was designed for v3.2 and v3.3 boards, and the board outline has
-not changed since v3.0.
+they are otherwise identical. It was designed for the v3.3 board, whose outline v3.4
+keeps.
 
 ![The printed enclosure](../img/enclosure5.jpg)
 

@@ -86,7 +86,7 @@ Connect bus lines only to a board whose [interface selection pads](/reference/ha
 For a K-wire build:
 
 - OBD pin 7 (K) goes to connector pin 3.
-- OBD pin 15 (L) goes to connector pin 6 only on a v3.3 or v3.4 board, and only if K-wire discovery shows that the vehicle needs the L line. Never on v3.0 to v3.2.
+- OBD pin 15 (L) goes to connector pin 6, but only if K-wire discovery shows that the vehicle needs the L line.
 - Ground is connector pin 2, shared with the rest of the harness.
 
 For a CAN build:
