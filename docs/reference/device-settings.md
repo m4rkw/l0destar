@@ -91,7 +91,7 @@ A request to queue a command must name the device, with `imei`, `device_id` or a
 | `fota` | Checks for an update at once, or once the engine stops if it is running, ignoring the retry holdoff and clearing any version it had given up on. | `fota: check queued`, or `fota: updates inhibited` on a unit built with `CONFIG_APP_FOTA_INHIBIT` |
 | `reboot` | Restarts the next time its main loop runs: straight away while driving, at engine start or key-off when the ignition is on with the engine off, and at the next ignition-on for a parked unit. | `rebooting` |
 | `track=0`, `track=1` | Sent by the server on every reply. Acted on only when it changes the mode; `track=1` is ignored while the ignition is off. | `track mode OFF`, `track mode ON` |
-| `fota=<version>` | Sent by the server when a newer build is published. The tracker compares it with its own version and downloads only a newer one. | None; see the `fota:` alerts |
+| `fota=<version>` | Sent by the server on every reply while a build is published for the device and not withheld. The tracker compares it with its own version and downloads only a newer one. | None; see the `fota:` alerts |
 
 - The tracker finds each command by its name anywhere in the reply, so the order does not matter and a command runs at most once per reply.
 - Positions in `google:` and `tomtom:` replies arrive as tappable links in Pushover.

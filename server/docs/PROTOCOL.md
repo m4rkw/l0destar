@@ -183,9 +183,9 @@ That is the price of not paying for a handshake.
 
 ## Firmware updates
 
-Every telemetry response carries `fota=<version>` when a newer build is
-published for that unit. The device compares it against its own running
-version locally and fetches nothing unless there is something newer — the
+Every telemetry response carries `fota=<version>` while a build is published
+for that unit and not withheld from it, newer or not. The device compares it
+against its own running version locally and fetches nothing unless there is something newer — the
 steady state costs no extra requests from the field.
 
 Each unit gets its own image. Carrier board revision and fitted interfaces
