@@ -104,9 +104,9 @@ done: 1 device(s) will pull 0.4.13 on their next telemetry
 
 ### Version numbers
 
-`firmware/VERSION` holds only the major and minor version (`0.4`). The patch number is worked out from what your server has already published - it lists every version it holds at `/fw/published.txt` - plus one, so there is nothing to bump by hand and two machines cannot reuse a number. The first release of a minor version is patch 1: patch 0 is what every bench build gets, and a device only installs a version newer than the one it runs. If that list cannot be fetched, the script stops rather than guess.
+`firmware/VERSION` holds only the major and minor version (`0.4`). The patch number is worked out from what your server has already published - it lists every version it holds at `/fw/published.txt` - plus one, so there is nothing to bump by hand, and machines publishing one after another never reuse a number (nothing stops two publishing at the same moment). The first release of a minor version is patch 1: patch 0 is what every bench build gets, and a device only installs a version newer than the one it runs. If that list cannot be fetched, the script stops rather than guess.
 
-Devices install only strictly newer versions, and each part of the version runs from 0 to 255. When the patch number would pass 255, raise the minor version in `VERSION` (for example to `0.5`) and patches start again from 1. To roll a device back, check out the old code and publish it: it goes out under the next number.
+Devices install only strictly newer versions, and each part of the version runs from 0 to 255. When the patch number would pass 255, raise the minor version in `VERSION` (for example to `0.5`) and patches start again from 1. To roll a device back, check out the old code but keep the current `VERSION` file, or raise it, then publish: the old code goes out under the next number. With its own, older `VERSION` it would build a version the device will not install, and `push_fw.sh` refuses it.
 
 ## Watching an update
 
