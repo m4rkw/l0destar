@@ -55,7 +55,7 @@ sudo docker run -d --name l0destar --restart unless-stopped \
 | `-p 65481:65481/tcp` | Firmware update downloads, open to the internet. |
 | `-p 127.0.0.1:5000:5000` | The web interface and API, reachable from this machine only. Tailscale or nginx publishes them over HTTPS. |
 
-Keep the device ports at 65480 and 65481: both numbers are built into the firmware.
+Keep the device ports at 65480 and 65481: they are the firmware's `CONFIG_APP_SERVER_PORT` and `CONFIG_APP_FOTA_PORT` defaults, compiled into every tracker image.
 
 Follow the first start:
 

@@ -29,7 +29,7 @@ The wire format is described in full in [PROTOCOL.md](https://github.com/m4rkw/l
 
 ## What the firmware has built in
 
-- **The port numbers.** 65480 is `UDP_PORT` in `firmware/src/config.h`, and 65481 is `CONFIG_APP_FOTA_PORT`. The container listens on those ports and `docker run` publishes them under the same numbers; keep it that way, because changing them means rebuilding every tracker.
+- **The port numbers.** 65480 and 65481 are the defaults of `CONFIG_APP_SERVER_PORT` and `CONFIG_APP_FOTA_PORT`, compiled into every tracker image. The container listens on those ports and `docker run` publishes them under the same numbers; keep it that way, because changing them means rebuilding every tracker with the new numbers.
 - **IPv4 only.** The firmware looks the hostname up for IPv4 addresses and nothing else. The server needs a public IPv4 address and the hostname needs an A record; an AAAA record on its own does not work.
 - **One DNS lookup per boot.** A tracker resolves `CONFIG_APP_SERVER_HOST` the first time it sends and keeps using that address until it restarts. If the server's public address changes, running trackers carry on sending to the old one, so use a static address. A tracker that has lost the server this way needs a power cycle.
 - **The certificate name.** The update client checks the TLS certificate against your CA and the hostname, so the certificate must be issued for `CONFIG_APP_SERVER_HOST` - the `L0DESTAR_HOSTNAME` the server was first started with ([Server installation](/server/installation.html)).
