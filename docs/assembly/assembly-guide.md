@@ -33,9 +33,11 @@ are on the right, as in this render of v3.4:
 - The two 20-pin Connect Kit headers run horizontally across the middle and the bottom of the
   board.
 
-This annotated photo is of a v3.3 board, which looks the same apart from three things: v3.3 fits
-the buck under-voltage divider that is optional on v3.4, it has a MAX33041 CAN transceiver where
-v3.4 specifies a TCAN3414DR, and it lacks the v3.4 test points.
+This annotated photo is of a v3.3 board, which looks the same apart from its test points and two
+parts: v3.3 fits the buck under-voltage divider that is optional on v3.4, and has a MAX33041 CAN
+transceiver where v3.4 specifies a TCAN3414DR. v3.3 has three test points of its own - S12TP6 and
+S12TP7 on the protected and unprotected 4.2V rails, and S11TP1 for OVP fault injection - so S12TP6
+and S12TP7 mean something different on the two boards.
 
 ![Annotated l0destar v3.3 board](../img/pcb_v3.3_features.png)
 

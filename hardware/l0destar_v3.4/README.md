@@ -88,9 +88,8 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 | Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
 | LT8609 | 4.2V output | NOT TESTED | |
 | LT8609 | UVLO thresholds | NOT TESTED | |
-| MCU OVP | 4.2V passes through at nominal voltage | NOT TESTED | S11Q1 on, S12TP6 ≈ S12TP7 |
-| MCU OVP | Cuts off when S12TP7 is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
-| MCU OVP | Fault injection via S11TP1 | NOT TESTED | Short S11TP1 to the unprotected rail, PP4V2 should drop |
+| MCU OVP | 4.2V passes through at nominal voltage | NOT TESTED | S11Q1 on, S12TP2 ≈ the buck output at S6C5 |
+| MCU OVP | Cuts off when the buck output (S6C5) is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
 | MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | NOT TESTED | |
 | GPS auxiliary 3.3V rail | Switches on enable signal | NOT TESTED | |
 | CAN auxiliary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
