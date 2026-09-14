@@ -88,3 +88,21 @@ def test_the_challenge_count_starts_again_after_a_quiet_period(database):
     assert not auth._rate_limited(fresh)
     counts = {r['ip']: r['count'] for r in database.all('SELECT `ip`, `count` FROM `authoptions_ip`')}
     assert counts[quiet] == 1 and counts[fresh] == 2
+
+
+def test_a_passkey_for_another_account_is_refused_without_counting(client, database, device):
+    for name, credential in (('alice', 'cred-alice'), ('bob', 'cred-bob')):
+        database.query(
+            "INSERT INTO `user` (`username`, `user_id`, `credential`) VALUES (%s, %s, '{}')",
+            (name, credential))
+    with client.session_transaction() as session:
+        session['session_id'] = 'session-1'
+    database.query(
+        "INSERT INTO `authoptions` (`user_id`, `session_id`, `authoptions`, `timestamp`, "
+        "`useragent`, `ipaddr`) VALUES ('cred-alice', 'session-1', 'eA==', %s, '', '')",
+        (int(time.time()),))
+
+    response = client.post('/authenticate', json={'user_id': 'cred-bob', 'authentication_data': {}})
+    assert response.status_code == 401
+    bob = database.one("SELECT `failed_login_count` FROM `user` WHERE `username` = 'bob'")
+    assert bob['failed_login_count'] == 0

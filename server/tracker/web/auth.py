@@ -230,11 +230,11 @@ def register():
             expected_challenge=json.loads(stored['regoptions'])['challenge'].encode(),
             expected_origin=origin(),
             expected_rp_id=rp_id(),
+            require_user_verification=True,
         )
     except Exception as e:
         audit('register-error', str(e))
         return error(str(e))
-            require_user_verification=True,
 
     # Burn the invitation, then replace any existing credential for this
     # username — re-registering is how a user recovers a lost authenticator.
@@ -311,10 +311,10 @@ def authoptions():
 
     user = db.web.one('SELECT * FROM `user` WHERE `username` = %s', (username,))
     if not user:
-        audit('authoptions-error', 'user not found')
+        audit('authoptions-error', 'user not found: %s' % username)
         return json_response({'status': 'error', 'message': 'user not found'}, 401)
     if user['locked']:
-        audit('authoptions-error', 'account locked')
+        audit('authoptions-error', 'account locked: %s' % username)
         return json_response({'status': 'error', 'message': 'account locked'}, 401)
 
     options = generate_authentication_options(
@@ -353,6 +353,15 @@ def authenticate():
     if not pending:
         audit('login-error', 'no challenge for session')
         return json_response({'status': 'error', 'message': 'no challenge for session'}, 401)
+
+    # The challenge was issued for the username typed in; a passkey belonging
+    # to any other account is refused before it can count against that
+    # account's failed logins.
+    if data.get('user_id') != pending['user_id']:
+        asked = db.web.one('SELECT `username` FROM `user` WHERE `user_id` = %s',
+                           (pending['user_id'],))
+        audit('login-error', 'passkey is not %s\'s' % (asked['username'] if asked else 'the requested account'))
+        return json_response({'status': 'error', 'message': 'authentication failed'}, 401)
 
     user = db.web.one('SELECT * FROM `user` WHERE `user_id` = %s',
                       (data.get('user_id'),))
@@ -400,6 +409,7 @@ def authenticate():
             expected_rp_id=rp_id(),
             credential_public_key=base64.b64decode(stored['public_key']),
             credential_current_sign_count=stored['sign_count'],
+            require_user_verification=True,
         )
     except Exception as e:
         # Every way this can fail — a bad signature, a malformed assertion, a
@@ -411,11 +421,11 @@ def authenticate():
             'UPDATE `user` SET `failed_login_count` = %s, `locked` = %s WHERE `id` = %s',
             (failed, 1 if failed >= MAX_FAILED_LOGINS else user['locked'], user['id']),
         )
-        audit('login-error', 'verification failed: %s (count=%d)' % (e, failed))
+        audit('login-error', 'verification failed for %s: %s (count=%d)'
+              % (user['username'], e, failed))
         logs.app.warning('failed login for %s from %s', user['username'], client_ip())
         return json_response({'status': 'error', 'message': 'authentication failed'}, 401)
 
-            require_user_verification=True,
     db.web.query('DELETE FROM `authoptions` WHERE `session_id` = %s',
                  (session['session_id'],))
     db.web.query('UPDATE `user` SET `failed_login_count` = 0 WHERE `id` = %s',
@@ -425,6 +435,6 @@ def authenticate():
 
     session['username'] = user['username']
     session['credential_id'] = user['user_id']
+    session['login_at'] = int(time.time())
     audit('login-success', user['username'])
     return ok({'message': 'authentication successful'})
-    session['login_at'] = int(time.time())
