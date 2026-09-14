@@ -62,7 +62,7 @@ Every alert is sent as a `POST` with a JSON body and a 10 second timeout:
 }
 ```
 
-`priority` uses the same -2 to 2 scale as Pushover; map it to whatever your receiver understands. `url` and `url_title` carry the map link for position replies. Anything that accepts a JSON `POST` will do - a home automation webhook, a small script, a chat bridge. To check your receiver before involving the tracker:
+`priority` uses the same -2 to 2 scale as Pushover; map it to whatever your receiver understands. `url` and `url_title` carry the map link for position replies. `title` is `Tracker` for every notification except the home check's, which is `Tracker home check`. Anything that accepts a JSON `POST` will do - a home automation webhook, a small script, a chat bridge. To check your receiver before involving the tracker:
 
 ```sh
 curl -X POST https://example.invalid/hook \
