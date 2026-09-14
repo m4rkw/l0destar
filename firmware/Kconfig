@@ -124,8 +124,8 @@ config APP_KLINE_DISCOVER
 	  finally the 5-baud init swept the same way.  No other request is
 	  sent;
 	  the result — which init worked, what protocol answered, or where
-	  the handshake stopped — is printed on the console and sent as an
-	  alert once the modem is up.  The run ends with a summary and the
+	  the handshake stopped — is printed on the console; the modem is never
+	  started.  The run ends with a summary and the
 	  local.conf block that makes the runtime path talk to this vehicle
 	  with no probing at all.
 
@@ -265,15 +265,14 @@ config APP_KLINE_DTC_REPORT
 	default n
 	help
 	  Read the stored diagnostic trouble codes (OBD-II mode 03) shortly
-	  after ignition-on and again when ignition goes off, and send the
+	  after ignition-on, and again during a drive whenever the stored-code
+	  count the ECU reports in mode 01 PID 01 changes, and send the
 	  complete current set to the server, which diffs it against what it
 	  already holds and alerts on codes appearing and clearing.
 
-	  Ignition-on captures what the ECU has persisted; ignition-off
-	  captures anything raised during the drive.  Nothing is read while
-	  driving, so a fault raised mid-drive is reported when the engine
-	  stops rather than immediately — codes persist, so nothing is lost,
-	  and the bus stays quiet.
+	  Nothing is read at ignition-off: the engine ECU is unpowered by then,
+	  so the read would time out, and an empty report would wrongly clear
+	  live faults.
 
 	  Read-only.  Mode 04, which erases codes and the emissions readiness
 	  data with them, is not implemented anywhere in this firmware.

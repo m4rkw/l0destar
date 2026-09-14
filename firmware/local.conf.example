@@ -86,8 +86,8 @@ CONFIG_APP_APN=""
 # CONFIG_APP_MODEM_STUCK_RESET_S=1800
 
 # --- K-wire (ISO 14230-1) vehicle session init — in-car bring-up only ------
-# Opens a KWP2000 session at boot and reports the result on the console and
-# as an alert, then runs the tracker.  See KWIRE.md.  Values below are the
+# Opens a KWP2000 session at boot, prints the result on the console and
+# parks without starting the tracker.  See KWIRE.md.  Values below are the
 # reference vehicle, a 2006 Toyota Harrier 2.4 (ACU30): its ECUs answer the
 # 5-baud init on their own addresses at 9600 baud, on K alone.
 # CONFIG_APP_KLINE_DISCOVER=y

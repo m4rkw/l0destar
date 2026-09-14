@@ -70,21 +70,17 @@ You need a K-wire board (OBD mode 2, K pads bridged) wired to the vehicle's OBD 
 
 ### 1. Build and flash a discovery image
 
-Put this in `firmware/local.conf`, with the values for your board, server and device:
+Put this in `firmware/local.conf`, with the board selection for your board:
 
 ```text
 CONFIG_APP_BOARD_L0DESTAR_V3_4=y
 CONFIG_APP_OBD_MODE=2
-CONFIG_APP_SERVER_HOST="tracker.example.com"
-CONFIG_APP_APN="your.apn"
-CONFIG_APP_PSK_HEX="<64 hex characters>"
-CONFIG_APP_FOTA_INHIBIT=y
 CONFIG_APP_KLINE_DISCOVER=y
 CONFIG_APP_KLINE_IDENT=y
 CONFIG_APP_KLINE_DTC=y
 ```
 
-`CONFIG_APP_FOTA_INHIBIT=y` stops the tracker replacing the discovery image with its published build. With the ignition on, build and flash, then open the console as in [watch the console](/board-setup/initial-flashing.html#watch-the-console):
+The discovery image never starts the modem, so it needs no server, APN or key, and cannot take an update. With the ignition on, build and flash, then open the console as in [watch the console](/board-setup/initial-flashing.html#watch-the-console):
 
 ```sh
 # in firmware/
