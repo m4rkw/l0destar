@@ -176,7 +176,7 @@ specification below should do.
 - Covers your operator's bands. In the UK that means B20 (800MHz), B8 (900MHz) and B3 (1800MHz); a
   698-2690MHz or "penta-band cellular" antenna covers everything you need.
 - Vertical polarisation, omnidirectional.
-- Keep the cable as short as practical: a 3m RG-174 lead costs roughly 2-3dB against a short one.
+- Keep the cable as short as practical: a 3m RG-174 lead costs roughly 3dB at 800-900MHz and 4-5dB at 1800MHz against a short one.
 
 **GNSS port - active, 3.3V**
 
