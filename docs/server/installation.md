@@ -69,10 +69,10 @@ l0destar: writing /data/config.yaml
 l0destar: creating the database in /data/mysql
 ...
 l0destar: loading the schema
-[2026-09-13 15:48:00 +0000] [131] [INFO] Starting gunicorn 26.2.0
 2026-09-13 15:48:00 UDP listening on 0.0.0.0:65480
-[2026-09-13 15:48:00 +0000] [131] [INFO] Listening at: http://0.0.0.0:5000 (131)
 2026-09-13 15:48:00 TLS listening on 0.0.0.0:65481
+[2026-09-13 15:48:00 +0000] [131] [INFO] Starting gunicorn 26.2.0
+[2026-09-13 15:48:00 +0000] [131] [INFO] Listening at: http://0.0.0.0:5000 (131)
 ```
 
 The lines in between come from MariaDB starting. `/data` in these messages is `/srv/l0destar` on the host. The server is ready when both listeners have reported, a few seconds after the image has downloaded. Press Ctrl-C to stop following the log - the server keeps running - and check the web interface answers:
