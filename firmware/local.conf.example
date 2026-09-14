@@ -4,8 +4,10 @@
 # --- carrier board ---------------------------------------------------------
 # Which l0destar PCB this build targets.  Selecting a board sets the whole
 # GPIO map, fitted-hardware flags and power-domain sequencing (see
-# Kconfig.boards).  Default is the bench (DK / Connect Kit + breadboard).
-# CONFIG_APP_BOARD_L0DESTAR_V3_4=y
+# Kconfig.boards).  Default is v3.4; a DK or Connect Kit on a breadboard is
+# the bench profile.
+# CONFIG_APP_BOARD_BENCH=y
+# CONFIG_APP_BOARD_L0DESTAR_V3_4=y      (default)
 # CONFIG_APP_BOARD_L0DESTAR_V3_3=y
 # CONFIG_APP_BOARD_L0DESTAR_V3_2=y
 # CONFIG_APP_BOARD_L0DESTAR_V3_1=y

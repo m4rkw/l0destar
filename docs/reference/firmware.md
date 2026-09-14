@@ -169,7 +169,7 @@ same decision see [Hardware](/reference/hardware.html#interface-selection-pads).
 
 | Symbol | Board | `APP_BOARD_ID` |
 |---|---|---|
-| `APP_BOARD_BENCH` (default) | nRF9151 DK or Connect Kit with the sensors on a breadboard | `bench` |
+| `APP_BOARD_BENCH` | nRF9151 DK or Connect Kit with the sensors on a breadboard | `bench` |
 | `APP_BOARD_L0DESTAR_V2_1` | v2.1 (CAN, K-wire and AIO inputs) | `v2.1` |
 | `APP_BOARD_L0DESTAR_V2_1_MINI` | v2.1 mini (no OBD, 5 LEDs) | `v2.1m` |
 | `APP_BOARD_L0DESTAR_V2_5_CAN` | v2.5C | `v2.5c` |
@@ -182,7 +182,7 @@ same decision see [Hardware](/reference/hardware.html#interface-selection-pads).
 | `APP_BOARD_L0DESTAR_V3_1` | v3.1 (adds rail sensing) | `v3.1` |
 | `APP_BOARD_L0DESTAR_V3_2` | v3.2 (adds MCU over-voltage protection) | `v3.2` |
 | `APP_BOARD_L0DESTAR_V3_3` | v3.3 (fixes the L-line pull-down and adds L_SENSE) | `v3.3` |
-| `APP_BOARD_L0DESTAR_V3_4` | v3.4 (same pin map as v3.3) | `v3.4` |
+| `APP_BOARD_L0DESTAR_V3_4` (default) | v3.4 (same pin map as v3.3) | `v3.4` |
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|

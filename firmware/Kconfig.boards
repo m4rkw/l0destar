@@ -74,7 +74,7 @@
 
 choice APP_BOARD
 	prompt "Carrier board"
-	default APP_BOARD_BENCH
+	default APP_BOARD_L0DESTAR_V3_4
 	help
 	  Which l0destar PCB (or bench setup) this firmware runs on.  Selecting
 	  a board sets the GPIO map, fitted-hardware flags and power-domain
