@@ -61,7 +61,7 @@ Never publish the web application's port (5000) on anything but `127.0.0.1`.
 
 ### Opening TCP 65481 only for updates
 
-Firmware images contain device keys, and nothing authenticates who downloads them ([Server security](/server/security.html)). If that matters to you, keep TCP 65481 closed and open it only while you publish and roll out an update. Do it where the port reaches the server - the router's port forwarding rule, or the provider's firewall - or leave `-p 65481:65481/tcp` out of `docker run` and create the container again with it for a rollout.
+Firmware images contain device keys, and nothing authenticates who downloads them, or who reports a staged update as installed ([Server security](/server/security.html)). If that matters to you, keep TCP 65481 closed and open it only while you publish and roll out an update. Do it where the port reaches the server - the router's port forwarding rule, or the provider's firewall - or leave `-p 65481:65481/tcp` out of `docker run` and create the container again with it for a rollout.
 
 A tracker that checks for an update while the port is closed fails the check and tries again later.
 

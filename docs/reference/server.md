@@ -310,6 +310,6 @@ Served by the TLS listener on port 65481, not by the web application.
 
 | Path | Purpose |
 |---|---|
-| `/fw/manifest.txt?imei=<imei>&v=<version>` | The manifest published for that device, or `status=blocked` for a version withheld from it. |
+| `/fw/manifest.txt?imei=<imei>&v=<version>` | The manifest published for that device, or `status=blocked` for a version withheld from it. A request whose `v=` is the version staged for that device marks the update as installed; nothing authenticates it. |
 | `/fw/<file>` | A firmware image, with range requests. |
 | `/fw/published.txt` | Every version ever published; `push_fw.sh` uses it to number the next release. |

@@ -96,7 +96,7 @@ The MCUboot signing key belongs on the build machine, not on the server, and the
 ## Device transports
 
 - **UDP, port 65480**, carries all telemetry. Every datagram is encrypted and authenticated with ChaCha20-Poly1305 under the device's own 32-byte key, with replay protection, and each reply is bound to the request it answers. Datagrams that fail any check are dropped without a reply, so the port cannot be used to find out which IMEIs are enrolled. The IMEI itself travels in clear, because the server needs it to choose the key: someone on the network path can see which tracker reports and when, but not what it says.
-- **TLS, port 65481**, serves firmware downloads and nothing else: it never accepts telemetry. What it does serve still needs care, as the next section explains.
+- **TLS, port 65481**, serves firmware downloads and never accepts telemetry. Nothing on it is authenticated, though: anyone who can reach it can fetch a device's manifest and image (next section), tell from the answers which IMEIs have a manifest, and, knowing the version staged for a device, mark that update as installed, which sends the `fota: updated to` notification and would hide a revert.
 
 ## Firmware images contain device keys
 
@@ -107,7 +107,7 @@ The MCUboot signing key belongs on the build machine, not on the server, and the
 
 With current firmware:
 
-- Keep TCP 65481 closed except while you roll out an update, at the router or your provider's firewall ([Telemetry port](/server/telemetry-port.html)). A firewall on the server itself, such as ufw, cannot close a port Docker publishes. Trackers check for updates at power-on and when a reply advertises one; a check that cannot connect fails and is retried later.
+- Keep TCP 65481 closed except while you roll out an update, at the router or your provider's firewall ([Telemetry port](/server/telemetry-port.html)). That also stops anyone listing which IMEIs have a manifest or confirming a staged update. A firewall on the server itself, such as ufw, cannot close a port Docker publishes. Trackers check for updates at power-on and when a reply advertises one; a check that cannot connect fails and is retried later.
 - Delete superseded images from `/srv/l0destar/fw`, keeping the one each device's manifest names.
 - If an image may have leaked, give the device a new key with `tools/device.py rekey` and reflash it ([Onboarding devices into the server](/board-setup/server-onboarding.html)).
 
