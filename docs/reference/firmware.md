@@ -134,7 +134,7 @@ other than `-1`, `CONFIG_APP_DEBUG_BATTERY_MV` other than `0`, or any of `CONFIG
 | `PROFILE`, `BOARD` | - | Passed through to `build.sh` |
 
 The script does not layer `local.conf`. It writes `board_test.conf` - the board selection,
-`APP_OBD_MODE`, `APP_BOARD_TEST=y`, `CONFIG_LOG_MODE_IMMEDIATE=y`, `CONFIG_LTE_NETWORK_TIMEOUT=180`,
+`APP_OBD_MODE`, `APP_BOARD_TEST=y`, `CONFIG_LOG_MODE_IMMEDIATE=y`, `CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT=180`,
 the APN and the impact threshold - and builds with that. From `local.conf` it reads only
 `CONFIG_APP_APN` (falling back to `makerdiary.conf`, then `prj.conf`, then asking),
 `CONFIG_APP_DEMO_MODE`, `CONFIG_APP_BOARD_TEST_HIDE_COORDS` and `CONFIG_APP_CRASH_THRESHOLD_MG`
