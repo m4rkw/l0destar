@@ -62,7 +62,7 @@ void cmd_run(char *cmd)
      * device converges on its setting after a reboot or a missed reply;
      * only a change is acted on, so the routine repeat is silent. */
     tmp = strstr(cmd, "track=");
-    if (tmp) {
+    if (tmp && IS_ENABLED(CONFIG_APP_TRACK_MODE)) {
         int8_t want = atoi(tmp + strlen("track=")) ? 1 : 0;
         if (want && ignition != 0) {
             /* Track mode is meaningless with the ignition off, and the
