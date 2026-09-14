@@ -67,7 +67,7 @@ UPDATE user SET locked = 0, failed_login_count = 0 WHERE username = 'alice';
 
 `audit.log` in `/srv/l0destar/logs` records every enrolment, login and logout attempt with the client address and username. It is a plain file rather than a table, so it survives problems with the database. Keep it, and read it after anything suspicious.
 
-Sessions last `session_lifetime_days` (30). Changing `session_secret` logs everyone out.
+A login lasts `session_lifetime_days` (30) from when it was made, however often it is used. Changing `session_secret` logs everyone out.
 
 ## API tokens
 

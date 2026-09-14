@@ -3,6 +3,8 @@
 Skipped unless ``TRACKER_TEST_DB`` is set; see conftest.py.
 """
 
+import time
+
 from conftest import needs_db
 
 pytestmark = needs_db
@@ -54,4 +56,15 @@ def test_a_session_without_a_credential_is_refused(client, database, device):
     )
     with client.session_transaction() as session:
         session['username'] = 'tester'
+    assert refused(client.get('/api/1.0/devices'))
+
+
+def test_a_login_expires_after_its_lifetime(client, logged_in, database, device):
+    """However much it is used: the cookie is re-issued on every request, so
+    only the recorded login time can end it."""
+    from tracker import config
+
+    assert client.get('/api/1.0/devices').status_code == 200
+    with client.session_transaction() as session:
+        session['login_at'] = int(time.time()) - config.SESSION_LIFETIME_DAYS * 86400 - 1
     assert refused(client.get('/api/1.0/devices'))

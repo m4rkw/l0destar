@@ -14,6 +14,7 @@ database with anything in it.
 
 import os
 import tempfile
+import time
 
 import pytest
 import yaml
@@ -151,6 +152,7 @@ def logged_in(client, database):
     with client.session_transaction() as session:
         session['username'] = 'tester'
         session['credential_id'] = 'tester-credential'
+        session['login_at'] = int(time.time())
     return client
 
 

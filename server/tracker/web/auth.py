@@ -67,10 +67,14 @@ def current_user():
     # `user_id` holds the passkey's credential id, which every registration
     # replaces, so a session logged in with an earlier passkey no longer
     # matches.
-    if (not user or user['locked']
+    # A login lasts session_lifetime_days from when it was made.  The cookie is
+    # re-issued on every request, so its own expiry only measures idleness.
+    expired = (time.time() - session.get('login_at', 0)
+               >= config.SESSION_LIFETIME_DAYS * 86400)
+    if (not user or user['locked'] or expired
             or user['user_id'] != session.get('credential_id')):
-        session.pop('username', None)
-        session.pop('credential_id', None)
+        for key in ('username', 'credential_id', 'login_at'):
+            session.pop(key, None)
         return None
     return user
 
@@ -421,3 +425,4 @@ def authenticate():
     session['credential_id'] = user['user_id']
     audit('login-success', user['username'])
     return ok({'message': 'authentication successful'})
+    session['login_at'] = int(time.time())
