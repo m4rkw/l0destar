@@ -758,7 +758,9 @@ int fota_check(enum fota_ctx ctx)
     int64_t budget_end =
         k_uptime_get() + (int64_t)CONFIG_APP_FOTA_DOWNLOAD_TIMEOUT_S * 1000;
 
+    int attempts = 0;
     for (int attempt = 1; attempt <= FOTA_DL_ATTEMPTS; attempt++) {
+        attempts = attempt;
         err = download_image(budget_end);
         if (err == 0) {
             break;
@@ -813,7 +815,7 @@ int fota_check(enum fota_ctx ctx)
             char msg[96];
             snprintf(msg, sizeof(msg),
                      "fota: %s -> %s failed after %d attempts (err %d, cause %d)",
-                     APP_VERSION_STRING, ver_str, FOTA_DL_ATTEMPTS,
+                     APP_VERSION_STRING, ver_str, attempts,
                      err, s_dl_cause);
             alert_enqueue(msg, 0);
         }
