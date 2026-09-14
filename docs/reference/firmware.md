@@ -5,7 +5,7 @@ the order they are applied in, the environment variables the build scripts read,
 application Kconfig symbol, the Zephyr and MCUboot settings worth knowing about, and the
 constants compiled in from `src/config.h`.
 
-Values come from the l0destar repository at commit `de3ee46` (firmware 0.4.x). Paths are
+Values describe firmware 0.4.x as of September 2026. Paths are
 relative to the `firmware/` directory of your clone. Where an older document in the repository
 says something different, the Kconfig files and the source are what the firmware actually does -
 see [Where older documents disagree](#where-older-documents-disagree).
