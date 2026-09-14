@@ -151,7 +151,7 @@ sudo docker exec l0destar python tools/command.py 350000000000000 locate
 
 ### Live stream
 
-`/ws/carpos?imei=<imei>` is the WebSocket the map page uses. It needs a signed-in session, so it is for browsers rather than scripts. On connecting it sends the latest record, then every new record as it arrives, each as a JSON position with the same fields as `carpos` - coordinates, speeds, heading, timestamp, battery, ignition, operator, the OBD and IMU readings, and in track mode the unpacked motion burst. When nothing new has arrived for 10 seconds it sends `{"ping": true, "track_mode": 0}` so the connection is not dropped.
+`/ws/carpos?imei=<imei>` is the WebSocket the map page uses. It needs a signed-in session, so it is for browsers rather than scripts. On connecting it sends the latest record, then every new record as it arrives, each as the `position` object that `carpos` returns - coordinates, speeds, heading, timestamp, battery, ignition, operator, the OBD and IMU readings, and in track mode the unpacked motion burst - but not `carpos`'s `accel_baseline`. When nothing new has arrived for 10 seconds it sends `{"ping": true, "track_mode": 0}`, carrying the track mode switch, so the connection is not dropped.
 
 ### Home check
 
