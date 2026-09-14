@@ -100,8 +100,8 @@ over-the-air updates.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `FW_SERVER` | `a` | ssh host the images and manifests are copied to. The default is the author's - set yours |
-| `FW_DIR` | `/var/www/tracker/fw` | Directory on that host; it must be the server's `fw_dir` |
+| `FW_SERVER` | none | ssh destination the images and manifests are copied to; required except with `--list` |
+| `FW_DIR` | `/srv/l0destar/fw` | Directory on that host; it must be the server's `fw_dir` |
 | `REMOTE_CONF` | `remote.conf` | The fleet description |
 | `FW_HOST` | `CONFIG_APP_SERVER_HOST` from `[common]` | Hostname the published release is verified against |
 | `VERIFY_PORT` | `65481` | Port of the server's firmware endpoint |

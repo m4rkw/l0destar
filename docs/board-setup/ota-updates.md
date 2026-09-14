@@ -78,7 +78,7 @@ export FW_DIR=/srv/l0destar/fw
 ./push_fw.sh
 ```
 
-`FW_SERVER` is the SSH destination and `FW_DIR` the firmware directory on the server. Always set both: the defaults are the author's own server. The script takes the hostname to verify against from `CONFIG_APP_SERVER_HOST` in `[common]`.
+`FW_SERVER` is the SSH destination and `FW_DIR` the firmware directory on the server. The script stops without `FW_SERVER`; `FW_DIR` defaults to `/srv/l0destar/fw`, the Docker installation's. The script takes the hostname to verify against from `CONFIG_APP_SERVER_HOST` in `[common]`.
 
 `--list` prints the version it would publish and each device's resolved configuration without building anything. Then, for each device, `push_fw.sh`:
 
