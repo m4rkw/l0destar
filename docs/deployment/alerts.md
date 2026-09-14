@@ -39,7 +39,7 @@ Alert priorities are passed to Pushover as they are:
 | 1 | High priority, bypasses quiet hours |
 | 2 | Emergency: repeated every `retry` seconds until acknowledged or until `expire` seconds have passed |
 
-Pushover requires `retry` to be at least 30 seconds and `expire` to be no more than 10800 seconds. Position replies (`google:` and `tomtom:`) arrive with a link that opens the Google Maps or TomTom app.
+Pushover requires `retry` to be at least 30 seconds and `expire` to be no more than 10800 seconds. Position replies arrive with a link: `google:` opens Google Maps - the app where it is installed, a browser otherwise - and `tomtom:` opens the TomTom GO app, which has to be installed on the phone.
 
 ### Webhook
 

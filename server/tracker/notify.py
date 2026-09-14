@@ -134,7 +134,8 @@ def send(message, title='Tracker', priority=0, url=None, url_title=None):
 # `google: <lat>,<lon>` and `tomtom` sends `tomtom: <lat>,<lon>`; turning those
 # into a tappable link is the whole point of asking the device for a position.
 _DEEP_LINKS = {
-    'google: ': (lambda c: 'comgooglemaps://?q=%s' % c, 'Open in Google Maps'),
+    'google: ': (lambda c: 'https://www.google.com/maps/search/?api=1&query=%s' % c,
+                 'Open in Google Maps'),
     'tomtom: ': (lambda c: 'tomtomgo://x-callback-url/navigate?destination=%s' % c,
                  'Open in TomTom'),
 }
