@@ -22,7 +22,7 @@ It prints a link like `https://tracker.example.com/register?username=alice&token
 Things to know:
 
 - **Hostname.** A passkey belongs to the hostname it was created on. Always open the interface on the same hostname that was in the sign-up link: a Tailscale name and a public name are different sites as far as passkeys are concerned.
-- **Lost phone.** Create a new link for the same username. Registering replaces the old passkey.
+- **Lost phone.** Create a new link for the same username. Registering replaces the old passkey and signs the lost phone out.
 - **Sessions** last 30 days (`session_lifetime_days`). **logout** ends one.
 - **Lockouts.** Five failed passkey verifications lock the account. Separately, after five sign-in attempts from one address without a successful login, further attempts get `too many requests` until an hour after the last one. [Server security](/server/security.html) covers unlocking an account.
 

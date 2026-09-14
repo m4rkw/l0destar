@@ -150,6 +150,7 @@ def logged_in(client, database):
     )
     with client.session_transaction() as session:
         session['username'] = 'tester'
+        session['credential_id'] = 'tester-credential'
     return client
 
 

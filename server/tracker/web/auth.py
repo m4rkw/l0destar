@@ -53,18 +53,24 @@ def current_user():
     """The logged-in user's row, or None.
 
     A signed session cookie outlives anything that happens to its account, so
-    a user removed from the table, or locked after failed logins, would keep
-    their access until the cookie expired.  Every authenticated request looks
-    the account up instead — one indexed query — and a session whose user is
-    gone or locked is cleared.
+    a user removed from the table, locked after failed logins, or re-enrolled
+    after losing a phone would keep their access until the cookie expired.
+    Every authenticated request looks the account up instead — one indexed
+    query — and a session whose user is gone, locked or holds a different
+    passkey is cleared.
     """
     username = session.get('username')
     if not username:
         return None
-    user = db.web.one('SELECT `id`, `username`, `locked` FROM `user` '
+    user = db.web.one('SELECT `id`, `username`, `user_id`, `locked` FROM `user` '
                       'WHERE `username` = %s', (username,))
-    if not user or user['locked']:
+    # `user_id` holds the passkey's credential id, which every registration
+    # replaces, so a session logged in with an earlier passkey no longer
+    # matches.
+    if (not user or user['locked']
+            or user['user_id'] != session.get('credential_id')):
         session.pop('username', None)
+        session.pop('credential_id', None)
         return None
     return user
 
@@ -410,5 +416,6 @@ def authenticate():
                  (client_ip(),))
 
     session['username'] = user['username']
+    session['credential_id'] = user['user_id']
     audit('login-success', user['username'])
     return ok({'message': 'authentication successful'})

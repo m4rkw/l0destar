@@ -30,3 +30,28 @@ def test_a_removed_account_loses_its_session(client, logged_in, database, device
     database.query("DELETE FROM `user` WHERE `username` = 'tester'")
     assert refused(client.get('/devices'))
     assert refused(client.get('/'))
+
+
+def test_re_enrolment_ends_the_old_passkeys_session(client, logged_in, database, device):
+    """Registering again is how a lost phone is recovered, so it has to cut
+    the lost phone off."""
+    assert client.get('/api/1.0/devices').status_code == 200
+
+    # What registration does: the row is replaced, with the new credential.
+    database.query("DELETE FROM `user` WHERE `username` = 'tester'")
+    database.query(
+        "INSERT INTO `user` (`username`, `user_id`, `credential`) "
+        "VALUES ('tester', 'new-credential', '{}')"
+    )
+    assert refused(client.get('/api/1.0/devices'))
+
+
+def test_a_session_without_a_credential_is_refused(client, database, device):
+    """Sessions issued before they recorded the credential log in again."""
+    database.query(
+        "INSERT INTO `user` (`username`, `user_id`, `credential`) "
+        "VALUES ('tester', 'tester-credential', '{}')"
+    )
+    with client.session_transaction() as session:
+        session['username'] = 'tester'
+    assert refused(client.get('/api/1.0/devices'))
