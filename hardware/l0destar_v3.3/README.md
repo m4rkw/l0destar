@@ -2,8 +2,6 @@
 
 ## Overview
 
-**NOTE: THIS HAS NOT YET BEEN TESTED, USE AT YOUR OWN RISK**
-
 - This is a prototype l0destar vehicle tracker PCB designed to be
   hand-solderable (hot air required)
 - It makes use of the [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) to provide the LTE and GPS
