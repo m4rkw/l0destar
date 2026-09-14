@@ -88,7 +88,7 @@ If no notification backend is configured yet, the alert still appears in `udp.lo
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
-| No `imei=` at boot; `IMEI not set, dropping packet` | The modem did not register during start-up, so the firmware never read the IMEI. | Fix the SIM, APN, antenna or coverage, then reset. See [no imei= line](/board-setup/initial-flashing.html#no-imei-line). |
+| No `connected` at boot | The modem has not registered on the network. | Give it a few minutes; if it still does not connect, fix the SIM, APN, antenna or coverage, then reset. See [no connected line](/board-setup/initial-flashing.html#no-connected-line). |
 | `connected`, `sent`, but nothing at all in `udp.log` | The datagrams never arrive: DNS, no IPv4 address for the hostname, a firewall or missing port forward, or a wrong APN (the modem can register without a working data connection). | Test the port from outside, as in [telemetry port](/server/telemetry-port.html). Check `CONFIG_APP_SERVER_HOST` resolves to an IPv4 address. |
 | `decrypt failed from ...` in `udp.log` | The device is not enrolled, or the key or IMEI does not match. | Check the IMEI with `device.py show`. If in doubt about the key, give the server the one in `local.conf` again with `device.py rekey <imei> --psk <key>`. |
 | `records from ...` in the log, but never a `resp:` line | The server's replies do not get back, or the device is not waiting for them. | Test with pin 5 on and the supply below 13.0V, where every send waits for a reply. Check nothing between the server and the internet drops outgoing UDP. |

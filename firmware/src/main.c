@@ -1180,6 +1180,18 @@ static struct kline_discovery kline_boot_disc;
      IS_ENABLED(CONFIG_APP_L_SENSE_TEST)     ||   \
      IS_ENABLED(CONFIG_APP_LTE_POWER_TEST))
 
+/* Every datagram and the update check carry the IMEI.  Reading it needs no
+ * network. */
+static void read_imei(void)
+{
+    char imei[32] = {0};
+
+    if (modem_get_imei(imei, sizeof(imei)) == 0) {
+        strncpy(g_settings.imei, imei, sizeof(g_settings.imei) - 1);
+        LOG_INF("imei=%s", g_settings.imei);
+    }
+}
+
 int main(void)
 {
     LOG_INF("=== l0destar firmware boot (v%s, board %s) ===",
@@ -1359,6 +1371,10 @@ int main(void)
         LOG_ERR("modem init failed");
         return 0;
     }
+    /* Before connecting: a modem that registers after the start-up wait
+     * would otherwise leave the IMEI unset, and every send dropped, for the
+     * whole boot. */
+    read_imei();
     if (modem_provision_tls()) {
         LOG_ERR("TLS provisioning failed");
         return 0;
@@ -1373,10 +1389,8 @@ int main(void)
 
     led_boot_animation();
     if (modem_connect() == 0) {
-        char imei[32] = {0};
-        if (modem_get_imei(imei, sizeof(imei)) == 0) {
-            strncpy(g_settings.imei, imei, sizeof(g_settings.imei) - 1);
-            LOG_INF("imei=%s", g_settings.imei);
+        if (g_settings.imei[0] == '\0') {
+            read_imei();   /* the read above failed */
         }
         transport_open();
         transport_teardown();

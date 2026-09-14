@@ -158,13 +158,13 @@ A healthy boot looks like this (abridged - timings and readings will differ):
 <inf> hw_selftest: self-test: all rails OK
 <inf> main: ignition=OFF battery=12.01V
 <inf> modem: init ok
+<inf> main: imei=350000000000000
 <inf> modem: TLS CA provisioned (sec_tag 1)
 <inf> modem: FOTA CA provisioned (sec_tag 42)
 <inf> modem: connecting (this can take 30s+)...
 <wrn> lte_lc: Registration rejected, EMM cause: 15, Cell ID: 366868, Tracking area: 12296, LTE mode: 7
 <inf> modem: nw reg status: 5
 <inf> modem: connected
-<inf> main: imei=350000000000000
 <wrn> fota: updates inhibited (APP_FOTA_INHIBIT) — running 0.4.0
 <inf> modem: PLMN: mcc=234 mnc=30
 <inf> transport: sent 552 bytes
@@ -175,15 +175,16 @@ What to look for:
 - **`board v3.4+kline`** - the board and interface you configured (`+can` for CAN, nothing after the version for no interface).
 - **`self-test: all rails OK`** - the switched rails came up. `RAIL:` or `SELFTEST:` failures send you back to the [board test](/assembly/board-test.html).
 - **`battery=`** close to your supply voltage, and **`ignition=`** following the switch on pin 5.
-- **`connected`** followed by **`imei=`**. Write the IMEI down: you need it on the next page.
+- **`imei=`** straight after `init ok`. Write the IMEI down: you need it on the next page.
+- **`connected`** - the modem has registered on the network.
 - **`sent N bytes`** - a datagram went to your server. A record needs a position, so nothing is sent until the GNSS antenna has had its first fix since the tracker started: `no fix, skipping send` means it is still waiting.
 - With pin 5 off, **`entering sleep`** a few seconds later. The `registration lost (status 0)` warning after `sleep: modem power off` is the modem being switched off, not a fault.
 
 A roaming SIM often sees a few `Registration rejected` warnings from networks it may not use before `nw reg status: 5` (registered, roaming) - that took about 50 seconds on the author's bench. The two `CA provisioned` lines appear on the tracker firmware's first boot only; later boots, and boards that already hold a CA, print `TLS CA already provisioned (sec_tag 1)`.
 
-### No imei= line
+### No connected line
 
-The firmware reads the IMEI once, after the modem registers during start-up. If `connected` never appears, the IMEI stays unset for that whole boot and every send is dropped with `IMEI not set, dropping packet` - even if the modem registers later. Check that the SIM is inserted and active, the APN, that the antenna is on the LTE connector and that there is LTE-M coverage, then `./reset.sh`.
+The modem has not registered within a minute of starting. The firmware leaves it searching and carries on as soon as it registers. If it never connects, check that the SIM is inserted and active, the APN, that the antenna is on the LTE connector and that there is LTE-M coverage, then `./reset.sh`.
 
 ### Expected at this stage
 
