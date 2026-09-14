@@ -146,7 +146,7 @@ Tilt alerts need the vehicle lifted by several degrees. Do not jack up a vehicle
 | Few satellites, high HDOP, wandering positions or many cell positions | The antenna cannot see enough sky | Move the antenna closer to the glass and away from metal; check the GNSS lead is on the GNSS port and the antenna is an active type |
 | Gaps in the same places on every drive | Holes in LTE-M coverage | Nothing to fix in the tracker; records built during the gap are sent afterwards, thinned out if the outage was long |
 | Gaps anywhere, with registration or send errors in `device.log` | Weak LTE at the antenna position | Move the antenna; check your network's LTE-M coverage |
-| A gap of a few minutes followed by `fota:` alerts | An update was downloaded and installed | Expected: GNSS and telemetry pause while an update downloads |
+| A gap of a few minutes with the engine off, followed by `fota:` alerts | An update was downloaded and installed | Expected: GNSS and telemetry pause while an update downloads, which waits until the engine is off |
 | `decrypt failed` in `udp.log` from the vehicle's address | The tracker's key or IMEI does not match the server | See [Verifying telemetry](/board-setup/verifying-telemetry.html) |
 | Restarts (`rst=`) during drives, especially when starting the engine | Power wiring: a poor ground, a loose crimp, a fuse holder | Re-check the harness, the crimps and the ground point |
 | A journey split in two at a short stop | The stop was longer than `journey_resume_seconds` (300) | Raise `journey_resume_seconds` in `config.yaml` if you want longer stops joined up |

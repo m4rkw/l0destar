@@ -1594,8 +1594,13 @@ int main(void)
              * `fota` command, or a power-on check that hit a dead link and
              * is still pending.  Serviced here so the download happens
              * between sends rather than mid-collection; a no-op (single
-             * flag test) when nothing is pending. */
-            fota_check(FOTA_CTX_AWAKE);
+             * flag test) when nothing is pending.  Not while the engine runs:
+             * a download stops GNSS and telemetry for minutes and ends in a
+             * reboot, so a drive keeps its tracking and the update waits for
+             * the engine to stop, key-off (STATE_SEND) or a timed wake. */
+            if (!engine_running) {
+                fota_check(FOTA_CTX_AWAKE);
+            }
 
             if (should_send_data()) {
                 LOG_INF("collecting GPS fix (%d/%d)",

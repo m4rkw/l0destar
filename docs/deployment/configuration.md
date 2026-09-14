@@ -38,7 +38,7 @@ After changing a device's section, publish for that device:
 ./push_fw.sh --device 350000000000000
 ```
 
-The tracker downloads the update once a reply it reads advertises it. That can happen while the vehicle is being driven: GNSS is stopped and no telemetry is sent while the image downloads, which typically takes a few minutes, and the tracker then restarts into the new image.
+The tracker downloads the update once a reply it reads advertises it, but not while the engine is running: it waits for the engine to stop, the ignition to go off or a timed wake. GNSS is stopped and no telemetry is sent while the image downloads, which typically takes a few minutes, and the tracker then restarts into the new image.
 
 ### Per-vehicle tuning
 
