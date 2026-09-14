@@ -393,7 +393,7 @@ Discovery, run once per vehicle with the ignition on (see
 | `APP_KLINE_INIT_ADDRS` | string | `""` | Addresses already known to answer the 5-baud init, as comma-separated hex such as `"13,29,58,B4"`; each is tried in turn and everything it sends is captured |
 | `APP_KLINE_INIT_ACK` | bool | `y` | Depends on `APP_KLINE_DISCOVER`. During a capture, reply with the inverted second byte as a tester would |
 | `APP_KLINE_INIT_DIAG` | bool | `n` | Depends on `APP_KLINE_DISCOVER`. Before the init, hold the L pull-down on for 5 seconds and listen on K for 20 seconds, so the wiring can be checked with a meter |
-| `APP_KLINE_IDENT` | bool | `n` | Depends on `APP_KLINE_DISCOVER`. Ask each address that completes the handshake to identify itself: ECU identification, supported PIDs, engine speed, coolant temperature and VIN |
+| `APP_KLINE_IDENT` | bool | `n` | Depends on `APP_KLINE_DISCOVER`. Ask each address in `APP_KLINE_INIT_ADDRS` whose 5-baud handshake completes to identify itself: ECU identification, supported PIDs, engine speed, coolant temperature and VIN |
 | `APP_KLINE_DTC` | bool | `n` | Depends on `APP_KLINE_IDENT`. Also read stored, pending and permanent fault codes |
 
 `APP_L_SEND_ENABLED` is under [Fitted hardware and power domains](#fitted-hardware-and-power-domains).
