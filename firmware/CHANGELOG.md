@@ -28,6 +28,97 @@ the key turned, so a fresh fix taken while parked, such as the one after a
 reboot, still reported the receiver's standstill noise.  Above the threshold a
 roll-away or a tow reports what it measured.
 
+### Connect Kit builds from a fresh clone see satellites
+- **The GNSS antenna settings are committed.**  The Connect Kit's GNSS
+amplifier is powered from the nRF9151's COEX0 pin, which the modem only drives
+once the modem antenna library has sent `AT%XCOEX0`.  NCS turns that library
+on only for Nordic's own boards, and the settings lived in the gitignored
+`makerdiary.conf`, so a fresh clone built Connect Kit firmware that could not
+see a satellite.  They now live in
+`boards/nrf9151_connectkit_nrf9151_ns.conf`, which every Connect Kit build
+applies.
+
+### Bench harnesses no longer reset themselves
+- **The watchdog is armed only in tracker builds.**  Since 0.4.36 a missed
+feed really resets the SoC, and the board test, provisioning mode, K-wire
+discovery, the CAN and K-line tests, the accel, voltage and L-sense streams,
+the CAN bench agent and the LTE power test all wait in loops that never feed
+it, so each reset about 35-45 s in.
+
+### A unit with no position sleeps instead of searching awake
+- **With the ignition off and no fix since boot, it goes to sleep.**  A record
+needs a position and sleep was only entered after a send, so a unit that
+started where GNSS could not see the sky, such as an underground car park
+after a key-off update, stayed awake with GNSS searching until a fix turned
+up.  Its timed wakes now search for a first fix on the 1st, 2nd, 4th, 8th and
+16th wake and then every 16th.
+
+### An update no longer interrupts a drive or retries in a loop
+- **No update starts while the engine is running.**  The main loop ran any
+pending check on every pass, so a download usually began mid-drive: GNSS and
+telemetry stopped for minutes, then the unit rebooted while driving.  It now
+waits for the engine to stop; key-off and timed wakes still check, and a
+manual `fota` command waits too.
+- **A failed download backs off.**  It only bumped the failure count, so the
+`fota=` in the next reply re-armed the check, within half a minute while
+driving, stopping GNSS each time.  It now backs off like any failed check, 10
+minutes doubling to 80; the `fota` command still overrides it.
+- **One download budget per check.**  `APP_FOTA_DOWNLOAD_TIMEOUT_S` was meant
+to bound a whole check, but each attempt started its own deadline, so one
+check could keep GNSS stopped for about 40 minutes.  Every attempt now shares
+the check's deadline.
+- **The failure alert counts the attempts made.**  `fota: x -> y failed after
+N attempts` always gave the configured number, even when the budget stopped
+the check sooner.
+- **A reverted update is reported once.**  The record of a staged update
+survives a warm reset, and nothing marked its revert as reported, so every
+later warm reset raised `failed to boot` again and sent the server another
+`F,fota,failed` line.  Later boots now only restore the refusal of a version
+that has used up its attempts.
+- **An inhibited build says so.**  With `APP_FOTA_INHIBIT` the `fota` command
+replied `fota: check queued` and cleared the record of a version that had
+failed to boot, though no check would run.  It now replies `fota: updates
+inhibited` and leaves the record alone.
+
+### A late registration no longer leaves the IMEI unset
+- **The IMEI is read before connecting.**  It was read only inside a
+successful start-up connect, so a modem that registered after the 60 s
+start-up wait left it unset for the whole boot: every send was dropped with
+`IMEI not set`, and the power-on update check asked for `imei=unknown`.
+`AT+CGSN` needs no network, so it is now read as soon as the modem library
+starts.
+
+### Command replies match what the unit does
+- **`locatenow` and `tomtomnow` take a fresh fix while awake.**  The send path
+stops GNSS before it runs the commands in a reply, so their record waited out
+the 60 s fix timeout on a stopped receiver and reported the last known
+position.  With the ignition on they now resume GNSS first.
+- **A build without track mode ignores `track=`.**  `APP_TRACK_MODE=n`
+compiles the mode out, but a `track=1` in a reply still set the flag and sent
+`track mode ON`.
+
+### The K-wire L line is driven only for a vehicle that needs it
+- **Discovery tries K alone first.**  It drove the L line whenever
+`APP_L_SEND_ENABLED` allowed, the default on v3.3 and v3.4, and its summary
+said `L wire driven` whenever that setting was on, so it could not show
+whether a vehicle needed L.  Each 5-baud init now goes out on K alone, and
+again with L only if that gets no answer; the summary says `L wire needed`
+only then and suggests `CONFIG_APP_KLINE_USE_L=y`.  A sweep that finds nothing
+on K alone is repeated with L, which takes about as long again.
+- **The runtime session can drive L.**  `kline_session_open()` always opened
+on K alone, so a vehicle that needed L would pass discovery and then never
+open a session.  With `APP_KLINE_USE_L` it drives L as well, after the same
+short-to-battery test.
+
+### The bench tools no longer leave a board drawing milliamps asleep
+- **`reset.sh` does a pin reset.**  Its soft reset left the nRF9151 in debug
+interface mode, drawing milliamps asleep until a pin reset or power cycle.
+USB now re-enumerates on every reset, as it does after `flash.sh`.
+- **`ifmcu/build.sh` refuses a clone without the whole fix.**  It builds only
+a Makerdiary clone that contains PR #20's merge and has no local changes.  An
+older version of the script patched the clone itself, which made a clone from
+before #20 look fixed.
+
 ## 0.4.43
 
 ### A failed A-GNSS fetch no longer leaves a cold start unassisted
