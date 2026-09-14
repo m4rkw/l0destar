@@ -27,7 +27,7 @@ somewhere to report to while you bring it up on the bench.
 
 ## What you end up with
 
-- A tracker that sleeps at around 35.5µA from the vehicle battery and wakes on the ignition,
+- A tracker expected to sleep at about 35.5µA from the vehicle battery that wakes on the ignition,
   movement, an impact or a slow tilt such as a tow or a jack.
 - Position, speed, battery voltage and ignition state every few seconds while driving (3-5
   seconds on LTE-M in the author's vehicle), and on a timer while parked if you want it.
