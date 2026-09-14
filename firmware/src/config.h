@@ -57,6 +57,13 @@
 #define BATTERY_CHECK_INTERVAL      CONFIG_APP_BATTERY_CHECK_INTERVAL
 #define NETWORK_REGISTRATION_TIMEOUT CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT
 #define NETWORK_RETRY_INTERVAL      CONFIG_APP_NETWORK_RETRY_INTERVAL
+/* How often a parked unit that owes a timed report checks whether the modem
+ * has registered.  On 2026-09-14 the 07:57 wake gave up after the 60 s
+ * registration timeout, the modem registered at 08:00:31 with the radio left
+ * searching, and the sleep loop powered it off at 08:00:57 with the record
+ * still in the backlog; it went out at 08:59.  Matches the default tilt poll,
+ * so a unit polling for tilt anyway wakes no more often. */
+#define RESEND_POLL_S               30
 #define GPS_FIX_TIMEOUT_MS          CONFIG_APP_GPS_FIX_TIMEOUT_MS
 #define GPS_COLD_FIX_TIMEOUT_MS     CONFIG_APP_GPS_COLD_FIX_TIMEOUT_MS
 

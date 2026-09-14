@@ -509,6 +509,15 @@ static void do_sleep(void)
     int  tow_last_tilt = -1;      /* tenths, for the "still" test */
     int  tow_stable_secs = 0;
 
+    /* A timed report that could not go out because the modem had not
+     * registered.  modem_connect() leaves the radio searching when it gives
+     * up, so registration often arrives a minute or two later — and the next
+     * pass used to power the modem straight off, leaving the record in the
+     * backlog until the following timed wake an hour on.  Owed until the
+     * modem registers or the next timed report runs. */
+    bool    resend_owed = false;
+    int64_t resend_failed_ms = 0;
+
     if (s_saved_loop_interval < 0) {
         s_saved_loop_interval = g_settings.loop_interval;
     }
@@ -530,6 +539,8 @@ static void do_sleep(void)
             sleep_secs = s_move_cooldown_secs;
         if (TOW_TILT_DEG > 0 && sleep_secs > TOW_POLL_S)
             sleep_secs = TOW_POLL_S;   /* slow-tilt poll cadence */
+        if (resend_owed && sleep_secs > RESEND_POLL_S)
+            sleep_secs = RESEND_POLL_S;   /* notice the registration */
         if (sleep_secs < 1) sleep_secs = 1;
 
         k_sem_reset(&s_wake_sem);
@@ -766,8 +777,11 @@ static void do_sleep(void)
                 }
                 /* This branch continues past the bottom-of-loop power-off,
                  * so drop the modem here if anything above raised it —
-                 * whether or not the connect actually registered. */
-                if (modem_raised || network_ready) {
+                 * whether or not the connect actually registered — unless
+                 * it has registered with a timed report still owed, which
+                 * the next pass sends first. */
+                if ((modem_raised || network_ready) &&
+                    !(resend_owed && modem_is_registered())) {
                     lte_lc_power_off();
                     network_ready = false;
                 }
@@ -825,8 +839,20 @@ static void do_sleep(void)
             accel_read_baseline();
         }
 
+        /* --- owed timed report --- */
+        if (resend_owed && modem_is_registered()) {
+            resend_owed = false;
+            if (g_settings.loop_interval > 0) {
+                LOG_WRN("registered — sending the timed report that failed "
+                        "%lld s ago",
+                        (k_uptime_get() - resend_failed_ms) / 1000);
+                telemetry_remaining = 0;
+            }
+        }
+
         /* --- timer telemetry --- */
         if (telemetry_remaining <= 0 && g_settings.loop_interval > 0) {
+            resend_owed = false;
             LOG_INF("sleep: INA228 wake for voltage read");
             hw_power_wake();
             float v = battery_read_voltage();
@@ -875,7 +901,13 @@ static void do_sleep(void)
                     pending_server_cmd[0] = '\0';
                     if (alert_count > 0) alert_send();
                 }
-                if (!last_send_ok) modem_recover();
+                if (!last_send_ok) {
+                    modem_recover();
+                    if (!modem_is_registered()) {
+                        resend_owed = true;
+                        resend_failed_ms = k_uptime_get();
+                    }
+                }
             }
             data_reset();
 
@@ -903,8 +935,11 @@ static void do_sleep(void)
             telemetry_remaining = g_settings.loop_interval;
         }
 
-        /* power modem back off if any alert or telemetry path woke it */
-        if (modem_raised || network_ready) {
+        /* power modem back off if any alert or telemetry path woke it —
+         * except a registration that has just arrived with a timed report
+         * owed: the next pass, at most RESEND_POLL_S away, sends it first */
+        if ((modem_raised || network_ready) &&
+            !(resend_owed && modem_is_registered())) {
             lte_lc_power_off();
             network_ready = false;
         }

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### A timed report that misses registration goes out when the modem registers
+- **The sleep loop sends it instead of powering the modem off.**  A timed
+wake gives up on registration after `APP_NETWORK_REGISTRATION_TIMEOUT` (60 s)
+and leaves the radio searching, and the record goes to the backlog.  When the
+modem registered a minute or two later, the next pass of the sleep loop
+powered it straight off, so the record waited for the next timed wake an hour
+on.  Observed on 2026-09-14: the 07:57 wake gave up, the modem registered at
+08:00:31 and was powered off at 08:00:57, and the record arrived at 08:59; the
+same happened at 02:49 and 04:51.  A report that failed for want of
+registration is now owed: the loop polls every `RESEND_POLL_S` (30 s) and, once
+the modem registers, reruns the timed report — a fresh record, the backlog and
+the server's reply — before powering the modem off.
+
+## 0.4.43
+
 ### A failed A-GNSS fetch no longer leaves a cold start unassisted
 - **The in-search fetch is retried.**  When the receiver asks for assistance
 and the fetch at the start of a cold search fails, `gnss_collect()` now
