@@ -41,7 +41,7 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 | Track mode | `track=` | `device.track_mode` | `0` | GNSS off, engine and IMU data streamed quickly |
 | Update advert | `fota=` | per-device manifest | - | See [OTA updates](/board-setup/ota-updates.html) |
 
-- A timed report while parked sends the last known position. GNSS is only started for it when movement has been detected since the previous one. Ignition, movement, impact and tilt wake the tracker whatever the interval is.
+- A timed report while parked sends the last known position. GNSS is only started for it when movement has been detected since the previous one, or when the tracker has had no fix since it started. Ignition, movement, impact and tilt wake the tracker whatever the interval is.
 - Movement, impact and tilt alerts are raised whatever the movement alarm flag says. Use the priority settings in [Configure alerts](/deployment/alerts.html) to quieten them.
 - Track mode is switched from the web page (see [Web interface and API](/board-setup/web-interface.html)). The server clears it when the ignition goes off, or when a device is heard from after an hour of silence, and the tracker ignores `track=1` while the ignition is off.
 

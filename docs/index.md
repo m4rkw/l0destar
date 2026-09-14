@@ -58,9 +58,7 @@ somewhere to report to while you bring it up on the bench.
 - **Firmware:** 0.4.x, built with nRF Connect SDK v3.3.0. OBD-II data and fault codes are read over
   the K wire. The CAN-FD interface is supported as hardware and bench tested in classic CAN and
   CAN-FD modes, but the firmware does not read vehicle data over CAN yet.
-- **Server:** a public reference implementation derived from the author's private deployment. It
-  has tests but has not been run end to end against real hardware in this form, so treat it as
-  something to review and adapt.
+- **Server:** a public reference implementation of a tracking telemetry server.
 
 These pages describe the [l0destar repository](https://github.com/m4rkw/l0destar) as of September
 2026. Where they disagree with the repository, the repository is right - please report it.

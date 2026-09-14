@@ -182,6 +182,8 @@ sudo docker run -d --name l0destar --restart unless-stopped \
 
 The new container carries on with everything in `/srv/l0destar`. As it starts it applies any database migrations the new version brings, logging `l0destar: applying migration <file>` for each. Take a backup first, and look for new settings by comparing your `config.yaml` with the new image's example, `sudo docker exec l0destar cat config.yaml.example`.
 
+If you [built the image yourself](/server/installation.html#building-the-image-yourself), pull the repository and build it again in place of `docker pull`.
+
 ## Scheduling the home check
 
 `POST /api/1.0/home` checks every vehicle listed under `home_check` ([Server configuration](/server/configuration.html)). Run it at a time the vehicles are normally at home, from the server itself. Create a token for it:

@@ -193,21 +193,21 @@ same decision see [Hardware](/reference/hardware.html#interface-selection-pads).
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_BOARD_HAS_CAN` | bool | `y` on v2.1, v2.5C, v2.6C and v3.0; on v3.1-v3.3 when `APP_OBD_MODE=1`; otherwise `n` | MCP2518FD CAN controller fitted. On v3.0, which lays out both interfaces, set the one you did not populate to `n` |
-| `APP_BOARD_HAS_KLINE` | bool | `y` on the bench, v2.1, v2.5K, v2.6K and v3.0; on v3.1-v3.3 when `APP_OBD_MODE=2`; otherwise `n` | K-wire transceiver fitted |
-| `APP_L_SEND_ENABLED` | bool | `y` on v3.3 and the bench, `n` on every other board | Allows the firmware to drive the L line. Boards before v3.3 switch the L pull-down straight onto the wire, and an L wire shorted to battery destroys the transistor and can take the nRF9151 with it, so leave it off on those unless you know the wire is safe |
+| `APP_BOARD_HAS_CAN` | bool | `y` on v2.1, v2.5C, v2.6C and v3.0; on v3.1-v3.4 when `APP_OBD_MODE=1`; otherwise `n` | MCP2518FD CAN controller fitted. On v3.0, which lays out both interfaces, set the one you did not populate to `n` |
+| `APP_BOARD_HAS_KLINE` | bool | `y` on the bench, v2.1, v2.5K, v2.6K and v3.0; on v3.1-v3.4 when `APP_OBD_MODE=2`; otherwise `n` | K-wire transceiver fitted |
+| `APP_L_SEND_ENABLED` | bool | `y` on v3.3, v3.4 and the bench, `n` on every other board | Allows the firmware to drive the L line. Boards before v3.3 switch the L pull-down straight onto the wire, and an L wire shorted to battery destroys the transistor and can take the nRF9151 with it, so leave it off on those unless you know the wire is safe |
 | `APP_BOARD_HAS_AIO` | bool | `y` on v2.1 | 0-30V AIO inputs fitted; adds `+aio` to the board identity |
-| `APP_BOARD_HAS_L_SENSE` | bool | `y` on v3.3 | L-line sense input fitted, read through the ADC to detect an L wire shorted to battery |
+| `APP_BOARD_HAS_L_SENSE` | bool | `y` on v3.3 and v3.4 | L-line sense input fitted, read through the ADC to detect an L wire shorted to battery |
 | `APP_L_SENSE_LOW_MV` | int | `2800` | Depends on `APP_BOARD_HAS_L_SENSE`. Below this the L line counts as pulled low; a line that is high, open or shorted to battery reads at the 3.6V full scale |
-| `APP_BOARD_HAS_RAIL_SENSE` | bool | `y` on v3.1-v3.3 | Switched-rail status inputs fitted, so the boot self-test and the `RAIL:` alerts can tell a rail that did not come up |
+| `APP_BOARD_HAS_RAIL_SENSE` | bool | `y` on v3.1-v3.4 | Switched-rail status inputs fitted, so the boot self-test and the `RAIL:` alerts can tell a rail that did not come up |
 | `APP_BOARD_CAN_ON_AUX` | bool, hidden | `y` on v2.1, v2.5C and v2.6C | The CAN circuit is powered from the AUX domain |
 | `APP_BOARD_KLINE_ON_AUX` | bool, hidden | `y` on v2.1 | The whole K-line circuit is powered from the AUX domain |
 | `APP_BOARD_KLINE_SHIFT_ON_AUX` | bool, hidden | `y` on v2.5K and v2.6K | The level shifter is on AUX and the transceiver rails on `K_EN`; the K-line pins are released only while both are up |
 | `APP_BOARD_OBD_DOMAIN` | bool, hidden | `y` on v3.0 | CAN and K-line share one switched OBD domain |
-| `APP_BOARD_SPLIT_OBD_DOMAIN` | bool, hidden | `y` on v3.1-v3.3 | CAN and K-line rails are switched independently |
-| `APP_BOARD_CAN_XSTBY` | bool, hidden | `y` on v2.5C, v2.6C and v3.0-v3.3 | The CAN transceiver's standby pin is driven by the MCP2518FD, so putting the controller to sleep puts the transceiver in standby |
+| `APP_BOARD_SPLIT_OBD_DOMAIN` | bool, hidden | `y` on v3.1-v3.4 | CAN and K-line rails are switched independently |
+| `APP_BOARD_CAN_XSTBY` | bool, hidden | `y` on v2.5C, v2.6C and v3.0-v3.4 | The CAN transceiver's standby pin is driven by the MCP2518FD, so putting the controller to sleep puts the transceiver in standby |
 | `APP_BOARD_IGN_EXT_PULLUP` | bool, hidden | `y` on every l0destar board | The ignition sense line has an external pull-up, so the nRF9151's internal one stays off |
-| `APP_BOARD_RAIL_ST_12V_ACTIVE_LOW` | bool, hidden | `y` on v3.1-v3.3 | The 12V K rail sense reads low while the rail is up |
+| `APP_BOARD_RAIL_ST_12V_ACTIVE_LOW` | bool, hidden | `y` on v3.1-v3.4 | The 12V K rail sense reads low while the rail is up |
 | `APP_LED_ACTIVE_LOW` | bool | `y` for a bench build on the DK, otherwise `n` | Status LED polarity |
 
 The domain flags tell the firmware which pins end inside a switched rail. Those pins are parked
@@ -532,9 +532,12 @@ These are compiled in and have no Kconfig symbol; change them in the source and 
 | `PSK_HEX_DEFAULT` | 64 zeros | Fallback for an empty `APP_PSK_HEX` |
 | `TLS_SEC_TAG` | `1` | The other modem tag the CA certificate is written to |
 | `ENGINE_OFF_BOOT_INTERVAL` | `900` | Timed wake interval, in seconds, from boot until the first server reply when `APP_ENGINE_OFF_LOOP_INTERVAL` is 0 |
+| `RESEND_POLL_S` | `30` | How often a parked unit that owes a timed report - one that failed because the modem had not registered - checks for registration, so the report goes out as soon as it has rather than at the next timed wake |
 | `ENGINE_STOPPED_HOLD_S` | `300` | Seconds of low voltage and standstill before the voltage fallback calls the engine stopped |
 | `ENGINE_MOVING_KMH` | `3.0` | GNSS speed above which the vehicle counts as moving, restarting that hold |
 | `ENGINE_FIX_MAX_AGE_S` | `180` | Oldest fix still counted as evidence of movement |
+| `AGNSS_RETRIES`, `AGNSS_RETRY_INTERVAL_MS` | `2`, `15000` | Further A-GNSS fetches during a cold search when the first fails, and the gap between them; GNSS keeps searching between attempts |
+| `GNSS_PRIO_STARVED_EPOCHS`, `GNSS_PRIO_WINDOW_MS` | `5`, `40000` | GNSS priority mode, which takes the radio from LTE, is requested only after this many consecutive epochs the receiver reports as starved of radio time, and not again while a window this long may still be running |
 | `BATTERY_WARN_SETTLE_S` | `60` | Seconds the ignition must have been off before a low reading can raise `low battery`, since cranking sags the rail |
 | `IMPLAUSIBLE_VOLTAGE` | `5.0` | Readings below this mean no INA228 rather than a flat battery |
 | `BATTERY_SAMPLES`, `BATTERY_SAMPLE_GAP_MS` | `8`, `3` | INA228 conversions averaged per battery reading, and the milliseconds between them |
@@ -547,7 +550,8 @@ These are compiled in and have no Kconfig symbol; change them in the source and 
 | `BATCH_HEADROOM` | `400` | Room kept for one more record and the log lines that ride along |
 | `BATCH_FLUSH_BYTES` | `736` | `UDP_PACKET_SIZE - 64 - BATCH_HEADROOM`: a batch is sent once it reaches this size |
 | `SPEED_MIN_SATS` | `4` | Satellites needed before the GNSS speed counts as evidence of movement or rest |
-| `IGN_OFF_STOPPED_KMH` | `3.22` | On the ignition-off record, GNSS speeds below this (2mph) are sent as 0 |
+| `IGN_OFF_STOPPED_KMH` | `3.22` | With the ignition off, a GNSS speed below this (2mph) is sent as 0: standstill noise rather than motion. A roll-away or a tow above it reports what was measured |
+| `SPEED_FIX_MAX_AGE_MS` | `10000` | Oldest fix whose speed still goes out in a record. A record built from the stored position, such as a parked unit's timed report, sends speed 0 rather than repeating the last fix's figure |
 | `GYRO_REST_KMH`, `GYRO_AUTOZERO_SAMPLES`, `GYRO_AUTOZERO_GAP_MS`, `GYRO_AUTOZERO_REJECT_LSB`, `GYRO_AUTOZERO_EMA_SHIFT` | `1.0`, `16`, `5`, `250`, `2` | Learning the gyro's temperature-dependent zero-rate offset while stationary with a good fix |
 
 `TLS_PORT` (65481), `DTLS_PORT` (5684), `LOW_POWER_STANDBY`, `NO_MOVEMENT_GPS_SKIP` and

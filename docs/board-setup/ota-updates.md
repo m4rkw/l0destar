@@ -124,7 +124,7 @@ On the server, `tls.log` shows the manifest request and the first and last range
 
 | What you see | What happened | What to do |
 |---|---|---|
-| `fota: <old> -> <new> failed after 3 attempts (err ..., cause ...)` | The download did not complete. | Check TCP 65481 is reachable from outside and the certificate is valid. The device retries by itself; the `fota` command retries now. |
+| `fota: <old> -> <new> failed after <n> attempts (err <e>, cause <c>)` | The download did not complete. | Check TCP 65481 is reachable from outside and the certificate is valid. The device retries by itself; the `fota` command retries now. |
 | `<name>: fota: <version> failed to boot (running <old>) — updates withheld until retried` | The image installed but did not start, and MCUboot reverted it. | Publish a fixed, newer version (offered automatically), or retry the same one with `command.py <imei> fota-retry`. |
 | Console: `manifest targets board '...', this unit is '...' — refusing` | The device's section in `remote.conf` does not match its hardware. | Correct the section and publish again. |
 | Console: `battery ... — deferring update` | The vehicle battery reads below 12.0V. | Nothing: it tries again at the next check. |

@@ -17,7 +17,7 @@ ts,lat,lon,spd,alt,hdg,hdop,sat,bat,ign,up,pon[,extras...]
 
 | Field | Meaning |
 |---|---|
-| `ts` | modem clock, `dd/mm/yy,HH:MM:SS+NN` — **contains a comma** |
+| `ts` | modem clock in UTC, `dd/mm/yy,HH:MM:SS.uuuuuu+00` — **contains a comma** |
 | `lat`, `lon` | decimal degrees |
 | `spd` | km/h (the server stores mph) |
 | `alt` | metres |
@@ -31,7 +31,7 @@ ts,lat,lon,spd,alt,hdg,hdop,sat,bat,ign,up,pon[,extras...]
 
 Records built in track mode send `0` for `hdop` and `sat`, and `1` for `ign`.
 
-`+NN` in the timestamp is quarter-hours east of UTC, per 3GPP `AT+CCLK`.
+The timestamp is always UTC: the firmware converts the modem's clock, appends microseconds and writes the offset as `+00`.
 
 ### Extras
 

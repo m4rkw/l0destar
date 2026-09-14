@@ -68,7 +68,7 @@ ORDER BY id DESC LIMIT 5;
 
 | Check | How | What you should see |
 |---|---|---|
-| Position | Latest records, or the map | Coordinates of where the antenna is, and four or more satellites once it has a fix. A device that has never had a fix sends `0.000000`. |
+| Position | Latest records, or the map | Coordinates of where the antenna is, and four or more satellites once it has a fix. A device that has not had a fix since it started sends nothing. |
 | Battery | `battery_level` | Within a few tens of millivolts of your bench supply. |
 | Ignition | Switch pin 5 on, wait for a record, switch it off | `ignition_state` follows the switch. A journey opens when the ignition comes on and closes after it goes off; switching back on within 5 minutes continues the same journey. |
 | Firmware | `fw` | `0.4.0` for a bench build. It is sent after a restart and copied onto every later record. |

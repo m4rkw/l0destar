@@ -4,9 +4,6 @@ The l0destar server receives telemetry from your trackers, stores it in a databa
 
 This page installs it with Docker. One image, `m4rkw/l0destar`, holds the server and the MariaDB database it uses, and everything the server keeps is stored in a directory on the host. [Server configuration](/server/configuration.html) explains the settings and [Server deployment](/server/deployment.html) covers HTTPS, backups and upgrades. Read [Server security](/server/security.html) before exposing anything to a network.
 
-!!! note "Status"
-    The server in the l0destar repository is a public, de-personalised version of the author's private deployment. Its automated tests pass and these steps have been followed on a fresh Ubuntu 26.04 machine, but it has not been run end to end against real hardware in this form. Read the code before you trust it with a vehicle.
-
 ## What you need
 
 - A Linux machine that stays on, amd64 or arm64. These steps were tested on Ubuntu 26.04; anything that runs Docker will do. A tracker only reports when it wakes, and anything it sends while the server is down is lost.
@@ -150,6 +147,17 @@ https://tracker.example.com/register?username=alice&token=<64 hex characters>
 The passkey created from it is bound to the hostname in the link, so use the name people will actually browse to. With Tailscale that is the machine's `.ts.net` name, not the public hostname the trackers use. Open the link once the web interface is reachable over HTTPS, on the phone or computer that should hold the passkey.
 
 All the server's tools run like this, inside the container: `sudo docker exec l0destar python tools/<tool>.py`. They are listed in the [server configuration reference](/reference/server.html#tools).
+
+## Building the image yourself
+
+The published image is built for amd64 and arm64. To run your own copy of the code instead - with a change of your own, say - build the image from the repository under the same name:
+
+```sh
+git clone https://github.com/m4rkw/l0destar.git
+sudo docker build -t m4rkw/l0destar l0destar/server
+```
+
+Then start it with the same `docker run` command as above: Docker uses the local image instead of pulling one. To upgrade it later, pull the repository with `git -C l0destar pull`, build again and recreate the container as in [upgrading](/server/deployment.html#upgrading), leaving out `docker pull`.
 
 ## Without Docker
 

@@ -158,7 +158,7 @@ The alarms are covered in [Configure alerts](/deployment/alerts.html).
 
 ## Engine-off reporting and battery use
 
-With the engine-off interval (`int`) above 0, a parked tracker wakes every `int` seconds, reads the battery, connects, sends one record, reads the server's reply - which is how settings, commands and update adverts reach a parked unit - and goes back to sleep. The record carries the last known position: GNSS is only started for a timed report when movement has been detected since the previous one.
+With the engine-off interval (`int`) above 0, a parked tracker wakes every `int` seconds, reads the battery, connects, sends one record, reads the server's reply - which is how settings, commands and update adverts reach a parked unit - and goes back to sleep. The record carries the last known position: GNSS is only started for a timed report when movement has been detected since the previous one, or when the tracker has had no fix since it started (see below).
 
 Each wake costs battery. The author's bench figures at 12V are about 35.5µA asleep, roughly 0.85mAh a day, and about 10 seconds at 15mA on average for a timed report, roughly 0.04mAh each. From those:
 
