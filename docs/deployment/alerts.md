@@ -12,7 +12,7 @@ The `notify` section of `config.yaml` selects the backend; every key is listed i
 | `pushover` | Push notifications through [Pushover](https://pushover.net/). |
 | `webhook` | A JSON `POST` to a URL of your choice. |
 
-A notification that fails is logged in `app.log` and never stops the telemetry being stored.
+Notifications go out in the background, so a slow or failing backend never delays a tracker's reply or stops its telemetry being stored; a failed delivery is logged in `app.log`.
 
 ### Pushover
 
