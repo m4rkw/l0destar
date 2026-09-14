@@ -222,7 +222,7 @@ All in `/srv/l0destar/logs` (`log_dir`):
 
 | File | Contents |
 |---|---|
-| `app.log` | Application errors. |
+| `app.log` | Application errors, and every notification the server sends, whatever the backend. |
 | `udp.log` | The UDP listener: records received per exchange, commands delivered, alerts relayed, update reports, decryption failures. Also in the container's output. |
 | `tls.log` | The TLS listener: handshakes and firmware requests. Also in the container's output. |
 | `debug.log` | Records that carry debug counters or a reset cause, one line each: a short list of incidents. |

@@ -99,7 +99,7 @@ notify:
   expire: 300
 ```
 
-`backend` is `none` (the default: alerts are only logged), `pushover`, or `webhook` with a `url` and an optional `token` sent as a bearer token. Which alerts exist, and how to set up each backend, is covered in [Configure alerts](/deployment/alerts.html).
+`backend` is `none` (the default: nothing is sent, but every notification is written to `app.log`), `pushover`, or `webhook` with a `url` and an optional `token` sent as a bearer token. Which alerts exist, and how to set up each backend, is covered in [Configure alerts](/deployment/alerts.html).
 
 ## Home check
 

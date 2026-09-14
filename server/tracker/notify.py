@@ -2,8 +2,8 @@
 
 The reference deployment uses Pushover, but nothing above this module knows
 that: callers pass a message, a title and a priority, and the configured
-backend decides what to do with them.  ``none`` is a valid choice — the server
-runs fine with alerts only going to ``udp.log``.
+backend decides what to do with them.  ``none`` is a valid choice: every
+notification is written to ``app.log`` whichever backend is set.
 
 Backends are selected in config.yaml::
 
@@ -78,6 +78,7 @@ _BACKENDS = {
 def send(message, title='Tracker', priority=0, url=None, url_title=None):
     """Deliver a notification.  Never raises — a dead notification service
     must not cost a telemetry record."""
+    logs.notify.info('%s, priority %d: %s', title, priority, message)
     handler = _BACKENDS.get(_backend)
     if handler is None:
         if _backend != 'none':

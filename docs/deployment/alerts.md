@@ -8,7 +8,7 @@ The `notify` section of `config.yaml` selects the backend; every key is listed i
 
 | Backend | What happens |
 |---|---|
-| `none` | Nothing is sent. Device alerts are still written to the transport's log, such as `udp.log`. |
+| `none` | Nothing is sent. Every notification is still written to `app.log`, and device alerts to the transport's log as well, such as `udp.log`. |
 | `pushover` | Push notifications through [Pushover](https://pushover.net/). |
 | `webhook` | A JSON `POST` to a URL of your choice. |
 
