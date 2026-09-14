@@ -15,15 +15,15 @@ firmware toolchain.
 
 v3.4 has seven test points. Readings below are with 12V applied to the board.
 
-| Test point | Label | Net | Expected |
-|---|---|---|---|
-| S12TP1 | `GND` | GND | Ground reference for every reading |
-| S12TP2 | `4.2V protected` | PP4V2 | 4.2V whenever the input is powered: the buck, the OVP MOSFET S11Q1 and the ideal diode S11U1 are all passing the rail |
-| S12TP3 | `3.3V` | PP3V3 | 3.3V only with the Connect Kit fitted - it comes from the Connect Kit |
-| S12TP4 | `3.3V GPS` | PP3V3_GPS | 0V until the firmware switches the GPS rail on |
-| S12TP5 | `3.3V CAN` | PP3V3_CAN | 0V until the firmware switches the CAN rail on |
-| S12TP6 | `3.3V K` | PP3V3_K | 0V until the firmware switches the K-wire rails on |
-| S12TP7 | `12V K` | PP12V_K | 0V until the firmware switches the K-wire rails on |
+| Test point | Net | Expected |
+|---|---|---|
+| S12TP1 | GND | Ground reference for every reading |
+| S12TP2 | PP4V2 | 4.2V whenever the input is powered: the buck, the OVP MOSFET S11Q1 and the ideal diode S11U1 are all passing the rail |
+| S12TP3 | PP3V3 | 3.3V only with the Connect Kit fitted - it comes from the Connect Kit |
+| S12TP4 | PP3V3_GPS | 0V until the firmware switches the GPS rail on |
+| S12TP5 | PP3V3_CAN | 0V until the firmware switches the CAN rail on |
+| S12TP6 | PP3V3_K | 0V until the firmware switches the K-wire rails on |
+| S12TP7 | PP12V_K | 0V until the firmware switches the K-wire rails on |
 
 The unprotected buck output has no test point on v3.4; measure it at the non-ground pad of S6C5.
 

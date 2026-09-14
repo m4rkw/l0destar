@@ -139,15 +139,15 @@ The CAN parts and the K-wire parts are optional as a group; see
 
 ## Test points
 
-| Test point | Label | Net |
-|---|---|---|
-| S12TP1 | `GND` | Ground |
-| S12TP2 | `4.2V protected` | PP4V2, the protected rail feeding the Connect Kit |
-| S12TP3 | `3.3V` | PP3V3, supplied by the Connect Kit |
-| S12TP4 | `3.3V GPS` | PP3V3_GPS, the switched GPS antenna bias rail |
-| S12TP5 | `3.3V CAN` | PP3V3_CAN, the switched CAN rail |
-| S12TP6 | `3.3V K` | PP3V3_K, the switched K-wire 3.3V rail |
-| S12TP7 | `12V K` | PP12V_K, the switched K-wire 12V rail |
+| Test point | Net |
+|---|---|
+| S12TP1 | Ground |
+| S12TP2 | PP4V2, the protected rail feeding the Connect Kit |
+| S12TP3 | PP3V3, supplied by the Connect Kit |
+| S12TP4 | PP3V3_GPS, the switched GPS antenna bias rail |
+| S12TP5 | PP3V3_CAN, the switched CAN rail |
+| S12TP6 | PP3V3_K, the switched K-wire 3.3V rail |
+| S12TP7 | PP12V_K, the switched K-wire 12V rail |
 
 Expected readings are on the [board test](/assembly/board-test.html) page.
 

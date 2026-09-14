@@ -24,11 +24,11 @@ are on the right, as in this render of v3.4:
   and `K` on the silkscreen. They select which interface the connector's two bus pins are routed
   to.
 - **Top middle**: the 2-pin CAN termination header S9J1, marked `CAN-T`.
-- **Bottom left**, beside the lower 20-pin header: the OVP bypass pad S5R5, the holes for the
-  Connect Kit power lead, S1J4 (marked `+` and `-`), and the test points S12TP1 (`GND`) and S12TP2 (`4.2V`,
-  the protected rail that feeds the Connect Kit).
-- **Top right**: test points S12TP3 (`3.3V`), S12TP4 (`3.3V GPS`) and S12TP5 (`3.3V CAN`).
-- **Right, between the SMA connectors**: test points S12TP6 (`3.3V K`) and S12TP7 (`12V K`).
+- **Left edge**, between the two 20-pin headers: the OVP bypass pad S5R5, the holes for the
+  Connect Kit power lead, S1J4 (marked `+` and `-`), and the test points S12TP1 (ground) and S12TP2 (the
+  protected 4.2V rail that feeds the Connect Kit).
+- **Top right**: test points S12TP3 (3.3V), S12TP4 (the 3.3V GPS rail) and S12TP5 (the 3.3V CAN rail).
+- **Right, between the SMA connectors**: test points S12TP6 (the 3.3V K-wire rail) and S12TP7 (the 12V K-wire rail).
 - **Right edge**: the GPS (top) and LTE (bottom) u.FL and SMA connectors.
 - The two 20-pin Connect Kit headers run horizontally across the middle and the bottom of the
   board.
