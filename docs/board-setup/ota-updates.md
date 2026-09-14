@@ -140,7 +140,7 @@ That clears the server's block and queues the `fota` command, which clears the d
 
 ## Bench units
 
-- Build bench units with `CONFIG_APP_FOTA_INHIBIT=y`, as in [minimal config and initial flashing](/board-setup/initial-flashing.html). The unit skips the check at boot and ignores update adverts and the `fota` command.
+- Build bench units with `CONFIG_APP_FOTA_INHIBIT=y`, as in [minimal config and initial flashing](/board-setup/initial-flashing.html). The unit skips the check at boot, ignores update adverts, and answers the `fota` command with `fota: updates inhibited`.
 - Never use `CONFIG_APP_FOTA=n` instead. That also removes the call that confirms an image, so a build that did arrive over the air would be reverted on its next boot.
 - Keep bench units out of `remote.conf`. A device with no manifest on the server is never offered anything.
 

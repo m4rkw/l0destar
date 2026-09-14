@@ -131,6 +131,9 @@ void cmd_run(char *cmd)
             }
             ver[n] = '\0';
             fota_notify_available(ver);
+        } else if (IS_ENABLED(CONFIG_APP_FOTA_INHIBIT)) {
+            /* A bench build never checks, so do not claim one is queued. */
+            alert_enqueue("fota: updates inhibited", 0);
         } else {
             fota_request_check();
             alert_enqueue("fota: check queued", 0);

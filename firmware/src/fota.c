@@ -364,6 +364,10 @@ static int download_image(int64_t deadline)
  * and the failure holdoff from the server. */
 void fota_request_check(void)
 {
+    if (IS_ENABLED(CONFIG_APP_FOTA_INHIBIT)) {
+        LOG_WRN("ignoring `fota` command — updates inhibited");
+        return;
+    }
     if (s_denied_ver) {
         LOG_INF("manual retry — clearing the block on the failed version");
     }
@@ -375,10 +379,6 @@ void fota_request_check(void)
     s_fail_count = 0;
     s_next_check_ms = 0;
 
-    if (IS_ENABLED(CONFIG_APP_FOTA_INHIBIT)) {
-        LOG_WRN("ignoring `fota` command — updates inhibited");
-        return;
-    }
     /* Manual `fota` command: check now, even inside a failure holdoff. */
     s_forced = true;
     s_next_check_ms = 0;

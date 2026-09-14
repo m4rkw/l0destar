@@ -118,6 +118,7 @@ The self-test and rail alerts mean a hardware fault; the [board test](/assembly/
 | `tomtom: <lat>,<lon>` | 0 | `tomtom`, `tomtomnow` |
 | `fw=<version> int=<n> ma=<n> tm=<n> bat=<volts>V ign=<on or off> up=<seconds>s` | 0 | `config` |
 | `fota: check queued` | 0 | `fota` |
+| `fota: updates inhibited` | 0 | `fota`, on a unit built with `CONFIG_APP_FOTA_INHIBIT` |
 | `rebooting` | 0 | `reboot` |
 | `track mode ON`, `track mode OFF` | 0 | Track mode switched from the web page |
 
