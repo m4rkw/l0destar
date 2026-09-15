@@ -11,7 +11,7 @@ The advice here is general. Every vehicle is wired differently, and nothing on t
 ## Fire and electrical safety
 
 !!! danger "Fuse both 12V feeds"
-    Fit a 2A inline fuse in the permanent 12V feed and another in the ignition feed, each as close as practical to the point where you take the power. The fuses on the board are there to protect the board, not the wire running to it: an unfused wire that chafes through to the bodywork can start a fire.
+    Fit a 2A inline fuse in the permanent 12V feed and another in the ignition feed, each as close as practical to the point where you take the power. The fuses on the board are a backstop against faults on the board side and cannot protect the wire running to it: an unfused wire that chafes through to the bodywork can start a fire.
 
 - The board is designed for 12V vehicle electrical systems. 24V vehicles are not supported.
 - Plan the route of every wire before you cut anything. Keep wires away from sharp edges, hot parts and anything that moves - the steering column, pedals, seat runners, glovebox and door hinges - and use grommets wherever a wire passes through metal.

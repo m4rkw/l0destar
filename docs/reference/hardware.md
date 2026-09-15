@@ -19,10 +19,11 @@ different Connect Kit pins and switches its power rails differently. Select the 
 | v3.3 | Built and bench tested | `CONFIG_APP_BOARD_L0DESTAR_V3_3=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.3`, `v3.3+can`, `v3.3+kline` |
 
 v3.4 has its own board definition, but it is the v3.3 one under a new name: the Connect Kit
-headers and the power header carry identical nets on the two PCBs - the only differences are the
-renamed bus nets and the accelerometer's NC pads - so the pin map and the rail topology are the same.
-It exists so that update images stay tied to the revision: a v3.4 unit reports the FOTA board id
-`v3.4` and installs only images built for it. Pick v3.4 in the interactive board test.
+headers and the power header carry identical nets on the two PCBs, so the pin map and the rail
+topology are the same. The v3.4 changes - the accelerometer's NC pads, the enable divider made
+optional, the test points, the enlarged power-header holes and the CAN transceiver - touch none of
+them. It exists so that update images stay tied to the revision: a v3.4 unit reports the FOTA
+board id `v3.4` and installs only images built for it. Pick v3.4 in the interactive board test.
 
 `CONFIG_APP_OBD_MODE` tells the firmware which interface is populated, and with it
 which rails to switch and which drivers to start:
@@ -84,7 +85,7 @@ OBD socket, CAN high is pin 6 and CAN low pin 14; the K line is pin 7 and the L 
 
 | Header | Pins | Purpose |
 |---|---|---|
-| S1J2 | Connect Kit pins 1-20 | Lower 20-pin 2.54mm header. Pin 1, the Connect Kit's VSYS (the l0destar symbol names it VBUS), is the square pad at the Molex end. |
+| S1J2 | Connect Kit pins 1-20 | Lower 20-pin 2.54mm header. Pin 1, the Connect Kit's VBUS (USB 5V, unconnected on the board), is the square pad at the Molex end. |
 | S1J3 | Connect Kit pins 21-40 | Upper 20-pin 2.54mm header, pin 40 at the Molex end. |
 | S1J4 | `+` protected 4.2V, `-` ground | Holes for the MX1.25 lead that feeds the Connect Kit's battery connector; the lead's wires are soldered in. |
 | S9J1 | CAN termination | 2-pin 2.54mm header in series with the 120R resistor S9R3 across the bus. CAN builds only. |
@@ -198,7 +199,7 @@ specification below should do.
 |---|---|
 | Supply | 12V nominal automotive, two feeds: permanent live and ignition |
 | Maximum input | 40V, bounded by the K-wire 12V load switch; the buck itself is rated to 42V |
-| Transient protection | 33V TVS on each input, sized for ISO 7637-2:2011 pulse 2a at its maximum level; unsuppressed load dump (ISO 16750-2 test A) is out of scope |
+| Transient protection | 33V TVS on each input, chosen to ride out a 35V suppressed load dump; the bulk capacitance is sized for ISO 7637-2:2011 pulse 2a at its maximum level; unsuppressed load dump (ISO 16750-2 test A) is out of scope |
 | Fusing | 2A time-lag on each 12V input on the board, as a backstop; external 2A harness fuses on both feeds are required |
 | Module rail | 4.2V (4.24V nominal) from an LT8609A synchronous buck at 2MHz |
 | Over-voltage protection | Trips at about 4.95V and releases at about 4.80V; latches off while the unprotected rail stays above the release threshold, so clearing a trip needs the input power to drop far enough for the buck output to fall below about 4.8V |

@@ -63,7 +63,7 @@ The README splits the parts into sections:
 | Bill of materials - CAN bus parts | Only for a CAN build |
 | Optional: CAN common-mode choke | Part of the CAN build, but optional |
 | Bill of materials - K-wire parts | Only for a K-wire build |
-| Parts list | The same parts aggregated with quantities per board: `All` rows plus the `CAN` or `K-wire` rows for your build |
+| Parts list | The same parts aggregated with quantities per board: `All` rows plus the `CAN` or `K-wire` rows for your build, and the `Optional` rows if you fit the buck enable divider |
 
 Designators start with the schematic sheet they belong to, which helps when finding parts on the
 board:
@@ -173,7 +173,8 @@ a rail fed straight from the battery that means a continuous fault current.
 
 - Buy spares of every 0402 part.
 - Work from the **Parts list** table in the README, taking the `All` rows plus the rows for your
-  interface. Treat the specification column as the minimum, not the part number.
+  interface, and the `Optional` rows if you fit the buck enable divider. Treat the specification
+  column as the minimum, not the part number.
 - Use a distributor you trust. The links in the README are for identification and go stale.
 
 ## Enclosure hardware

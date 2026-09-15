@@ -31,8 +31,9 @@ These pages describe the **l0destar v3.4** board.
 - **v3.4 is designed but has not yet been built or tested.** Every row of the test table in the
   [v3.4 README](https://github.com/m4rkw/l0destar/blob/master/hardware/l0destar_v3.4/README.md)
   reads NOT TESTED.
-- **v3.3 is the most recent board that has been built and bench tested.** v3.4 fixes the
-  accelerometer footprint, makes the buck converter's enable divider an optional
+- **v3.3 is the most recent board that has been built and bench tested.** v3.4 leaves the
+  accelerometer's two NC pads unconnected (they were grounded on v3.0-v3.3, which kept the part
+  out of its low-power state), makes the buck converter's enable divider an optional
   part that is not fitted by default, adds test points, enlarges the holes for the Connect Kit power
   lead and specifies a TCAN3414DR CAN transceiver in place of the MAX33041E (same footprint and
   pinout).
