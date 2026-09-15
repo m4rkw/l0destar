@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.46
 
 ### A timed report that misses registration goes out when the modem registers
 - **The sleep loop sends it instead of powering the modem off.**  A timed
