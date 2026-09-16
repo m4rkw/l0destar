@@ -39,6 +39,13 @@ bool     use_cached_gps;
 bool     powered_on = true;
 char     ignition;
 int8_t   previous_ignition = -1;
+/* The last exit from sleep was the ignition line.  IDLE clears it once the
+ * key is confirmed on, or reports once and sleeps if the key is already off
+ * again (a short key cycle) — see the ignition-off branch there. */
+static bool s_key_wake;
+/* The sleep loop was woken by the backup module's ignition pulse (see
+ * ign_isr and the ignition check in do_sleep).  data.c reads and clears it. */
+bool     backup_woke;
 bool     engine_running;
 float    battery_v;
 
@@ -63,6 +70,10 @@ static int64_t s_last_resp_ms;
 static K_SEM_DEFINE(s_wake_sem, 0, 1);
 static struct gpio_callback s_ign_cb;
 static bool s_ign_cb_installed;
+/* Latched by ign_isr.  The pin level is not enough on its own: the backup
+ * module's wake pulse (CONFIG_APP_BACKUP_SUPPLY) holds the line for only
+ * ~0.4 s, so by the time the loop's debounce re-reads it the level is gone. */
+static atomic_t s_ign_int_flag;
 
 static void ign_isr(const struct device *dev, struct gpio_callback *cb,
                     uint32_t pins)
@@ -72,6 +83,7 @@ static void ign_isr(const struct device *dev, struct gpio_callback *cb,
      * back-to-back and starve the sleep loop.  Disarm here; the loop
      * re-arms before each wait. */
     gpio_pin_interrupt_configure(dev, PIN_IGN_SENSE, GPIO_INT_DISABLE);
+    atomic_set(&s_ign_int_flag, 1);
     k_sem_give(&s_wake_sem);
 }
 
@@ -525,6 +537,7 @@ static void do_sleep(void)
     int telemetry_remaining = g_settings.loop_interval;
 
     ign_irq_enable();
+    atomic_clear(&s_ign_int_flag);
     int ign_before = ignition_read();
     g_cell.dirty = true;
 
@@ -548,6 +561,12 @@ static void do_sleep(void)
          * ISR disarms itself, and a level already present when the sense is
          * re-enabled fires immediately, which the reset would swallow. */
         ign_irq_enable();
+        /* A pulse that landed while this pass was busy (a report, the tilt
+         * debounce) is latched but its semaphore was just reset: give it
+         * back so the wait returns at once instead of at the next timer. */
+        if (atomic_get(&s_ign_int_flag)) {
+            k_sem_give(&s_wake_sem);
+        }
         int64_t t0 = k_uptime_get();
         console_suspend();
         /* Waited out in slices so the watchdog keeps being fed: a sleep
@@ -668,13 +687,39 @@ static void do_sleep(void)
 #endif
 
         /* --- ignition check --- */
+        /* The inline backup module lifts the ignition line to ~12 V for
+         * about 0.4 s when its boost takes over the rail, so a power cut
+         * wakes the unit instead of waiting for the timer.  The rail tells
+         * that apart from a key-on: on the module it reads ~9 V, and a car
+         * with its key turned is never in that band. */
+        bool backup_wake = false;
+        bool ign_int = atomic_clear(&s_ign_int_flag) != 0;
         int ign_now = ignition_read();
-        if (ign_now != ign_before) {
+        if (ign_int || ign_now != ign_before) {
+            hw_power_wake();
+            float v = battery_read_voltage();
+            battery_v = v;
+            if (battery_on_backup(v)) {
+                LOG_WRN("wake: ignition pulse with the rail at %.2fV - "
+                        "backup module, reporting the cut", (double)v);
+                backup_wake = true;
+                backup_woke = true;
+                telemetry_remaining = 0;
+                k_msleep(500);           /* let the pulse pass before anything reads the line */
+                ign_now = ignition_read();
+                ign_before = ign_now;
+                ign_int = false;
+            } else {
+                hw_power_shutdown();
+            }
+        }
+        if (!backup_wake && (ign_int || ign_now != ign_before)) {
             k_msleep(200);
             ign_now = ignition_read();
             if (ign_now == 0) {
                 LOG_INF("wake: ignition ON");
                 ignition = 0;
+                s_key_wake = true;
                 movement_reset();
                 ign_irq_disable();
                 accel_irq_disable();
@@ -850,21 +895,30 @@ static void do_sleep(void)
             }
         }
 
-        /* --- timer telemetry --- */
-        if (telemetry_remaining <= 0 && g_settings.loop_interval > 0) {
+        /* --- timer telemetry (and the report a backup wake owes) --- */
+        if ((telemetry_remaining <= 0 && g_settings.loop_interval > 0) ||
+            backup_wake) {
             resend_owed = false;
             LOG_INF("sleep: INA228 wake for voltage read");
             hw_power_wake();
             float v = battery_read_voltage();
             battery_v = v;
 
-            if (v > 0 && v < BATTERY_POWEROFF_LEVEL) {
+            /* On the backup module the rail reads ~9 V, under both gates
+             * below.  Those exist to spare a weak car battery; the pack is
+             * there to be spent, and a unit that went quiet the moment its
+             * power was cut would defeat it.  data.c raises the alert. */
+            bool on_backup = battery_on_backup(v);
+            if (on_backup) {
+                LOG_INF("battery %.2fV: backup power, reporting", (double)v);
+            }
+            if (!on_backup && v > 0 && v < BATTERY_POWEROFF_LEVEL) {
                 LOG_WRN("battery %.2fV < poweroff", (double)v);
                 hw_power_shutdown();
                 telemetry_remaining = BATTERY_CHECK_INTERVAL;
                 continue;
             }
-            if (v > 0 && v < SLEEP_SAFETY_VOLTAGE) {
+            if (!on_backup && v > 0 && v < SLEEP_SAFETY_VOLTAGE) {
                 LOG_WRN("battery %.2fV, skipping send", (double)v);
                 hw_power_shutdown();
                 telemetry_remaining = g_settings.loop_interval;
@@ -948,11 +1002,17 @@ static void do_sleep(void)
         accel_read_baseline();
         accel_irq_enable();
 
-        /* re-check ignition before going back to sleep */
+        /* re-check ignition before going back to sleep.  After a backup wake
+         * a line still reading on is the module's pulse, not a key-on: the
+         * rail says so. */
         ign_now = ignition_read();
+        if (ign_now == 0 && backup_wake && battery_on_backup(battery_v)) {
+            ign_now = 1;
+        }
         if (ign_now == 0) {
             LOG_INF("wake: ignition ON");
             ignition = 0;
+            s_key_wake = true;
             movement_reset();
             ign_irq_disable();
             accel_irq_disable();
@@ -1606,6 +1666,8 @@ int main(void)
                         engine_rpm_or_na(), (double)battery_v);
             }
 
+            if (ignition == 0) s_key_wake = false;
+
             if (ignition == 0 && previous_ignition != 0 &&
                 g_gnss.valid) {
                 LOG_INF("ignition on — sending cached position");
@@ -1656,6 +1718,40 @@ int main(void)
                         s_buffered_records + 1, BATCH_SIZE);
                 use_cached_gps = false;
                 s_state = STATE_GPS_COLLECT;
+                break;
+            }
+
+            /* Ignition off and the server already told: nothing keeps the
+             * unit awake, yet sleep is otherwise only entered from
+             * STATE_SEND, so this idled with GNSS running until the next
+             * timed record.  Reached when a key-on wake's key is off again
+             * before the first poll here — the wake needs the line on for
+             * 200 ms, but modem_connect() runs for seconds before IDLE
+             * looks — and after a routine collection that found no fix.
+             * A short key cycle is still an event someone caused, so it
+             * gets one record from the cached position before sleeping. */
+            if (ignition != 0 && previous_ignition != -1 && !s_coasting &&
+                s_buffered_records == 0) {
+                if (s_key_wake) {
+                    s_key_wake = false;
+                    LOG_INF("ignition off again since the wake — reporting "
+                            "once");
+                    use_cached_gps = true;
+                    read_udp_response = false;
+                    force_record = true;
+                    if (g_cell.mcc == 0) modem_update_cell_info();
+                    s_record_ignition = ignition;
+                    if (collect_data(ignition) > 0) {
+                        send_data();
+                        data_reset();
+                    }
+                    force_record = false;
+                    use_cached_gps = false;
+                    s_last_send_ms = k_uptime_get();
+                    previous_ignition = ignition;
+                }
+                LOG_INF("ignition off with nothing to send — sleeping");
+                s_state = STATE_SLEEP;
                 break;
             }
             status_delay(1000);

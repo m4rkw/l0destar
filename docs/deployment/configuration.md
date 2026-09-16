@@ -56,6 +56,7 @@ These are the settings most worth reviewing for a particular vehicle. Every symb
 | `CONFIG_APP_SLEEP_SAFETY_MV` | 12000 | Timed reports while parked are skipped below this |
 | `CONFIG_APP_BATTERY_POWEROFF_MV` | 11800 | Below this, timed reports stop and the battery is only checked again a day later |
 | `CONFIG_APP_FOTA_MIN_BATTERY_MV` | 12000 | Update downloads wait until the battery is above this |
+| `CONFIG_APP_BACKUP_SUPPLY` | n | Set `y` on a tracker fed through the inline battery backup module, so its ~9V rail is treated as backup power rather than a flat battery |
 | `CONFIG_APP_BATCH_SIZE` | 3 | Records per datagram while driving |
 | `CONFIG_APP_TRACK_MODE` | y | Set `n` if track mode should not be available for this vehicle |
 
@@ -190,6 +191,16 @@ Other behaviour worth knowing:
 The tracker raises its `low battery` alert when it builds a record with the ignition off for at least a minute and the battery below `CONFIG_APP_BATTERY_WARNING_MV` (11.9V). While parked, the only records it builds are timed reports, and with the default thresholds a timed report is skipped below 12.0V before its record is built. In practice the alert rarely arrives from a parked vehicle, and effectively never with `int` 0.
 
 If you want the warning while parked, set `CONFIG_APP_SLEEP_SAFETY_MV` below `CONFIG_APP_BATTERY_WARNING_MV` in the device's section - 11850, for example - and use an engine-off interval above 0. Timed reports between the two levels are then sent and raise the alert, at the cost of sending those reports on a low battery. Otherwise, keep an eye on the battery voltage the tracker reports on the map page.
+
+## Battery backup
+
+A tracker fed through the inline battery backup module sees about 9V from the module's cell whenever car power is cut, which is below both timed-report gates above: without help it would send nothing until the pack ran out. Set `CONFIG_APP_BACKUP_SUPPLY=y` in that device's section. A supply between `CONFIG_APP_BACKUP_MIN_MV` (8500) and `CONFIG_APP_BACKUP_MAX_MV` (9700) with the ignition off is then backup power: timed reports keep going, the `low battery` alert stays quiet, and a `backup power: 9.05V` alert goes out at priority 1 once the ignition has been off for a minute (the same guard that keeps a cranking sag out of the low battery alert). When the rail comes back above the band, `car power restored: 12.60V` follows at normal priority.
+
+A cut does not wake a sleeping tracker by itself (its wake sources are the timer, the accelerometer and ignition-present), so the module pulses the ignition line for about 0.4 s as it takes over. The firmware treats an ignition wake with the rail in the backup band as that pulse: it reports the cut straight away, `backup power` alert included, and goes back to sleep rather than starting a drive. Without the pulse the cut is still reported at the next timed wake.
+
+A car battery only rests in that band when it is dead, which is why the option is off by default: on a tracker without the module a reading there is a flat battery and the gates should apply. The module's own undervoltage lockout drops the rail to nothing once the pack is spent, so a reading below the band is never mistaken for backup power.
+
+The module carries a **non-rechargeable** lithium cell, so a `backup power` alert that runs for a long time means the cell needs replacing - it does not recover when car power returns. A brief disconnection (servicing, for example) costs almost nothing.
 
 ## Track mode
 

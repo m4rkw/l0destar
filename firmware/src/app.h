@@ -419,6 +419,8 @@ int   modem_read_temp(float *temp_c);
 int   modem_read_vbat(int *mv);        /* nRF9151 VDD (= VSYS), millivolts */
 int   ignition_read(void);
 float battery_read_voltage(void);
+bool  battery_on_backup(float v);       /* supply is the inline backup module, not the car */
+extern bool backup_woke;                /* this wake was the module's ignition pulse: alert without the settle wait */
 
 int  accel_crash_int_enable(int threshold_mg);
 int  accel_crash_int_disable(void);

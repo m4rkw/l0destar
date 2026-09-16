@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.4.47
+
+### A short key cycle no longer leaves the unit idling awake
+- **IDLE sleeps when the ignition is off and nothing is owed.**  Leaving
+sleep on the ignition line needs it on for only 200 ms, but IDLE then spends
+seconds in `modem_connect()` before it polls the line again; a key that was
+off again by then left no transition to act on, and since sleep was only
+entered from the send state the unit sat polling with GNSS running until the
+next timed record (or the next key).  Seen on the bench on 2026-09-16 with a
+quick ignition pulse: awake and silent for minutes until the ignition was
+poked again.  The same idle followed a routine collection that found no fix.
+- **A key cycle that is over by then still reports once**, from the cached
+position, before sleeping — so poking the ignition to get an update works
+whatever the pulse length instead of needing the key held for a second or
+two.
+
+### A tracker on the inline battery backup keeps reporting
+- **`CONFIG_APP_BACKUP_SUPPLY` (default `n`) declares the backup module.**
+The module holds the rail at about 9 V while car power is absent, which is
+under both timed-report gates (`APP_BATTERY_POWEROFF_MV` 11.8 V, after which
+the next check is a day away, and `APP_SLEEP_SAFETY_MV` 12.0 V): a unit whose
+power had just been cut would have gone silent for 24 hours, the opposite of
+what the module is for.  With the option set, a reading between
+`APP_BACKUP_MIN_MV` (8.5 V) and `APP_BACKUP_MAX_MV` (9.7 V) with the ignition
+off is backup power: the timed wake reports as normal and the two gates are
+bypassed.  Off by default because without the module a car battery in that
+band is flat.
+- **`backup power: 9.05V` goes out at priority 1, `car power restored: 12.60V`
+when the rail returns.**  A cut supply on a parked car is a tamper signal, so
+it carries the movement alarm's priority rather than the low battery's.  The
+same 60 s ignition-off settle guard as the low battery alert keeps a crank
+sag out of it, and the low battery alert itself stays quiet in the band.
+- **A power cut wakes a sleeping tracker.**  Nothing about a cut reaches a
+sleeping unit on its own - the wake sources are the timer, the accelerometer
+and ignition-present - so revision F of the module lifts the ignition line to
+about 12 V for ~0.4 s as its boost starts.  The sleep loop now latches the
+ignition interrupt rather than trusting the pin level (which is also why a
+quick key cycle used to need a second or two to take), acts on a pulse that
+landed while it was busy before the next wait, and on an ignition wake reads
+the rail first: in the backup band it is the module's pulse, so
+the unit reports at once (the `backup power` alert goes with that record,
+without the settle wait) and goes back to sleep; anything else is the key-on
+it always was.  Without the pulse a cut is still found at the next timed
+wake.
+
 ## 0.4.46
 
 ### A timed report that misses registration goes out when the modem registers

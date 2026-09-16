@@ -84,6 +84,14 @@ bool hw_power_available(void)
 	return s_ok;
 }
 
+/* True when the reading says the inline backup module is carrying the rail.
+ * See BACKUP_SUPPLY_MIN/MAX in config.h; always false without the module
+ * configured, so callers need no #if of their own. */
+bool battery_on_backup(float v)
+{
+	return BACKUP_SUPPLY_MAX > 0.0f && v >= BACKUP_SUPPLY_MIN && v <= BACKUP_SUPPLY_MAX;
+}
+
 float battery_read_voltage(void)
 {
 #if CONFIG_APP_DEBUG_BATTERY_MV > 0

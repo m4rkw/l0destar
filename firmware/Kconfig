@@ -713,6 +713,36 @@ config APP_ENGINE_RUNNING_MV
 	int "Engine running voltage threshold (mV)"
 	default 13000
 
+config APP_BACKUP_SUPPLY
+	bool "Inline battery backup module fitted"
+	default n
+	help
+	  The l0destar inline battery backup holds the tracker's supply at
+	  about 9 V from its LTO pack while car power is absent.  With this
+	  enabled, a supply between APP_BACKUP_MIN_MV and APP_BACKUP_MAX_MV
+	  with the ignition off is taken as backup power rather than a flat
+	  car battery: timed reports keep going, the power-off and sleep-safety
+	  rules are bypassed, and a "backup power" alert is raised once (and a
+	  "car power restored" alert when the rail comes back).  Without the
+	  module a car battery in that band is flat, so leave this off.
+
+config APP_BACKUP_MIN_MV
+	int "Backup supply band, lower edge (mV)"
+	depends on APP_BACKUP_SUPPLY
+	default 8500
+	help
+	  Below this the reading is treated as a flat supply again (the backup
+	  pack has been cut off by its own undervoltage lockout, or there is no
+	  module).
+
+config APP_BACKUP_MAX_MV
+	int "Backup supply band, upper edge (mV)"
+	depends on APP_BACKUP_SUPPLY
+	default 9700
+	help
+	  The module delivers 9.6 V less a diode drop, 8.8-9.3 V depending on
+	  load.  Keep this below any voltage a resting car battery can show.
+
 # --- accelerometer / movement ----------------------------------------------
 
 config APP_ACC_MOVEMENT_THRESHOLD

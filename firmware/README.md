@@ -372,6 +372,7 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_BATTERY_WARNING_MV` / `_POWEROFF_MV` | 11900 / 11800 | Battery warning / power-off (mV) |
 | `APP_SLEEP_SAFETY_MV` | 12000 | Skip-send threshold while sleeping (mV) |
 | `APP_ENGINE_RUNNING_MV` | 13000 | Engine-running voltage threshold (mV) |
+| `APP_BACKUP_SUPPLY` | n | Inline battery backup module fitted: 8.5-9.7 V (`APP_BACKUP_MIN_MV`/`_MAX_MV`) with the ignition off is backup power, not a flat battery |
 | `APP_ACC_MOVEMENT_THRESHOLD` | 150 | Movement delta threshold (milli-g) |
 | `APP_MOVEMENT_CONFIRM_MS` / `_HITS` | 10000 / 6 | Movement confirmation window / samples |
 | `APP_MOVEMENT_INACTIVITY_RESET` | 1800 | Inactivity reset timer (s) |

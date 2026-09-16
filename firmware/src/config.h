@@ -91,6 +91,21 @@
 #define ENGINE_RUNNING_VOLTAGE      (CONFIG_APP_ENGINE_RUNNING_MV / 1000.0f)
 #define IMPLAUSIBLE_VOLTAGE         5.0f
 
+/* -- inline battery backup ------------------------------------------------- */
+/* With the backup module fitted (hardware: l0destar_battery_backup) the rail
+ * sits at 9.6 V less a diode drop while car power is absent, 8.8-9.3 V with
+ * load.  A car battery only rests in that band when it is dead, and a crank
+ * sag passes through it for a second or two, inside IGNITION_OFF_HOLD_S and
+ * BATTERY_WARN_SETTLE_S.  Both edges are 0 without CONFIG_APP_BACKUP_SUPPLY,
+ * so battery_on_backup() is never true. */
+#ifdef CONFIG_APP_BACKUP_SUPPLY
+#define BACKUP_SUPPLY_MIN           (CONFIG_APP_BACKUP_MIN_MV / 1000.0f)
+#define BACKUP_SUPPLY_MAX           (CONFIG_APP_BACKUP_MAX_MV / 1000.0f)
+#else
+#define BACKUP_SUPPLY_MIN           0.0f
+#define BACKUP_SUPPLY_MAX           0.0f
+#endif
+
 /* -- engine-running detection, voltage fallback ---------------------------- */
 /* Only consulted when the ECU is not answering — see engine_is_running().
  * Demoting to "engine stopped" needs the rail low AND the vehicle standing

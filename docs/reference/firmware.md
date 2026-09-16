@@ -337,6 +337,9 @@ update, and `push_fw.sh` does not check it either.
 | `APP_BATTERY_POWEROFF_MV` | int | `11800` | While asleep, a timed wake below this sends nothing and the next check is `APP_BATTERY_CHECK_INTERVAL` later |
 | `APP_SLEEP_SAFETY_MV` | int | `12000` | While asleep, a timed wake below this skips its send |
 | `APP_ENGINE_RUNNING_MV` | int | `13000` | Without an engine speed from the ECU, a battery voltage above this means the engine is running. The reverse needs the voltage low and the vehicle stationary for 300 seconds (`ENGINE_STOPPED_HOLD_S`), because cars with charging control let the rail fall below 13V while driving |
+| `APP_BACKUP_SUPPLY` | bool | `n` | The inline battery backup module is fitted. A supply between `APP_BACKUP_MIN_MV` and `APP_BACKUP_MAX_MV` with the ignition off is then backup power rather than a flat car battery: timed reports keep going, the power-off and sleep-safety gates are bypassed, a `backup power` alert (priority 1) goes out once the ignition has been off for 60 seconds, and `car power restored` when the rail comes back. The module's ~0.4 s ignition pulse at takeover wakes a sleeping unit, which reports the cut at once instead of treating it as a key-on |
+| `APP_BACKUP_MIN_MV` | int | `8500` | Lower edge of the backup band; below it the reading is a flat supply again (the pack's own undervoltage lockout has tripped) |
+| `APP_BACKUP_MAX_MV` | int | `9700` | Upper edge of the backup band. The module delivers 9.6V less a diode drop, 8.8-9.3V with load; keep this below anything a resting car battery can show |
 
 ### Movement, impact and tow detection
 

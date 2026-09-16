@@ -28,6 +28,9 @@ bool  last_record_stale;
 bool  last_send_ok;
 
 static int  s_battery_warning_status;
+/* Set once the "backup power" alert has gone out; cleared, with a "car power
+ * restored" alert, by the first record built above the backup band again. */
+static bool s_on_backup;
 /* Uptime at which the ignition was last seen going off, for the warning's
  * settle time.  -1 until a record has been built with it off. */
 static int64_t s_ign_off_ms = -1;
@@ -404,7 +407,33 @@ int collect_data(int ignitionState)
     }
     s_ign_last = (ignitionState == 0) ? 0 : 1;
 
-    if (ignitionState != 0 && v >= IMPLAUSIBLE_VOLTAGE) {
+    /* Backup module carrying the rail (CONFIG_APP_BACKUP_SUPPLY): the same
+     * settle guard as the low-battery alert keeps a crank sag out of it, and
+     * a reading back above the band means the car supply has returned.  A
+     * cut supply on a parked car is a tamper signal, so it goes out at the
+     * movement alarm's priority rather than the low battery's. */
+    if (ignitionState != 0 && battery_on_backup(v)) {
+        /* The settle wait exists for a crank sag, and the module's wake
+         * pulse cannot be one: sleep is only entered with the ignition off. */
+        bool settled = backup_woke ||
+                       (s_ign_off_ms >= 0 &&
+                        k_uptime_get() - s_ign_off_ms >=
+                            (int64_t)BATTERY_WARN_SETTLE_S * 1000);
+        backup_woke = false;
+        if (!s_on_backup && settled && ignition_read() != 0) {
+            char msg[28];
+            snprintf(msg, sizeof(msg), "backup power: %.2fV", (double)v);
+            alert_enqueue(msg, 1);
+            s_on_backup = true;
+        }
+    } else if (s_on_backup && v > BACKUP_SUPPLY_MAX) {
+        char msg[32];
+        snprintf(msg, sizeof(msg), "car power restored: %.2fV", (double)v);
+        alert_enqueue(msg, 0);
+        s_on_backup = false;
+    }
+
+    if (ignitionState != 0 && v >= IMPLAUSIBLE_VOLTAGE && !battery_on_backup(v)) {
         if (v < BATTERY_WARNING_LEVEL) {
             /* Not within the settle time of the ignition going off, and not
              * if the line already reads on again: both are what a crank
