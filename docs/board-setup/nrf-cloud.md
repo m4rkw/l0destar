@@ -1,46 +1,44 @@
 # nRF Cloud onboarding
 
-This step is optional. It lets the tracker download assistance data (A-GNSS) from Nordic's nRF Cloud when it starts, which cuts the first GNSS fix from 2 to 5 minutes to about 20 seconds on the author's bench. Without it the tracker works the same, it just takes longer to find itself after a cold start.
+nRF Cloud is free for up to 10 devices and allows the use of A-GNSS (Assisted
+GPS) which lets the tracker get GPS fixes much faster than it otherwise would.
 
-The firmware authenticates to nRF Cloud with a key and certificate stored in the modem, and nRF Cloud only accepts them once the device has been onboarded to your account. Until then the download fails - the console shows `agnss_data_get` reporting `HTTP 401`, then `A-GNSS fetch failed — first fix will take longer` - and GNSS carries on unassisted. Onboarding is done once per device. The credentials live in the modem's own storage, so they survive every reflash. Check nRF Cloud's current terms for its location services before you rely on them.
+## Initial setup
 
-The procedure uses a provisioning build of the tracker firmware, which turns the console into a bridge to the modem for Nordic's tools.
+1. Register for nRFCloud and get your API key from this page: https://app.nrfcloud.com/#/account
 
-## Before you start
+Note: you may be redirected to memfault.com, this is Nordic's new interface. For
+reasons I don't yet understand the new interface gives a different API key that
+doesn't work with this onboarding process (open ticket:
+https://devzone.nordicsemi.com/support/362337). If you get redirected go back
+to https://app.nrfcloud.com, click the lines in the top right of the page, then
+User Account. On this page your API key will be available.
 
-You need:
-
-- **A board set up as in [minimal config and initial flashing](/board-setup/initial-flashing.html).** The provisioning build uses the same `local.conf`, because the provisioning firmware still sets up the carrier board's pins.
-- **An nRF Cloud account and its API key.** Sign in at [nrfcloud.com](https://nrfcloud.com) and find the key on the User Account page. If the site sends you to Memfault, that is the wrong interface: follow the link back to nRF Cloud to find the key.
-- **nrfcloud-utils**, Nordic's provisioning and onboarding tools.
-
-Install nrfcloud-utils with uv:
-
-```sh
-uv tool install --python 3.12 nrfcloud-utils
 ```
-
-Keep the API key in your shell for the commands below:
-
-```sh
 export NRF_CLOUD_API_KEY=<your API key>
 ```
 
-## 1. Create a CA for your devices
+2. Install the nrfcloud-utils
 
-Once, for all your devices:
+```
+uv tool install --python 3.12 nrfcloud-utils
+```
 
-```sh
-# in firmware/
+3. Create a CA for your devices
+
+This should only be done once, the CA is used for all of your devices. Replace
+'GB' with your country code. This CA is only used to vouch for your devices to
+nRFCloud, it is completely separate from any CAs that might be configured on
+your instance of the server component.
+
+```
+git clone https://github.com/m4rkw/l0destar
+cd firmware
 mkdir -p onboarding
 create_ca_cert -c GB -o l0destar -p onboarding -f l0destar
 ```
 
-Replace `GB` with your two-letter country code. This writes three files named like `onboarding/l0destar0x<serial>_ca.pem`, `_prv.pem` and `_pub.pem`. `onboarding/` is gitignored. The `_prv.pem` file is this CA's private key - anyone holding it can mint device certificates under your CA - so keep it private and back it up with your other keys.
-
-This CA only vouches for your devices to nRF Cloud. It is separate from the CA your l0destar server's certificate is issued from.
-
-## 2. Build and flash the provisioning firmware
+4. Build and flash the provisioning firmware
 
 ```sh
 # in firmware/
@@ -49,22 +47,12 @@ pyocd load -t nrf91 --no-reset build_prov/merged.hex
 pyocd reset -t nrf91 -m hw -O auto_unlock=false
 ```
 
-`PROV=1` layers `prov.conf` over your configuration: logging is switched off so nothing interleaves with the exchange, the modem is brought up, and the firmware then does nothing except pass commands between the console and the modem. It builds into its own directory, so your normal build is left alone. Use `BUILD_SUBDIR` rather than a relative `BUILD_DIR`, which would resolve inside the SDK directory. The two `pyocd` commands are what `flash.sh` does, pointed at this build - see [why the scripts reset the way they do](/board-setup/initial-flashing.html#why-the-scripts-reset-the-way-they-do).
-
-On the console the board prints:
-
-```text
-*** PROVISIONING MODE — AT host ready; run nrfcloud-utils ***
-```
-
-## 3. Install the device credentials
-
-Close anything that has the serial port open - `screen`, a logger, another terminal. A second program reading the port corrupts the exchange. Then run the installer on the console port - the first `/dev/cu.usbmodem*` port on macOS, or `/dev/serial/by-id/usb-Makerdiary_IFMCU_CMSIS-DAP_<serial>-if00` on Linux:
+5. Install the device credentials
 
 ```sh
 # in firmware/
 device_credentials_installer \
-  --port /dev/cu.usbmodemXXXX --cmd-type at \
+  --port /dev/cu.usbmodem*1 --cmd-type at \
   --ca onboarding/*_ca.pem \
   --ca-key onboarding/*_prv.pem \
   --id-imei --id-str nrf- \
@@ -78,7 +66,7 @@ The modem generates a private key that never leaves it, the tool signs a certifi
 - `-d` deletes anything already stored at that tag first, so running it again is safe.
 - `onboard.csv` is overwritten on each run, so it only ever describes the device you just provisioned.
 
-## 4. Onboard the device to your account
+6. Onboard the device to your account
 
 ```sh
 # in firmware/
@@ -93,7 +81,7 @@ curl -s "https://api.nrfcloud.com/v1/devices" -H "Authorization: Bearer $NRF_CLO
 
 For each further device, repeat steps 2 to 4 with the same CA.
 
-## 5. Back to the tracker firmware
+7. Back to the tracker firmware
 
 The provisioning firmware does not track anything. Flash the tracker firmware back: the provisioning build went into its own directory, so `build/` still holds it.
 
