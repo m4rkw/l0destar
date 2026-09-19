@@ -76,6 +76,13 @@
  * each attempt still pauses it for up to the 20 s REST timeout. */
 #define AGNSS_RETRIES               2
 #define AGNSS_RETRY_INTERVAL_MS     15000
+/* A receiver whose last fix is younger than this still holds usable
+ * ephemerides (broadcast sets are good for hours), so a "cold" collect —
+ * the restart after a warm timeout, the start after a short stop — searches
+ * first and only asks nRF Cloud from the wait, after AGNSS_RETRY_INTERVAL_MS
+ * without a fix.  Up-front fetches are for a receiver that has genuinely
+ * lost its data. */
+#define AGNSS_FIX_FRESH_MS          (30 * 60 * 1000)
 /* GNSS priority takes the radio from LTE's idle-mode work (paging, cell
  * measurements), and the modem ends it after the first fix or 40 s.  It is
  * only requested once the receiver has flagged NOT_ENOUGH_WINDOW_TIME for

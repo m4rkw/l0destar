@@ -1574,7 +1574,18 @@ int main(void)
         switch (s_state) {
         case STATE_IDLE:
 
-            if (!network_ready) {
+            if (network_ready) {
+                /* Registered — whether the poll below saw it or the LTE
+                 * handler flipped the flag back on its own, which is what
+                 * happens after every routine blip and skips the reset in
+                 * the poll.  The retry timer has to measure the *current*
+                 * outage: carried over from an earlier one it declared
+                 * "no registration for 300s" five seconds into a cell
+                 * change on 2026-09-19 (10:43 and 11:20), and the bring-up
+                 * that followed turned each blip into a minute without
+                 * the network. */
+                s_unregistered_ms = 0;
+            } else {
                 int reg = modem_get_network_status();
                 if (reg == 1 || reg == 5) {
                     network_ready = true;
@@ -1582,14 +1593,17 @@ int main(void)
                     LOG_INF("network ready");
                     fota_report_flush();
                 } else {
-                    /* Reapply the link settings and CFUN=1 every retry
-                     * interval.  Cheap, idempotent, and the only thing that
-                     * brings the radio back after a modem fault: the reset
-                     * thread reinitialises the library but leaves the modem
-                     * offline with none of the app's settings.  Not a
-                     * blocking connect — the poll below is already the
-                     * wait, and it keeps servicing the ignition line and the
-                     * K-wire keep-alive while the network is away. */
+                    /* Bring the radio up again every retry interval.  The
+                     * only thing that brings it back after a modem fault:
+                     * the reset thread reinitialises the library but leaves
+                     * the modem offline with none of the app's settings.  A
+                     * modem that is already up and searching is left alone
+                     * (modem_radio_up checks), since reapplying +COPS=0 to
+                     * it restarts the PLMN search it is in the middle of.
+                     * Not a blocking connect — the poll below is already
+                     * the wait, and it keeps servicing the ignition line
+                     * and the K-wire keep-alive while the network is
+                     * away. */
                     int64_t now = k_uptime_get();
 
                     if (s_unregistered_ms == 0) {

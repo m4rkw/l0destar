@@ -245,11 +245,29 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
      * succeeds — clearing it first meant one timeout cost the assistance for
      * the whole cold start.  A failure is retried from the wait below while
      * the receiver keeps searching: a single attempt still left the search
-     * unassisted, because nothing asked again until the next cold collect. */
+     * unassisted, because nothing asked again until the next cold collect.
+     *
+     * Not up front for a receiver that is only cold on paper.  A restart
+     * after a warm timeout, or a start after a short stop, still holds the
+     * ephemerides of a fix minutes old and fixes again on its own as soon
+     * as it gets the radio.  The fetch is a TLS exchange that pauses the
+     * receiver for its whole duration, and on the marginal link that
+     * caused the timeout in the first place it ran 21 s into a connect
+     * timeout on 2026-09-19 at 11:01 before the search had even begun.
+     * Such a start searches first and asks from the wait if no fix comes
+     * within the retry interval. */
     int agnss_left = 0;
     int64_t agnss_next_ms = 0;
+    int64_t fix_age_ms = g_gnss.valid ? k_uptime_get() - g_gnss.fix_uptime_ms
+                                      : INT64_MAX;
 
-    if (cold && s_agnss_needed) {
+    if (cold && s_agnss_needed && fix_age_ms < AGNSS_FIX_FRESH_MS &&
+        timeout_ms > AGNSS_RETRY_INTERVAL_MS) {
+        agnss_left = AGNSS_RETRIES;
+        agnss_next_ms = k_uptime_get() + AGNSS_RETRY_INTERVAL_MS;
+        LOG_INF("A-GNSS wanted, last fix %llds ago — searching first",
+                fix_age_ms / 1000);
+    } else if (cold && s_agnss_needed) {
         if (agnss_fetch(&s_agnss_req) == 0) {
             s_agnss_needed = false;
         } else if (timeout_ms > AGNSS_RETRY_INTERVAL_MS) {
@@ -270,50 +288,61 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
      * two minutes on 2026-09-13, during which the modem dropped off the
      * network.  So, as Nordic documents, it is only requested once the
      * receiver reports it is being starved, and the modem's own 40 s limit
-     * ends each window. */
+     * ends each window.
+     *
+     * Cold searches only.  A warm wait that gets no fix while driving is
+     * usually a cell change, and priority takes the radio from the very
+     * idle-mode measurements the modem needs to finish one — Nordic's note
+     * on the call is to time priority away from anticipated data transfer,
+     * and a drive sends every few seconds.  Whether the 11:00 dropout on
+     * 2026-09-19 was the receiver starved of windows or blocked outright by
+     * an RRC connection is not in the log, because a warm wait recorded
+     * neither: so a starved warm wait is logged instead, and the timeout
+     * line says what the receiver saw. */
     int64_t prio_at_ms = 0;
     bool prio_logged = false;
+    bool starve_logged = false;
 
-    int remaining = timeout_ms;
+    /* A deadline, not a countdown of the semaphore waits: the tick runs
+     * the OBD poll for half a second between them, which stretched the
+     * 60 s warm wait to 88 s on 2026-09-19 at 11:01. */
+    const int64_t deadline = k_uptime_get() + timeout_ms;
+    int64_t last_log_ms = k_uptime_get();
     int err = -EAGAIN;
-    int since_log = 0;
     const int tick = s_tick_cb ? 1000 : 10000;
 
-    while (remaining > 0) {
-        int chunk = (remaining > tick) ? tick : remaining;
-        err = k_sem_take(&s_fix_sem, K_MSEC(chunk));
+    for (;;) {
+        int64_t left = deadline - k_uptime_get();
+
+        if (left <= 0) {
+            err = -EAGAIN;
+            break;
+        }
+        err = k_sem_take(&s_fix_sem, K_MSEC((int)MIN(left, tick)));
         if (err == 0) {
             break;
         }
-        remaining -= chunk;
-        since_log += chunk;
         watchdog_kick();
 
         if (s_tick_cb) {
             s_tick_cb();
         }
 
-        if (!cold) {
-            continue;
-        }
-
-        if (s_agnss_needed && agnss_left > 0 &&
-            k_uptime_get() >= agnss_next_ms && modem_is_registered()) {
-            agnss_left--;
-            if (agnss_fetch(&s_agnss_req) == 0) {
-                s_agnss_needed = false;
-                LOG_WRN("A-GNSS fetched on retry %d",
-                        AGNSS_RETRIES - agnss_left);
-            } else if (agnss_left > 0) {
-                agnss_next_ms = k_uptime_get() + AGNSS_RETRY_INTERVAL_MS;
-                LOG_WRN("A-GNSS retry failed — %d left", agnss_left);
-            } else {
-                LOG_WRN("A-GNSS retries failed — searching unassisted");
-            }
-        }
-
         int64_t now = k_uptime_get();
         int starved = (int)atomic_get(&s_starved_epochs);
+
+        if (!cold) {
+            /* Diagnostics only, once per wait: a starved warm search is a
+             * few seconds without a fix while driving, so this is a
+             * handful of lines per long drive. */
+            if (starved >= GNSS_PRIO_STARVED_EPOCHS && !starve_logged) {
+                starve_logged = true;
+                LOG_WRN("warm search starved for %d epochs (%d SVs%s)",
+                        starved, s_tracked_sv,
+                        s_blocked ? ", blocked" : "");
+            }
+            continue;
+        }
 
         if (starved >= GNSS_PRIO_STARVED_EPOCHS &&
             (prio_at_ms == 0 || now - prio_at_ms >= GNSS_PRIO_WINDOW_MS)) {
@@ -331,10 +360,26 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
             }
         }
 
-        if (since_log >= 30000) {
-            since_log = 0;
-            LOG_INF("cold start: %ds remaining, %d SVs%s",
-                    remaining / 1000, s_tracked_sv,
+        if (s_agnss_needed && agnss_left > 0 &&
+            now >= agnss_next_ms && modem_is_registered()) {
+            agnss_left--;
+            if (agnss_fetch(&s_agnss_req) == 0) {
+                s_agnss_needed = false;
+                LOG_WRN("A-GNSS fetched on retry %d",
+                        AGNSS_RETRIES - agnss_left);
+            } else if (agnss_left > 0) {
+                agnss_next_ms = k_uptime_get() + AGNSS_RETRY_INTERVAL_MS;
+                LOG_WRN("A-GNSS retry failed — %d left", agnss_left);
+            } else {
+                LOG_WRN("A-GNSS retries failed — searching unassisted");
+            }
+        }
+
+        now = k_uptime_get();
+        if (now - last_log_ms >= 30000) {
+            last_log_ms = now;
+            LOG_INF("cold start: %llds remaining, %d SVs%s",
+                    (deadline - now) / 1000, s_tracked_sv,
                     s_blocked ? " (blocked)" : "");
         }
     }
@@ -342,8 +387,10 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     nrf_modem_gnss_prio_mode_disable();
 
     if (err) {
-        LOG_WRN("%s fix timeout — restarting GNSS",
-                cold ? "cold" : "warm");
+        LOG_WRN("%s fix timeout — restarting GNSS (%d SVs%s, %d starved)",
+                cold ? "cold" : "warm", s_tracked_sv,
+                s_blocked ? ", blocked by LTE" : "",
+                (int)atomic_get(&s_starved_epochs));
         nrf_modem_gnss_stop();
         k_msleep(500);
         s_have_fix = false;
