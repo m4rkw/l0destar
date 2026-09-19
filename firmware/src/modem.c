@@ -297,6 +297,28 @@ int modem_rescan_plmn(int timeout_s)
  * radio needs it can just call it. */
 int modem_radio_up(void)
 {
+    /* Only a modem that is actually down needs this.  One already in
+     * normal mode is registered or searching, and every setting below is
+     * in place — we are the only ones who ever set CFUN=1, and always
+     * after applying them.  Reapplying is not free: +CGDCONT is refused
+     * while attached, and +COPS=0 makes the modem start PLMN selection
+     * over even in automatic mode (Nordic's own advice for leaving an
+     * unwanted network), so a bring-up issued a few seconds into a
+     * routine cell change (status 4 while it reselects) is the likeliest
+     * reason one on 2026-09-19 at 10:43 became a 63 s outage, and a 30 s
+     * hole followed the one at 11:20; blips left alone that day cost
+     * under 15 s.  The one case this is for — the fault handler's reinit,
+     * a power-off — leaves the modem at CFUN=0, and that still gets the
+     * full treatment.  A modem that is up but not registering is left to
+     * its own periodic search. */
+    enum lte_lc_func_mode mode;
+
+    if (lte_lc_func_mode_get(&mode) == 0 &&
+        mode == LTE_LC_FUNC_MODE_NORMAL) {
+        LOG_INF("radio already up — leaving the search to the modem");
+        return 0;
+    }
+
     modem_set_apn(g_settings.apn);
 
     apply_link_settings();
@@ -562,8 +584,11 @@ int modem_recover(void)
             return err;
         }
         lte_lc_register_handler(lte_handler);
-        modem_set_apn(g_settings.apn);
-        err = lte_lc_normal();
+        /* The whole bring-up, not a bare CFUN=1: a reinitialised modem
+         * has none of the link settings, and registering without
+         * %REL14FEAT and %RAI would quietly cost the GNSS duty cycle —
+         * the same gap modem_rescan_plmn() closes after its CFUN=4. */
+        err = modem_radio_up();
         if (err) {
             LOG_ERR("reconnect: %d", err);
             return err;
@@ -580,10 +605,9 @@ int modem_recover(void)
         network_ready = false;
         lte_lc_offline();
         k_msleep(2000);
-        modem_set_apn(g_settings.apn);
         watchdog_kick();
 
-        int err = lte_lc_normal();
+        int err = modem_radio_up();
 
         if (err) {
             LOG_ERR("reconnect: %d", err);

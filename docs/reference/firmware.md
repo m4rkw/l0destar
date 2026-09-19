@@ -336,7 +336,7 @@ Set `APP_TRACCAR` to report to a [Traccar](https://www.traccar.org) server with 
 | `APP_VOLTAGE_POLL_INTERVAL` | int | `5` | How often, in seconds, the battery is sampled with the ignition on and the engine off, to notice the engine starting |
 | `APP_BATTERY_CHECK_INTERVAL` | int | `86400` | While asleep with the battery below `APP_BATTERY_POWEROFF_MV`, seconds until the next check |
 | `APP_NETWORK_REGISTRATION_TIMEOUT` | int | `60` | Seconds a connect waits for registration before leaving the radio searching |
-| `APP_NETWORK_RETRY_INTERVAL` | int | `300` | While awake and unregistered, how often the link settings are reapplied and the radio brought up again |
+| `APP_NETWORK_RETRY_INTERVAL` | int | `300` | While awake and unregistered for this long, bring the radio up again if it is down (CFUN=0 after a modem fault). A modem that is up and searching is left to it: reapplying `+COPS=0` would restart its search |
 | `APP_GPS_FIX_TIMEOUT_MS` | int | `60000` | Longest wait for a fix when building a record |
 | `APP_GPS_COLD_FIX_TIMEOUT_MS` | int | `300000` | Longest wait for the first fix after a cold boot, when the receiver has no almanac or ephemeris |
 | `APP_RESP_POLL_S` | int, 0-600 | `30` | While driving, read a server reply at least this often, so changed settings reach a moving vehicle. `0` reads replies only when stopped or at an ignition change |

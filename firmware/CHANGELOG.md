@@ -15,6 +15,66 @@ mid-drive reopen.  A rule that does not parse disables the list with the
 reason logged.  On a Traccar build a coolant or intake alert is a
 `temperature` alarm.  See KWIRE.md, "Threshold alerts".
 
+### A cell change on the motorway no longer costs a minute of tracking
+Two dropouts on 2026-09-19's long drive, at 10:43 and 11:00, each held the
+track for a minute or two on a motorway with a clear sky.  Both were the
+firmware making a routine LTE cell change worse; the captured log shows how.
+- **The registration retry timer measures the current outage.**  When the
+modem loses registration the idle poll starts a timer and, after
+`APP_NETWORK_RETRY_INTERVAL` (300 s), brings the radio up again.  The timer
+was cleared only by the poll seeing registration return, but the LTE event
+handler flips `network_ready` back on its own after every blip, and the poll
+is then skipped — so the timer kept the start of some earlier outage.  Every
+later blip fired the bring-up at once: at 10:43:10 the modem reported status
+4 while reselecting on the motorway, and 5 s later the log reads `no
+registration for 300s — bringing the radio up again`; the same again at 11:20
+(3 s) and on 2026-09-18 at 20:12 (21 s).  It now resets whenever the unit is
+registered.
+- **`modem_radio_up()` leaves a modem that is already up alone.**  The
+bring-up reapplies the link settings and CFUN=1, which is what a modem
+reinitialised after a fault needs (it comes back at CFUN=0).  Issued to a
+modem that is already in normal mode it is not idempotent: `+CGDCONT` is
+refused while attached (`CGDCONT: 65536` in the log), and `+COPS=0` makes the
+modem start PLMN selection over even in automatic mode (Nordic's own advice
+for leaving an unwanted network) — the likeliest reason the 10:43 blip became
+63 s without a network, and a 30 s hole followed the 11:20 one (the EMM cause
+9 rejects around that one were the network's, and happened before the
+bring-up too).  The comparable blips left alone (09:19, 10:14) cost under
+15 s.  It now reads `+CFUN?` first and does nothing when the modem is in
+normal mode; a modem that is up but not registering is left to its own
+periodic search.
+- **A starved warm search says so.**  At 10:59:41 the receiver had a fix;
+then none for the whole warm wait while the modem worked through a cell
+change.  Whether LTE's idle-mode work was starving the receiver of windows or
+an RRC connection was blocking it outright is not in the log, because a warm
+wait recorded neither.  Priority mode is not the answer there: it takes the
+radio from the very measurements the modem needs to finish a cell change, and
+Nordic's note on the call is to time it away from anticipated data transfer,
+which a drive never is.  So a warm wait now logs its starved epochs, and the
+timeout line carries what the receiver saw (satellites, blocked or not), so
+the next one can be read.
+- **The fix wait is a deadline.**  It counted down its one-second semaphore
+waits and ignored the OBD poll that runs between them, so the 60 s warm wait
+above took 88 s.  It now runs to a `k_uptime_get()`-based deadline.
+- **A receiver that fixed within the last half hour searches before it asks
+nRF Cloud.**  The restart after a warm timeout makes the next collect a cold
+one, and a cold collect with an assistance request outstanding fetched it up
+front, pausing the receiver for the whole exchange.  At 11:01:11 that fetch
+ran 21 s into a TLS connect timeout on the very link that had just failed,
+before the search even began; the retry from the wait succeeded in 5 s.  With
+a fix younger than `AGNSS_FIX_FRESH_MS` (30 min) the ephemerides are still
+good, so such a collect searches first and only fetches from the wait after
+`AGNSS_RETRY_INTERVAL_MS` (15 s) without a fix.  A receiver that has really
+lost its data — boot, a long stop — still fetches first.
+
+### Recovery brings the radio up the same way everywhere
+- **`modem_recover()`'s CFUN cycle and library restart go through
+`modem_radio_up()`.**  Both set the APN and CFUN=1 and nothing else, so a
+modem that came back through either registered without `%REL14FEAT` and
+`%RAI`, quietly costing the GNSS duty cycle — the gap `modem_rescan_plmn()`
+already closes after its own CFUN=4.  Neither path ran on 2026-09-19.
+>>>>>>> 2a5aef8425d56d81ad1d8b3b9586054e425f027b
+
 ## 0.4.48
 
 ### Telemetry can go to a Traccar server
