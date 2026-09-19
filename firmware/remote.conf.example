@@ -52,3 +52,7 @@ profile = makerdiary
 CONFIG_APP_BOARD_L0DESTAR_V3_0=y
 CONFIG_APP_BOARD_HAS_CAN=n
 CONFIG_APP_BOARD_HAS_KLINE=y
+# Threshold alerts on the OBD telemetry, "<field><op><value>[/<hysteresis>]"
+# comma-separated — see KWIRE.md, "Threshold alerts".  Needs
+# CONFIG_APP_KLINE_TELEMETRY=y.
+#CONFIG_APP_OBD_ALERTS="coolant>=90,rpm>6500"

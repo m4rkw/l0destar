@@ -1516,6 +1516,7 @@ int main(void)
      * costs no bus time, and engine RPM is sampled across the cycle rather
      * than once per record. */
     gnss_set_tick(obd_sample_tick);
+    obd_alert_init();
 #endif
 
     crash_irq_enable();

@@ -322,6 +322,44 @@ Because both feed decisions rather than the record, they are refreshed by
 engine-off state records are 30 s apart, which is far too stale to notice the
 engine starting.  That costs three exchanges, about 250 ms, every 3 s.
 
+### Threshold alerts
+
+`CONFIG_APP_OBD_ALERTS` holds a list of rules judged against the live
+snapshot after every poll, so a fast PID is checked about once a second and
+a slow one the moment its rotation slot reads it:
+
+```
+CONFIG_APP_OBD_ALERTS="coolant>=90,rpm>6500,stft<-12.5/2"
+```
+
+Each rule is `<field><op><value>[/<hysteresis>]`, comma-separated, in the
+field's engineering unit.  Fields: `rpm`, `speed` (km/h), `coolant`,
+`intake` (°C), `load`, `throttle` (%), `maf` (g/s), `timing` (°), `stft`,
+`ltft` (%), `fuel`, `mil`, `dtc`; the record keys from the table above
+(`ocl`, `orpm` ...) are accepted as aliases.  Operators: `>` `>=` `<` `<=`
+`=`.  Decimals are rounded to the field's scale.
+
+Crossing the threshold queues one alert at `CONFIG_APP_OBD_ALERT_PRIORITY`
+(default 1, the same as the movement alarm) carrying the reading and the
+rule — `coolant 92C (>= 90C)` — and it goes out with the next send like any
+other alert.  Nothing more is said until the value has come back across the
+threshold by the hysteresis, when `coolant 84C (>= 90C cleared)` is queued
+at priority 0 and the rule is armed again.  The hysteresis defaults to a
+twentieth of the threshold (4 °C on 90, 325 rpm on 6500), which is what
+stops a gauge hovering at the line from firing every other poll into a
+five-deep queue; `/<hysteresis>` sets it explicitly.
+
+Rules are re-armed at key-off, not on a mid-drive session reopen: an engine
+that is still hot at the next start alerts again, and a reopen does not
+repeat an alert already sent.  A field the ECU does not advertise is never
+judged.  A rule that does not parse disables the whole list, with the reason
+in the boot log, rather than leave one alert quietly missing from a set the
+operator believes is in place; the parsed rules are logged at boot either
+way (`obd_alert: rule 0: coolant >= 90C, hysteresis 4C`).
+
+On a Traccar build a `coolant` or `intake` alert becomes a `temperature`
+alarm; the rest are `general`.
+
 ### Part 4 — fault codes
 
 `CONFIG_APP_KLINE_DTC_REPORT=y` reads the stored codes (OBD-II mode 03) at

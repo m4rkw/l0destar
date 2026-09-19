@@ -215,6 +215,9 @@ void obd_close(void)
 		s_dtc_retry_after = 0;
 		s_state_rpm = s_state_speed = OBD_NA;
 		s_state_ms = 0;
+		/* Not on a mid-drive reopen: the engine is as hot as it was,
+		 * and re-arming would just repeat the alert. */
+		obd_alert_reset();
 	}
 	/* s_reopened_this_poll deliberately survives: obd_close() is part of
 	 * the reopen path and the flag is what records that it happened. */
@@ -572,6 +575,11 @@ int obd_poll_fast(struct obd_snapshot *s)
 	if (!s_abort && !s_reopened_this_poll) {
 		s_reopen_count = 0;
 	}
+
+	/* Judged here, on the live snapshot, rather than on the record: a
+	 * slow PID is then checked the moment its rotation slot reads it,
+	 * not whenever the next record happens to be built. */
+	obd_alert_eval(&s_live);
 
 	return s ? obd_snapshot_copy(s) : 0;
 }

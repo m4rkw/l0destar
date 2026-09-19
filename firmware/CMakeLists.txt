@@ -52,5 +52,7 @@ target_sources_ifdef(CONFIG_APP_DEBUG_LOG app PRIVATE src/dbglog.c)
 
 # OBD-II telemetry / fault codes over the K wire.
 target_sources_ifdef(CONFIG_APP_KLINE_OBD app PRIVATE src/kline_obd.c)
+# Threshold alerts on that telemetry (CONFIG_APP_OBD_ALERTS).
+target_sources_ifdef(CONFIG_APP_KLINE_TELEMETRY app PRIVATE src/obd_alert.c)
 
 target_include_directories(app PRIVATE src)

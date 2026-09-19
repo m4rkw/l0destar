@@ -97,7 +97,7 @@ The other lines the device sends:
 
 | Line | Traccar |
 |---|---|
-| `A,<priority>,<message>` | A position with no coordinates of its own — Traccar attaches the device's last — carrying `alert=<message>`, `priority=<n>` and, where the message is one Traccar has an alarm type for, `alarm=<type>`: movement → `movement`, impact while driving → `accident`, parked impact → `vibration`, tilt → `tow`, tamper → `tampering`, low battery → `lowPower`, backup power → `powerCut`, car power restored → `powerRestored`, self-test and rail faults → `fault`. Any other alert at priority 1 or above is a `general` alarm; the informational ones (the replies to `locate` and `config`, update progress) carry only `alert` |
+| `A,<priority>,<message>` | A position with no coordinates of its own — Traccar attaches the device's last — carrying `alert=<message>`, `priority=<n>` and, where the message is one Traccar has an alarm type for, `alarm=<type>`: movement → `movement`, impact while driving → `accident`, parked impact → `vibration`, tilt → `tow`, tamper → `tampering`, low battery → `lowPower`, backup power → `powerCut`, car power restored → `powerRestored`, self-test and rail faults → `fault`, a coolant or intake threshold alert (`CONFIG_APP_OBD_ALERTS`) → `temperature`. Any other alert at priority 1 or above is a `general` alarm; the informational ones (the replies to `locate` and `config`, update progress) carry only `alert` |
 | `D,<codes>` | `dtcs=<codes>`, the complete set of stored fault codes, empty when there are none |
 | `L,...` | Dropped. Captured warnings and errors are for the l0destar server's device log |
 | `F,...` | Dropped. The failed-update verdict is also queued as an alert, which does get through |

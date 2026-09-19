@@ -389,6 +389,20 @@ void obd_keepalive(void);
 int  obd_rpm(void);
 int  obd_speed_kmh(void);
 
+/* -- threshold alerts on the snapshot (src/obd_alert.c) --------------------
+ * CONFIG_APP_OBD_ALERTS rules ("coolant>=90,rpm>6500"), judged on the live
+ * snapshot after every poll.  No-ops on a build without APP_KLINE_TELEMETRY
+ * or with no rules. */
+#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
+void obd_alert_init(void);                          /* parse the rules; logs each */
+void obd_alert_eval(const struct obd_snapshot *s);  /* queue alerts and clears */
+void obd_alert_reset(void);                         /* re-arm: session closed */
+#else
+static inline void obd_alert_init(void) { }
+static inline void obd_alert_eval(const struct obd_snapshot *s) { }
+static inline void obd_alert_reset(void) { }
+#endif
+
 /* The stored-code count rides in mode 01 PID 01, which every poll already
  * reads, so a code appearing or clearing mid-drive is visible for free.  That
  * is what triggers a mode 03 read; there is no periodic re-read. */

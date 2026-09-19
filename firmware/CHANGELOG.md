@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Threshold alerts on OBD telemetry
+- **`CONFIG_APP_OBD_ALERTS` queues an alert when a PID crosses a line.**
+A comma-separated rule list, `"coolant>=90,rpm>6500,stft<-12.5/2"`, judged
+on the live snapshot after every poll (`src/obd_alert.c`), so a slow PID is
+checked as soon as its rotation slot reads it rather than when the next
+record is built.  One alert per crossing, at `APP_OBD_ALERT_PRIORITY`
+(default 1), worded `coolant 92C (>= 90C)`; a clear at priority 0 once the
+value is back across the threshold by the hysteresis, a twentieth of the
+threshold unless the rule gives one.  Rules re-arm at key-off, not on a
+mid-drive reopen.  A rule that does not parse disables the list with the
+reason logged.  On a Traccar build a coolant or intake alert is a
+`temperature` alarm.  See KWIRE.md, "Threshold alerts".
+
 ## 0.4.48
 
 ### Telemetry can go to a Traccar server

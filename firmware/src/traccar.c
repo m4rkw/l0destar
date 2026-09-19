@@ -395,6 +395,9 @@ static const char *alarm_for(const char *msg, int priority)
         { "car power restored", "powerRestored" },
         { "SELFTEST",           "fault"         },
         { "RAIL",               "fault"         },
+        /* OBD threshold alerts lead with the field name (obd_alert.c). */
+        { "coolant",            "temperature"   },
+        { "intake",             "temperature"   },
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(map); i++) {
