@@ -6,7 +6,7 @@ holdoff = sys.argv[3] if len(sys.argv) > 3 else "8e-9"
 offset = sys.argv[4] if len(sys.argv) > 4 else "100e-6"
 sc = Scope()
 def c(x): sc.cmd(x); time.sleep(0.05)
-c(":TRIGger:MODE EDGE"); c(":TRIGger:EDGE:SOURce CHANnel1"); c(":TRIGger:EDGE:SLOPe POSitive"); c(":TRIGger:EDGE:LEVel 2.9")
+c(":TRIGger:MODE EDGE"); c(":TRIGger:EDGE:SOURce CHANnel1"); c(":TRIGger:EDGE:SLOPe POSitive"); c(":TRIGger:EDGE:LEVel 2.6")
 c(f":TRIGger:HOLDoff {holdoff}"); c(":TRIGger:SWEep NORMal"); c(":DISPlay:GRADing:TIME MIN")
 c(":TIMebase:MAIN:SCALe 50e-6"); c(f":TIMebase:MAIN:OFFSet {offset}")
 c(":RUN"); time.sleep(1.5); c(":STOP"); time.sleep(0.3); sc.shot(f"scope_{tag}_frame.png")
@@ -29,7 +29,7 @@ def raw(src):
     return v, xinc
 h, xinc = raw("CHANnel1"); l, _ = raw("CHANnel2")
 n = min(len(h), len(l))
-act = [i for i in range(0, n, 50) if h[i] > 2.7]
+act = [i for i in range(0, n, 50) if h[i] > 2.55]
 if act:
     a0, a1 = max(0, act[0] - 1000), min(n, act[-1] + 1000); h, l = h[a0:a1], l[a0:a1]; n = a1 - a0
     print(f"  active region {a0}..{a1} ({(a1-a0)*xinc*1e6:.0f} us) of {len(act)*50} samples record")

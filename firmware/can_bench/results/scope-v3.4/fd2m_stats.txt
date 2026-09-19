@@ -1,0 +1,12 @@
+  active region 348300..1000000 (1043 us) of 144950 samples record
+651700 samples @ 1.60 ns = 1043 us
+runs: 633 total, single-bit runs at 500 ns: 290 dominant, 300 recessive
+  dominant diff at 75 % of single bit    min   1.96  mean   1.98  max   2.00 V
+  dominant diff at 50 %                  min   1.96  mean   1.99  max   2.00 V
+  recessive diff at 75 % of single bit   min  -0.02  mean   0.00  max   0.02 V
+  recessive diff at 50 %                 min  -0.02  mean   0.00  max   0.03 V
+  dominant peak (overshoot) in bit       min   2.13  mean   2.15  max   2.17 V
+  recessive trough (undershoot) in bit   min  -0.36  mean  -0.33  max  -0.31 V
+  single-bit width: min 486 mean 500 max 514 ns (nominal 500)
+  rise 10-90 %: min 25.6 mean 27.2 max 28.8 ns
+  eye screenshot fd2m

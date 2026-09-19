@@ -1,0 +1,9 @@
+error: 0,"No error"
+1000000 samples @ 3.20 ns
+  TXD fall (recessive->dominant): TXD -> RXD loop delay              min  83.2  mean  85.7  max  86.4 ns  (n=232)
+  TXD fall (recessive->dominant): TXD -> bus (diff crosses 0.9 V)    min  38.4  mean  39.6  max  41.6 ns  (n=232)
+  TXD fall (recessive->dominant): bus -> RXD                         min  44.8  mean  46.1  max  48.0 ns  (n=232)
+  TXD rise (dominant->recessive): TXD -> RXD loop delay              min 105.6  mean 106.9  max 108.8 ns  (n=232)
+  TXD rise (dominant->recessive): TXD -> bus (diff crosses 0.9 V)    min  51.2  mean  53.2  max  54.4 ns  (n=232)
+  TXD rise (dominant->recessive): bus -> RXD                         min  51.2  mean  53.7  max  54.4 ns  (n=232)
+TXD levels: low -1.37 high 4.27 V; RXD: low -0.24 high 3.45 V

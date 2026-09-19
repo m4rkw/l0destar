@@ -1,8 +1,12 @@
 # CAN bench tests
 
-Host-driven test rig for the l0destar CAN interface (MCP2518FD + MAX33041E)
-using a CANable 2.0 class USB adapter.  Results and conclusions from the
-first run are in [`../CAN_BENCH_REPORT.md`](../CAN_BENCH_REPORT.md).
+Host-driven test rig for the l0destar CAN interface (MCP2518FD + MAX33041E
+on v3.1, MCP2518FD + TCAN3414DR on v3.4) using a CANable 2.0 class USB
+adapter.  Results and conclusions from the first run (v3.1, 2 September
+2026) are in [`../CAN_BENCH_REPORT.md`](../CAN_BENCH_REPORT.md); the v3.4 /
+TCAN3414DR run of 19 September 2026 is `results/20260919-132751.*` with its
+scope captures in `results/scope-v3.4/`, and the report is
+`../../docs/v3.4-can-interface-bench-test`.
 
 ## Pieces
 
@@ -16,6 +20,8 @@ first run are in [`../CAN_BENCH_REPORT.md`](../CAN_BENCH_REPORT.md).
 | `device.py` | encodes the agent's control protocol (ID 0x7E0 -> 0x7E8) |
 | `run_all.py` | the test suite; writes `results/<stamp>.json` and `.md` |
 | `console_log.py` | logs the tracker's serial console (timestamped, ANSI stripped) |
+| `scope/setup.py` | puts the DHO814 into the CANH/CANL capture setup used by `scope/rawcap.py` (`chan34` also enables TXD/RXD) |
+| `scope/shots.py` | one screenshot at a given timebase/offset, optionally with persistence |
 | `adapter_firmware/` | adapter firmware images and the DFU tools used to flash them |
 
 ## Adapter firmware
@@ -63,8 +69,9 @@ Quirks of the FD fork that the host code works around:
 # 2. console (optional, gives the agent's printk lines in the results)
 python3 can_bench/console_log.py /dev/cu.usbmodem1301 /tmp/console.log &
 
-# 3. adapter server (needs root for USB on macOS)
-sudo /Users/mark/.venv/bin/python3 /Users/mark/code/l0destar/firmware/can_test_host.py &
+# 3. adapter server (needed root for USB on macOS in the first run; ran
+#    unprivileged on 19 September 2026 -- try without sudo first)
+/Users/mark/.venv/bin/python3 /Users/mark/code/l0destar/firmware/can_test_host.py &
 
 # 4. tests
 python3 can_bench/run_all.py --console /tmp/console.log            # everything (~15 min)

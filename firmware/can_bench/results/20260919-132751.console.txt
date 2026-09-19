@@ -1,0 +1,285 @@
+[PASS] A1 Identification and idle state
+       device_mode: Normal CAN 2.0
+       fast_spi: False
+       int_pin_idle: 1
+       tec: 0
+       rec: 0
+       adapter: canable2 gs_usb
+       adapter_features: LISTEN_ONLY,LOOP_BACK,ONE_SHOT,IDENTIFY,USER_ID,PAD_PKTS_TO_MAX_PKT_SIZE,FD,BT_CONST_EXT
+       adapter_clock_hz: 160000000
+[PASS] A2 SPI link: MCP2518FD RAM sweep and transaction timing (slow/fast bit-bang)
+       slow_ram_sweep_errors_of_10240: 0
+       slow_rw_errors_of_200: 0
+       slow_write16_us: 1089
+       slow_read16_us: 1096
+       slow_spi_kbit_s: 131
+       fast_ram_sweep_errors_of_10240: 0
+       fast_rw_errors_of_200: 0
+       fast_write16_us: 152
+       fast_read16_us: 161
+       fast_spi_kbit_s: 894
+       - 18 bytes on the wire per timed 16-byte transaction
+[PASS] A3 CAN_INT line follows RX FIFO
+       rx: 30
+       int_low_whenever_fifo_nonempty: True
+       int_idle_now: 1
+[PASS] B1 Classic 500 kbps frame integrity: DLC 0-8, std/ext IDs, data patterns (echo)
+       frames: 53
+       ok: 53
+       failed: 0
+       rtt_ms_median: 6.04
+       tec: 0
+       rec: 0
+       bdiag1: []
+[PASS] B1r Classic 500 kbps remote (RTR) frames received
+       rtr_sent: 5
+       device_rx: 5
+       device_rx_rtr: 5
+[PASS] B2 Classic 500 kbps round-trip latency (200 echoes, slow/fast SPI)
+       slow_spi_rtt_ms_min/median/p95/max: 6.08 / 6.57 / 8.06 / 8.92
+       slow_spi_lost: 0
+       fast_spi_rtt_ms_min/median/p95/max: 2.18 / 2.62 / 2.89 / 4.00
+       fast_spi_lost: 0
+       - RTT includes USB + adapter latency on both legs; device turnaround = RX read + TX write over SPI
+[info] B3 Classic 500 kbps host->device sustained rate limit
+       slow_spi_max_lossless_rate_f_s: 500
+       slow_spi_min_gap_us: 2000
+       fast_spi_max_lossless_rate_f_s: 3340
+       fast_spi_min_gap_us: 300
+       - slow gap=5000us: rx=300/300 miss=0 ovf=0 rate=200/s
+       - slow gap=3000us: rx=300/300 miss=0 ovf=0 rate=333/s
+       - slow gap=2000us: rx=300/300 miss=0 ovf=0 rate=500/s
+       - slow gap=1500us: rx=248/300 miss=52 ovf=52 rate=551/s
+       - fast gap=5000us: rx=300/300 miss=0 ovf=0 rate=200/s
+       - fast gap=3000us: rx=300/300 miss=0 ovf=0 rate=333/s
+       - fast gap=2000us: rx=300/300 miss=0 ovf=0 rate=499/s
+       - fast gap=1500us: rx=300/300 miss=0 ovf=0 rate=668/s
+       - fast gap=1200us: rx=300/300 miss=0 ovf=0 rate=833/s
+       - fast gap=1000us: rx=300/300 miss=0 ovf=0 rate=999/s
+       - fast gap=800us: rx=300/300 miss=0 ovf=0 rate=1253/s
+       - fast gap=600us: rx=300/300 miss=0 ovf=0 rate=1671/s
+       - fast gap=500us: rx=300/300 miss=0 ovf=0 rate=2008/s
+       - fast gap=400us: rx=300/300 miss=0 ovf=0 rate=2509/s
+       - fast gap=300us: rx=300/300 miss=0 ovf=0 rate=3340/s
+       - fast gap=250us: rx=283/300 miss=17 ovf=17 rate=3755/s
+[PASS] B3b Classic 500 kbps RX FIFO burst absorption
+       burst16_rx/miss/ovf: 16/0/0
+       burst32_rx/miss/ovf: 32/0/0
+       burst60_rx/miss/ovf: 38/16/3
+       burst100_rx/miss/ovf: 42/50/7
+       - RX FIFO is 32 deep (MCP2518FD FSIZE max): bursts up to 32 must be lossless with the slow SPI; 60 and 100 are expected to overflow
+[PASS] B4 Classic 500 kbps device->host bursts (500 frames, DLC 8/0, slow/fast SPI)
+       slow_spi_dlc8_rate_f_s: 317.8
+       slow_spi_dlc8_host_got: 500/500
+       slow_spi_dlc8_tec: 0
+       slow_spi_dlc8_tx_flags: []
+       slow_spi_dlc0_rate_f_s: 375.6
+       slow_spi_dlc0_host_got: 500/500
+       slow_spi_dlc0_tec: 0
+       slow_spi_dlc0_tx_flags: []
+       fast_spi_dlc8_rate_f_s: 2153.0
+       fast_spi_dlc8_host_got: 500/500
+       fast_spi_dlc8_tec: 0
+       fast_spi_dlc8_tx_flags: []
+       fast_spi_dlc0_rate_f_s: 2536.3
+       fast_spi_dlc0_host_got: 500/500
+       fast_spi_dlc0_tec: 0
+       fast_spi_dlc0_tx_flags: []
+[PASS] B5 Classic 500 kbps simultaneous bidirectional traffic (arbitration)
+       host_frames: 200
+       device_rx: 200
+       device_miss: 0
+       device_ovf: 0
+       device_tx: 200
+       host_got: 200
+       device_lost_arbitration_flag: False
+       tec: 0
+       rec: 0
+       bdiag1: []
+[PASS] B6 Error counters clean after classic tests
+       tec: 0
+       rec: 0
+       trec: []
+       bdiag1: []
+       nrerr: 0
+       nterr: 0
+       drerr: 0
+       dterr: 0
+[PASS] C1 Bit rates 125k / 250k / 500k / 1M
+       125k: echo 20/20, burst 100/100 @312.2/s, TEC 0 REC 0 []
+       250k: echo 20/20, burst 100/100 @314.1/s, TEC 0 REC 0 []
+       500k: echo 20/20, burst 100/100 @313.8/s, TEC 0 REC 0 []
+       1000k: echo 20/20, burst 100/100 @313.8/s, TEC 0 REC 0 []
+[PASS] C2 Host sample-point sweep at 500 kbps
+       host_sp_60%: 20/20 pings
+       host_sp_70%: 20/20 pings
+       host_sp_75%: 20/20 pings
+       host_sp_80%: 20/20 pings
+       host_sp_85%: 20/20 pings
+       host_sp_90%: 20/20 pings
+       host_sp_95%: 20/20 pings
+       - device sample point 80 % (62+1 of 80 tq), SJW 16 tq
+[info] C3 Host bit-rate offset tolerance at 500 kbps
+       lossless_window: -2.44% .. +2.56%
+       - -6.98% (465.1 kbps, brp 43 x 8 tq): 0/10
+       - -6.43% (467.8 kbps, brp 18 x 19 tq): 0/10
+       - -6.16% (469.2 kbps, brp 31 x 11 tq): 0/10
+       - -5.33% (473.4 kbps, brp 26 x 13 tq): 0/10
+       - -4.76% (476.2 kbps, brp 14 x 24 tq): 0/10
+       - -3.90% (480.5 kbps, brp 37 x 9 tq): 0/10
+       - -3.03% (484.8 kbps, brp 15 x 22 tq): 0/10
+       - -2.44% (487.8 kbps, brp 41 x 8 tq): 10/10
+       - -1.54% (492.3 kbps, brp 13 x 25 tq): 10/10
+       - -1.23% (493.8 kbps, brp 18 x 18 tq): 10/10
+       - -0.93% (495.4 kbps, brp 17 x 19 tq): 10/10
+       - +0.00% (500.0 kbps, brp 16 x 20 tq): 10/10
+       - +0.31% (501.6 kbps, brp 29 x 11 tq): 10/10
+       - +1.59% (507.9 kbps, brp 15 x 21 tq): 10/10
+       - +2.56% (512.8 kbps, brp 13 x 24 tq): 10/10
+       - +3.23% (516.1 kbps, brp 31 x 10 tq): 0/10
+       - +3.90% (519.5 kbps, brp 14 x 22 tq): 0/10
+       - +4.58% (522.9 kbps, brp 17 x 18 tq): 0/10
+       - +5.26% (526.3 kbps, brp 16 x 19 tq): 0/10
+       - +6.67% (533.3 kbps, brp 12 x 25 tq): 0/10
+[PASS] D1 CAN FD frame integrity 500k/2M: lengths 0-64, BRS, ext IDs (echo)
+       frames: 36
+       ok: 36
+       failed: 0
+       tec: 0
+       rec: 0
+       bdiag1: []
+       device_rx_fd: 35
+       device_rx_brs: 35
+[PASS] D2 CAN FD data rates 1M / 2M / 4M / 5M / 8M (echo)
+       data_1M: echo 20/20, TEC 0 REC 0 [] drerr 0 dterr 0
+       data_2M: echo 20/20, TEC 0 REC 0 [] drerr 0 dterr 0
+       data_4M: echo 20/20, TEC 0 REC 0 [] drerr 0 dterr 0
+       data_5M: echo 20/20, TEC 0 REC 0 [] drerr 0 dterr 0
+       data_8M: echo 20/20, TEC 0 REC 0 ['DBIT0ERR', 'DBIT1ERR'] drerr 0 dterr 2
+       - nominal 500 kbps; device TDC auto, host TDC on above 2.5 Mbps
+[PASS] D3 CAN FD throughput both directions at 2M and 5M
+       2M_slow_spi_dev_to_host: 200/200 good @152.5/s TEC 0 []
+       2M_slow_spi_host_to_dev_paced4ms: rx 100/100 miss 0 ovf 0 bytes 6400
+       2M_fast_spi_dev_to_host: 200/200 good @1048.2/s TEC 0 []
+       2M_fast_spi_host_to_dev_paced4ms: rx 100/100 miss 0 ovf 0 bytes 6400
+       5M_slow_spi_dev_to_host: 200/200 good @152.5/s TEC 0 []
+       5M_slow_spi_host_to_dev_paced4ms: rx 100/100 miss 0 ovf 0 bytes 6400
+       5M_fast_spi_dev_to_host: 200/200 good @1050.1/s TEC 0 []
+       5M_fast_spi_host_to_dev_paced4ms: rx 100/100 miss 0 ovf 0 bytes 6400
+[info] D4 CAN FD host->device sustained rate limit (64-byte frames)
+       slow_spi_max_lossless_rate_64B_f_s: 500
+       fast_spi_max_lossless_rate_64B_f_s: 2914
+       - slow gap=8000us: rx=100/100 miss=0 ovf=0 rate=125/s
+       - slow gap=5000us: rx=100/100 miss=0 ovf=0 rate=200/s
+       - slow gap=4000us: rx=100/100 miss=0 ovf=0 rate=250/s
+       - slow gap=3000us: rx=100/100 miss=0 ovf=0 rate=333/s
+       - slow gap=2500us: rx=100/100 miss=0 ovf=0 rate=401/s
+       - slow gap=2000us: rx=100/100 miss=0 ovf=0 rate=500/s
+       - slow gap=1500us: rx=94/100 miss=5 ovf=6 rate=629/s
+       - fast gap=8000us: rx=100/100 miss=0 ovf=0 rate=125/s
+       - fast gap=5000us: rx=100/100 miss=0 ovf=0 rate=200/s
+       - fast gap=4000us: rx=100/100 miss=0 ovf=0 rate=250/s
+       - fast gap=3000us: rx=100/100 miss=0 ovf=0 rate=333/s
+       - fast gap=2500us: rx=100/100 miss=0 ovf=0 rate=400/s
+       - fast gap=2000us: rx=100/100 miss=0 ovf=0 rate=502/s
+       - fast gap=1500us: rx=100/100 miss=0 ovf=0 rate=668/s
+       - fast gap=1000us: rx=100/100 miss=0 ovf=0 rate=1003/s
+       - fast gap=500us: rx=100/100 miss=0 ovf=0 rate=2023/s
+       - fast gap=0us: rx=100/100 miss=0 ovf=0 rate=2914/s
+[info] D5 Classic-mode device facing FD frames (misconfiguration hazard)
+       fd_frames_sent_to_classic_device: 10
+       device_rx: 0
+       device_rec: 17
+       device_bdiag1: ['NSTUFERR']
+       device_nrerr: 10
+       host_error_frames: 2000
+       - expected: device receives none, counts form errors and actively destroys the FD frames (host sees error frames)
+[PASS] D6 Device FD loopback through the transceiver at 1M-8M (host stopped)
+       data_1M: {'int': '16/16 ok, mismatch 0, TEC 0 [] []', 'ext': '16/16 ok, mismatch 0, TEC 0 [] []'}
+       data_2M: {'int': '16/16 ok, mismatch 0, TEC 0 [] []', 'ext': '16/16 ok, mismatch 0, TEC 0 [] []'}
+       data_4M: {'int': '16/16 ok, mismatch 0, TEC 0 [] []', 'ext': '16/16 ok, mismatch 0, TEC 0 [] []'}
+       data_5M: {'int': '16/16 ok, mismatch 0, TEC 0 [] []', 'ext': '16/16 ok, mismatch 0, TEC 0 [] []'}
+       data_8M: {'int': '16/16 ok, mismatch 0, TEC 0 [] []', 'ext': '16/16 ok, mismatch 0, TEC 0 [] []'}
+       - internal = digital core only; external = through transceiver and bus
+[info] D7 FD 5M with TDC disabled
+       host_got: 50/50
+       tec: 0
+       tx_flags: []
+       bdiag1: []
+       dterr: 0
+       - TDC (transmitter delay compensation) is normally required above ~2 Mbps
+[PASS] E1 No partner: one-shot abort, error-passive and recovery
+       one_shot_tec: 88
+       one_shot_aborted_frames: 3
+       one_shot_trec: []
+       one_shot_tx_flags: []
+       one_shot_bdiag1: ['NACKERR']
+       one_shot_c1int: ['IVMIF']
+       retry_frame_delivered_when_partner_returned: 1
+       retry_tec: 126
+       retry_trec: ['EWARN', 'TXWARN']
+       retry_bdiag1: ['NACKERR']
+       tec_after_100_good_frames: 15
+       trec_after: []
+[PASS] E2 Bus-off provocation and recovery
+       device_burst: {'sent': 400, 'failed': 0, 'dur_us': 1256339, 'tec': 0, 'rec': 0, 'tx_fifo_flags': [], 'drained': True, 'frames_per_s': 317.6}
+       host_error_frames: 0
+       host_bus_off_events: 0
+       host_err_passive_events: 0
+       host_lost_arb: 0
+       device_tec: 0
+       device_rec: 0
+       device_trec: []
+       device_bdiag1: []
+       device_c1int: []
+       device_responds_after: True
+       - a controller that hits bus-off must recover on its own (128 x 11 recessive bits)
+[PASS] E3 Listen-only mode is truly passive
+       host_frames: 20
+       host_error_frames: 4
+       host_no_ack_errors: 2
+       device_rx_counted: 4
+       device_rec: 0
+       device_tec: 0
+       device_bdiag1: []
+       - device rx should be 0: without any ACKing node the host destroys its own frames
+[PASS] E4 Acceptance filter
+       with_filter_0x123_rx: 20
+       after_restore_rx_0x124: 20
+[PASS] E5 RX FIFO overflow detection
+       small_fifo_rx: 9
+       small_fifo_missing: 37
+       overflow_events: 6
+       c1int: []
+       after_restore_rx: 20/20
+[info] E6 Sleep and wake-on-bus (transceiver standby vs awake)
+       xstby_standby: {'wakif': True, 'int_low_seen': True, 'int_low_at_ms': 503, 'osc_ready_us': 366, 'mode_after_wake': 'Configuration', 'int_before': 1, 'int_at_end': 0, 'osc_before': '0x460', 'c1int': ['WAKIF'], 'reconfig_failed': False}
+       xcvr_awake: {'wakif': True, 'int_low_seen': True, 'int_low_at_ms': 520, 'osc_ready_us': 366, 'mode_after_wake': 'Configuration', 'int_before': 1, 'int_at_end': 0, 'osc_before': '0x460', 'c1int': ['WAKIF'], 'reconfig_failed': False}
+       - host sends 5 frames (one-shot, 100 ms apart) 0.5 s into a 2 s sleep
+[PASS] E7 CAN rail power cycle x5 and re-init
+       cycles: 5
+       - off 300 ms: rail before/end-of-off/back=1/0/1 sense low after 22 ms, power_on=0 (25 ms) reconfig=0 osc=0x0460 mode=Normal CAN 2.0
+       - off 300 ms: rail before/end-of-off/back=1/0/1 sense low after 22 ms, power_on=0 (24 ms) reconfig=0 osc=0x0460 mode=Normal CAN 2.0
+       - off 300 ms: rail before/end-of-off/back=1/0/1 sense low after 22 ms, power_on=0 (25 ms) reconfig=0 osc=0x0460 mode=Normal CAN 2.0
+       - off 1500 ms: rail before/end-of-off/back=1/0/1 sense low after 22 ms, power_on=0 (24 ms) reconfig=0 osc=0x0460 mode=Normal CAN 2.0
+       - off 1500 ms: rail before/end-of-off/back=1/0/1 sense low after 22 ms, power_on=0 (24 ms) reconfig=0 osc=0x0460 mode=Normal CAN 2.0
+[PASS] E8 Cold reboot re-init
+       agent_back_after_reboot: True
+       - 13:25:44 bench: echo off
+       - 13:25:44 bench: reboot
+       - 13:25:45 bench: ready  CAN 2.0 500 kbps, control 0x7e0 -> 0x7e8, OSC=0x00000460 rail=1 int=1
+[PASS] E9 Soak: mixed traffic with echo
+       seconds: 120
+       host_sent: 22200
+       device_rx: 22200
+       device_missing: 0
+       device_ovf: 0
+       device_echoed: 22200
+       echo_dropped: 0
+       host_got_echoes: 22200
+       tec: 0
+       rec: 0
+       bdiag1: []
+       host_error_frames: 0
+
+results: /Users/mark/Library/Mobile Documents/com~apple~CloudDocs/code/l0destar/firmware/can_bench/results/20260919-132751.json / .md

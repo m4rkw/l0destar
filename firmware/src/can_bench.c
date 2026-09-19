@@ -430,11 +430,19 @@ static uint8_t len2dlc(uint8_t len)
 /* One-shot mode (RTXAT + TXAT=0): after the single attempt fails the
  * controller sets TXATIF and leaves the message in the FIFO, so everything
  * queued behind it is stuck until the FIFO is reset.  A production driver
- * must do this too. */
+ * must do this too.
+ *
+ * Read TXREQ before the empty flag.  The two reads are separate SPI
+ * transactions, about 1 ms apart on the slow bit-bang, and a frame in
+ * flight can complete between them: read empty-flag first and it says "not
+ * empty", then TXREQ has cleared by the time it is read, which looks like
+ * an aborted message and resets a healthy FIFO.  TXREQ only clears by
+ * itself once the FIFO is empty, and nothing queues a frame between the
+ * two reads, so TXREQ-clear followed by not-empty can only be an abort. */
 static bool tx_abort_check(void)
 {
-	uint32_t sta = rd32(R_FIFOSTA(TX_FIFO));
 	uint32_t con = rd32(R_FIFOCON(TX_FIFO));
+	uint32_t sta = rd32(R_FIFOSTA(TX_FIFO));
 	bool exhausted = sta & BIT(3);                          /* TXATIF */
 	bool stuck = !(sta & BIT(2)) && !(con & BIT(9));        /* not empty, TXREQ clear */
 
