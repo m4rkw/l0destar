@@ -1,0 +1,9 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "PTVS33VS1UTR_115") (type "KiCad") (uri "${KIPRJMOD}/libs/PTVS33VS1UTR_115.kicad_sym") (options "") (descr ""))
+	(lib (name "lodestar_backup") (type "KiCad") (uri "${KIPRJMOD}/libs/lodestar_backup.kicad_sym") (options "") (descr "Lodestar backup module symbols"))
+	(lib (name "1051_KEY") (type "KiCad") (uri "${KIPRJMOD}/libs/1051_KEY.kicad_sym") (options "") (descr ""))
+	(lib (name "IRLR2905TRPBF") (type "KiCad") (uri "${KIPRJMOD}/libs/IRLR2905TRPBF.kicad_sym") (options "") (descr ""))
+	(lib (name "EEE_FK1J470P") (type "KiCad") (uri "${KIPRJMOD}/libs/EEE_FK1J470P.kicad_sym") (options "") (descr ""))
+	(lib (name "EEEFK1J101P") (type "KiCad") (uri "${KIPRJMOD}/libs/EEEFK1J101P.kicad_sym") (options "") (descr ""))
+)
