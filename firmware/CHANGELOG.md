@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.49
 
 ### Threshold alerts on OBD telemetry
 - **`CONFIG_APP_OBD_ALERTS` queues an alert when a PID crosses a line.**
@@ -73,7 +73,6 @@ lost its data — boot, a long stop — still fetches first.
 modem that came back through either registered without `%REL14FEAT` and
 `%RAI`, quietly costing the GNSS duty cycle — the gap `modem_rescan_plmn()`
 already closes after its own CFUN=4.  Neither path ran on 2026-09-19.
->>>>>>> 2a5aef8425d56d81ad1d8b3b9586054e425f027b
 
 ## 0.4.48
 
