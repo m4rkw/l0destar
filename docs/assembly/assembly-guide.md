@@ -3,13 +3,13 @@
 How to assemble a l0destar v3.4 board by hand. The board has not been built yet in this
 revision, so treat this as a guide based on the v3.3 build and the v3.4 design files.
 
-Before you start, have the [prerequisites](/assembly/prerequisites.md) to hand, decide which
-interface you are building ([component selection](/assembly/component-selection.md)) and open
+Before you start, have the [prerequisites](prerequisites.md) to hand, decide which
+interface you are building ([component selection](component-selection.md)) and open
 `hardware/l0destar_v3.4/l0destar.kicad_pcb` in KiCad so you can look up each part as you go.
 
 !!! danger "Do not connect the Connect Kit yet"
     The Makerdiary Connect Kit is fitted last, and only after the board has passed the checks on
-    the [board test](/assembly/board-test.md) page. If any of the 12V rails
+    the [board test](board-test.md) page. If any of the 12V rails
     are shorted to 3.3V or any of the GPIO pins it will likely be permanently
     damaged.
 
@@ -66,7 +66,7 @@ can put the full input voltage on its output, which would destroy the Connect Ki
 Fit S6R4 as a 0402 0R jumper for the default build, or fit the optional enable divider (S6R4 1M,
 S6R5 243K, S6R6 3.92M) if you want the buck to cut out below about 4.3V and restart above about
 5.6V (calculated; a v3.3 board measured 4.47V and 5.14V). The divider adds around 9µA of sleep current at 12V; see
-[component selection](/assembly/component-selection.md#optional-parts).
+[component selection](component-selection.md#optional-parts).
 
 Do **not** place the over-voltage protection stage yet - the S11 designators, including the
 LM66100 ideal diode S11U1. It can also be damaged by high voltage.
@@ -133,7 +133,7 @@ hold them, then remove the tape and solder the rest.
 Do not use hot air for the SMA connectors. Fit each connector and carefully solder its pins one at a
 time with the soldering iron, using no more solder than a good joint needs: excess solder can run
 down a pin and short the centre pin to ground. Solder the four ground pins first and the centre pin
-last. The [board test](/assembly/board-test.md) checks each centre pin for a short to the
+last. The [board test](board-test.md) checks each centre pin for a short to the
 connector's outer casing.
 
 ### 9. Clean the board
@@ -145,7 +145,7 @@ highly flammable.
 ## Test before fitting the Connect Kit
 
 Work through the unpowered checks and the first power-up on the
-[board test](/assembly/board-test.md) page now, with the Connect Kit still off the board.
+[board test](board-test.md) page now, with the Connect Kit still off the board.
 
 ## Ensure the wiring harness is connected to the power supply or vehicle correctly
 
@@ -185,7 +185,7 @@ underneath is tucked inside towards the centre without being snagged
 ![final assembly step 5](../img/final_assembly6.png)
 
 6. Connect the two SMA connectors to your antenna. The GPS port needs an **active** antenna - see
-   the [antenna requirements](/reference/hardware.md#antenna).
+   the [antenna requirements](../reference/hardware.md#antenna).
 
 ![final assembly step 6](../img/final_assembly7.png)
 
@@ -200,7 +200,7 @@ underneath is tucked inside towards the centre without being snagged
 
 Apply power again from the supply with the current limited to 50mA. At any sign of a short, switch
 off immediately. If the current does not pin at the limit, chances are the board is built
-correctly. The remaining powered checks are on the [board test](/assembly/board-test.md) page.
+correctly. The remaining powered checks are on the [board test](board-test.md) page.
 
 ## Enclosure
 

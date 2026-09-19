@@ -4,7 +4,7 @@ This section walks through building a l0destar carrier board by hand, from order
 a powered bench test. Read this page, and the project's full
 [disclaimer](https://github.com/m4rkw/l0destar/blob/master/DISCLAIMER.md), before you order
 anything. If you intend to fit the finished tracker to a vehicle, also read
-[Deployment: read this first](/deployment/read-this-first.md).
+[Deployment: read this first](../deployment/read-this-first.md).
 
 !!! danger "Fuse both 12V inputs"
     A board wired to a vehicle battery can start a fire if it is built, wired or fused wrong.
@@ -76,7 +76,7 @@ That means your own due diligence on part selection, assembly, fusing, wiring an
 - **Static.** The Connect Kit and the ICs are static sensitive. Handle boards by their edges and
   use ESD precautions.
 - **First power.** Power a new board for the first time from a current-limited supply, as
-  described on the [board test](/assembly/board-test.md) page, and never connect the Connect Kit
+  described on the [board test](board-test.md) page, and never connect the Connect Kit
   until the board has passed the checks there.
 
 ## Regulatory approval

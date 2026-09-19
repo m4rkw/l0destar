@@ -44,7 +44,7 @@ With no power applied and the Connect Kit **not** fitted:
 
 The board is fed through the Molex connector: pin 2 is ground, pin 4 the permanent 12V and pin 5
 the ignition input. Pins 3 and 6 are the interface bus lines and pin 1 is unused. See the
-[vehicle connector pinout](/reference/hardware.md#vehicle-connector-pinout).
+[vehicle connector pinout](../reference/hardware.md#vehicle-connector-pinout).
 
 1. Set the bench supply's current limit to 50mA.
 2. Apply 12V to both the permanent (pin 4) and ignition (pin 5) inputs and watch the current as you
@@ -64,7 +64,7 @@ the ignition input. Pins 3 and 6 are the interface bus lines and pin 1 is unused
 
 ## Stage 3: power-up with the Connect Kit
 
-Carry out the [final assembly](/assembly/assembly-guide.md#final-assembly) steps, then:
+Carry out the [final assembly](assembly-guide.md#final-assembly) steps, then:
 
 1. Apply 12V again with the current limited to 50mA. At any sign of a short, switch off
    immediately. If the current does not pin at the limit, chances are the board is built
@@ -86,8 +86,8 @@ accelerometer, GPS, the modem and the interface loopbacks.
 ### What you need
 
 - The software and the clone of the repository from
-  [Board setup prerequisites](/board-setup/prerequisites.md). Updating the Connect Kit's
-  interface firmware ([Updating the Makerdiary firmware](/board-setup/makerdiary-firmware.md))
+  [Board setup prerequisites](../board-setup/prerequisites.md). Updating the Connect Kit's
+  interface firmware ([Updating the Makerdiary firmware](../board-setup/makerdiary-firmware.md))
   is not needed for the test, but is needed before the board goes into use, so you may as well do
   it first.
 - A USB-C data cable to the Connect Kit. The script flashes over it and uses its serial console.
@@ -186,13 +186,13 @@ rail that never came up. The run ends with a summary:
 
 The test firmware runs the tests and then parks - it never starts the tracker. Flash the normal
 firmware when you are done, as described in
-[Minimal config and initial flashing](/board-setup/initial-flashing.md).
+[Minimal config and initial flashing](../board-setup/initial-flashing.md).
 
 ### Troubleshooting
 
 | Symptom | What to try |
 |---|---|
-| `No Connect Kit serial port found` | Check the USB-C cable carries data and the Connect Kit enumerates (`pyocd list` should show its probe). If the Connect Kit LED isn't lit it may not be getting power or the 3.3V rail might be shorted to ground. On Linux, check the access set up in [Board setup prerequisites](/board-setup/prerequisites.md#linux-access-to-the-connect-kit). |
+| `No Connect Kit serial port found` | Check the USB-C cable carries data and the Connect Kit enumerates (`pyocd list` should show its probe). If the Connect Kit LED isn't lit it may not be getting power or the 3.3V rail might be shorted to ground. On Linux, check the access set up in [Board setup prerequisites](../board-setup/prerequisites.md#linux-access-to-the-connect-kit). |
 | The console stays silent | The Connect Kit exposes two serial ports and the script uses the first. Run again with `SERIAL=/dev/cu.usbmodemXXXX ./board_test.sh`, naming the other port. |
 | `board_test.sh needs GNU screen` | Install it: `sudo apt install -y screen` on Linux, or Homebrew or MacPorts on macOS. |
 | `screen could not open` the port | The port can be busy or re-enumerating for a few seconds after flashing; the script retries for up to about 20 seconds. If it still fails, the script prints what holds the port; close that and re-run. |

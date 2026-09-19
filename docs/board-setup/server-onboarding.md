@@ -6,7 +6,7 @@ The server's tools run inside its container: `sudo docker exec l0destar python t
 
 ## Enrol the device
 
-On the server, give `adddevice.py` the IMEI from the console on [minimal config and initial flashing](/board-setup/initial-flashing.md), a name, optionally the vehicle's registration, and the key from `CONFIG_APP_PSK_HEX` in your `local.conf`:
+On the server, give `adddevice.py` the IMEI from the console on [minimal config and initial flashing](initial-flashing.md), a name, optionally the vehicle's registration, and the key from `CONFIG_APP_PSK_HEX` in your `local.conf`:
 
 ```sh
 sudo docker exec l0destar python tools/adddevice.py 350000000000000 "Car" AB12CDE --psk <64 hex characters>
@@ -53,7 +53,7 @@ imei             name        registration  last seen            firmware  batter
 
 The address in `udp.log` is your mobile operator's, not the SIM's own.
 
-[Verifying telemetry](/board-setup/verifying-telemetry.md) goes through the rest of the checks.
+[Verifying telemetry](verifying-telemetry.md) goes through the rest of the checks.
 
 !!! note "Letting the server choose the key"
     Without `--psk`, `adddevice.py` generates a key and prints it once. That suits a device whose firmware does not have a key yet: put the printed key in `CONFIG_APP_PSK_HEX`, then build and flash again.
@@ -69,20 +69,20 @@ The address in `udp.log` is your mobile operator's, not the SIM's own.
 | `garage` | `0` | Marks a vehicle expected to be moved, downgrading urgent alerts. |
 | `overnight_alarm` | `0` | Server alert when the ignition comes on overnight (23:00 to 06:00 unless changed). |
 
-`int`, `ma` and `track_mode` travel to the device in every reply; the other three only change what the server does. To change them use `command.py` or the API - every setting and command is in [device settings and commands](/reference/device-settings.md), and what `int` costs in battery is worked out in [deployment configuration](/deployment/configuration.md). For example, to have a parked vehicle report every hour:
+`int`, `ma` and `track_mode` travel to the device in every reply; the other three only change what the server does. To change them use `command.py` or the API - every setting and command is in [device settings and commands](../reference/device-settings.md), and what `int` costs in battery is worked out in [deployment configuration](../deployment/configuration.md). For example, to have a parked vehicle report every hour:
 
 ```sh
 sudo docker exec l0destar python tools/command.py 350000000000000 int=3600
 ```
 
-`command.py` uses the API token created during [server installation](/server/installation.md). A setting like `int=` waits in the queue until the device next reads a reply; server-only settings such as `alarm=1` take effect immediately.
+`command.py` uses the API token created during [server installation](../server/installation.md). A setting like `int=` waits in the queue until the device next reads a reply; server-only settings such as `alarm=1` take effect immediately.
 
 ## More than one device
 
 Enrol each device the same way. Every device has its own IMEI, its own key and its own section in `remote.conf` with its own board and interface settings; nothing is shared between them.
 
 - Give each a name you will recognise in an alert.
-- The web interface lists them all on its device page and opens the map for whichever you choose; see [web interface and API](/board-setup/web-interface.md).
+- The web interface lists them all on its device page and opens the map for whichever you choose; see [web interface and API](web-interface.md).
 - API calls that only read can fall back to a default device, but calls that change anything - settings, commands, track mode - must name the device.
 
 ## Managing devices
@@ -145,4 +145,4 @@ The device still uses its old key, so it sees the update in its replies and inst
 sudo docker exec l0destar python tools/device.py rekey 350000000000000 --psk <64 hex characters>
 ```
 
-Records sent between steps 3 and 4 are lost. This is also how to retire a key you think has leaked, for example with a firmware image; see [server security](/server/security.md).
+Records sent between steps 3 and 4 are lost. This is also how to retire a key you think has leaked, for example with a firmware image; see [server security](../server/security.md).

@@ -2,7 +2,7 @@
 
 The server's web interface shows every enrolled vehicle, its live position, its journeys, and the engine and motion data it reports. The same server offers a small HTTP API for scripts and home automation.
 
-Examples use `https://tracker.example.com`; use whatever hostname you serve the interface on (see [server security](/server/security.md) for serving it privately over Tailscale).
+Examples use `https://tracker.example.com`; use whatever hostname you serve the interface on (see [server security](../server/security.md) for serving it privately over Tailscale).
 
 ## Signing in
 
@@ -24,7 +24,7 @@ Things to know:
 - **Hostname.** A passkey belongs to the hostname it was created on. Always open the interface on the same hostname that was in the sign-up link: a Tailscale name and a public name are different sites as far as passkeys are concerned.
 - **Lost phone.** Create a new link for the same username. Registering replaces the old passkey and signs the lost phone out.
 - **Sessions** last 30 days (`session_lifetime_days`). **logout** ends one.
-- **Lockouts.** Five failed passkey verifications lock the account. Separately, after five sign-in attempts from one address without a successful login, further attempts get `too many requests` until an hour after the last one. [Server security](/server/security.md) covers unlocking an account.
+- **Lockouts.** Five failed passkey verifications lock the account. Separately, after five sign-in attempts from one address without a successful login, further attempts get `too many requests` until an hour after the last one. [Server security](../server/security.md) covers unlocking an account.
 
 ## Choosing a vehicle
 
@@ -47,7 +47,7 @@ The page follows the vehicle live over a WebSocket and reconnects by itself if t
 
 ### ECU panel
 
-Shown only when records carry OBD-II data, which means a K-wire build with OBD telemetry enabled ([deployment configuration](/deployment/configuration.md)). It shows RPM, coolant and intake temperature, engine load, throttle, mass air flow, timing advance, short and long-term fuel trims and fuel system status. Coolant at 110°C or more, fuel trims beyond ±10% and a fault in the fuel system status are highlighted, and a line appears when the check engine light is on, with the number of stored fault codes. A value the ECU did not report in that record shows as a dash.
+Shown only when records carry OBD-II data, which means a K-wire build with OBD telemetry enabled ([deployment configuration](../deployment/configuration.md)). It shows RPM, coolant and intake temperature, engine load, throttle, mass air flow, timing advance, short and long-term fuel trims and fuel system status. Coolant at 110°C or more, fuel trims beyond ±10% and a fault in the fuel system status are highlighted, and a line appears when the check engine light is on, with the number of stored fault codes. A value the ECU did not report in that record shows as a dash.
 
 ### IMU panel
 
@@ -109,7 +109,7 @@ These take a bearer token instead of a session. Create one per consumer on the s
 sudo docker exec l0destar python tools/gentoken.py home-automation
 ```
 
-A token is not limited to particular devices or actions: anything holding one can change settings and queue commands such as `reboot`. Treat it like shell access, and see [server security](/server/security.md) for revoking one.
+A token is not limited to particular devices or actions: anything holding one can change settings and queue commands such as `reboot`. Treat it like shell access, and see [server security](../server/security.md) for revoking one.
 
 | Endpoint | What it does |
 |---|---|
@@ -143,7 +143,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 
 ### Commands
 
-A command waits on the server until the device next reads a reply, and is handed over once: if that reply is lost, queue it again. Queuing a command replaces a pending one it supersedes (`locate` and `locatenow`, for instance), and several can be sent at once separated by commas. Server-side settings in the same request - `alarm=`, `garage=`, `overnightalarm=` and the overnight hours - take effect immediately and never go to the device. The full list is in [device settings and commands](/reference/device-settings.md#commands); from the server's shell, `tools/command.py` does the same job:
+A command waits on the server until the device next reads a reply, and is handed over once: if that reply is lost, queue it again. Queuing a command replaces a pending one it supersedes (`locate` and `locatenow`, for instance), and several can be sent at once separated by commas. Server-side settings in the same request - `alarm=`, `garage=`, `overnightalarm=` and the overnight hours - take effect immediately and never go to the device. The full list is in [device settings and commands](../reference/device-settings.md#commands); from the server's shell, `tools/command.py` does the same job:
 
 ```sh
 sudo docker exec l0destar python tools/command.py 350000000000000 locate
@@ -157,7 +157,7 @@ sudo docker exec l0destar python tools/command.py 350000000000000 locate
 
 A tracker that stops reporting while parked at home is hard to notice: its last record looks exactly like a car parked at home. The home check catches the opposite case - the last known position is not where the vehicle should be.
 
-List each vehicle's home in `home_check` in the server's configuration (see [server configuration](/server/configuration.md)), then call the endpoint on a schedule from the server itself, at a time the vehicles should be home - [server deployment](/server/deployment.md#scheduling-the-home-check) has the details:
+List each vehicle's home in `home_check` in the server's configuration (see [server configuration](../server/configuration.md)), then call the endpoint on a schedule from the server itself, at a time the vehicles should be home - [server deployment](../server/deployment.md#scheduling-the-home-check) has the details:
 
 ```text
 # /etc/cron.d/l0destar-home-check: every night at 03:00
@@ -168,4 +168,4 @@ It checks every configured vehicle, or only the one `?imei=` names (an IMEI with
 
 ## Google Maps key
 
-The map uses the Google Maps JavaScript API. Create a key in the Google Cloud console with that API enabled, restrict it to your interface's address with an HTTP referrer restriction - the key is sent to every browser that loads the page and cannot be kept secret - and set it as `google_maps_api_key` in `config.yaml`. The [server configuration](/server/configuration.md) page covers the setting.
+The map uses the Google Maps JavaScript API. Create a key in the Google Cloud console with that API enabled, restrict it to your interface's address with an HTTP referrer restriction - the key is sent to every browser that loads the page and cannot be kept secret - and set it as `google_maps_api_key` in `config.yaml`. The [server configuration](../server/configuration.md) page covers the setting.

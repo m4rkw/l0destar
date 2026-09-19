@@ -19,13 +19,13 @@ A failed download is retried after 10 minutes, doubling up to 80 minutes. Once a
 
 ## What you need
 
-- TCP port 65481 on the server reachable from the internet. The Docker installation sets up the TLS listener itself; see [telemetry port](/server/telemetry-port.md).
-- Devices whose modems trust your CA: built with your server's CA from their very first boot, as in [minimal config and initial flashing](/board-setup/initial-flashing.md#copy-your-servers-ca-certificate).
-- SSH access from your build machine to the server as the owner of `/srv/l0destar`, who can write to its firmware directory, `/srv/l0destar/fw`. See [server deployment](/server/deployment.md).
+- TCP port 65481 on the server reachable from the internet. The Docker installation sets up the TLS listener itself; see [telemetry port](../server/telemetry-port.md).
+- Devices whose modems trust your CA: built with your server's CA from their very first boot, as in [minimal config and initial flashing](initial-flashing.md#copy-your-servers-ca-certificate).
+- SSH access from your build machine to the server as the owner of `/srv/l0destar`, who can write to its firmware directory, `/srv/l0destar/fw`. See [server deployment](../server/deployment.md).
 - `firmware/certs/ca.crt`, your server's CA certificate. `push_fw.sh` uses it to check the endpoint the way a device will.
 - `firmware/mcuboot_priv.pem`, the signing key your first build created. Every build for every device must be signed with the same key for as long as the devices are in service.
 - curl, ssh and scp. `push_fw.sh` runs on macOS and Linux.
-- Each device's IMEI, and the key it was [enrolled](/board-setup/server-onboarding.md) with.
+- Each device's IMEI, and the key it was [enrolled](server-onboarding.md) with.
 
 ## Describe your devices in remote.conf
 
@@ -58,7 +58,7 @@ CONFIG_APP_PSK_HEX="<64 hex characters>"
 - `local.conf` is never included, so nothing from your bench reaches a device in the field.
 - Set the APN here: the example does not, and a production build would otherwise get the `prj.conf` default.
 - If your server publishes its ports under other numbers, put `CONFIG_APP_SERVER_PORT` and `CONFIG_APP_FOTA_PORT` in `[common]` too, and set `VERIFY_PORT` to the update port when you run `push_fw.sh`.
-- The options a vehicle build needs, such as K-wire telemetry and alert priorities, are covered in [deployment configuration](/deployment/configuration.md).
+- The options a vehicle build needs, such as K-wire telemetry and alert priorities, are covered in [deployment configuration](../deployment/configuration.md).
 
 !!! warning "One key per device"
     The example puts `CONFIG_APP_PSK_HEX` in `[common]`, which would give every device the same key. Put each device's key - the one it was enrolled with - in its own section.
@@ -110,7 +110,7 @@ Devices install only strictly newer versions, and each part of the version runs 
 
 ## Watching an update
 
-A device learns about an update the next time it reads a reply from the server: within about 30 seconds when its ignition is on, and while driving. A parked device that makes no timed wakes learns at its next journey, and normally installs the update when the ignition is switched off. The [device settings reference](/reference/device-settings.md) lists when replies are read.
+A device learns about an update the next time it reads a reply from the server: within about 30 seconds when its ignition is on, and while driving. A parked device that makes no timed wakes learns at its next journey, and normally installs the update when the ignition is switched off. The [device settings reference](../reference/device-settings.md) lists when replies are read.
 
 As it happens you get, in order:
 
@@ -128,7 +128,7 @@ On the server, `tls.log` shows the manifest request and the first and last range
 | `<name>: fota: <version> failed to boot (running <old>) — updates withheld until retried` | The image installed but did not start, and MCUboot reverted it. | Publish a fixed, newer version (offered automatically), or retry the same one with `command.py <imei> fota-retry`. |
 | Console: `manifest targets board '...', this unit is '...' — refusing` | The device's section in `remote.conf` does not match its hardware. | Correct the section and publish again. |
 | Console: `battery ... — deferring update` | The vehicle battery reads below 12.0V. | Nothing: it tries again at the next check. |
-| Console: `manifest request failed` while telemetry works | The TCP path to port 65481 is broken - working UDP telemetry proves nothing about TCP - or the modem trusts a different CA. | Check port 65481 is forwarded and open; a failed connection often reports error 22 (EINVAL) rather than a timeout. If the board ever booted the tracker firmware with another CA, the recovery is in [firmware build options](/reference/firmware.md). |
+| Console: `manifest request failed` while telemetry works | The TCP path to port 65481 is broken - working UDP telemetry proves nothing about TCP - or the modem trusts a different CA. | Check port 65481 is forwarded and open; a failed connection often reports error 22 (EINVAL) rather than a timeout. If the board ever booted the tracker firmware with another CA, the recovery is in [firmware build options](../reference/firmware.md). |
 
 To retry a version the server is withholding, run on the server:
 
@@ -140,7 +140,7 @@ That clears the server's block and queues the `fota` command, which clears the d
 
 ## Bench units
 
-- Build bench units with `CONFIG_APP_FOTA_INHIBIT=y`, as in [minimal config and initial flashing](/board-setup/initial-flashing.md). The unit skips the check at boot, ignores update adverts, and answers the `fota` command with `fota: updates inhibited`.
+- Build bench units with `CONFIG_APP_FOTA_INHIBIT=y`, as in [minimal config and initial flashing](initial-flashing.md). The unit skips the check at boot, ignores update adverts, and answers the `fota` command with `fota: updates inhibited`.
 - Never use `CONFIG_APP_FOTA=n` instead. That also removes the call that confirms an image, so a build that did arrive over the air would be reverted on its next boot.
 - Keep bench units out of `remote.conf`. A device with no manifest on the server is never offered anything.
 
@@ -156,6 +156,6 @@ pyocd reset -t nrf91 -m hw -O auto_unlock=false
 ## Security
 
 !!! warning "Images contain the device's key"
-    `CONFIG_APP_PSK_HEX` is compiled into each image, and the server's TLS port serves images to anyone who can reach it and knows the device's IMEI. Read [server security](/server/security.md) before leaving TCP 65481 open permanently.
+    `CONFIG_APP_PSK_HEX` is compiled into each image, and the server's TLS port serves images to anyone who can reach it and knows the device's IMEI. Read [server security](../server/security.md) before leaving TCP 65481 open permanently.
 
 The signing key is the other half: anyone holding `mcuboot_priv.pem` can build firmware every one of your devices will accept. Keep it offline and backed up.

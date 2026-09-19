@@ -8,7 +8,7 @@ to your own server and alerts you when something happens.
 !!! danger "A prototype, not a product"
     Nothing here is validated, certified or finished, and anything you build, install and
     operate from it is your responsibility. Start with
-    [Assembly: read this first](/assembly/read-this-first.md) and read the full
+    [Assembly: read this first](assembly/read-this-first.md) and read the full
     [project disclaimer](https://github.com/m4rkw/l0destar/blob/master/DISCLAIMER.md) before you
     order parts.
 
@@ -19,11 +19,11 @@ somewhere to report to while you bring it up on the bench.
 
 | Section | What it covers |
 |---|---|
-| [Assembly](/assembly/read-this-first.md) | Choosing parts, building the PCB and testing it before and after the Connect Kit goes on |
-| [Server](/server/installation.md) | Installing the tracking server, configuring it, running it as a service and exposing only what has to be exposed |
-| [Board setup](/board-setup/prerequisites.md) | The toolchain, firmware, enrolling the board with your server and checking its telemetry on the bench |
-| [Deployment](/deployment/read-this-first.md) | Installing the tracker in a vehicle, its production configuration, a test drive and alerts |
-| [Configuration reference](/reference/hardware.md) | Every hardware option, firmware build setting, device command and server setting |
+| [Assembly](assembly/read-this-first.md) | Choosing parts, building the PCB and testing it before and after the Connect Kit goes on |
+| [Server](server/installation.md) | Installing the tracking server, configuring it, running it as a service and exposing only what has to be exposed |
+| [Board setup](board-setup/prerequisites.md) | The toolchain, firmware, enrolling the board with your server and checking its telemetry on the bench |
+| [Deployment](deployment/read-this-first.md) | Installing the tracker in a vehicle, its production configuration, a test drive and alerts |
+| [Configuration reference](reference/hardware.md) | Every hardware option, firmware build setting, device command and server setting |
 
 ## What you end up with
 

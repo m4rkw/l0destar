@@ -2,19 +2,19 @@
 
 This section brings one board up on the bench - flashed with the tracker firmware, enrolled on your server and reporting - before it goes anywhere near a vehicle.
 
-The shortest way to a working tracker is the first four pages: this one, [minimal config and initial flashing](/board-setup/initial-flashing.md), [onboarding the device into the server](/board-setup/server-onboarding.md) and [verifying telemetry](/board-setup/verifying-telemetry.md). The pages after them cover the web interface, over-the-air updates, the Makerdiary firmware update every Connect Kit needs before it goes into a vehicle, and the optional nRF Cloud onboarding. Once a board is reporting, [firmware build options](/reference/firmware.md) lists everything you can change.
+The shortest way to a working tracker is the first four pages: this one, [minimal config and initial flashing](initial-flashing.md), [onboarding the device into the server](server-onboarding.md) and [verifying telemetry](verifying-telemetry.md). The pages after them cover the web interface, over-the-air updates, the Makerdiary firmware update every Connect Kit needs before it goes into a vehicle, and the optional nRF Cloud onboarding. Once a board is reporting, [firmware build options](../reference/firmware.md) lists everything you can change.
 
-It assumes a board that has been through [Assembly](/assembly/board-test.md) and a server installed as described in [Server installation](/server/installation.md). The interactive stage of the board test needs the software on this page, so if you have not run it yet, come back to it once this page is done.
+It assumes a board that has been through [Assembly](../assembly/board-test.md) and a server installed as described in [Server installation](../server/installation.md). The interactive stage of the board test needs the software on this page, so if you have not run it yet, come back to it once this page is done.
 
 ## Hardware
 
-- **The assembled carrier board** with the Makerdiary nRF9151 Connect Kit fitted, the u.FL leads connected, and the unpowered and first power-up checks from the [board test](/assembly/board-test.md) passed.
+- **The assembled carrier board** with the Makerdiary nRF9151 Connect Kit fitted, the u.FL leads connected, and the unpowered and first power-up checks from the [board test](../assembly/board-test.md) passed.
 - **A USB-C data cable.** A charge-only cable powers the Connect Kit but never shows up as a debug probe.
 - **A current-limited 12V bench supply.** The 50mA limit is only for the first power-up checks. Before running firmware, raise it to around 300mA: a modem transmitting at full power averages up to about 45mA from the 12V input, with bursts above that, and a supply that hits its current limit makes the board brown out and reset.
-- **A bench lead** for the board's Micro-Fit 3.0 connector (pinout in the [hardware reference](/reference/hardware.md#vehicle-connector-pinout)): ground on pin 2, 12V on pin 4 (permanent live), and 12V through a switch on pin 5 so you can turn the ignition on and off. Leave pins 1, 3 and 6 unconnected on the bench.
-- **An antenna** that meets the [antenna requirements](/reference/hardware.md#antenna). The GNSS port needs an active antenna. Put it by a window or outside: GNSS will not get a fix in the middle of a room.
+- **A bench lead** for the board's Micro-Fit 3.0 connector (pinout in the [hardware reference](../reference/hardware.md#vehicle-connector-pinout)): ground on pin 2, 12V on pin 4 (permanent live), and 12V through a switch on pin 5 so you can turn the ignition on and off. Leave pins 1, 3 and 6 unconnected on the bench.
+- **An antenna** that meets the [antenna requirements](../reference/hardware.md#antenna). The GNSS port needs an active antenna. Put it by a window or outside: GNSS will not get a fix in the middle of a room.
 - **A SIM card that supports LTE-M**, activated, and the APN its provider tells you to use. The firmware only uses LTE-M - NB-IoT is disabled in `prj.conf` - so a SIM or network without LTE-M never registers.
-- **Your l0destar server**, installed and reachable from the internet on UDP 65480 and TCP 65481 ([Telemetry port](/server/telemetry-port.md)).
+- **Your l0destar server**, installed and reachable from the internet on UDP 65480 and TCP 65481 ([Telemetry port](../server/telemetry-port.md)).
 
 ## Software
 

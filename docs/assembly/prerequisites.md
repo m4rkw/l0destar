@@ -2,7 +2,7 @@
 
 What you need before you start building a board: the skills, the tools, the design files, a PCB
 and the parts. Which parts to buy - and which ones not to substitute - is covered on the
-[component selection](/assembly/component-selection.md) page.
+[component selection](component-selection.md) page.
 
 ## Skills
 
@@ -44,7 +44,7 @@ test needs the supply voltage raised and lowered by 1V.
 
 You will also want some tape to hold the pin headers in place while soldering them, and if you
 print the enclosure, a soldering iron tip for heat-set inserts (see
-[component selection](/assembly/component-selection.md#enclosure-hardware)).
+[component selection](component-selection.md#enclosure-hardware)).
 
 Before you start:
 
@@ -105,14 +105,14 @@ logo.
   Makerdiary and does not sell the Connect Kit.
 - The parts in the
   [v3.4 bill of materials](https://github.com/m4rkw/l0destar/blob/master/hardware/l0destar_v3.4/README.md)
-  for the build you chose - see [component selection](/assembly/component-selection.md).
+  for the build you chose - see [component selection](component-selection.md).
 - Two 35mm u.FL to u.FL cables and one ultra-thin MX1.25 two-pin power lead, both in the bill of
   materials. The cables link the board's u.FL connectors to the Connect Kit's antenna
   connectors; the lead takes the 4.2V rail to the Connect Kit's battery connector.
 - If you are printing the enclosure: M2 heat-set inserts and M2 x 10mm screws.
 
 An antenna, a SIM card and the firmware tooling are only needed once the board is built; they are
-listed under [Board setup prerequisites](/board-setup/prerequisites.md).
+listed under [Board setup prerequisites](../board-setup/prerequisites.md).
 
 ## For the board test
 
@@ -120,7 +120,7 @@ listed under [Board setup prerequisites](/board-setup/prerequisites.md).
 - A way to feed the board through its 6-pin Molex Micro-Fit 3.0 connector: a lead made up with
   the mating 43025-0600 housing, or temporary wires. Pin 2 is ground, pin 4 is the permanent 12V
   and pin 5 is the ignition input - see the
-  [vehicle connector pinout](/reference/hardware.md#vehicle-connector-pinout). A switch in the
+  [vehicle connector pinout](../reference/hardware.md#vehicle-connector-pinout). A switch in the
   ignition wire is needed for the firmware test.
 - For the interactive firmware test only: a USB-C data cable, a SIM card and antenna, and the
-  toolchain described in [Board setup prerequisites](/board-setup/prerequisites.md).
+  toolchain described in [Board setup prerequisites](../board-setup/prerequisites.md).

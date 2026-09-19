@@ -50,7 +50,7 @@ Both sets of interface parts can be populated, but only one interface may be ena
 !!! danger "Never bridge the CAN and K pads together"
     The pads route the same two connector pins to one interface or the other. Connecting both at
     once gives unpredictable behaviour. The full pad table is in the
-    [hardware reference](/reference/hardware.md#interface-selection-pads).
+    [hardware reference](../reference/hardware.md#interface-selection-pads).
 
 ## How the bill of materials is organised
 
@@ -93,7 +93,7 @@ internal under-voltage lockout. Fitting the divider instead (S6R4 1M, S6R5 243K,
 1%) makes the buck start only above about 5.6V and shut off below about 4.3V by calculation (a v3.3 board measured 5.14V on and 4.47V off), which gives clean
 behaviour in ISO 16750-2 style low-voltage and drop-out events. It costs around 9µA of sleep
 current at 12V, which is why it is not fitted by default. Values and formula are in the
-[hardware reference](/reference/hardware.md#buck-enable-divider).
+[hardware reference](../reference/hardware.md#buck-enable-divider).
 
 **CAN common-mode choke (S9FL1).** An ACT1210-101-2P-TL00 in series with CAN high and CAN low,
 which improves emissions and common-mode noise rejection. CAN works without it.

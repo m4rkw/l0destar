@@ -136,7 +136,7 @@ connector. It improves radiated emissions and common-mode noise rejection, but C
 ### Interface parts
 
 The CAN parts and the K-wire parts are optional as a group; see
-[component selection](/assembly/component-selection.md).
+[component selection](../assembly/component-selection.md).
 
 ## Test points
 
@@ -150,7 +150,7 @@ The CAN parts and the K-wire parts are optional as a group; see
 | S12TP6 | PP3V3_K, the switched K-wire 3.3V rail |
 | S12TP7 | PP12V_K, the switched K-wire 12V rail |
 
-Expected readings are on the [board test](/assembly/board-test.md) page.
+Expected readings are on the [board test](../assembly/board-test.md) page.
 
 ## Status LEDs
 

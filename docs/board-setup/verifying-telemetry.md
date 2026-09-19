@@ -2,7 +2,7 @@
 
 With the device enrolled, check the whole path - device, network, server, database and web interface - while the board is still on the bench, where problems are easy to see and fix.
 
-Keep a console open on the device (see [minimal config and initial flashing](/board-setup/initial-flashing.md#watch-the-console)) and a shell on the server.
+Keep a console open on the device (see [minimal config and initial flashing](initial-flashing.md#watch-the-console)) and a shell on the server.
 
 ## On the device
 
@@ -72,7 +72,7 @@ ORDER BY id DESC LIMIT 5;
 | Battery | `battery_level` | Within a few tens of millivolts of your bench supply. |
 | Ignition | Switch pin 5 on, wait for a record, switch it off | `ignition_state` follows the switch. A journey opens when the ignition comes on and closes after it goes off; switching back on within 5 minutes continues the same journey. |
 | Firmware | `fw` | `0.4.0` for a bench build. It is sent after a restart and copied onto every later record. |
-| Network | `rat`, `mcc`, `mnc` | `rat` is `CATM1`. The map shows the operator's name once the server has operator data (`tools/import_plmn.py`, see the [server reference](/reference/server.md)). |
+| Network | `rat`, `mcc`, `mnc` | `rat` is `CATM1`. The map shows the operator's name once the server has operator data (`tools/import_plmn.py`, see the [server reference](../reference/server.md)). |
 | Replies and commands | `command.py <imei> config` | Once the device next reads a reply, an alert such as `fw=0.4.0 int=0 ma=1 tm=0 bat=12.4V ign=on up=512s`. |
 | Web interface | Sign in | The device in the device list, with a recent last-seen time, and its position on the map. |
 
@@ -88,11 +88,11 @@ If no notification backend is configured yet, the alert still appears in `udp.lo
 
 | Symptom | Likely cause | What to do |
 |---|---|---|
-| No `connected` at boot | The modem has not registered on the network. | Give it a few minutes; if it still does not connect, fix the SIM, APN, antenna or coverage, then reset. See [no connected line](/board-setup/initial-flashing.md#no-connected-line). |
-| `connected`, `sent`, but nothing at all in `udp.log` | The datagrams never arrive: DNS, no IPv4 address for the hostname, a firewall or missing port forward, or a wrong APN (the modem can register without a working data connection). | Test the port from outside, as in [telemetry port](/server/telemetry-port.md). Check `CONFIG_APP_SERVER_HOST` resolves to an IPv4 address. |
+| No `connected` at boot | The modem has not registered on the network. | Give it a few minutes; if it still does not connect, fix the SIM, APN, antenna or coverage, then reset. See [no connected line](initial-flashing.md#no-connected-line). |
+| `connected`, `sent`, but nothing at all in `udp.log` | The datagrams never arrive: DNS, no IPv4 address for the hostname, a firewall or missing port forward, or a wrong APN (the modem can register without a working data connection). | Test the port from outside, as in [telemetry port](../server/telemetry-port.md). Check `CONFIG_APP_SERVER_HOST` resolves to an IPv4 address. |
 | `decrypt failed from ...` in `udp.log` | The device is not enrolled, or the key or IMEI does not match. | Check the IMEI with `device.py show`. If in doubt about the key, give the server the one in `local.conf` again with `device.py rekey <imei> --psk <key>`. |
 | `records from ...` in the log, but never a `resp:` line | The server's replies do not get back, or the device is not waiting for them. | Test with pin 5 on and the supply below 13.0V, where every send waits for a reply. Check nothing between the server and the internet drops outgoing UDP. |
 | `no GPS fix`, `no fix, skipping send`, or `reporting from last known position` | No usable GNSS signal. Until the first fix since start-up nothing is sent at all. | Active antenna on the GNSS connector, a view of the sky, and patience: an unassisted first fix takes 2 to 5 minutes. |
-| `battery_level` near zero | No 12V on pin 4, or an INA228 fault. | Check the bench lead, then the voltage stage of the [board test](/assembly/board-test.md). |
+| `battery_level` near zero | No 12V on pin 4, or an INA228 fault. | Check the bench lead, then the voltage stage of the [board test](../assembly/board-test.md). |
 | `ignition_state` never changes | Nothing reaches pin 5. | Check the bench lead's switch and wiring. |
 | A command never arrives | The device has not read a reply since it was queued. | `device.py show <imei>` lists queued commands. Switch pin 5 on to make the device read replies. |

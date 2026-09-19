@@ -6,7 +6,7 @@ The server reads `/srv/l0destar/config.yaml` once at start-up. The first start w
 sudo docker restart l0destar
 ```
 
-This page goes through the decisions you need to make. Every key and its default is listed in the [server configuration reference](/reference/server.md#configyaml), and the image carries a fully commented example:
+This page goes through the decisions you need to make. Every key and its default is listed in the [server configuration reference](../reference/server.md#configyaml), and the image carries a fully commented example:
 
 ```sh
 sudo docker exec l0destar cat config.yaml.example
@@ -50,7 +50,7 @@ google_maps_api_key: '<key>'
 - `secure_cookies` must stay `true` for anything but a local test over plain HTTP. Passkeys need HTTPS anyway.
 - `google_maps_api_key` is needed for the map. Without it the map page shows a note instead and everything else still works. Create a key for the Maps JavaScript API in the Google Cloud console and restrict it to your site's address with an HTTP referrer restriction such as `https://tracker.example.com/*`: the key is sent to every browser that opens the map and cannot be kept secret.
 
-The login rate limit, `rate_limit_request_count` and `rate_limit_reset_period`, rarely needs changing; see [Server security](/server/security.md).
+The login rate limit, `rate_limit_request_count` and `rate_limit_reset_period`, rarely needs changing; see [Server security](security.md).
 
 ## Which vehicle the web interface opens on
 
@@ -73,7 +73,7 @@ The server listens for trackers on two ports:
 
 Both are on without any settings: the TLS listener starts once `tls_cert` and `tls_key` are set, which the first start does. Keep both ports at their defaults, in `config.yaml` and in the `-p` options of `docker run`, because both numbers are compiled into the firmware.
 
-The TLS timeouts (`tls_read_timeout`, `tls_handshake_timeout` and `fw_download_timeout`) are tuned for LTE-M in weak signal and are best left alone. Opening the ports is covered in [Telemetry port](/server/telemetry-port.md).
+The TLS timeouts (`tls_read_timeout`, `tls_handshake_timeout` and `fw_download_timeout`) are tuned for LTE-M in weak signal and are best left alone. Opening the ports is covered in [Telemetry port](telemetry-port.md).
 
 ## Engine state and journeys
 
@@ -99,7 +99,7 @@ notify:
   expire: 300
 ```
 
-`backend` is `none` (the default: nothing is sent, but every notification is written to `app.log`), `pushover`, or `webhook` with a `url` and an optional `token` sent as a bearer token. Which alerts exist, and how to set up each backend, is covered in [Configure alerts](/deployment/alerts.md).
+`backend` is `none` (the default: nothing is sent, but every notification is written to `app.log`), `pushover`, or `webhook` with a `url` and an optional `token` sent as a bearer token. Which alerts exist, and how to set up each backend, is covered in [Configure alerts](../deployment/alerts.md).
 
 ## Home check
 
@@ -117,7 +117,7 @@ home_check:
     radius_m: 300
 ```
 
-Nothing happens until something calls `POST /api/1.0/home`, usually a cron job at a time the vehicles are normally at home ([Server deployment](/server/deployment.md)). Each listed vehicle whose last position is further than `radius_m` metres from its point, and which is not marked as garaged, raises a notification. A single mapping, without the list, is also accepted. An entry missing its `imei`, `latitude` or `longitude` stops the server at start-up with an error naming the entry, rather than leaving that vehicle silently unchecked.
+Nothing happens until something calls `POST /api/1.0/home`, usually a cron job at a time the vehicles are normally at home ([Server deployment](deployment.md)). Each listed vehicle whose last position is further than `radius_m` metres from its point, and which is not marked as garaged, raises a notification. A single mapping, without the list, is also accepted. An entry missing its `imei`, `latitude` or `longitude` stops the server at start-up with an error naming the entry, rather than leaving that vehicle silently unchecked.
 
 ## Command-line tools
 
