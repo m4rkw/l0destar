@@ -41,6 +41,16 @@ CONFIG_APP_APN=""
 # Only if the server publishes its UDP listener under another port number:
 # CONFIG_APP_SERVER_PORT=65480
 
+# --- Traccar instead of the l0destar server --------------------------------
+# Report to a Traccar server with its OsmAnd protocol (TRACCAR.md).  Register
+# the device there with its IMEI as the identifier first.  SERVER_HOST and
+# PSK_HEX above are then unused.
+# CONFIG_APP_TRACCAR=y
+# CONFIG_APP_TRACCAR_HOST="traccar.example.org"
+# CONFIG_APP_TRACCAR_PORT=5055
+# CONFIG_APP_TRACCAR_ID=""            # empty: the IMEI
+# CONFIG_APP_TRACCAR_SEC_TAG=-1       # a modem sec_tag with the CA for HTTPS
+
 # --- preferences -----------------------------------------------------------
 # CONFIG_APP_MOVEMENT_ALARM=n
 # CONFIG_LOG_MODE_IMMEDIATE=y

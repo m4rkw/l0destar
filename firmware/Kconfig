@@ -470,6 +470,74 @@ config APP_APN
 	help
 	  Network APN.  Leave empty to fall back to DEFAULT_APN in config.h.
 
+# --- Traccar ----------------------------------------------------------------
+
+menuconfig APP_TRACCAR
+	bool "Report to a Traccar server instead of the l0destar server"
+	default n
+	help
+	  Send telemetry to a Traccar server (https://www.traccar.org) with
+	  its OsmAnd protocol - one HTTP request per record, alert or fault
+	  code report - in place of the encrypted UDP datagrams the l0destar
+	  server takes.  src/traccar.c replaces src/transport.c; the record
+	  builder, batching, the backlog and the alert queue are unchanged.
+	  APP_SERVER_HOST and APP_PSK_HEX are then unused.
+
+	  Register the device in Traccar with its IMEI as the identifier (or
+	  whatever APP_TRACCAR_ID says) before it first reports: Traccar
+	  answers an unknown device with HTTP 400, and such a report is
+	  dropped rather than retried.
+
+	  What the l0destar server does that Traccar cannot: set the
+	  engine-off interval and the movement alarm from its side (they stay
+	  at APP_ENGINE_OFF_LOOP_INTERVAL and APP_MOVEMENT_ALARM), switch on
+	  track mode, advertise firmware updates (the power-on check still
+	  runs against APP_FOTA_HOST, if one is set), and keep the captured
+	  warnings and errors.  Traccar's "custom" command does reach the
+	  device: its data is handed to the same command parser the l0destar
+	  server's commands go through (int=, movealarm=, locate, fota,
+	  reboot ...).  See TRACCAR.md.
+
+if APP_TRACCAR
+
+config APP_TRACCAR_HOST
+	string "Traccar server hostname"
+	default ""
+	help
+	  The host running Traccar.  Required: a build with it empty fails.
+
+config APP_TRACCAR_PORT
+	int "Traccar OsmAnd protocol port"
+	range 1 65535
+	default 5055
+	help
+	  The port of Traccar's OsmAnd listener, 5055 unless traccar.xml sets
+	  osmand.port.  Not the web interface's 8082: that answers every
+	  request with the page, which the firmware would count as delivered.
+
+config APP_TRACCAR_ID
+	string "Device identifier (empty = the IMEI)"
+	default ""
+	help
+	  What the device calls itself, which must match the identifier of
+	  the device registered in Traccar.  The IMEI unless set.
+
+config APP_TRACCAR_SEC_TAG
+	int "Modem sec_tag holding the server's CA (-1 = plain HTTP)"
+	default -1
+	help
+	  Set to reach Traccar over HTTPS: the modem verifies the server
+	  against the CA chain stored at this tag and checks the certificate
+	  against APP_TRACCAR_HOST.  The firmware does not install anything
+	  here - Traccar's OsmAnd port is normally plain HTTP, and TLS in
+	  front of it is a reverse proxy with a certificate of your own
+	  choosing - so provision the CA with nrfcredstore or AT%CMNG.  The
+	  same value as APP_FOTA_SEC_TAG reuses the l0destar CA that
+	  modem_provision_tls() stores at boot, for a proxy whose certificate
+	  it issued.
+
+endif # APP_TRACCAR
+
 # --- over-the-air updates ---------------------------------------------------
 
 menuconfig APP_FOTA

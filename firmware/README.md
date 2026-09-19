@@ -113,6 +113,7 @@ of being ignored. Telemetry `ax/ay/az` are **milli-g** (FS-independent);
 | `gnss.c`      | GNSS fixes via the nRF9151's built-in receiver (`nrf_modem_gnss`) |
 | `agnss.c`     | A-GNSS assistance from **nRF Cloud REST** (device-JWT auth) |
 | `transport.c` | UDP telemetry, each datagram sealed with **ChaCha20-Poly1305** under the device key |
+| `traccar.c`   | Built in its place with `CONFIG_APP_TRACCAR`: the same lines as OsmAnd-protocol HTTP requests to a **Traccar** server ([TRACCAR.md](TRACCAR.md)) |
 | `data.c`      | Telemetry CSV record builder (position, speed, battery, ignition, accel) |
 | `commands.c`  | Server command dispatch (`key=value[,…]`) |
 | `alert.c`     | Movement/event alert queue (piggybacks on sends, or standalone) |
@@ -153,6 +154,16 @@ that decrypts is authenticated as well as private.
 
 The CA in `src/ca_cert.h` is for updates only: `modem.c` writes it into the
 modem on first boot, and the update server's certificate is checked against it.
+
+**Traccar** instead of the l0destar server: `CONFIG_APP_TRACCAR=y` with
+`CONFIG_APP_TRACCAR_HOST` builds `src/traccar.c` in place of `transport.c`,
+and every record, alert and fault-code report goes to a
+[Traccar](https://www.traccar.org) server as an OsmAnd-protocol HTTP request
+(port 5055), with the device's IMEI as its identifier. Records, batching and
+the backlog are unchanged; Traccar's *custom* command reaches the firmware's
+command parser. What the l0destar server does that Traccar cannot — settings
+from the server, track mode, update adverts, the device log, encryption — is
+in [TRACCAR.md](TRACCAR.md), with the field mapping.
 
 Each telemetry record is one CSV line built in `data.c` (timestamp, lat, lon,
 speed, altitude, heading, HDOP, satellites, battery, ignition, uptime and
@@ -360,6 +371,10 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_SERVER_HOST` | "" | Telemetry hostname (else `HOSTNAME` in `config.h`) |
 | `APP_SERVER_PORT` | 65480 | Telemetry UDP port |
 | `APP_APN` | "" | Cellular APN (else `DEFAULT_APN`) |
+| `APP_TRACCAR` | n | Report to a Traccar server (OsmAnd protocol over HTTP) instead of the l0destar server ([TRACCAR.md](TRACCAR.md)) |
+| `APP_TRACCAR_HOST` / `_PORT` | "" / 5055 | The Traccar server and its OsmAnd listener's port |
+| `APP_TRACCAR_ID` | "" | Device identifier in Traccar (empty = the IMEI) |
+| `APP_TRACCAR_SEC_TAG` | -1 | Modem sec_tag holding the CA for HTTPS to Traccar; -1 = plain HTTP |
 | `APP_PSK_HEX` | "" | Device key, 64 hex characters: required, and must match the server's |
 | `APP_ENGINE_OFF_LOOP_INTERVAL` | 0 | Engine-off wake interval until the server sets one (s; 0 = 900) |
 | `APP_IGNITION_ON_SLEEP_INTERVAL` | 30 | Send cadence: ignition on, engine off (s) |

@@ -495,6 +495,7 @@ static void do_sleep(void)
     gnss_stop();
     LOG_INF("sleep: transport close");
     transport_close();
+    transport_teardown();   /* the connection does not survive the modem going off */
     LOG_INF("sleep: modem power off");
     lte_lc_power_off();
     LOG_INF("sleep: CAN power off");
@@ -827,6 +828,7 @@ static void do_sleep(void)
                  * the next pass sends first. */
                 if ((modem_raised || network_ready) &&
                     !(resend_owed && modem_is_registered())) {
+                    transport_teardown();
                     lte_lc_power_off();
                     network_ready = false;
                 }
@@ -994,6 +996,7 @@ static void do_sleep(void)
          * owed: the next pass, at most RESEND_POLL_S away, sends it first */
         if ((modem_raised || network_ready) &&
             !(resend_owed && modem_is_registered())) {
+            transport_teardown();
             lte_lc_power_off();
             network_ready = false;
         }

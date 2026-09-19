@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.4.48
+
+### Telemetry can go to a Traccar server
+- **`CONFIG_APP_TRACCAR=y` reports to Traccar instead of the l0destar
+server.**  `src/traccar.c` is built in place of `src/transport.c` and sends
+the same lines — records, alerts, fault-code reports — as OsmAnd-protocol
+HTTP requests to `APP_TRACCAR_HOST` on its OsmAnd port (`APP_TRACCAR_PORT`,
+5055), the device identified by its IMEI or `APP_TRACCAR_ID`, over TLS when
+`APP_TRACCAR_SEC_TAG` names a CA.  The record builder, batching, the backlog
+and the alert queue are untouched.  Record fields arrive under Traccar's own
+attribute names where it has one (`power`, `ignition`, `sat`, `versionFw`,
+`rpm`, `coolantTemp`, the fuel trims unscaled ...) and their own otherwise;
+alerts become positions with `alarm=` set from the wording (movement, tow,
+tampering, accident, powerCut ...).  Traccar's *custom* command is returned
+in the response and goes through the same command parser as the l0destar
+server's, so `int=`, `movealarm=`, `locate`, `fota` and `reboot` work from
+there.  See `TRACCAR.md` for the mapping and what Traccar cannot do:
+settings from the server, track mode, update adverts, the device log.
+- **One TCP connection is kept across sends.**  Release assistance drops the
+RRC connection after each response, and closing the connection after that
+would need a fresh one just for the FIN, so `transport_close()` keeps the
+socket and only hints the release; `transport_teardown()` drops it, which
+now happens before every `lte_lc_power_off()` (a no-op for the UDP
+transport, whose socket is already closed by then).  A request on a
+connection the server has meanwhile dropped is retried once on a new one.
+- **A 4xx answer drops the report, a 5xx keeps it.**  400 is Traccar not
+knowing the identifier; holding such a report in the backlog would retry it
+forever and escalate the modem recovery for a link that is fine.
+- **A build with no update server skips the update check** instead of
+failing DNS on an empty hostname at every power-on: `APP_FOTA_HOST` empty
+and `APP_SERVER_HOST` empty, as a Traccar build has them.
+
 ## 0.4.47
 
 ### A short key cycle no longer leaves the unit idling awake

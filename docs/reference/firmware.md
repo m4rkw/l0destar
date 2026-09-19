@@ -293,13 +293,25 @@ update, and `push_fw.sh` does not check it either.
 | `APP_SERVER_PORT` | int, 1-65535 | `65480` | UDP port telemetry is sent to. Change it only when the server publishes its UDP listener under another port number |
 | `APP_PSK_HEX` | string | `""` | The device's 32-byte ChaCha20-Poly1305 key as 64 hex characters: generate one with `openssl rand -hex 32` and enrol the device with `tools/adddevice.py --psk`, or use the key `adddevice.py` prints. Empty means an all-zero key: the firmware still sends, and the server rejects everything. The key is stored in the image in plain text |
 
+### Traccar
+
+Set `APP_TRACCAR` to report to a [Traccar](https://www.traccar.org) server with its OsmAnd protocol instead of the l0destar server. `src/traccar.c` is built in place of `src/transport.c`; the records are the same, and `APP_SERVER_HOST` and `APP_PSK_HEX` are unused. Register the device in Traccar with its IMEI as the identifier first. The firmware's `TRACCAR.md` has the field mapping, the command channel and what the l0destar server does that Traccar cannot.
+
+| Symbol | Type | Default | Meaning |
+|---|---|---|---|
+| `APP_TRACCAR` | bool | `n` | Report to Traccar. Traccar cannot set the engine-off interval, the movement alarm or track mode, advertise updates, or keep the device log; its *custom* command reaches the tracker's command parser |
+| `APP_TRACCAR_HOST` | string | `""` | The Traccar server. Required when `APP_TRACCAR` is set: the build fails with it empty |
+| `APP_TRACCAR_PORT` | int, 1-65535 | `5055` | The port of Traccar's OsmAnd listener (`osmand.port` in `traccar.xml`), not the web interface's 8082 |
+| `APP_TRACCAR_ID` | string | `""` | The identifier the device reports under; empty is the IMEI |
+| `APP_TRACCAR_SEC_TAG` | int | `-1` | Modem security tag holding the CA to verify the server against, for HTTPS through a reverse proxy; `-1` is plain HTTP, which Traccar's own listener speaks. Nothing is installed at the tag by the firmware — provision it, or reuse `APP_FOTA_SEC_TAG` for a proxy certificate the l0destar CA issued |
+
 ### Over-the-air updates
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
 | `APP_FOTA` | bool | `y` | The update subsystem. Leave it on: turning it off also removes the call that confirms an image installed over the air, so MCUboot would revert such an image at the next boot |
 | `APP_FOTA_INHIBIT` | bool | `n` | Keeps the subsystem but never checks, downloads or acts on update adverts or the `fota` command, while still confirming the running image. For bench builds, whose version is `MAJOR.MINOR.0` and would be replaced within seconds of booting by any build published for the unit's IMEI. Never in a published image |
-| `APP_FOTA_HOST` | string | `""` | Update host; empty reuses `APP_SERVER_HOST` |
+| `APP_FOTA_HOST` | string | `""` | Update host; empty reuses `APP_SERVER_HOST`. With both empty (a Traccar build), the update check is skipped and updates are over SWD only |
 | `APP_FOTA_PORT` | int | `65481` | Update port: the server's TLS listener, which serves firmware downloads |
 | `APP_FOTA_SEC_TAG` | int | `42` | Modem security tag holding the CA the update server is verified against. `-1` fetches over plain HTTP; the image is still signature-checked, but the manifest is not authenticated |
 | `APP_FOTA_MANIFEST_PATH` | string | `"/fw/manifest.txt"` | Requested with `?imei=<imei>&v=<running version>` appended |

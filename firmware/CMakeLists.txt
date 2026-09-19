@@ -18,7 +18,6 @@ target_sources(app PRIVATE
     src/gnss.c
     src/agnss.c
     src/modem.c
-    src/transport.c
     src/data.c
     src/alert.c
     src/commands.c
@@ -28,6 +27,14 @@ target_sources(app PRIVATE
     src/reboot.c
     src/fatal.c
 )
+
+# Telemetry transport: the l0destar server's encrypted UDP, or a Traccar
+# server's OsmAnd HTTP.  Both implement the transport_* interface in app.h.
+if(CONFIG_APP_TRACCAR)
+    target_sources(app PRIVATE src/traccar.c)
+else()
+    target_sources(app PRIVATE src/transport.c)
+endif()
 
 # Interactive bring-up rig (board_test.sh) — bench builds only.
 target_sources_ifdef(CONFIG_APP_BOARD_TEST app PRIVATE src/board_test.c)

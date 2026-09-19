@@ -143,14 +143,29 @@ const char *demo_mask_coords(const char *in, size_t len,
 int  agnss_init(void);
 int  agnss_fetch(void *agnss_request);  /* NULL = request all; else nrf_modem_gnss_agnss_data_frame* */
 
+/* -- telemetry transport ----------------------------------------------------
+ * transport.c, the l0destar server's encrypted UDP, or traccar.c, Traccar's
+ * OsmAnd protocol over HTTP (CONFIG_APP_TRACCAR); one of the two is built.
+ * Both take the same payload: newline-separated lines in the server
+ * protocol's format (records, "A," alerts, "D," fault codes, "L," log
+ * lines), which is what data.c, databuf.c and alert.c produce. */
 int  transport_open(void);
+/* The exchange is over: let the radio go.  The UDP transport closes its
+ * socket; the Traccar one keeps its TCP connection for the next send and
+ * only hints the release, since closing would cost a fresh RRC connection
+ * for the FIN. */
 void transport_close(void);
 /* Streaming: keep the socket and the RRC connection up between sends
  * (RAI_ONGOING) instead of releasing the radio after each one.  Only
  * sensible with GNSS stopped, since the radio is then LTE's anyway. */
 void transport_set_streaming(bool on);
+/* Drop the socket, hint or no hint: before the modem is powered off or
+ * reset, and when a send has failed on it. */
 void transport_teardown(void);
 int  transport_send(const uint8_t *plaintext, size_t pt_len);
+/* The server's reply to the last send, "1,<interval>,<movement_alarm>[,cmd]".
+ * UDP waits up to timeout_ms for the datagram; Traccar already has it (a
+ * 2xx, and any queued command) and answers at once. */
 int  transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms);
 
 int  collect_data(int ignition_state);

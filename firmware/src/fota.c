@@ -575,6 +575,19 @@ int fota_check(enum fota_ctx ctx)
     if (!s_forced && !s_boot_check) {
         return 0;   /* nothing pending — the common case, no traffic */
     }
+    if (FOTA_HOST[0] == '\0') {
+        /* A Traccar build with no APP_FOTA_HOST, say: nowhere to ask, so
+         * the check is not a failure to retry.  Said once. */
+        static bool said;
+
+        if (!said) {
+            said = true;
+            LOG_INF("no update server configured — updates only over SWD");
+        }
+        s_forced = false;
+        s_boot_check = false;
+        return 0;
+    }
     if (s_next_check_ms != 0 && k_uptime_get() < s_next_check_ms) {
         return 0;   /* failure holdoff (fota_request_check overrides it) */
     }
