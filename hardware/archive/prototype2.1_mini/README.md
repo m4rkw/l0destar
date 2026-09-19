@@ -6,7 +6,7 @@ This is a prototype l0destar vehicle tracker PCB designed to be hand-solderable.
 It makes use of the [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) to provide the LTE and GPS
 functions.
 
-This is the same as the regular [l0destar v2.1](https://github.com/m4rkw/l0destar/tree/master/hardware/prototype2.1) prototype but with the CAN
+This is the same as the regular [l0destar v2.1](https://github.com/m4rkw/l0destar/tree/master/hardware/archive/prototype2.1) prototype but with the CAN
 interface, K-wire interface and general-purpose AIO pins on the main connector
 removed in favour of a smaller footprint and simpler construction.
 
@@ -30,7 +30,7 @@ recorded below are my own unverified bench observations - repeat the testing
 yourself rather than taking them on trust.
 
 **Before building or installing anything from this repository, read the
-[full disclaimer](../../DISCLAIMER.md).**
+[full disclaimer](../../../DISCLAIMER.md).**
 
 ## Status
 

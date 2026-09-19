@@ -7,7 +7,7 @@ MCP2518FD and a host-side canable2 USB adapter.
 
 ## Hardware setup
 
-- l0destar v2.6C board (MCP2518FD + MAX33041EASA+ transceiver)
+- l0destar v2.6C board (MCP2518FD + TCAN334GDR transceiver)
 - canable2 USB-CAN adapter (gs_usb firmware, VID 1D50 PID 606F)
 - Two-wire CAN bus between them (CANH, CANL)
 - 120R termination on both ends (PCB-side resistor + DSD TECH jumper)

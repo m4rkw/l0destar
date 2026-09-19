@@ -4,7 +4,7 @@ A deployed tracker gets its firmware configuration from its own section of `remo
 
 ## Firmware for the vehicle
 
-`push_fw.sh` builds each device from the `[common]` section of `firmware/remote.conf` plus the section named after the device's IMEI. Your bench `local.conf` is not used at all, so everything the vehicle needs has to be in `remote.conf`. The file and the script are covered in [OTA updates](/board-setup/ota-updates.html); a typical vehicle looks like this:
+`push_fw.sh` builds each device from the `[common]` section of `firmware/remote.conf` plus the section named after the device's IMEI. Your bench `local.conf` is not used at all, so everything the vehicle needs has to be in `remote.conf`. The file and the script are covered in [OTA updates](/board-setup/ota-updates.md); a typical vehicle looks like this:
 
 ```ini
 [common]
@@ -22,7 +22,7 @@ CONFIG_APP_OBD_MODE=2
 
 - `CONFIG_APP_APN` belongs here even if it is already in your `local.conf`. Without it the image falls back to the APN in `prj.conf`, which is not your SIM's.
 - `CONFIG_APP_PSK_HEX` goes in each device's own section, because the server gives every device its own key.
-- `CONFIG_APP_BOARD_L0DESTAR_V3_4=y` selects a v3.4 board (a v3.3 board uses `..._V3_3`); other revisions are listed in [Firmware build options](/reference/firmware.html#board-selection).
+- `CONFIG_APP_BOARD_L0DESTAR_V3_4=y` selects a v3.4 board (a v3.3 board uses `..._V3_3`); other revisions are listed in [Firmware build options](/reference/firmware.md#board-selection).
 - `CONFIG_APP_OBD_MODE` must match the board's interface selection pads: `0` for none, `1` for CAN, `2` for K-wire.
 
 Never put these in a deployed unit's configuration:
@@ -42,7 +42,7 @@ The tracker downloads the update once a reply it reads advertises it, but not wh
 
 ### Per-vehicle tuning
 
-These are the settings most worth reviewing for a particular vehicle. Every symbol is described in [Firmware build options](/reference/firmware.html).
+These are the settings most worth reviewing for a particular vehicle. Every symbol is described in [Firmware build options](/reference/firmware.md).
 
 | Symbol | Default | Why you might change it |
 |---|---|---|
@@ -81,7 +81,7 @@ CONFIG_APP_KLINE_IDENT=y
 CONFIG_APP_KLINE_DTC=y
 ```
 
-The discovery image never starts the modem, so it needs no server, APN or key, and cannot take an update. With the ignition on, build and flash, then open the console as in [watch the console](/board-setup/initial-flashing.html#watch-the-console):
+The discovery image never starts the modem, so it needs no server, APN or key, and cannot take an update. With the ignition on, build and flash, then open the console as in [watch the console](/board-setup/initial-flashing.md#watch-the-console):
 
 ```sh
 # in firmware/
@@ -138,7 +138,7 @@ The tracker is then running the version the server advertises, so it does not do
 
 ## Settings on the server
 
-The server holds a few settings per device. Change them with `tools/command.py` or the config endpoint, both described in [Device settings and commands](/reference/device-settings.html).
+The server holds a few settings per device. Change them with `tools/command.py` or the config endpoint, both described in [Device settings and commands](/reference/device-settings.md).
 
 | Setting | New device | Set with | Effect |
 |---|---|---|---|
@@ -155,7 +155,7 @@ For example, an hourly check-in:
 sudo docker exec l0destar python tools/command.py 350000000000000 int=3600
 ```
 
-The alarms are covered in [Configure alerts](/deployment/alerts.html).
+The alarms are covered in [Configure alerts](/deployment/alerts.md).
 
 ## Engine-off reporting and battery use
 
@@ -175,7 +175,7 @@ Treat these as estimates. A report takes longer on a weak signal or when the mod
 
 What the setting trades:
 
-- With `int` 0 the server only hears from a parked tracker when something happens: the ignition, movement, an impact or a tilt. A tracker that has lost power or coverage looks exactly like a quiet one until the next drive. For a vehicle normally parked at home, the home check in [Configure alerts](/deployment/alerts.html) helps with that.
+- With `int` 0 the server only hears from a parked tracker when something happens: the ignition, movement, an impact or a tilt. A tracker that has lost power or coverage looks exactly like a quiet one until the next drive. For a vehicle normally parked at home, the home check in [Configure alerts](/deployment/alerts.md) helps with that.
 - With `int` above 0 the reports are a heartbeat, and queued commands and updates reach the parked unit without waiting for the next drive. Hourly roughly doubles the parked consumption, and is a reasonable place to start.
 - The `int=` command raises values from 1 to 9 to 10, but the config endpoint does not. Intervals close to the length of a report keep the tracker awake almost all the time.
 
@@ -204,4 +204,4 @@ The module carries a **non-rechargeable** lithium cell, so a `backup power` aler
 
 ## Track mode
 
-Track mode is not set per vehicle: it is switched on from the web page for a session and ends when the ignition goes off. It is built in by default; set `CONFIG_APP_TRACK_MODE=n` in a device's section if it should not be available for that vehicle. See [Web interface and API](/board-setup/web-interface.html), and the driving note in [Deployment: read this first](/deployment/read-this-first.html).
+Track mode is not set per vehicle: it is switched on from the web page for a session and ends when the ignition goes off. It is built in by default; set `CONFIG_APP_TRACK_MODE=n` in a device's section if it should not be available for that vehicle. See [Web interface and API](/board-setup/web-interface.md), and the driving note in [Deployment: read this first](/deployment/read-this-first.md).

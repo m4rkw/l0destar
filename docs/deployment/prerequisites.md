@@ -4,20 +4,20 @@ Everything to have ready before you start work on the vehicle.
 
 ## A tracker that is ready to fit
 
-- The board is assembled, has passed the [board test](/assembly/board-test.html) and is in its enclosure.
-- The Connect Kit's [interface firmware has been updated](/board-setup/makerdiary-firmware.html). Without the update, unplugging a USB cable leaves the interface MCU drawing about 2mA, which matters if you plan to plug USB in while the tracker is in the vehicle.
-- The tracker is [enrolled on your server](/board-setup/server-onboarding.html) and its [telemetry has been verified](/board-setup/verifying-telemetry.html) on the bench.
-- It runs production firmware: the device has its own section in `remote.conf` and has already taken at least one update over the air from `push_fw.sh` (see [OTA updates](/board-setup/ota-updates.html)). That proves the update path through your firewall before the unit is hidden behind a panel. A production image must not contain `CONFIG_APP_FOTA_INHIBIT=y` or any bench overrides - see [Deployment configuration](/deployment/configuration.html).
+- The board is assembled, has passed the [board test](/assembly/board-test.md) and is in its enclosure.
+- The Connect Kit's [interface firmware has been updated](/board-setup/makerdiary-firmware.md). Without the update, unplugging a USB cable leaves the interface MCU drawing about 2mA, which matters if you plan to plug USB in while the tracker is in the vehicle.
+- The tracker is [enrolled on your server](/board-setup/server-onboarding.md) and its [telemetry has been verified](/board-setup/verifying-telemetry.md) on the bench.
+- It runs production firmware: the device has its own section in `remote.conf` and has already taken at least one update over the air from `push_fw.sh` (see [OTA updates](/board-setup/ota-updates.md)). That proves the update path through your firewall before the unit is hidden behind a panel. A production image must not contain `CONFIG_APP_FOTA_INHIBIT=y` or any bench overrides - see [Deployment configuration](/deployment/configuration.md).
 - The SIM is active, supports LTE-M, and has LTE-M coverage where the vehicle is kept and driven. The firmware does not use NB-IoT.
-- A notification backend is configured on the server and delivers alerts (see [Configure alerts](/deployment/alerts.html)).
+- A notification backend is configured on the server and delivers alerts (see [Configure alerts](/deployment/alerts.md)).
 
 ## Antenna
 
-A combined LTE and active GNSS antenna with two SMA plugs, as described in [Antenna](/reference/hardware.html#antenna). Check that its cable reaches from where you intend to put the antenna to where you intend to put the tracker.
+A combined LTE and active GNSS antenna with two SMA plugs, as described in [Antenna](/reference/hardware.md#antenna). Check that its cable reaches from where you intend to put the antenna to where you intend to put the tracker.
 
 ## Wiring harness
 
-The tracker connects to the vehicle through a 6-way Molex Micro-Fit 3.0 connector. The pin assignments are in [Vehicle connector pinout](/reference/hardware.html#vehicle-connector-pinout): pin 2 ground, pin 4 permanent 12V, pin 5 ignition 12V, and pins 3 and 6 for the optional bus lines.
+The tracker connects to the vehicle through a 6-way Molex Micro-Fit 3.0 connector. The pin assignments are in [Vehicle connector pinout](/reference/hardware.md#vehicle-connector-pinout): pin 2 ground, pin 4 permanent 12V, pin 5 ignition 12V, and pins 3 and 6 for the optional bus lines.
 
 | Item | Notes |
 |---|---|
@@ -34,7 +34,7 @@ The tracker's current is small - roughly 15-45mA from 12V while it reports, goin
 
 ## Diagnostic connection (optional)
 
-Only needed for a board built with the K-wire interface, if you want engine data and fault codes (see [Deployment configuration](/deployment/configuration.html)). Firmware 0.4.x reads nothing over CAN.
+Only needed for a board built with the K-wire interface, if you want engine data and fault codes (see [Deployment configuration](/deployment/configuration.md)). Firmware 0.4.x reads nothing over CAN.
 
 - An OBD-II (SAE J1962) plug with flying leads, or a pass-through splitter so the vehicle's socket stays free for a scan tool.
 - The standard socket pins are 4 chassis ground, 5 signal ground, 6 CAN high, 7 K line, 14 CAN low, 15 L line and 16 battery positive. Not every vehicle populates every pin: look inside the socket, and measure before relying on one.
@@ -44,7 +44,7 @@ Only needed for a board built with the K-wire interface, if you want engine data
 - A multimeter. Use it, rather than a test lamp, on circuits near control units.
 - Plastic trim tools and whatever is needed for the vehicle's panels and fixings.
 - Wire strippers, the crimp tool and a heat gun for the heat shrink.
-- A laptop with the firmware toolchain (see [Board setup prerequisites](/board-setup/prerequisites.html)) and a USB-C data cable, to watch the console or reflash the tracker in the vehicle - for example for K-wire discovery.
+- A laptop with the firmware toolchain (see [Board setup prerequisites](/board-setup/prerequisites.md)) and a USB-C data cable, to watch the console or reflash the tracker in the vehicle - for example for K-wire discovery.
 - A torch.
 
 ## Optional extras
@@ -53,7 +53,7 @@ Only needed for a board built with the K-wire interface, if you want engine data
 - A normally closed push-to-break switch, to power-cycle the tracker without reaching it.
 - Foam or felt tape, to stop the enclosure rattling.
 
-The first two are covered in [Mounting recommendations](/deployment/mounting.html).
+The first two are covered in [Mounting recommendations](/deployment/mounting.md).
 
 ## Vehicle information
 

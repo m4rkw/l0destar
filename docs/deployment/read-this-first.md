@@ -1,6 +1,6 @@
 # Deployment: read this first
 
-This section covers fitting a working l0destar tracker to a vehicle: wiring it into the vehicle's electrics, hiding it, checking that it reports properly and setting up alerts. Read this page before you start, together with [Assembly: read this first](/assembly/read-this-first.html) and the project's [full disclaimer](https://github.com/m4rkw/l0destar/blob/master/DISCLAIMER.md).
+This section covers fitting a working l0destar tracker to a vehicle: wiring it into the vehicle's electrics, hiding it, checking that it reports properly and setting up alerts. Read this page before you start, together with [Assembly: read this first](/assembly/read-this-first.md) and the project's [full disclaimer](https://github.com/m4rkw/l0destar/blob/master/DISCLAIMER.md).
 
 ## You are responsible for the installation
 
@@ -50,7 +50,7 @@ The tracker can fail silently: no coverage, a flat battery, a disconnected harne
 
 ## Location data and the law
 
-The tracker records where the vehicle goes and when. If you operate one, you are the data controller for that data - including when someone else drives the vehicle, such as a family member, an employee or a borrower. Tracking a vehicle you do not own, or tracking its drivers without their knowledge, may be unlawful where you live. Find out what the law requires, get consent or give notice where it does, and keep the data secure (see [Server security](/server/security.html)).
+The tracker records where the vehicle goes and when. If you operate one, you are the data controller for that data - including when someone else drives the vehicle, such as a family member, an employee or a borrower. Tracking a vehicle you do not own, or tracking its drivers without their knowledge, may be unlawful where you live. Find out what the law requires, get consent or give notice where it does, and keep the data secure (see [Server security](/server/security.md)).
 
 ## Radio, vehicle approval and insurance
 

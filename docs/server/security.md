@@ -14,7 +14,7 @@ Every user who can log in can see and control every device: there are no per-use
 
 ## Keep the web interface private
 
-The recommended setup makes the web interface reachable only over [Tailscale](https://tailscale.com/), so it never faces the internet. Only the device ports, UDP 65480 and TCP 65481, need to be public ([Telemetry port](/server/telemetry-port.html)).
+The recommended setup makes the web interface reachable only over [Tailscale](https://tailscale.com/), so it never faces the internet. Only the device ports, UDP 65480 and TCP 65481, need to be public ([Telemetry port](/server/telemetry-port.md)).
 
 Install Tailscale on the server and join it to your tailnet. In the Tailscale admin console, enable MagicDNS and HTTPS certificates for the tailnet. Then publish the web application - which the container makes available on `127.0.0.1:5000` - on the tailnet:
 
@@ -43,9 +43,9 @@ If you prefer nginx in front, bind it to the server's Tailscale address rather t
 
 ## If the web interface has to be public
 
-- Put nginx in front with a public certificate ([Server deployment](/server/deployment.html)) and keep its `proxy_set_header` lines. The application trusts `X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto` and `X-Forwarded-Port`, which is only safe while the proxy overwrites them.
+- Put nginx in front with a public certificate ([Server deployment](/server/deployment.md)) and keep its `proxy_set_header` lines. The application trusts `X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto` and `X-Forwarded-Port`, which is only safe while the proxy overwrites them.
 - Publish the web port on loopback only, `-p 127.0.0.1:5000:5000`. Docker opens the ports it publishes ahead of the host firewall, so a port published on every address cannot be hidden behind a firewall rule, and anything that reaches it can forge the forwarded headers.
-- Keep the operating system, Docker, nginx and the `m4rkw/l0destar` image up to date ([Server deployment](/server/deployment.html#upgrading)).
+- Keep the operating system, Docker, nginx and the `m4rkw/l0destar` image up to date ([Server deployment](/server/deployment.md#upgrading)).
 - Read `audit.log` regularly.
 
 ## Accounts and passkeys
@@ -107,22 +107,22 @@ The MCUboot signing key belongs on the build machine, not on the server, and the
 
 With current firmware:
 
-- Keep TCP 65481 closed except while you roll out an update, at the router or your provider's firewall ([Telemetry port](/server/telemetry-port.html)). That also stops anyone listing which IMEIs have a manifest or confirming a staged update. A firewall on the server itself, such as ufw, cannot close a port Docker publishes. Trackers check for updates at power-on and when a reply advertises one; a check that cannot connect fails and is retried later.
+- Keep TCP 65481 closed except while you roll out an update, at the router or your provider's firewall ([Telemetry port](/server/telemetry-port.md)). That also stops anyone listing which IMEIs have a manifest or confirming a staged update. A firewall on the server itself, such as ufw, cannot close a port Docker publishes. Trackers check for updates at power-on and when a reply advertises one; a check that cannot connect fails and is retried later.
 - Delete superseded images from `/srv/l0destar/fw`, keeping the one each device's manifest names.
-- If an image may have leaked, give the device a new key with `tools/device.py rekey` and reflash it ([Onboarding devices into the server](/board-setup/server-onboarding.html)).
+- If an image may have leaked, give the device a new key with `tools/device.py rekey` and reflash it ([Onboarding devices into the server](/board-setup/server-onboarding.md)).
 
 Fixing this properly needs device keys provisioned separately from the image, which the firmware does not support yet.
 
 ## Signing and CA keys
 
 - **`firmware/mcuboot_priv.pem`** signs firmware, and trackers install any newer image signed with it. Whoever holds it and can serve updates to your trackers can run code on all of them. Keep it off the server, backed up and ideally offline. If it is lost, no deployed tracker can ever be updated again.
-- **`certs/ca.key`** issues the certificates trackers trust for the update endpoint. The server's first start creates it in `/srv/l0destar/certs`, and after that it is only needed to renew the server certificate. Keep a backup somewhere safe. To keep it off the server as well, move it away once the installation is done and renew the server certificate wherever you keep it ([Server installation](/server/installation.html#renewing-the-server-certificate)).
+- **`certs/ca.key`** issues the certificates trackers trust for the update endpoint. The server's first start creates it in `/srv/l0destar/certs`, and after that it is only needed to renew the server certificate. Keep a backup somewhere safe. To keep it off the server as well, move it away once the installation is done and renew the server certificate wherever you keep it ([Server installation](/server/installation.md#renewing-the-server-certificate)).
 - **`certs/server.key`** is the update endpoint's identity. If it leaks, re-issue the server certificate from the CA - but the leaked certificate stays trusted until it expires, so treat a serious leak as a reason to create a new CA and reflash the trackers.
 
 ## Location data and privacy
 
-- If you run trackers, you are responsible for the location data they collect, including when someone else drives the vehicle. See [Deployment: read this first](/deployment/read-this-first.html).
-- Nothing is deleted automatically. Decide how long to keep history ([Server deployment](/server/deployment.html)).
+- If you run trackers, you are responsible for the location data they collect, including when someone else drives the vehicle. See [Deployment: read this first](/deployment/read-this-first.md).
+- Nothing is deleted automatically. Decide how long to keep history ([Server deployment](/server/deployment.md)).
 - Notifications leave your server. Pushover or a webhook receives device names, alert text and, for `locate`, a position.
 - `udp.log` records IMEIs and source addresses, `device.log` firmware messages, and `audit.log` usernames and client addresses. The database holds everything, so encrypt its backups.
 

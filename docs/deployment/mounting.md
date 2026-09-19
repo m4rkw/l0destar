@@ -1,6 +1,6 @@
 # Mounting recommendations
 
-The aim is a tracker that is hard to find, cannot come loose, is powered safely and still has an antenna with a view of the sky. What follows is general advice; the vehicle decides what is possible. Read [Deployment: read this first](/deployment/read-this-first.html) before you start.
+The aim is a tracker that is hard to find, cannot come loose, is powered safely and still has an antenna with a view of the sky. What follows is general advice; the vehicle decides what is possible. Read [Deployment: read this first](/deployment/read-this-first.md) before you start.
 
 ## Where to put the tracker
 
@@ -81,7 +81,7 @@ Only plug the tracker in when these are right.
 
 ## Diagnostic wiring (optional)
 
-Connect bus lines only to a board whose [interface selection pads](/reference/hardware.html#interface-selection-pads) are set for that interface, and only if you want what they provide.
+Connect bus lines only to a board whose [interface selection pads](/reference/hardware.md#interface-selection-pads) are set for that interface, and only if you want what they provide.
 
 For a K-wire build:
 
@@ -102,11 +102,11 @@ A splitter keeps the diagnostic socket usable. A scan tool and the tracker talki
 The Connect Kit's USB-C port is how you watch the console and reflash the tracker. A USB-C extension with a panel-mount socket, routed to the glovebox or another place you can reach, keeps that possible without taking the dashboard apart.
 
 - USB can be connected at any time. The board feeds the Connect Kit through its battery connector, so USB simply takes over the supply while it is plugged in.
-- Update the [Makerdiary interface firmware](/board-setup/makerdiary-firmware.html) first. Without it, unplugging USB leaves the interface MCU drawing about 2mA.
+- Update the [Makerdiary interface firmware](/board-setup/makerdiary-firmware.md) first. Without it, unplugging USB leaves the interface MCU drawing about 2mA.
 - Use a short, good-quality cable that carries data; a charge-only cable will not work.
 
 !!! warning "An accessible USB port is a way in"
-    The USB-C port gives full debug access to the tracker. Anyone who finds the socket can erase or reflash the tracker, or read its firmware, which contains the device's PSK. Hide the socket as carefully as the tracker, and [rekey the device](/board-setup/server-onboarding.html) if you think someone has used it.
+    The USB-C port gives full debug access to the tracker. Anyone who finds the socket can erase or reflash the tracker, or read its firmware, which contains the device's PSK. Hide the socket as carefully as the tracker, and [rekey the device](/board-setup/server-onboarding.md) if you think someone has used it.
 
 ## Push-to-break reset button (optional)
 
@@ -122,7 +122,7 @@ A normally closed momentary switch - push to break - wired in series with the pe
 Before refitting any trim:
 
 1. Check the tracker is fixed, its connector is latched and the harness is supported, with nothing near moving parts or airbags.
-2. Check the tracker reports from its final position with the antenna where it will stay. The latest records should show a GNSS fix (the position on the map page, or `satellites` and `hdop` in the `log` table) and `rat` should read `CATM1`. See [Verifying telemetry](/board-setup/verifying-telemetry.html).
+2. Check the tracker reports from its final position with the antenna where it will stay. The latest records should show a GNSS fix (the position on the map page, or `satellites` and `hdop` in the `log` table) and `rat` should read `CATM1`. See [Verifying telemetry](/board-setup/verifying-telemetry.md).
 3. Turn the ignition on and then off, and check that both records arrive.
 
-Do the [test drive](/deployment/test-drive.html) before relying on the installation.
+Do the [test drive](/deployment/test-drive.md) before relying on the installation.

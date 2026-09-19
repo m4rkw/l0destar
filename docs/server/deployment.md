@@ -1,6 +1,6 @@
 # Server deployment
 
-This page covers running the server from day to day: keeping it running, giving the web interface an HTTPS address, the firewall, publishing firmware from the build machine, logs, backups and upgrades. It assumes the installation in [Server installation](/server/installation.html).
+This page covers running the server from day to day: keeping it running, giving the web interface an HTTPS address, the firewall, publishing firmware from the build machine, logs, backups and upgrades. It assumes the installation in [Server installation](/server/installation.md).
 
 ## Keeping it running
 
@@ -44,7 +44,7 @@ The telemetry listeners do not run in the workers. gunicorn loads the applicatio
 
 The web interface needs HTTPS: browsers refuse passkeys in an insecure context. The container publishes it on `127.0.0.1:5000` only, so something on the same machine has to serve it. Choose one of:
 
-- **Tailscale** (recommended). The interface is only reachable from devices on your tailnet, with a certificate Tailscale provides. See [Server security](/server/security.html).
+- **Tailscale** (recommended). The interface is only reachable from devices on your tailnet, with a certificate Tailscale provides. See [Server security](/server/security.md).
 - **nginx with a public certificate**, if people must reach it from anywhere.
 
 For the public option, `server/deploy/nginx.conf.example` in the repository is a complete virtual host. It redirects HTTP to HTTPS, overwrites the forwarded headers the application trusts, passes WebSocket upgrades through for the live map and sets a content security policy that allows the Google Maps script.
@@ -71,13 +71,13 @@ When editing, change `server_name` and the certificate paths, and keep the `prox
 | TCP 5000 | this machine only | the web application, published on `127.0.0.1` |
 
 !!! warning "Docker opens published ports itself"
-    Docker adds its own firewall rules for the ports a container publishes, ahead of the host firewall. A firewall on the server, such as ufw, can neither open nor close UDP 65480 and TCP 65481 while the container publishes them: with ufw denying every incoming connection, both still reach the server. Filter them at the router or at your provider's firewall instead ([Telemetry port](/server/telemetry-port.html)).
+    Docker adds its own firewall rules for the ports a container publishes, ahead of the host firewall. A firewall on the server, such as ufw, can neither open nor close UDP 65480 and TCP 65481 while the container publishes them: with ufw denying every incoming connection, both still reach the server. Filter them at the router or at your provider's firewall instead ([Telemetry port](/server/telemetry-port.md)).
 
-[Telemetry port](/server/telemetry-port.html) has port forwarding examples and a reachability test.
+[Telemetry port](/server/telemetry-port.md) has port forwarding examples and a reachability test.
 
 ## Publishing firmware from the build machine
 
-`push_fw.sh` uploads each image with `scp` and writes that device's manifest with `ssh`, straight into `/srv/l0destar/fw`, then checks the result through port 65481 the way a tracker would ([OTA updates](/board-setup/ota-updates.html)). The directory belongs to you, so your own ssh login is all it needs. Check from the build machine:
+`push_fw.sh` uploads each image with `scp` and writes that device's manifest with `ssh`, straight into `/srv/l0destar/fw`, then checks the result through port 65481 the way a tracker would ([OTA updates](/board-setup/ota-updates.md)). The directory belongs to you, so your own ssh login is all it needs. Check from the build machine:
 
 ```sh
 ssh you@tracker.example.com 'touch /srv/l0destar/fw/.write-test && rm /srv/l0destar/fw/.write-test'
@@ -94,7 +94,7 @@ The server picks up a new manifest on the next telemetry exchange; it does not n
 
 ## Logs
 
-`sudo docker logs l0destar` shows the container's output: its start-up, MariaDB, gunicorn, and every line the UDP and TLS listeners log. The server also writes one file per channel into `/srv/l0destar/logs`, listed in the [server configuration reference](/reference/server.html#log-files).
+`sudo docker logs l0destar` shows the container's output: its start-up, MariaDB, gunicorn, and every line the UDP and TLS listeners log. The server also writes one file per channel into `/srv/l0destar/logs`, listed in the [server configuration reference](/reference/server.md#log-files).
 
 The server never rotates those files and keeps each one open, so rotate them with logrotate's `copytruncate`. A minimal installation may not have logrotate yet: `sudo apt install -y logrotate`. Then save this as `/etc/logrotate.d/l0destar`:
 
@@ -182,11 +182,11 @@ sudo docker run -d --name l0destar --restart unless-stopped \
 
 The new container carries on with everything in `/srv/l0destar`. As it starts it applies any database migrations the new version brings, logging `l0destar: applying migration <file>` for each. Take a backup first, and look for new settings by comparing your `config.yaml` with the new image's example, `sudo docker exec l0destar cat config.yaml.example`.
 
-If you [built the image yourself](/server/installation.html#building-the-image-yourself), pull the repository and build it again in place of `docker pull`.
+If you [built the image yourself](/server/installation.md#building-the-image-yourself), pull the repository and build it again in place of `docker pull`.
 
 ## Scheduling the home check
 
-`POST /api/1.0/home` checks every vehicle listed under `home_check` ([Server configuration](/server/configuration.html)). Run it at a time the vehicles are normally at home, from the server itself. Create a token for it:
+`POST /api/1.0/home` checks every vehicle listed under `home_check` ([Server configuration](/server/configuration.md)). Run it at a time the vehicles are normally at home, from the server itself. Create a token for it:
 
 ```sh
 sudo docker exec l0destar python tools/gentoken.py home-check
@@ -202,4 +202,4 @@ Then save this as `/etc/cron.d/l0destar-home-check`, with the token in place:
 sudo chmod 600 /etc/cron.d/l0destar-home-check
 ```
 
-A vehicle that is legitimately away that night raises a notification too, unless you mark it as garaged first with `garage=1` ([Device settings and commands](/reference/device-settings.html#commands)).
+A vehicle that is legitimately away that night raises a notification too, unless you mark it as garaged first with `garage=1` ([Device settings and commands](/reference/device-settings.md#commands)).

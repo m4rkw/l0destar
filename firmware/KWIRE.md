@@ -233,7 +233,7 @@ at ignition-off, before the K rails drop.
 
 Values travel as integers with a fixed scale, so the packet never carries a
 decimal point and the firmware needs no float formatting.  The server
-unscales them (`OBD_FIELDS` in `main.py`) into the `obd_*` columns on `log`.
+unscales them (`OBD_FIELDS` in `server/tracker/telemetry.py`) into the `obd_*` columns on `log`.
 
 Speed is the one unit conversion.  The ECU reports km/h and the firmware
 sends km/h, matching what it already does for GNSS speed; the server applies

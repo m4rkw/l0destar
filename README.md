@@ -30,7 +30,7 @@ This is a prototype, not a product. Nothing here is validated, qualified or cert
 
 - **Mission** - the world's best fully open-source vehicle tracker, no profit motive. See [`MISSION.md`](MISSION.md).
 - **Goals** - KiCad reference design, open enclosure CAD, open firmware and server, weeks of standby on a typical car battery, 1 Hz GNSS, LTE-M/NB-IoT, CAN + K-Line diagnostics, accelerometer-driven wake. Full list in [`GOALS.md`](GOALS.md).
-- **Technology choices** - Nordic nRF9151 SiP (LTE-M/NB-IoT + GNSS), LT8609A buck, ASM330LHHX IMU, MCP2518FD + MAX33041 CAN, TJA1027T K-Line. Rationale and trade-offs in [`TECHNOLOGY.md`](TECHNOLOGY.md).
+- **Technology choices** - Nordic nRF9151 SiP (LTE-M/NB-IoT + GNSS), LT8609A buck, ASM330LHHX IMU, MCP2518FD + TCAN3414 CAN, TJA1027T K-Line. Rationale and trade-offs in [`TECHNOLOGY.md`](TECHNOLOGY.md).
 
 ## License
 

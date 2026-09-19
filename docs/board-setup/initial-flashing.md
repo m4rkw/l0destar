@@ -2,7 +2,7 @@
 
 Build the tracker firmware for your board with the smallest configuration that reports to your server, flash it over USB, and read the device's IMEI from the console. The next page enrols the device on the server with that IMEI.
 
-Complete [Board setup prerequisites](/board-setup/prerequisites.html) first. Commands on this page run in `firmware/`.
+Complete [Board setup prerequisites](/board-setup/prerequisites.md) first. Commands on this page run in `firmware/`.
 
 ## Copy your server's CA certificate
 
@@ -16,7 +16,7 @@ scp tracker.example.com:/srv/l0destar/certs/ca.crt certs/ca.crt
 The build turns it into `src/ca_cert.h`, and refuses to build the tracker firmware without it.
 
 !!! warning "The first boot stores the CA for good"
-    The first time the tracker firmware boots, it stores its CA in the modem, at security tags 1 and 42, and it never replaces a CA that is already there. A board that has once run tracker firmware built with another CA - from an earlier server, say - keeps trusting that one through every later flash, so its updates from your server fail while its telemetry works. The console then says `TLS CA already provisioned` on the very first boot. The recovery is in [firmware build options](/reference/firmware.html#the-ca-certificate). The board test and the nRF Cloud provisioning build never store the CA.
+    The first time the tracker firmware boots, it stores its CA in the modem, at security tags 1 and 42, and it never replaces a CA that is already there. A board that has once run tracker firmware built with another CA - from an earlier server, say - keeps trusting that one through every later flash, so its updates from your server fail while its telemetry works. The console then says `TLS CA already provisioned` on the very first boot. The recovery is in [firmware build options](/reference/firmware.md#the-ca-certificate). The board test and the nRF Cloud provisioning build never store the CA.
 
 ## Write local.conf
 
@@ -49,14 +49,14 @@ CONFIG_APP_FOTA_INHIBIT=y
 
 | Setting | What it does |
 |---|---|
-| `CONFIG_APP_BOARD_L0DESTAR_V3_4` | Selects the carrier board: its GPIO map, the parts it has and how its switched power rails are sequenced. Other revisions have their own symbol, listed in [firmware build options](/reference/firmware.html#board-selection). |
-| `CONFIG_APP_OBD_MODE` | Must match the [interface selection pads](/reference/hardware.html#interface-selection-pads) you bridged: `0` none, `1` CAN, `2` K-wire. It decides which OBD rails are powered and which driver starts. `0` powers no OBD circuitry at all, so it is safe on any board while you check the rest. |
+| `CONFIG_APP_BOARD_L0DESTAR_V3_4` | Selects the carrier board: its GPIO map, the parts it has and how its switched power rails are sequenced. Other revisions have their own symbol, listed in [firmware build options](/reference/firmware.md#board-selection). |
+| `CONFIG_APP_OBD_MODE` | Must match the [interface selection pads](/reference/hardware.md#interface-selection-pads) you bridged: `0` none, `1` CAN, `2` K-wire. It decides which OBD rails are powered and which driver starts. `0` powers no OBD circuitry at all, so it is safe on any board while you check the rest. |
 | `CONFIG_APP_SERVER_HOST` | Where telemetry (UDP 65480) and updates (TCP 65481) go. Use the name your server's certificate was issued for. It must resolve to an IPv4 address: the firmware does not use IPv6. |
 | `CONFIG_APP_APN` | The default in `prj.conf` (`sensor.net`) is almost certainly not your SIM provider's APN. With the wrong APN the modem can register on the network and still have no data connection. |
 | `CONFIG_APP_PSK_HEX` | The key that encrypts everything the device sends. The server gets the same key when you enrol the device. |
-| `CONFIG_APP_FOTA_INHIBIT` | A bench build is version 0.4.0, older than anything published, and the firmware checks for an update every time it boots. If the server has a build published for this IMEI - a section for it in `remote.conf` - the build you are testing is replaced within seconds; a unit with no manifest is never offered one, but keep this set so a later publish cannot catch a bench unit. An image installed over the air still confirms itself with this set. Never use it in a production build; see [OTA updates](/board-setup/ota-updates.html). |
+| `CONFIG_APP_FOTA_INHIBIT` | A bench build is version 0.4.0, older than anything published, and the firmware checks for an update every time it boots. If the server has a build published for this IMEI - a section for it in `remote.conf` - the build you are testing is replaced within seconds; a unit with no manifest is never offered one, but keep this set so a later publish cannot catch a bench unit. An image installed over the air still confirms itself with this set. Never use it in a production build; see [OTA updates](/board-setup/ota-updates.md). |
 
-Everything else keeps its default. [Firmware build options](/reference/firmware.html) lists every setting, including `CONFIG_APP_SERVER_PORT` and `CONFIG_APP_FOTA_PORT` for a server that publishes its ports under other numbers.
+Everything else keeps its default. [Firmware build options](/reference/firmware.md) lists every setting, including `CONFIG_APP_SERVER_PORT` and `CONFIG_APP_FOTA_PORT` for a server that publishes its ports under other numbers.
 
 !!! tip "Recording the console"
     `CONFIG_APP_DEMO_MODE=y` replaces coordinates with a placeholder in everything printed on the console, so a live unit can be shown on screen without revealing where it is. What goes to the server is unchanged.
@@ -173,7 +173,7 @@ A healthy boot looks like this (abridged - timings and readings will differ):
 What to look for:
 
 - **`board v3.4+kline`** - the board and interface you configured (`+can` for CAN, nothing after the version for no interface).
-- **`self-test: all rails OK`** - the switched rails came up. `RAIL:` or `SELFTEST:` failures send you back to the [board test](/assembly/board-test.html).
+- **`self-test: all rails OK`** - the switched rails came up. `RAIL:` or `SELFTEST:` failures send you back to the [board test](/assembly/board-test.md).
 - **`battery=`** close to your supply voltage, and **`ignition=`** following the switch on pin 5.
 - **`imei=`** straight after `init ok`. Write the IMEI down: you need it on the next page.
 - **`connected`** - the modem has registered on the network.
@@ -206,11 +206,11 @@ Once the engine counts as running, the supply has to stay below 13.0V for five m
 
 | Symptom | Check |
 |---|---|
-| `pyocd list` finds no probe | The cable carries data. On Linux, the udev rule from the [prerequisites](/board-setup/prerequisites.html#linux-access-to-the-connect-kit) is in place. In a virtual machine, the Connect Kit is connected to it. |
+| `pyocd list` finds no probe | The cable carries data. On Linux, the udev rule from the [prerequisites](/board-setup/prerequisites.md#linux-access-to-the-connect-kit) is in place. In a virtual machine, the Connect Kit is connected to it. |
 | `flash.sh` stops with `Memory transfer fault` | Unplug USB and power the board off and on, then run `./flash.sh` again. |
 | Permission denied opening the serial port | On Linux, you are in the `dialout` group and have logged in again since adding it. |
 | The board keeps restarting | The bench supply's current limit: around 300mA once firmware is running, because the modem's transmit bursts can take a 50mA supply into its limit and brown the board out. Then look for a pattern in the `reset cause:` line. |
-| `RAIL:... fail` or `SELFTEST:` messages | A switched rail did not come up: go back to the [board test](/assembly/board-test.html). |
+| `RAIL:... fail` or `SELFTEST:` messages | A switched rail did not come up: go back to the [board test](/assembly/board-test.md). |
 | `no GPS fix` | Active antenna on the GNSS connector, with a view of the sky. An unassisted first fix can take 2 to 5 minutes. |
 | `no fix, skipping send`, and no `sent` line | Nothing is sent before the first GNSS fix since the tracker started. Check the antenna as above, then switch pin 5 on: with the ignition on it keeps searching until it has a fix. |
 | `battery=0.00V` or a silly reading | 12V on pin 4, and the INA228 stage of the board test. |

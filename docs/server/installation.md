@@ -2,13 +2,13 @@
 
 The l0destar server receives telemetry from your trackers, stores it in a database, sends notifications, serves over-the-air firmware updates and runs the map. It is self-hosted: there is no service to sign up to, and the location history lives only on the machine you install it on.
 
-This page installs it with Docker. One image, `m4rkw/l0destar`, holds the server and the MariaDB database it uses, and everything the server keeps is stored in a directory on the host. [Server configuration](/server/configuration.html) explains the settings and [Server deployment](/server/deployment.html) covers HTTPS, backups and upgrades. Read [Server security](/server/security.html) before exposing anything to a network.
+This page installs it with Docker. One image, `m4rkw/l0destar`, holds the server and the MariaDB database it uses, and everything the server keeps is stored in a directory on the host. [Server configuration](/server/configuration.md) explains the settings and [Server deployment](/server/deployment.md) covers HTTPS, backups and upgrades. Read [Server security](/server/security.md) before exposing anything to a network.
 
 ## What you need
 
 - A Linux machine that stays on, amd64 or arm64. These steps were tested on Ubuntu 26.04; anything that runs Docker will do. A tracker only reports when it wakes, and anything it sends while the server is down is lost.
-- A public **IPv4** address the trackers can reach on UDP 65480 and TCP 65481, directly or through port forwarding, and a DNS name with an A record pointing at it. The firmware cannot use IPv6; see [Telemetry port](/server/telemetry-port.html).
-- An HTTPS address for the web interface, because passkeys only work in a secure context: Tailscale ([Server security](/server/security.html), recommended) or nginx with a public certificate ([Server deployment](/server/deployment.html)).
+- A public **IPv4** address the trackers can reach on UDP 65480 and TCP 65481, directly or through port forwarding, and a DNS name with an A record pointing at it. The firmware cannot use IPv6; see [Telemetry port](/server/telemetry-port.md).
+- An HTTPS address for the web interface, because passkeys only work in a secure context: Tailscale ([Server security](/server/security.md), recommended) or nginx with a public certificate ([Server deployment](/server/deployment.md)).
 
 ## Install Docker
 
@@ -97,7 +97,7 @@ It should print `HTTP/1.1 200 OK`. The first start created:
 
 ## Give the build machine the CA
 
-Trackers download updates over TLS, and trust the server only if its certificate was issued by the CA built into their firmware. The first start created that CA. The firmware build needs its certificate, `ca.crt`: you copy it to the build machine before your first firmware build, in [minimal config and initial flashing](/board-setup/initial-flashing.html#copy-your-servers-ca-certificate).
+Trackers download updates over TLS, and trust the server only if its certificate was issued by the CA built into their firmware. The first start created that CA. The firmware build needs its certificate, `ca.crt`: you copy it to the build machine before your first firmware build, in [minimal config and initial flashing](/board-setup/initial-flashing.md#copy-your-servers-ca-certificate).
 
 | File in `/srv/l0destar/certs/` | What it is | Where it belongs |
 |---|---|---|
@@ -107,7 +107,7 @@ Trackers download updates over TLS, and trust the server only if its certificate
 | `server.crt`, `server.key` | the certificate and key for your hostname | the server only |
 
 !!! warning "Keep the CA"
-    Keep `/srv/l0destar/certs/` for as long as trackers use it. If it is lost, the next start creates a new CA, and every tracker built with the old one stops accepting updates from your server. Each then needs its stored CA replaced over USB, as described in [the CA certificate](/reference/firmware.html#the-ca-certificate).
+    Keep `/srv/l0destar/certs/` for as long as trackers use it. If it is lost, the next start creates a new CA, and every tracker built with the old one stops accepting updates from your server. Each then needs its stored CA replaced over USB, as described in [the CA certificate](/reference/firmware.md#the-ca-certificate).
 
 If you already have a CA - from an earlier installation, say - put its `ca.crt`, and a `server.crt` and `server.key` issued from it, into `/srv/l0destar/certs/` before the first start. The container then uses them rather than creating new ones.
 
@@ -136,7 +136,7 @@ sudo docker exec l0destar python tools/gentoken.py admin-cli
 sudo docker exec l0destar python tools/regtoken.py alice tracker.example.com
 ```
 
-`gentoken.py` prints a bearer token for the HTTP API. `tools/command.py` uses the first token in the database to queue commands, so create one even if nothing else will use the API, and treat it like a password ([Server security](/server/security.html)).
+`gentoken.py` prints a bearer token for the HTTP API. `tools/command.py` uses the first token in the database to queue commands, so create one even if nothing else will use the API, and treat it like a password ([Server security](/server/security.md)).
 
 `regtoken.py` prints a single-use enrolment link, valid for 24 hours:
 
@@ -146,7 +146,7 @@ https://tracker.example.com/register?username=alice&token=<64 hex characters>
 
 The passkey created from it is bound to the hostname in the link, so use the name people will actually browse to. With Tailscale that is the machine's `.ts.net` name, not the public hostname the trackers use. Open the link once the web interface is reachable over HTTPS, on the phone or computer that should hold the passkey.
 
-All the server's tools run like this, inside the container: `sudo docker exec l0destar python tools/<tool>.py`. They are listed in the [server configuration reference](/reference/server.html#tools).
+All the server's tools run like this, inside the container: `sudo docker exec l0destar python tools/<tool>.py`. They are listed in the [server configuration reference](/reference/server.md#tools).
 
 ## Building the image yourself
 
@@ -157,7 +157,7 @@ git clone https://github.com/m4rkw/l0destar.git
 sudo docker build -t m4rkw/l0destar l0destar/server
 ```
 
-Then start it with the same `docker run` command as above: Docker uses the local image instead of pulling one. To upgrade it later, pull the repository with `git -C l0destar pull`, build again and recreate the container as in [upgrading](/server/deployment.html#upgrading), leaving out `docker pull`.
+Then start it with the same `docker run` command as above: Docker uses the local image instead of pulling one. To upgrade it later, pull the repository with `git -C l0destar pull`, build again and recreate the container as in [upgrading](/server/deployment.md#upgrading), leaving out `docker pull`.
 
 ## Without Docker
 

@@ -126,6 +126,7 @@ of being ignored. Telemetry `ax/ay/az` are **milli-g** (FS-independent);
 | `hw_accel.c`  | ASM330LHHX IMU (accel path): polling + hardware wake interrupt |
 | `hw_kline.c`  | K wire: 5-baud init bit-banged, data bytes on UARTE1; vehicle discovery and the runtime session ([KWIRE.md](KWIRE.md), [KWIRE_QUICKSTART.md](KWIRE_QUICKSTART.md)) |
 | `kline_obd.c` | OBD-II over the K wire: PID polling into telemetry, fault codes, engine/speed for the tracker's own logic; the fast rotating poll for track mode ([TRACK_MODE.md](TRACK_MODE.md)) |
+| `obd_alert.c` | Threshold alerts on OBD telemetry: the `CONFIG_APP_OBD_ALERTS` rule list judged after every poll, one alert per crossing with a clear on the way back |
 | `fota.c`      | Over-the-air updates: manifest check, battery gate, MCUboot image download ([FOTA.md](FOTA.md)) |
 | `databuf.c`   | Backlog of records that could not be sent, kept until the link comes back |
 | `dbglog.c`    | Keeps warnings and errors in RAM and sends them with the next record that gets through |

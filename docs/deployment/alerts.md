@@ -4,7 +4,7 @@ Alerts come from two places. The tracker raises them for things only it can see 
 
 ## Choose a notification backend
 
-The `notify` section of `config.yaml` selects the backend; every key is listed in [config.yaml](/reference/server.html#configyaml). Restart the server after changing it.
+The `notify` section of `config.yaml` selects the backend; every key is listed in [config.yaml](/reference/server.md#configyaml). Restart the server after changing it.
 
 | Backend | What happens |
 |---|---|
@@ -105,7 +105,7 @@ The movement alarm setting (`ma`, `movealarm=`) does not affect any of these in 
 | `fota: <old> -> <new> failed after <n> attempts (err <e>, cause <c>)` | 0 | Every download attempt in one check failed. Once per version. |
 | `fota: <staged> failed to boot, reverted to <running>` | 0 | The new image did not confirm itself and MCUboot put the previous one back. |
 
-The self-test and rail alerts mean a hardware fault; the [board test](/assembly/board-test.html) is the place to chase it.
+The self-test and rail alerts mean a hardware fault; the [board test](/assembly/board-test.md) is the place to chase it.
 
 ### Replies to commands
 
@@ -122,7 +122,7 @@ The self-test and rail alerts mean a hardware fault; the [board test](/assembly/
 | `rebooting` | 0 | `reboot` |
 | `track mode ON`, `track mode OFF` | 0 | Track mode switched from the web page |
 
-What each command does is in [Commands](/reference/device-settings.html#commands).
+What each command does is in [Commands](/reference/device-settings.md#commands).
 
 ### From the server
 
@@ -145,7 +145,7 @@ The tracker picks the priority of each alert it raises, and the server passes it
 - For a device in garage mode, priority 2 becomes 0 - for device alerts and the ignition alarms alike - and the home check leaves the device out.
 - A `low battery` alert is dropped while the device's latest record has the ignition on, because a charging system moves the voltage around by design; otherwise it is sent at 0.
 
-To change the accelerometer alert priorities for a vehicle, set these in its `remote.conf` section and publish with `push_fw.sh` (see [Deployment configuration](/deployment/configuration.html)):
+To change the accelerometer alert priorities for a vehicle, set these in its `remote.conf` section and publish with `push_fw.sh` (see [Deployment configuration](/deployment/configuration.md)):
 
 | Symbol | Default | Meaning |
 |---|---|---|
@@ -187,7 +187,7 @@ The alarm fires on the record where the ignition goes from off to on. The tracke
 
 ## Fault code alerts
 
-Fault code alerts need a K-wire build with `CONFIG_APP_KLINE_DTC_REPORT=y` and the vehicle's address found by discovery (see [Deployment configuration](/deployment/configuration.html)). The tracker reads the stored codes a few seconds after the ignition comes on, and again whenever the count of stored codes changes during a drive. It always sends the complete set, so the server alerts once per report on codes that appeared and on codes that cleared, and keeps the history in the `dtc` table:
+Fault code alerts need a K-wire build with `CONFIG_APP_KLINE_DTC_REPORT=y` and the vehicle's address found by discovery (see [Deployment configuration](/deployment/configuration.md)). The tracker reads the stored codes a few seconds after the ignition comes on, and again whenever the count of stored codes changes during a drive. It always sends the complete set, so the server alerts once per report on codes that appeared and on codes that cleared, and keeps the history in the `dtc` table:
 
 ```sql
 SELECT t.code, t.raised_at, t.cleared_at, t.active
@@ -228,11 +228,11 @@ Add `?imei=<imei>` to the URL to check a single device. For each device more tha
 
 ## Low battery alerts
 
-With the default thresholds, a parked tracker skips its timed report once the battery is below 12.0V, before it builds the record that would raise the 11.9V `low battery` alert - so the alert rarely arrives from a parked vehicle, and effectively never with no engine-off interval set. [Deployment configuration](/deployment/configuration.html) describes how to change the thresholds if you want the warning while parked.
+With the default thresholds, a parked tracker skips its timed report once the battery is below 12.0V, before it builds the record that would raise the 11.9V `low battery` alert - so the alert rarely arrives from a parked vehicle, and effectively never with no engine-off interval set. [Deployment configuration](/deployment/configuration.md) describes how to change the thresholds if you want the warning while parked.
 
 ## Test your alerts
 
-With the ignition on, queue a `config` command. Within about 30 seconds the tracker reads it and sends its settings back as an alert, which proves the whole path from the tracker through the server to your phone. A parked tracker only picks up commands when it next reads a reply (see [Device settings and commands](/reference/device-settings.html)).
+With the ignition on, queue a `config` command. Within about 30 seconds the tracker reads it and sends its settings back as an alert, which proves the whole path from the tracker through the server to your phone. A parked tracker only picks up commands when it next reads a reply (see [Device settings and commands](/reference/device-settings.md)).
 
 ```sh
 # on the server
@@ -243,4 +243,4 @@ Then:
 
 1. Queue `locate` and check that the alert's map link opens.
 2. Set `alarm=1`, wait for the tracker to go to sleep, then turn the ignition on: an emergency priority notification should arrive. Set `alarm=0` afterwards if you do not want it permanently.
-3. Test a parked movement alert as described in [Test drive](/deployment/test-drive.html).
+3. Test a parked movement alert as described in [Test drive](/deployment/test-drive.md).

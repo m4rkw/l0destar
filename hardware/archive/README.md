@@ -1,6 +1,6 @@
 # archived l0destar hardware
 
-**Before building, installing or relying on any of this, read the [project disclaimer](../DISCLAIMER.md).**
+**Before building, installing or relying on any of this, read the [project disclaimer](../../DISCLAIMER.md).**
 
 ## Overview
 
@@ -76,7 +76,7 @@ Same as v2.5 with a stacked 47uF ceramic bulk cap (2220, 50V X7R) added on the
 > to 12V while L_SEND is driven can destroy the pulldown MOSFET and put battery
 > voltage onto an nRF9151 GPIO, destroying the module. Do not connect the L
 > wire on these versions. Fixed in v3.3. See the
-> [v3.2 README](l0destar_v3.2/README.md#known-defects) for the full analysis.
+> [v3.2 README](../l0destar_v3.2/README.md#known-defects) for the full analysis.
 > The firmware will refuse to drive L\_SEND on affected boards, the odds of
 > anyone actually having this problem are miniscule given how rare the K-wire
 > interface is and how rare using the L wire is even on K-wire vehicles, but

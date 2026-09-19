@@ -31,7 +31,7 @@ recorded below are my own unverified bench observations - repeat the testing
 yourself rather than taking them on trust.
 
 **Before building or installing anything from this repository, read the
-[full disclaimer](../../DISCLAIMER.md).**
+[full disclaimer](../../../DISCLAIMER.md).**
 
 ## Power supply
 

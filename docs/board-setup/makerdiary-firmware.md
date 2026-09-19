@@ -16,7 +16,7 @@ The interface firmware builds with nRF Connect SDK v3.4.0, alongside the v3.3.0 
 nrfutil sdk-manager install v3.4.0
 ```
 
-**On Linux on arm64**, install it the way the [prerequisites](/board-setup/prerequisites.html#nrf-connect-sdk) install v3.3.0, with the Zephyr SDK that v3.4.0 needs, 1.0.1. It takes about another 4.5GB:
+**On Linux on arm64**, install it the way the [prerequisites](/board-setup/prerequisites.md#nrf-connect-sdk) install v3.3.0, with the Zephyr SDK that v3.4.0 needs, 1.0.1. It takes about another 4.5GB:
 
 ```sh
 uvx --python 3.12 west init -m https://github.com/nrfconnect/sdk-nrf --mr v3.4.0 ~/ncs/v3.4.0

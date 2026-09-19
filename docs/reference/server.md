@@ -1,6 +1,6 @@
 # Server configuration reference
 
-Everything that configures the l0destar server: `config.yaml`, the container and its data directory, environment variables, the per-device settings stored in the database, the command-line tools, log files, database tables and HTTP endpoints. [Server configuration](/server/configuration.html) explains how to choose the settings; this page lists them.
+Everything that configures the l0destar server: `config.yaml`, the container and its data directory, environment variables, the per-device settings stored in the database, the command-line tools, log files, database tables and HTTP endpoints. [Server configuration](/server/configuration.md) explains how to choose the settings; this page lists them.
 
 ## `config.yaml`
 
@@ -70,7 +70,7 @@ The TLS listener serves firmware downloads and nothing else.
 | `notify.url` | - | Webhook: the URL a JSON body is posted to. |
 | `notify.token` | unset | Webhook: sent as `Authorization: Bearer <token>`. |
 
-How each backend behaves is described in [Configure alerts](/deployment/alerts.html).
+How each backend behaves is described in [Configure alerts](/deployment/alerts.md).
 
 ### Home check
 
@@ -90,7 +90,7 @@ How each backend behaves is described in [Configure alerts](/deployment/alerts.h
 
 ## The container
 
-`m4rkw/l0destar` runs the server and its MariaDB database together; [Server installation](/server/installation.html) has the `docker run` command.
+`m4rkw/l0destar` runs the server and its MariaDB database together; [Server installation](/server/installation.md) has the `docker run` command.
 
 | Option | Meaning |
 |---|---|
@@ -145,7 +145,7 @@ Each device's settings live in its `device` row. The first three are sent to the
 | `overnight_alarm_hour_from` | `23` | `overnight_alarm_hour_from=<hour>`, or `oaf` | Start of the window, as an hour in the server's local time. |
 | `overnight_alarm_hour_to` | `6` | `overnight_alarm_hour_to=<hour>`, or `oat` | End of the window. |
 
-An `int=` or `movealarm=` command is queued for the tracker, which applies it and reports the new value; `POST /api/1.0/config` changes the column directly and the next reply carries it. Either way the `int` and `movement_alarm` columns follow what the tracker reports. The server-side settings take effect immediately. What each setting does on the tracker, and every command, is in [Device settings and commands](/reference/device-settings.html#commands).
+An `int=` or `movealarm=` command is queued for the tracker, which applies it and reports the new value; `POST /api/1.0/config` changes the column directly and the next reply carries it. Either way the `int` and `movement_alarm` columns follow what the tracker reports. The server-side settings take effect immediately. What each setting does on the tracker, and every command, is in [Device settings and commands](/reference/device-settings.md#commands).
 
 The other columns identify the device (`imei`, `name`, `registration`), hold its key (`psk`), and track firmware updates (`fw_staged`, `fw_staged_at`, `fw_blocked`, `fw_fail_count`); `command.py <imei> fota-retry` clears the update state.
 
@@ -163,7 +163,7 @@ sudo docker exec l0destar python tools/<tool>.py ...
 adddevice.py <imei> <name> [registration] [--psk <64 hex characters>]
 ```
 
-Enrols a device. With `--psk` it stores the key the tracker's firmware was already built with; without it, it generates a key and prints it once, to build into the firmware. The IMEI must be 14 to 16 digits ([Onboarding devices into the server](/board-setup/server-onboarding.html)).
+Enrols a device. With `--psk` it stores the key the tracker's firmware was already built with; without it, it generates a key and prints it once, to build into the firmware. The IMEI must be 14 to 16 digits ([Onboarding devices into the server](/board-setup/server-onboarding.md)).
 
 ### `device.py`
 
@@ -190,7 +190,7 @@ command.py <imei> <command> [command ...]
 command.py <imei> fota-retry
 ```
 
-Queues a command for the tracker's next reply, through the HTTP API at `api_base`, using the first token in `api_token` (create one with `gentoken.py` first). Several commands given together are sent together. The server-side settings - `alarm=`, `garage=`, `overnightalarm=`, `overnight_alarm_hour_from=` and `overnight_alarm_hour_to=` - are applied straight away instead of being queued. `fota-retry` clears a firmware version withheld from the device after a failed update and queues `fota`. The commands the firmware understands are listed in [Device settings and commands](/reference/device-settings.html#commands).
+Queues a command for the tracker's next reply, through the HTTP API at `api_base`, using the first token in `api_token` (create one with `gentoken.py` first). Several commands given together are sent together. The server-side settings - `alarm=`, `garage=`, `overnightalarm=`, `overnight_alarm_hour_from=` and `overnight_alarm_hour_to=` - are applied straight away instead of being queued. `fota-retry` clears a firmware version withheld from the device after a failed update and queues `fota`. The commands the firmware understands are listed in [Device settings and commands](/reference/device-settings.md#commands).
 
 ### `gentoken.py`
 
@@ -260,7 +260,7 @@ Deleting a `device` row deletes its `log`, `journey`, `dtc`, `command` and `devi
 
 ## HTTP endpoints
 
-The web application listens on `TRACKER_BIND`, which the container publishes on `127.0.0.1:5000`. Examples and response formats are in [Web interface and API](/board-setup/web-interface.html).
+The web application listens on `TRACKER_BIND`, which the container publishes on `127.0.0.1:5000`. Examples and response formats are in [Web interface and API](/board-setup/web-interface.md).
 
 ### Pages
 

@@ -135,7 +135,7 @@ grep 350000000000000 /srv/l0destar/logs/device.log | tail -50
 
 1. After switching off, check that the ignition-off record arrived and the journey has an end time.
 2. If you have set an engine-off interval, check that a record with the ignition off arrives every `int` seconds.
-3. Once the tracker has gone to sleep, a minute or so after switching off, get in and close the door firmly or rock the vehicle on its suspension. A movement or parked impact alert should arrive - at priority 2 unless you have changed it, so set up notifications first (see [Configure alerts](/deployment/alerts.html)). A single light knock may be ignored as a transient bump.
+3. Once the tracker has gone to sleep, a minute or so after switching off, get in and close the door firmly or rock the vehicle on its suspension. A movement or parked impact alert should arrive - at priority 2 unless you have changed it, so set up notifications first (see [Configure alerts](/deployment/alerts.md)). A single light knock may be ignored as a transient bump.
 
 Tilt alerts need the vehicle lifted by several degrees. Do not jack up a vehicle just to test the tracker unless you can do it safely.
 
@@ -147,7 +147,7 @@ Tilt alerts need the vehicle lifted by several degrees. Do not jack up a vehicle
 | Gaps in the same places on every drive | Holes in LTE-M coverage | Nothing to fix in the tracker; records built during the gap are sent afterwards, thinned out if the outage was long |
 | Gaps anywhere, with registration or send errors in `device.log` | Weak LTE at the antenna position | Move the antenna; check your network's LTE-M coverage |
 | A gap of a few minutes with the engine off, followed by `fota:` alerts | An update was downloaded and installed | Expected: GNSS and telemetry pause while an update downloads, which waits until the engine is off |
-| `decrypt failed` in `udp.log` from the vehicle's address | The tracker's key or IMEI does not match the server | See [Verifying telemetry](/board-setup/verifying-telemetry.html) |
+| `decrypt failed` in `udp.log` from the vehicle's address | The tracker's key or IMEI does not match the server | See [Verifying telemetry](/board-setup/verifying-telemetry.md) |
 | Restarts (`rst=`) during drives, especially when starting the engine | Power wiring: a poor ground, a loose crimp, a fuse holder | Re-check the harness, the crimps and the ground point |
 | A journey split in two at a short stop | The stop was longer than `journey_resume_seconds` (300) | Raise `journey_resume_seconds` in `config.yaml` if you want longer stops joined up |
 | The page flicking between "engine on" and "ignition on" | A charging system that lets the voltage fall while driving | Adjust `engine_running_voltage` and `engine_stopped_count` in `config.yaml`; engine data from the K wire settles it |

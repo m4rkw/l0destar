@@ -145,7 +145,7 @@ with room for the debug-log lines that ride along.
 
 ## Server
 
-- `sql/2026-09-06_track_mode.sql` adds `device.track_mode`, `log.track_mode`
+- `server/migrations/2026-09-06_track_mode.sql` adds `device.track_mode`, `log.track_mode`
   and `log.imu_burst`.  Apply once.
 - `parse_csv_line()` reads `tm=` and `acc=`; `process_record()` stores them
   (the burst is validated against its shape and capped at 4000 bytes).

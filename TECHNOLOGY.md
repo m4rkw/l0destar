@@ -40,7 +40,8 @@ The TCAN4550-Q1 was the original selection. The boards instead use a separate
 MCP2518FD controller over SPI with a discrete transceiver - a TCAN334GDR on
 v2.5C/v2.6C, changed to a MAX33041EASA+ from v3.0 for more robust transient
 protection, with a pulldown on STBY so the transceiver defaults to normal mode
-instead of floating.
+instead of floating, and to a TCAN3414DR from v3.4 (same footprint and pinout,
+fully rated for CAN FD, about a third of the price).
 
 - CAN FD controller with a mature Zephyr driver (mcp251xfd).
 - Controller sleep drives the transceiver standby pin via `IOCON.XSTBYEN`, leaving the block at roughly 10 µA.

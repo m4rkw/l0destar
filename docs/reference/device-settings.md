@@ -1,6 +1,6 @@
 # Device settings and commands
 
-The tracker takes its settings from the server on every reply it reads, runs the commands queued for it, and reports some of its state back. This page is the reference for that runtime interface. Build-time options are in [Firmware build options](/reference/firmware.html), and the battery cost of the engine-off interval is covered in [Deployment configuration](/deployment/configuration.html).
+The tracker takes its settings from the server on every reply it reads, runs the commands queued for it, and reports some of its state back. This page is the reference for that runtime interface. Build-time options are in [Firmware build options](/reference/firmware.md), and the battery cost of the engine-off interval is covered in [Deployment configuration](/deployment/configuration.md).
 
 ## How a reply reaches the device
 
@@ -39,11 +39,11 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 | Engine-off interval | `<int>` | `device.int` | `0` | Seconds between timed reports while parked; `0` means none |
 | Movement alarm | `<ma>` | `device.movement_alarm` | `1` | Stored, synced and reported, but not acted on by firmware 0.4.x |
 | Track mode | `track=` | `device.track_mode` | `0` | GNSS off, engine and IMU data streamed quickly |
-| Update advert | `fota=` | per-device manifest | - | See [OTA updates](/board-setup/ota-updates.html) |
+| Update advert | `fota=` | per-device manifest | - | See [OTA updates](/board-setup/ota-updates.md) |
 
 - A timed report while parked sends the last known position. GNSS is only started for it when movement has been detected since the previous one, or when the tracker has had no fix since it started. Ignition, movement, impact and tilt wake the tracker whatever the interval is.
-- Movement, impact and tilt alerts are raised whatever the movement alarm flag says. Use the priority settings in [Configure alerts](/deployment/alerts.html) to quieten them.
-- Track mode is switched from the web page (see [Web interface and API](/board-setup/web-interface.html)). The server clears it when the ignition goes off, or when a device is heard from after an hour of silence, and the tracker ignores `track=1` while the ignition is off.
+- Movement, impact and tilt alerts are raised whatever the movement alarm flag says. Use the priority settings in [Configure alerts](/deployment/alerts.md) to quieten them.
+- Track mode is switched from the web page (see [Web interface and API](/board-setup/web-interface.md)). The server clears it when the ignition goes off, or when a device is heard from after an hour of silence, and the tracker ignores `track=1` while the ignition is off.
 
 ## When the device reads a reply
 
@@ -61,7 +61,7 @@ After a movement alert on a unit whose interval is 0 or longer than four hours, 
 
 ## Commands
 
-Queue commands from the server with `tools/command.py`, or with `POST /api/1.0/command` and a bearer token (see [Web interface and API](/board-setup/web-interface.html)). Several commands in one call are joined with commas and delivered in the same reply.
+Queue commands from the server with `tools/command.py`, or with `POST /api/1.0/command` and a bearer token (see [Web interface and API](/board-setup/web-interface.md)). Several commands in one call are joined with commas and delivered in the same reply.
 
 ```sh
 # on the server
@@ -114,7 +114,7 @@ These are accepted by `command.py` and `POST /api/1.0/command` in the same way a
 | `overnight_alarm_hour_from=<hour>` | `overnight_alarm_hour_from` | 23 | First hour of the window (0-23), in the server's local time |
 | `overnight_alarm_hour_to=<hour>` | `overnight_alarm_hour_to` | 6 | Hour the window ends (0-23); the window runs up to the start of this hour |
 
-Values must be whole numbers. The alerts themselves are described in [Configure alerts](/deployment/alerts.html).
+Values must be whole numbers. The alerts themselves are described in [Configure alerts](/deployment/alerts.md).
 
 ### fota-retry
 
