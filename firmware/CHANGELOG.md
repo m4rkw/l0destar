@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.51
 
 ### A stale reply no longer costs a warning
 - **A tag that fails to verify is logged at debug, not warning.**  The
