@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### A stale reply no longer costs a warning
+- **A tag that fails to verify is logged at debug, not warning.**  The
+response AAD binds a reply to the nonce of the request it answers, so a reply
+the server sent to an earlier datagram fails the tag check by construction,
+and `transport.c` already treats that as a stale reply: it skips it and
+listens on for the one it wants, warning only if nothing valid arrives by the
+deadline.  But `crypto_decrypt()` warned on every failed check of its own, so
+each skipped reply still sent `psa_aead_decrypt: -149` to the server — 60 on
+the car, 42 of them within seconds of a registration outage ending, when the
+replies to the sends made during the outage arrive together.  An
+invalid-signature status is now debug-only; any other status, a key or buffer
+problem, is still a warning, and the transport's own `response decrypt
+failed` still fires when no reply authenticates.
+
 ## 0.4.50
 
 ### An hour of sleep is no longer logged as an outage
