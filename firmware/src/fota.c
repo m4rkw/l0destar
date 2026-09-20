@@ -91,7 +91,6 @@ const char *fota_board_id(void)
 #include <zephyr/dfu/mcuboot.h>
 #include <zephyr/net/tls_credentials.h>
 
-#include <modem/lte_lc.h>
 #include <net/fota_download.h>
 #include <net/rest_client.h>
 
@@ -883,8 +882,7 @@ int fota_check(enum fota_ctx ctx)
     alert_send_standalone();
 
     led_all_off();
-    lte_lc_power_off();
-    network_ready = false;
+    modem_power_off();
     k_msleep(200);
     reboot_now();
 
