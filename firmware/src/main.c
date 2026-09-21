@@ -25,8 +25,6 @@
 #include "hw_domain.h"
 #include "pins.h"
 
-#include <modem/lte_lc.h>
-
 LOG_MODULE_REGISTER(main, CONFIG_APP_LOG_LEVEL);
 
 /* -- shared state used across modules (declared in app.h) ------------------ */
@@ -473,6 +471,11 @@ static bool nofix_search_due(void)
     return (n % 16) == 0;
 }
 
+/* The 6D orientation tamper check in the sleep loop, and the flag it
+ * keeps across wakes.  TODO: re-enable once the unit is permanently
+ * mounted.  One switch for both, so they cannot drift apart. */
+#define SLEEP_D6D_TAMPER 0
+
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
@@ -497,7 +500,7 @@ static void do_sleep(void)
     transport_close();
     transport_teardown();   /* the connection does not survive the modem going off */
     LOG_INF("sleep: modem power off");
-    lte_lc_power_off();
+    modem_power_off();
     LOG_INF("sleep: CAN power off");
     hw_can_power_off();
     LOG_INF("sleep: K-line power off");
@@ -509,7 +512,6 @@ static void do_sleep(void)
     hw_aux_power_off();
     LOG_INF("sleep: INA228 shutdown");
     hw_power_shutdown();
-    network_ready = false;
     led_all_off();
     LOG_INF("sleep: all peripherals off");
 
@@ -518,7 +520,9 @@ static void do_sleep(void)
     accel_irq_enable();
 
     bool tow_alerted = false;
+#if SLEEP_D6D_TAMPER
     bool tamper_alerted = false;
+#endif
     int  tow_last_tilt = -1;      /* tenths, for the "still" test */
     int  tow_stable_secs = 0;
 
@@ -662,8 +666,7 @@ static void do_sleep(void)
         }
 
         /* --- 6D orientation tamper (unit flipped / off its mount) --- */
-        /* TODO: re-enable once unit is permanently mounted */
-#if 0
+#if SLEEP_D6D_TAMPER
         /* Checked on every wake, not gated on the INT pin: the wake pulse
          * de-asserts before the loop runs, but the zone bits persist. */
         if (accel_available()) {
@@ -829,8 +832,7 @@ static void do_sleep(void)
                 if ((modem_raised || network_ready) &&
                     !(resend_owed && modem_is_registered())) {
                     transport_teardown();
-                    lte_lc_power_off();
-                    network_ready = false;
+                    modem_power_off();
                 }
                 accel_read_baseline();
                 accel_irq_enable();
@@ -997,8 +999,7 @@ static void do_sleep(void)
         if ((modem_raised || network_ready) &&
             !(resend_owed && modem_is_registered())) {
             transport_teardown();
-            lte_lc_power_off();
-            network_ready = false;
+            modem_power_off();
         }
 
         /* re-read baseline and re-arm accel interrupt before next sleep cycle */

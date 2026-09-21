@@ -93,6 +93,16 @@ int crypto_decrypt(const uint8_t *ct, size_t ct_len,
                           nonce, 12, aad, aad_len,
                           ct, ct_len, out, out_size, out_len);
     psa_destroy_key(kid);
+    if (st == PSA_ERROR_INVALID_SIGNATURE) {
+        /* The response AAD binds a reply to the nonce of the request it
+         * answers, so a reply the server sent to an earlier datagram fails
+         * the tag check by construction.  transport.c expects that: it
+         * skips the reply and listens on, and warns itself if nothing valid
+         * arrives.  A warning here went to the server for every one of
+         * them, 60 on the car, most right after a registration outage. */
+        LOG_DBG("psa_aead_decrypt: tag mismatch");
+        return -EACCES;
+    }
     if (st != PSA_SUCCESS) {
         LOG_WRN("psa_aead_decrypt: %d", (int)st);
         return -EACCES;

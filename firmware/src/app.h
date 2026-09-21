@@ -108,6 +108,7 @@ int  modem_init(void);
 int  modem_provision_tls(void);
 int  modem_connect(void);
 int  modem_radio_up(void);              /* settings + CFUN=1, no wait */
+void modem_power_off(void);             /* CFUN=0 on purpose: not an outage */
 int  modem_get_imei(char *out, size_t out_len);
 int  modem_get_network_status(void);   /* 1=home, 5=roaming */
 void modem_set_apn(const char *apn);

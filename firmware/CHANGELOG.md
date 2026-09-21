@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.4.51
+
+### A stale reply no longer costs a warning
+- **A tag that fails to verify is logged at debug, not warning.**  The
+response AAD binds a reply to the nonce of the request it answers, so a reply
+the server sent to an earlier datagram fails the tag check by construction,
+and `transport.c` already treats that as a stale reply: it skips it and
+listens on for the one it wants, warning only if nothing valid arrives by the
+deadline.  But `crypto_decrypt()` warned on every failed check of its own, so
+each skipped reply still sent `psa_aead_decrypt: -149` to the server — 60 on
+the car, 42 of them within seconds of a registration outage ending, when the
+replies to the sends made during the outage arrive together.  An
+invalid-signature status is now debug-only; any other status, a key or buffer
+problem, is still a warning, and the transport's own `response decrypt
+failed` still fires when no reply authenticates.
+
+## 0.4.50
+
+### An hour of sleep is no longer logged as an outage
+- **A deliberate modem power-off is not a lost registration.**  The car's
+device log carried a pair of warnings for every timed wake on 2026-09-20:
+`registered again after 3628 s (status 5)` as the modem came up, and a second
+later `registration lost (status 0) — waiting for the modem` as it went back
+down.  Both were the firmware's own doing.  A timed wake brings the modem up
+with CFUN=1, sends the record and powers it off again with CFUN=0; the modem
+answers that with a not-registered URC, and the LTE event handler — which
+logs a loss at WRN so a real outage and its length reach the captured log —
+could not tell it from the network going away.  The 3628 s was the 3600 s
+loop interval plus the bring-up: every hour of sleep read as an hour without
+a network, and a real hour-long outage would have looked the same.
+`modem_power_off()` clears the handler's state before CFUN=0, so the URC is
+logged as the plain status change it is and the next registration has
+nothing to be measured against; sleep entry, the end of a timed wake, the
+parked-impact branch and the pre-reboot power-off in the update path all go
+through it.  A genuine outage still open when the modem is powered off gets
+its closing line, `powering off still unregistered, N s after losing the
+network`, so the log never shows a loss without an end.  Verified on the
+bench: sleep entry now logs `nw reg status: 0` at INF and nothing at WRN.
+
 ## 0.4.49
 
 ### Threshold alerts on OBD telemetry

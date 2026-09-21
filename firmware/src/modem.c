@@ -28,10 +28,11 @@ struct cell_info g_cell;
 
 static bool s_connected;
 
-/* Uptime at which registration was last lost, 0 while registered.  Losing
- * the network is logged at WRN so the outage and its length are in the
- * captured log: a unit that sits silent for a quarter of an hour while the
- * modem searches would otherwise leave no trace of why. */
+/* Uptime at which registration was last lost, 0 while registered or powered
+ * off on purpose (modem_power_off()).  Losing the network is logged at WRN so
+ * the outage and its length are in the captured log: a unit that sits silent
+ * for a quarter of an hour while the modem searches would otherwise leave no
+ * trace of why. */
 static int64_t s_lost_ms;
 
 static void lte_handler(const struct lte_lc_evt *evt)
@@ -329,6 +330,35 @@ int modem_radio_up(void)
         LOG_ERR("lte_lc_normal: %d", err);
     }
     return err;
+}
+
+/* Power the modem off on purpose: the end of a timed wake, the way into
+ * sleep, the moment before a FOTA reboot.  The modem answers CFUN=0 with a
+ * not-registered URC, and lte_handler cannot tell that from the network
+ * going away — so every hourly wake in the field used to log "registration
+ * lost" on the way down and "registered again after 3628 s" on the way back
+ * up: an hour of sleep dressed up as an outage, drowning the real ones the
+ * two warnings exist to show.  Clearing the state first makes the handler
+ * take the URC as the plain status change it is, and leaves nothing for the
+ * next registration to be measured against.
+ *
+ * A genuine outage that is still open gets its closing line here, so the
+ * captured log never shows a loss without an end. */
+void modem_power_off(void)
+{
+    if (s_lost_ms) {
+        LOG_WRN("powering off still unregistered, %lld s after losing "
+                "the network", (k_uptime_get() - s_lost_ms) / 1000);
+    }
+    s_connected = false;
+    s_lost_ms = 0;
+    network_ready = false;
+
+    int err = lte_lc_power_off();
+
+    if (err) {
+        LOG_WRN("lte_lc_power_off: %d", err);
+    }
 }
 
 int modem_connect(void)
