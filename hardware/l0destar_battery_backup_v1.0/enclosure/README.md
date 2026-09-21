@@ -36,12 +36,18 @@ AT YOUR OWN RISK.**
 - Two Micro-Fit 3.0 cutouts, 14.2 × 13 mm, straddling the split: car harness
   (J1) on the left, tracker harness (J2) on the right.
 
-Two bosses had to work around neighbouring parts (both 0.3 mm clear):
+Two bosses had to work around neighbouring parts. No wall in either is
+thinner than 1 mm (`MIN_WALL` in the generator); the general boss wall around
+the insert hole is 1.15 mm and the tip ring is 1.35 mm.
 
-- **H2** is 2.4 mm from the corner of C4's square base plate, so its tip is
-  flat-sided for the first 1.9 mm and its insert starts above the plate.
+- **H2** is 2.4 mm from the nearest corner of C4's chamfered base plate
+  (up-left of the hole). The tip ring simply omits the 90°..145° sector
+  facing the plate (0.57 mm clear) — a chord flat there would have left only
+  0.68 mm between the screw hole and the flat. The tip zone is 1.9 mm tall and
+  the insert starts above the plate.
 - **H3** is 2.8 mm from the cell holder body, so the boss has a flat on that
-  side.
+  side. The flat is placed 1.0 mm outside the insert hole, which leaves 0.2 mm
+  to the holder; 0.3 mm clearance would have thinned the wall to 0.9 mm.
 
 ## Required hardware
 
