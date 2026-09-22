@@ -113,17 +113,24 @@ static void ign_irq_disable(void)
  * 3.3 V — the bulk of the parked board's input draw).  The console is
  * suspended only for the blocking wait in do_sleep(), so everything logged
  * while awake still reaches the port.  A message logged mid-wait is dropped
- * harmlessly: with the device suspended the driver's tx path is a no-op. */
+ * harmlessly: with the device suspended the driver's tx path is a no-op.
+ *
+ * A quiet sleep pass (a tilt poll that finds nothing) runs with the console
+ * still suspended — see the quiet test in do_sleep().  Both calls are no-ops
+ * in the state they would set, so console_resume() can be dropped in front
+ * of any branch that logs without tracking whether it already ran. */
 #if DT_HAS_CHOSEN(zephyr_console)
 static const struct device *const s_console_dev =
     DEVICE_DT_GET_OR_NULL(DT_CHOSEN(zephyr_console));
 #else
 static const struct device *const s_console_dev = NULL;
 #endif
+static bool s_console_on = true;
 
 static void console_suspend(void)
 {
-    if (s_console_dev == NULL || !device_is_ready(s_console_dev)) {
+    if (!s_console_on || s_console_dev == NULL ||
+        !device_is_ready(s_console_dev)) {
         return;
     }
 
@@ -140,15 +147,19 @@ static void console_suspend(void)
             s_warned = true;
             LOG_WRN("console suspend failed (%d)", err);
         }
+        return;
     }
+    s_console_on = false;
 }
 
 static void console_resume(void)
 {
-    if (s_console_dev == NULL || !device_is_ready(s_console_dev)) {
+    if (s_console_on || s_console_dev == NULL ||
+        !device_is_ready(s_console_dev)) {
         return;
     }
     (void)pm_device_action_run(s_console_dev, PM_DEVICE_ACTION_RESUME);
+    s_console_on = true;
 }
 
 /* -- accelerometer wake interrupt ------------------------------------------ */
@@ -667,18 +678,37 @@ static void do_sleep(void)
          * does not take the semaphore, so a wake still ends the wait at the
          * first slice boundary after it arrives — and the wake sources are
          * interrupts, which give the semaphore immediately either way. */
+        bool woke = false;
         for (int left = sleep_secs; left > 0; left -= WATCHDOG_SLEEP_SLICE_S) {
             int slice = MIN(left, WATCHDOG_SLEEP_SLICE_S);
 
             if (k_sem_take(&s_wake_sem, K_SECONDS(slice)) == 0) {
+                woke = true;
                 break;
             }
             watchdog_kick();
         }
-        console_resume();
         int64_t woke_ms = k_uptime_get();
         int elapsed = (int)((woke_ms - t0) / 1000);
         if (elapsed < 1) elapsed = 1;
+
+        /* A quiet pass — the timer ran out, no wake interrupt is latched and
+         * no report is due — is the tow poll every TOW_POLL_S: two accel
+         * reads and an ignition read, none of which log.  Leave the console
+         * suspended for it rather than hold the HF clock for nothing.  Every
+         * branch a quiet pass can still fall into (tilt over threshold, a
+         * polled ignition change, INT1 still high, the tow re-arm, the modem
+         * off, the wake-cost line, key-on) resumes it first.  A LOG added to the quiet path without a
+         * console_resume() in front of it is silently dropped. */
+        bool quiet = !woke &&
+                     !atomic_get(&s_ign_int_flag) &&
+                     !atomic_get(&s_accel_int_flag) &&
+                     !resend_owed &&
+                     !(g_settings.loop_interval > 0 &&
+                       telemetry_remaining - elapsed <= 0);
+        if (!quiet) {
+            console_resume();
+        }
 
         /* Set by every path below that brings the radio up.  network_ready is
          * not enough on its own: modem_connect() sets it only on success, but
@@ -714,6 +744,7 @@ static void do_sleep(void)
             }
 
             if (tilt >= TOW_TILT_DEG * 10) {
+                console_resume();
                 k_msleep(2000);                       /* debounce */
                 tilt = accel_tilt_from_ref_tenths();
                 if (tilt >= TOW_TILT_DEG * 10 && !tow_alerted) {
@@ -746,6 +777,7 @@ static void do_sleep(void)
              * that is already reported. */
             if (tow_alerted && TOW_REARM_S > 0 &&
                 tow_stable_secs >= TOW_REARM_S) {
+                console_resume();
                 accel_snapshot_tilt_ref();
                 tow_alerted = false;
                 tow_stable_secs = 0;
@@ -762,6 +794,7 @@ static void do_sleep(void)
             uint8_t d6d = 0;
             int changed = accel_d6d_tamper(&d6d);
             if (changed && !tamper_alerted) {
+                console_resume();
                 tamper_alerted = true;
                 LOG_WRN("tamper: orientation changed (D6D_SRC=0x%02x)", d6d);
                 alert_enqueue("tamper: orientation changed",
@@ -789,6 +822,7 @@ static void do_sleep(void)
         bool ign_int = atomic_clear(&s_ign_int_flag) != 0;
         int ign_now = ignition_read();
         if (ign_int || ign_now != ign_before) {
+            console_resume();
             hw_power_wake();
             float v = battery_read_voltage();
             battery_v = v;
@@ -844,6 +878,7 @@ static void do_sleep(void)
         bool accel_int = atomic_clear(&s_accel_int_flag) != 0;
         if (accel_available() &&
             (accel_int || gpio_pin_get(hw_gpio0, PIN_ACC_INT1) == 1)) {
+            console_resume();
             LOG_INF("accel wake");
             gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
                                          GPIO_INT_DISABLE);
@@ -1143,6 +1178,7 @@ static void do_sleep(void)
          * window, or on a registration that has just arrived: the next
          * pass, at most RESEND_POLL_S away, sends it first */
         if (sleep_modem_release(modem_raised, resend_owed)) {
+            console_resume();
             transport_teardown();
             modem_power_off();
         }
@@ -1157,6 +1193,7 @@ static void do_sleep(void)
         if (wake_at != 0 && !resend_owed) {
             int64_t awake_ms = k_uptime_get() - wake_at;
 
+            console_resume();
             if (wake_rec_id != 0) {
                 wake_pending.rec_id = wake_rec_id;
                 wake_pending.ms = awake_ms;
@@ -1182,6 +1219,7 @@ static void do_sleep(void)
             ign_now = 1;
         }
         if (ign_now == 0) {
+            console_resume();
             LOG_INF("wake: ignition ON");
             ignition = 0;
             s_key_wake = true;

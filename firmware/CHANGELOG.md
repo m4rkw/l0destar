@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.4.55
+
+### A quiet tilt poll no longer wakes the console
+- **The parked sleep loop leaves the console suspended when a pass has
+nothing to do.**  With tow detection on (`APP_TOW_TILT_DEG`, default 6) the
+sleep wait is capped at `APP_TOW_POLL_S`, so a parked unit wakes every 30 s
+for the tilt check, and every one of those passes resumed the console UARTE
+first.  An enabled UARTE holds the HF clock, so each poll showed on the input
+current as a brief ~100 µA hump over the ~35 µA sleep floor, spent on a pass
+that reads the accelerometer twice, reads the ignition pin and logs nothing.
+A pass is now quiet when the wait timed out, no ignition or accelerometer
+interrupt is latched, no resend is owed and no timed report is due; a quiet
+pass runs with the console suspended, and skips the log drain and 2 ms settle
+before the next wait.  Every branch a quiet pass can still turn into — tilt
+over the threshold, the tow re-arm, the orientation tamper check, a polled
+ignition change, the accelerometer's INT1 still high, the modem
+power-off, the wake-cost line and key-on — resumes the console first,
+so nothing it logs is lost.  The bit-banged accelerometer reads still run the
+CPU for about 2 ms per poll, so the hump shrinks rather than disappears.  Not
+yet measured on hardware.
+
 ## 0.4.54
 
 ### Every engine-off wake reports what it cost
