@@ -377,12 +377,14 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_TRACCAR_ID` | "" | Device identifier in Traccar (empty = the IMEI) |
 | `APP_TRACCAR_SEC_TAG` | -1 | Modem sec_tag holding the CA for HTTPS to Traccar; -1 = plain HTTP |
 | `APP_PSK_HEX` | "" | Device key, 64 hex characters: required, and must match the server's |
-| `APP_ENGINE_OFF_LOOP_INTERVAL` | 0 | Engine-off wake interval until the server sets one (s; 0 = 900) |
+| `APP_ENGINE_OFF_LOOP_INTERVAL` | 0 | Engine-off wake interval until the server sets one (s; 0 = 3600) |
 | `APP_IGNITION_ON_SLEEP_INTERVAL` | 30 | Send cadence: ignition on, engine off (s) |
 | `APP_VOLTAGE_POLL_INTERVAL` | 5 | Battery sample cadence in IDLE (s) |
 | `APP_BATTERY_CHECK_INTERVAL` | 86400 | Battery check during deep sleep (s) |
 | `APP_NETWORK_REGISTRATION_TIMEOUT` | 60 | Registration timeout (s) |
 | `APP_NETWORK_RETRY_INTERVAL` | 300 | Network retry interval (s) |
+| `APP_NETWORK_SEARCH_TIMEOUT` | 300 | With the ignition off, how long the modem may search for a network before the unit powers it off and sleeps (s; 0 = no limit) |
+| `APP_NO_SIGNAL_MAX_INTERVAL` | 86400 | Ceiling on the engine-off wake interval while there is no network: each dead wake doubles the wait up to this (s; 0 = no backoff) |
 | `APP_GPS_FIX_TIMEOUT_MS` | 60000 | GNSS fix timeout (ms) |
 | `APP_GPS_COLD_FIX_TIMEOUT_MS` | 300000 | Cold-start fix timeout (ms) |
 | `APP_BATTERY_WARNING_MV` / `_POWEROFF_MV` | 11900 / 11800 | Battery warning / power-off (mV) |

@@ -67,12 +67,44 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `ofs`, `omil`, `odtc` | fuel system status bitmap, MIL lamp, stored code count | per-packet |
 | `tm` | 1 = built in track mode: GNSS off, position is the last fix, speed the ECU's | per-packet |
 | `acc` | IMU burst: `ax/ay/az/gx/gy/gz` per sample, samples joined by `:`, oldest first, 26 Hz; accel milli-g, gyro raw LSB | per-packet |
+| `rid` | the device's own id for this record, consecutive within a boot | per-packet |
+| `wt` | `<rid>:<ms>` — how long the device was awake for the send of record `<rid>` | retrospective |
 
 "Carried forward" means the device sends the field only when it changes or on
 the first record after a wake, and the server copies the previous row's value
 onto every row that omits it. A firmware version costs about ten bytes per
 boot instead of ten bytes per record, and every row is still attributable to a
 build.
+
+`rid` is the device's own id for a record, stored in `rec_id`. It is
+consecutive within a boot, so a gap in it is a record that never arrived, and
+it is seeded at random at each boot, so no two boots reuse the same ids and a
+reference to one can never be resolved against the wrong record.
+
+"Retrospective" is `wt` alone: it describes the record it names, not the one
+it rides on, and the server writes it back to that row's `wake_ms` column. It
+is what an engine-off wake cost — from the timer firing to the device back
+asleep with the modem off, covering the modem bring-up, the registration, the
+fix, the send, and on a wake that never registered the whole search window
+before it gave up. A wake cannot measure itself: the device is still awake
+when it builds the record, and on a bad wake most of the time is spent after
+that record exists, waiting for a registration that never comes. So the figure
+is finished once the wake is over and travels on a later record.
+
+It names the record rather than meaning "the one before" because arrival order
+does not say which that is. A wake whose own send failed leaves its record in
+the device's backlog, and the backlog is flushed *behind* the live record that
+describes it — so in exactly the case the figure is most worth having, the row
+before is the wrong row. When the named record has not arrived yet the figure
+is held on the `device` row (`wake_pending_rec_id`, `wake_pending_ms`) and
+applied as the record lands; at most one is outstanding per device, since the
+device clears its own pending figure as it emits it.
+
+`wake_ms` is NULL where nothing was reported for a row — every ignition-on
+record, the first after a boot, a wake that built no record to attribute it
+to, and any row whose figure was lost. Note that the eleventh fixed field is
+stored in a column called `waketime` for historical reasons; that one is
+seconds of uptime and unrelated.
 
 `dbg` is compound — its own body uses semicolons — so it is parsed whole rather
 than split like the others, and a trailing `;rst=` is separated off.

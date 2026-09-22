@@ -24,6 +24,25 @@ PING_INTERVAL = 10.0
 ACCOUNT_CHECK_INTERVAL = 60.0
 
 
+def opening(device, handle):
+    """What a fresh stream sends first, and the id it carries on from.
+
+    Only the newest row is wanted — newest by when the device built it, not
+    by arrival (devices.latest_log): a backlog flushed behind the live record
+    after an outage is stored last but is older.  Everything stored by now is
+    history whichever row is shown, so the stream carries on from the last
+    id.  That id is read first: a row landing between the two queries is
+    then sent on the next pass rather than skipped.
+    """
+    newest = handle.one(
+        'SELECT MAX(`id`) AS `id` FROM `log` WHERE `device_id` = %s',
+        (device['id'],),
+    )
+    resume_from = (newest or {}).get('id') or 0
+    row = devices.latest_log(device, handle)
+    return ([row] if row else []), resume_from
+
+
 @sock.route('/ws/carpos')
 def carpos(ws):
     user = current_user()
@@ -63,14 +82,12 @@ def carpos(ws):
             # Every row since the last one, oldest first.  Track mode writes
             # two a second, each with its own IMU burst, so skipping to the
             # newest would drop samples.  On first connect only the newest
-            # row is wanted.
+            # row is wanted; see opening().  A late row arriving after that
+            # carries gsm_ts, and the page leaves it off the screen.
             if last_id == 0:
-                rows = handle.all(
-                    'SELECT * FROM `log` WHERE `device_id` = %s '
-                    'ORDER BY `id` DESC LIMIT 1',
-                    (device['id'],),
-                )
+                rows, resume_from = opening(device, handle)
             else:
+                resume_from = last_id
                 rows = handle.all(
                     'SELECT * FROM `log` WHERE `device_id` = %s AND `id` > %s '
                     'ORDER BY `id` ASC LIMIT 20',
@@ -78,11 +95,12 @@ def carpos(ws):
                 )
 
             for row in rows:
-                last_id = row['id']
+                resume_from = max(resume_from, row['id'])
                 ws.send(json.dumps(
                     devices.position(row, database=handle, track_mode=track_mode),
                     separators=(',', ':')))
                 last_send = time.time()
+            last_id = resume_from
             if not rows and time.time() - last_send >= PING_INTERVAL:
                 # The client drops and reconnects if it hears nothing for a
                 # while, which is how it recovers from a proxy silently

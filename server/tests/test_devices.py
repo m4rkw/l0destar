@@ -4,11 +4,14 @@ and which requests may fall back to a default device.
 Skipped unless ``TRACKER_TEST_DB`` is set; see conftest.py.
 """
 
+import calendar
+
 import pytest
 
 from conftest import needs_db, record
 
 from tracker import config, db, logs, telemetry
+from tracker.web import devices, stream
 
 pytestmark = needs_db
 
@@ -163,6 +166,15 @@ def test_writes_must_name_their_device(client, logged_in, bearer, device):
     assert client.get('/api/1.0/trackmode').get_json()['track_mode'] == 1
 
 
+def test_switching_track_mode_is_audited(client, logged_in, device):
+    assert client.post('/api/1.0/trackmode?imei=%s' % CAR,
+                       json={'on': 1}).get_json()['track_mode'] == 1
+    with open(logs.AUDIT_PATH) as f:
+        last = f.read().splitlines()[-1]
+    assert 'tester' in last
+    assert last.endswith('[trackmode] - on=1 imei=%s' % CAR)
+
+
 def test_journey_points_stay_with_their_device(client, logged_in, device, second_device):
     send(device, record(0, 51.50, -0.1, 0))
     send(device, record(1, 51.50, -0.1, 1))
@@ -174,3 +186,61 @@ def test_journey_points_stay_with_their_device(client, logged_in, device, second
     assert client.get(url + '?imei=%s' % CAR).get_json()['status'] == 'ok'
     assert client.get(url + '?imei=%s' % VAN).get_json()['message'] == 'journey not found'
     assert client.get(url).get_json()['status'] == 'ok'
+
+
+# -- the newest record -------------------------------------------------------
+
+def latitude(row):
+    return float(row['latitude'])
+
+
+def test_the_map_shows_the_newest_record_by_device_time(client, logged_in, device):
+    # A backlog flushed after an outage arrives behind the live record, so by
+    # arrival the map would fall back to an old position.
+    send(device, record(30, 51.53, -0.1, 0))
+    send(device, record(5, 51.50, -0.1, 1), record(10, 51.51, -0.1, 1))
+
+    assert latitude(devices.latest_log(device)) == 51.53
+    assert client.get('/api/1.0/carpos').get_json()['position']['latitude'] == 51.53
+    listed = client.get('/api/1.0/devices').get_json()['devices']
+    assert listed[0]['latitude'] == 51.53
+
+
+def test_positions_carry_the_device_time(client, logged_in, device):
+    send(device, record(90, 51.5, -0.1, 0))          # 12/08/26 01:30:00
+    position = client.get('/api/1.0/carpos').get_json()['position']
+    assert position['gsm_ts'] == calendar.timegm((2026, 8, 12, 1, 30, 0))
+
+
+def test_a_record_dated_in_the_future_does_not_pin_the_map(device):
+    # A wrong clock is nearly always in the past, where it sorts behind every
+    # genuine record.  One in the future would win for good, so it is left
+    # out, and the row is sent without a device time for the page to
+    # remember it by.
+    send(device, record(0, 51.50, -0.1, 0))
+    send(device, record(0, 51.99, -0.1, 0).replace('12/08/26', '12/08/27'))
+
+    assert latitude(devices.latest_log(device)) == 51.50
+    future = db.web.one('SELECT * FROM `log` ORDER BY `id` DESC LIMIT 1')
+    assert latitude(future) == 51.99
+    assert devices.position(future)['gsm_ts'] is None
+
+
+def test_a_device_with_only_a_wrong_clock_still_has_a_latest_record(device):
+    send(device, record(0, 51.99, -0.1, 0).replace('12/08/26', '12/08/27'))
+    assert latitude(devices.latest_log(device)) == 51.99
+
+
+def test_the_stream_opens_on_the_newest_record_and_carries_on_from_the_last(device):
+    send(device, record(30, 51.53, -0.1, 0))
+    send(device, record(5, 51.50, -0.1, 1), record(10, 51.51, -0.1, 1))
+    last = db.web.one('SELECT MAX(`id`) AS `id` FROM `log`')['id']
+
+    rows, resume_from = stream.opening(device, db.web)
+    assert [latitude(r) for r in rows] == [51.53]
+    # The backlog is history, not the next thing sent.
+    assert resume_from == last
+
+
+def test_the_stream_waits_for_a_first_record(device):
+    assert stream.opening(device, db.web) == ([], 0)

@@ -46,6 +46,7 @@ static bool s_key_wake;
 bool     backup_woke;
 bool     engine_running;
 float    battery_v;
+struct wake_report wake_pending;
 
 /* -- state machine --------------------------------------------------------- */
 enum main_state {
@@ -325,6 +326,66 @@ static bool s_wait_logged;
  * CFUN=0 and nothing else awake would ever bring it up again. */
 static int64_t s_unregistered_ms;
 
+/* The radio has been up without a registration for longer than a parked unit
+ * is allowed to wait — see APP_NETWORK_SEARCH_TIMEOUT.  0 disables the cap,
+ * and a modem that is registered or powered off is never "expired". */
+static bool network_search_expired(void)
+{
+    return NETWORK_SEARCH_TIMEOUT > 0 &&
+           modem_unregistered_s() >= NETWORK_SEARCH_TIMEOUT;
+}
+
+/* Consecutive timed wakes that found no network.  Each one doubles the wait
+ * until the next, up to NO_SIGNAL_MAX_INTERVAL — see the note there for why a
+ * unit with no coverage should not keep waking on its usual cadence. */
+static int s_nosignal_wakes;
+
+/* Back to the configured cadence.  Called wherever the unit learns there is
+ * signal again, and on movement: the likeliest reason coverage returns is
+ * that the vehicle has been moved into it. */
+static void network_backoff_reset(void)
+{
+    if (s_nosignal_wakes > 0) {
+        LOG_INF("network back after %d wake%s without it — timed reports "
+                "every %ds again", s_nosignal_wakes,
+                s_nosignal_wakes == 1 ? "" : "s", g_settings.loop_interval);
+        s_nosignal_wakes = 0;
+    }
+}
+
+/* The engine-off wake interval with that backoff applied.  g_settings is left
+ * alone on purpose: the backoff is local, and by the time a record reaches
+ * the server there is signal and the count is already cleared, so the int=
+ * the device reports back stays the interval it was given. */
+static int telemetry_interval(void)
+{
+    int iv = g_settings.loop_interval;
+
+    if (iv <= 0 || NO_SIGNAL_MAX_INTERVAL <= 0) {
+        return iv;
+    }
+    for (int n = s_nosignal_wakes; n > 0 && iv < NO_SIGNAL_MAX_INTERVAL; n--) {
+        iv *= 2;
+    }
+    return MIN(iv, NO_SIGNAL_MAX_INTERVAL);
+}
+
+/* Whether a pass of the sleep loop may power the modem off at its end.
+ * Something must have brought it up (or it is registered), and no timed
+ * report may be owed on a search that is still inside its window: that
+ * report goes out the moment the modem registers, and the alert paths that
+ * raise the radio for their own send must not take it down under it. */
+static bool sleep_modem_release(bool raised, bool owed)
+{
+    if (!raised && !network_ready) {
+        return false;
+    }
+    if (owed && (modem_is_registered() || !network_search_expired())) {
+        return false;
+    }
+    return true;
+}
+
 void movement_reset(void)
 {
     s_move_alert_level = 0;
@@ -457,8 +518,8 @@ static bool have_position(void)
 }
 
 /* Timed wakes that go looking for a first fix: the 1st, 2nd, 4th, 8th and
- * 16th, then every 16th.  At the 900 s boot interval that is 15 and 30
- * minutes, 1, 2 and 4 hours, then every 4 hours. */
+ * 16th, then every 16th.  At the 3600 s boot interval that is 1, 2, 4, 8 and
+ * 16 hours, then every 16 hours. */
 static unsigned s_nofix_wakes;
 
 static bool nofix_search_due(void)
@@ -499,8 +560,32 @@ static void do_sleep(void)
     LOG_INF("sleep: transport close");
     transport_close();
     transport_teardown();   /* the connection does not survive the modem going off */
-    LOG_INF("sleep: modem power off");
-    modem_power_off();
+
+    /* A timed report that could not go out because the modem had not
+     * registered.  modem_connect() leaves the radio searching when it gives
+     * up, so registration often arrives a minute or two later — and the next
+     * pass used to power the modem straight off, leaving the record in the
+     * backlog until the following timed wake an hour on.  Owed until the
+     * modem registers, the search window closes (APP_NETWORK_SEARCH_TIMEOUT)
+     * or the next timed report runs. */
+    bool    resend_owed = false;
+    int64_t resend_owed_ms = 0;
+
+    /* A modem that is up, unregistered and still inside its search window
+     * is left to it, with the report owed, rather than powered off: the
+     * boot that could not register with the key off comes in this way, and
+     * the poll below gives it the rest of the window and sends the first
+     * record — and runs the power-on update check — if it registers in
+     * time.  A search that has already run its course is ended here. */
+    if (modem_unregistered_s() >= 0 && !network_search_expired()) {
+        resend_owed = true;
+        resend_owed_ms = k_uptime_get();
+        LOG_INF("sleep: modem left searching (%d s so far, report owed)",
+                modem_unregistered_s());
+    } else {
+        LOG_INF("sleep: modem power off");
+        modem_power_off();
+    }
     LOG_INF("sleep: CAN power off");
     hw_can_power_off();
     LOG_INF("sleep: K-line power off");
@@ -526,20 +611,23 @@ static void do_sleep(void)
     int  tow_last_tilt = -1;      /* tenths, for the "still" test */
     int  tow_stable_secs = 0;
 
-    /* A timed report that could not go out because the modem had not
-     * registered.  modem_connect() leaves the radio searching when it gives
-     * up, so registration often arrives a minute or two later — and the next
-     * pass used to power the modem straight off, leaving the record in the
-     * backlog until the following timed wake an hour on.  Owed until the
-     * modem registers or the next timed report runs. */
-    bool    resend_owed = false;
-    int64_t resend_failed_ms = 0;
-
     if (s_saved_loop_interval < 0) {
         s_saved_loop_interval = g_settings.loop_interval;
     }
 
-    int telemetry_remaining = g_settings.loop_interval;
+    int telemetry_remaining = telemetry_interval();
+
+    /* Uptime at which the timed report now in progress woke the unit, 0 when
+     * none is.  The wake is not over when the send is: one that could not
+     * register keeps the modem up and the loop polling for it every
+     * RESEND_POLL_S, and that is where the power goes — so this spans those
+     * passes too and closes only when nothing is owed any more. */
+    int64_t wake_at = 0;
+    /* The rid= of the record that wake produced, so the figure can name it
+     * rather than leaving the server to guess from arrival order.  Taken
+     * from the last record the report actually built: a resend builds a
+     * fresh one, and it is that record the wake ends up delivering. */
+    uint32_t wake_rec_id = 0;
 
     ign_irq_enable();
     atomic_clear(&s_ign_int_flag);
@@ -588,7 +676,8 @@ static void do_sleep(void)
             watchdog_kick();
         }
         console_resume();
-        int elapsed = (int)((k_uptime_get() - t0) / 1000);
+        int64_t woke_ms = k_uptime_get();
+        int elapsed = (int)((woke_ms - t0) / 1000);
         if (elapsed < 1) elapsed = 1;
 
         /* Set by every path below that brings the radio up.  network_ready is
@@ -827,10 +916,9 @@ static void do_sleep(void)
                 /* This branch continues past the bottom-of-loop power-off,
                  * so drop the modem here if anything above raised it —
                  * whether or not the connect actually registered — unless
-                 * it has registered with a timed report still owed, which
-                 * the next pass sends first. */
-                if ((modem_raised || network_ready) &&
-                    !(resend_owed && modem_is_registered())) {
+                 * a timed report is still owed on it, which the next pass
+                 * sends first. */
+                if (sleep_modem_release(modem_raised, resend_owed)) {
                     transport_teardown();
                     modem_power_off();
                 }
@@ -840,6 +928,10 @@ static void do_sleep(void)
             }
             accel_irq_disable();
             LOG_INF("movement confirmed");
+            /* The unit may have been carried into coverage, so the next
+             * timed report goes back to the full cadence rather than
+             * whatever a run of dead wakes had stretched it to. */
+            network_backoff_reset();
             led_accel_movement();
             s_move_idle_secs = 0;
             s_move_needs_gps = true;
@@ -892,11 +984,22 @@ static void do_sleep(void)
         if (resend_owed && modem_is_registered()) {
             resend_owed = false;
             if (g_settings.loop_interval > 0) {
-                LOG_WRN("registered — sending the timed report that failed "
-                        "%lld s ago",
-                        (k_uptime_get() - resend_failed_ms) / 1000);
+                LOG_WRN("registered — sending the timed report owed for "
+                        "%lld s",
+                        (k_uptime_get() - resend_owed_ms) / 1000);
                 telemetry_remaining = 0;
             }
+        } else if (resend_owed && network_search_expired()) {
+            /* The modem has had its APP_NETWORK_SEARCH_TIMEOUT and is still
+             * not registered.  Whatever record there was is in the backlog
+             * for the next report that gets through; nothing else keeps
+             * the radio up, so it goes off until the next timed wake. */
+            resend_owed = false;
+            LOG_WRN("no registration %d s after bringing the radio up — "
+                    "modem off until the next timed report",
+                    modem_unregistered_s());
+            transport_teardown();
+            modem_power_off();
         }
 
         /* --- timer telemetry (and the report a backup wake owes) --- */
@@ -925,8 +1028,15 @@ static void do_sleep(void)
             if (!on_backup && v > 0 && v < SLEEP_SAFETY_VOLTAGE) {
                 LOG_WRN("battery %.2fV, skipping send", (double)v);
                 hw_power_shutdown();
-                telemetry_remaining = g_settings.loop_interval;
+                telemetry_remaining = telemetry_interval();
                 continue;
+            }
+
+            /* Past the battery gates, so a wake that skipped the send
+             * never starts a measurement.  Only the first pass of a report
+             * sets it — a resend keeps the original wake's start. */
+            if (wake_at == 0) {
+                wake_at = woke_ms;
             }
 
             watchdog_kick();
@@ -937,9 +1047,25 @@ static void do_sleep(void)
             /* No position since boot means no record can be built, so a unit
              * restarted somewhere GNSS cannot reach would stay silent until
              * something moved it.  Search on timed wakes too, backing off so
-             * one parked underground does not spend its battery on it. */
-            bool search_gps = s_move_needs_gps ||
-                              (!have_position() && nofix_search_due());
+             * one parked underground does not spend its battery on it.
+             *
+             * Only with a network to send the fix over.  A wake that could
+             * not register used to run the receiver anyway — up to the cold
+             * timeout, five minutes — for a record that could only go to
+             * the backlog.  The search is left to the next wake that has a
+             * network: the backoff counter only advances on those, so the
+             * first of them searches, and a movement fix stays wanted. */
+            bool registered = modem_is_registered();
+            bool search_gps = registered &&
+                              (s_move_needs_gps ||
+                               (!have_position() && nofix_search_due()));
+
+            if (!registered) {
+                LOG_INF("no registration — %s",
+                        have_position()
+                            ? "recording from the stored position for the backlog"
+                            : "no position and no network to search for one");
+            }
 
             if (search_gps) {
                 /* the GPS antenna bias tee lives on the AUX domain */
@@ -953,6 +1079,7 @@ static void do_sleep(void)
             ignition = (char)ignition_read();
             read_udp_response = true;
             if (collect_data(ignition) > 0) {
+                wake_rec_id = data_last_rec_id();
                 send_data();
                 if (pending_server_cmd[0] != '\0') {
                     cmd_run(pending_server_cmd);
@@ -961,11 +1088,24 @@ static void do_sleep(void)
                 }
                 if (!last_send_ok) {
                     modem_recover();
-                    if (!modem_is_registered()) {
-                        resend_owed = true;
-                        resend_failed_ms = k_uptime_get();
-                    }
                 }
+            }
+            /* Owed whether or not a record could be built.  A unit with no
+             * stored position builds none, and used to leave the modem
+             * searching with nothing polling for the registration that
+             * would let it search for a fix: this is what makes the loop
+             * look, every RESEND_POLL_S, for as long as the window allows. */
+            if (!modem_is_registered()) {
+                resend_owed = true;
+                resend_owed_ms = k_uptime_get();
+                /* Stop counting at the ceiling; the interval is capped
+                 * there anyway and the count has nowhere useful to go. */
+                if (NO_SIGNAL_MAX_INTERVAL > 0 &&
+                    telemetry_interval() < NO_SIGNAL_MAX_INTERVAL) {
+                    s_nosignal_wakes++;
+                }
+            } else {
+                network_backoff_reset();
             }
             data_reset();
 
@@ -990,16 +1130,44 @@ static void do_sleep(void)
             fota_check(FOTA_CTX_ASLEEP);
 
             hw_power_shutdown();
-            telemetry_remaining = g_settings.loop_interval;
+            telemetry_remaining = telemetry_interval();
+            if (s_nosignal_wakes > 0) {
+                LOG_WRN("no network on %d consecutive wake%s — next timed "
+                        "report in %ds", s_nosignal_wakes,
+                        s_nosignal_wakes == 1 ? "" : "s", telemetry_remaining);
+            }
         }
 
         /* power modem back off if any alert or telemetry path woke it —
-         * except a registration that has just arrived with a timed report
-         * owed: the next pass, at most RESEND_POLL_S away, sends it first */
-        if ((modem_raised || network_ready) &&
-            !(resend_owed && modem_is_registered())) {
+         * except with a timed report owed on a search still inside its
+         * window, or on a registration that has just arrived: the next
+         * pass, at most RESEND_POLL_S away, sends it first */
+        if (sleep_modem_release(modem_raised, resend_owed)) {
             transport_teardown();
             modem_power_off();
+        }
+
+        /* The report is done with — sent, or given up on — and the modem is
+         * down, so this is the whole cost of the wake.  Held for the next
+         * record to carry, tagged with the record this one produced; see
+         * wake_pending.  A wake that built no record at all (no position
+         * since boot, nothing to send) has nothing to attribute the figure
+         * to, so it is logged and dropped rather than filed against some
+         * other record. */
+        if (wake_at != 0 && !resend_owed) {
+            int64_t awake_ms = k_uptime_get() - wake_at;
+
+            if (wake_rec_id != 0) {
+                wake_pending.rec_id = wake_rec_id;
+                wake_pending.ms = awake_ms;
+                LOG_INF("timed wake done: %lld ms awake (record %u)",
+                        awake_ms, wake_rec_id);
+            } else {
+                LOG_INF("timed wake done: %lld ms awake, no record to "
+                        "attribute it to", awake_ms);
+            }
+            wake_at = 0;
+            wake_rec_id = 0;
         }
 
         /* re-read baseline and re-arm accel interrupt before next sleep cycle */
@@ -1505,11 +1673,25 @@ int main(void)
         if (agnss_fetch(NULL)) {
             LOG_WRN("A-GNSS fetch failed — first fix will take longer");
         }
+    } else if (ignition_read() != 0) {
+        /* Key off and no network: a fix could not be sent, so the receiver
+         * is not started and the unit goes to sleep with the modem left
+         * searching for what remains of APP_NETWORK_SEARCH_TIMEOUT.  The
+         * sleep loop sends the first record, and runs the power-on update
+         * check, if the modem registers in that time; otherwise the timed
+         * wakes take over, and the first of those with a network searches
+         * for the fix.  Before this the main loop idled below with GNSS
+         * and the modem both searching until the network came, however
+         * long that took. */
+        LOG_WRN("no network with the ignition off — sleeping, GNSS not started");
+        s_state = STATE_SLEEP;
     } else {
         LOG_INF("no network yet — skipping A-GNSS, GNSS will ask later");
     }
 
-    gnss_start();
+    if (s_state != STATE_SLEEP) {
+        gnss_start();
+    }
 
 #if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
     /* Poll the ECU about once a second while waiting for a fix, which is
@@ -1587,6 +1769,10 @@ int main(void)
                  * that followed turned each blip into a minute without
                  * the network. */
                 s_unregistered_ms = 0;
+                /* Also the drive that ends parked somewhere with coverage
+                 * after a spell without it: the count is a run of dead
+                 * wakes, and this is proof the run is over. */
+                network_backoff_reset();
             } else {
                 int reg = modem_get_network_status();
                 if (reg == 1 || reg == 5) {
@@ -1648,6 +1834,36 @@ int main(void)
                         }
                         force_record = false;
                         use_cached_gps = false;
+                    }
+                    /* With the key off there is nothing to stay awake for
+                     * but the network, and that wait is bounded — see
+                     * APP_NETWORK_SEARCH_TIMEOUT.  A boot with the key on,
+                     * or a key-on wake, that never registered and has had
+                     * its key turned off again ends up here, as does a
+                     * drive that lost the network and parked; each used to
+                     * idle with GNSS running and the modem searching until
+                     * the network came.  Anything recorded meanwhile goes
+                     * to the backlog for the next send that gets through,
+                     * and since that is how the server will hear of the
+                     * ignition state it carried, that state is latched as
+                     * if sent — the next key-on is then a fresh transition
+                     * rather than a repeat of this one. */
+                    if (ignition != 0 && !s_coasting &&
+                        network_search_expired()) {
+                        LOG_WRN("no registration %d s after bringing the "
+                                "radio up, ignition off — sleeping",
+                                modem_unregistered_s());
+                        if (s_buffered_records > 0) {
+                            databuf_push_lines(data_current,
+                                               (size_t)data_index);
+                            data_reset();
+                            s_buffered_records = 0;
+                            s_transition_buffered = false;
+                            previous_ignition = s_record_ignition;
+                        }
+                        s_wait_logged = false;
+                        s_state = STATE_SLEEP;
+                        break;
                     }
                     if (!s_wait_logged) {
                         s_wait_logged = true;
@@ -1916,7 +2132,23 @@ int main(void)
             ignition = (char)ignition_read();
 
             /* state transition */
-            if (previous_ignition != ignition) {
+            if (previous_ignition != ignition && ignition != 0 &&
+                !s_coasting && !last_send_ok && !modem_is_registered()) {
+                /* Key off, and no network to take the record that says so.
+                 * The collect-and-send round below is right for a drive
+                 * that loses the network — it is what records the drive
+                 * into the backlog — but with the key off it repeated with
+                 * the same result, once a second, for as long as the outage
+                 * lasted, each pass pushing another copy of the ignition-off
+                 * record into the backlog and thinning the drive's own
+                 * records out of it.  IDLE already knows how to wait out an
+                 * outage with the key off: it records the change once,
+                 * holds it for the send that follows registration, and
+                 * gives up at APP_NETWORK_SEARCH_TIMEOUT. */
+                LOG_INF("ignition OFF with no network — waiting in idle");
+                gnss_resume();
+                s_state = STATE_IDLE;
+            } else if (previous_ignition != ignition) {
                 /* Ignition changed while that record was being built or sent,
                  * so the server has not been told.  Go round once more to
                  * report it before sleeping; force_record in

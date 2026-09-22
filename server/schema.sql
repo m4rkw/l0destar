@@ -39,6 +39,15 @@ CREATE TABLE `device` (
   `fw_blocked`    VARCHAR(16)  DEFAULT NULL COMMENT 'version withheld from this device after it failed to boot here',
   `fw_fail_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'consecutive failed attempts at fw_blocked',
 
+  -- A wake figure (wt=) that arrived before the record it belongs to, which
+  -- happens whenever the wake's own send failed: that record goes to the
+  -- device's backlog and is flushed behind the record describing it.  Held
+  -- here until it lands, then written to that row's log.wake_ms.  At most one
+  -- per device is ever outstanding -- the device clears its own pending
+  -- figure as it emits it.
+  `wake_pending_rec_id` INT UNSIGNED DEFAULT NULL COMMENT 'log.rec_id the held figure belongs to',
+  `wake_pending_ms`     INT UNSIGNED DEFAULT NULL COMMENT 'that figure, applied when the record arrives',
+
   -- Settings the server acts on; these never reach the device.
   `alarm`         TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'notify on ignition on',
   `garage`        TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'expected to be moved; downgrades alert priority',
@@ -101,6 +110,23 @@ CREATE TABLE `log` (
 
   `waketime`      INT UNSIGNED DEFAULT NULL COMMENT 'seconds awake for this send',
   `uptime`        INT UNSIGNED DEFAULT NULL COMMENT 'seconds since boot',
+  -- The device's own id for this record (rid= on the wire): consecutive
+  -- within a boot, seeded at random at each one, so a gap is a record that
+  -- never arrived and no two boots reuse the same ids.
+  `rec_id`        INT UNSIGNED DEFAULT NULL COMMENT 'the device''s own id for this record (rid=)',
+
+  -- What the wake that produced this row cost, start to finish: modem
+  -- bring-up, registration, fix, send, and -- on a wake that never
+  -- registered -- the whole search window before it gave up.  Reported on a
+  -- LATER record as wt=<rec_id>:<ms>, because a wake cannot measure itself,
+  -- and written back here against the rec_id it names.  It names the record
+  -- rather than meaning "the one before" because arrival order does not
+  -- identify it: a wake whose own send failed leaves its record in the
+  -- device's backlog, flushed behind the record describing it.  NULL where
+  -- none was reported -- every ignition-on record, the first after a boot,
+  -- and any row whose figure was lost.  Despite the name, `waketime` above
+  -- is seconds of uptime and is unrelated.
+  `wake_ms`       INT UNSIGNED DEFAULT NULL COMMENT 'ms awake to complete this send, reported on a later record',
   `dead_reckoning` TINYINT(1)  DEFAULT NULL,
 
   `fw`            VARCHAR(16)  DEFAULT NULL COMMENT 'running firmware version, carried forward',
@@ -139,9 +165,16 @@ CREATE TABLE `log` (
   `imu_burst`       TEXT         DEFAULT NULL COMMENT 'acc=: ax/ay/az/gx/gy/gz per sample at 26 Hz, samples joined by :',
 
   PRIMARY KEY (`id`),
-  -- The read paths are "latest row for a device" and "rows between two ids
-  -- for a device", both served by this one index.
+  -- The read paths are "rows after an id for a device" and "rows between two
+  -- ids for a device", served by the first index, and "the device's newest
+  -- row by its own clock" (tracker/web/devices.py latest_log), served by the
+  -- second — without it that is a sort of the device's whole history on
+  -- every map load.
   KEY `device_id` (`device_id`, `id`),
+  KEY `device_time` (`device_id`, `gsm_timestamp`),
+  -- Writing a wake figure back to the record it names is a lookup on this,
+  -- not a scan of the device's history on every wake.
+  KEY `device_rec` (`device_id`, `rec_id`),
   CONSTRAINT `log_device` FOREIGN KEY (`device_id`) REFERENCES `device` (`id`)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

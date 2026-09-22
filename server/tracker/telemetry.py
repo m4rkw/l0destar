@@ -13,7 +13,14 @@ One record per line, comma-separated::
 ``ts`` is the modem's own clock as ``dd/mm/yy,HH:MM:SS+NN`` — note that it
 contains a comma, so the first two fields are rejoined before parsing.
 ``hdop`` arrives multiplied by ten, and ``up`` is seconds since boot, stored
-in the ``waketime`` column; see docs/PROTOCOL.md.
+in the ``waketime`` column; see docs/PROTOCOL.md.  (``waketime`` predates the
+current meaning of that field and is unrelated to ``wake_ms`` below.)
+
+``rid=`` is the device's own id for a record, consecutive within a boot and
+seeded at random at each one, and ``wt=<rid>:<ms>`` is how long the wake that
+sent record ``<rid>`` lasted.  That figure names its record because arrival
+order cannot identify it: a wake whose own send failed leaves its record in
+the device's backlog, which is flushed behind the live record describing it.
 
 Everything after the twelve fixed fields is an "extras" group: comma-separated
 groups of ``key=value`` pairs joined by semicolons.  Extras are optional and
@@ -75,7 +82,16 @@ EXTRA_KEYS = {
     'dr':  'dead_reckoning',
     'tm':  'track_mode',         # 1 = built in track mode (GNSS off, fast poll)
     'acc': 'imu_burst',          # IMU samples since the previous record
+    'rid': 'rec_id',             # the device's own id for this record
+    # 'wt' is handled in parse_csv_line: it is <rid>:<ms>, and the one field
+    # that describes another record rather than this one.
 }
+
+# Upper bound on a reported wake, in milliseconds.  The device's own ceiling
+# on an engine-off wake is its registration search plus a fix attempt, minutes
+# at most, so anything near a day is a corrupt field rather than a very
+# patient tracker -- and storing it would skew every average over the column.
+WAKE_MS_MAX = 24 * 60 * 60 * 1000
 
 # Config the device may report back, mirrored onto the `device` row so the
 # server's view of a unit's settings tracks what the unit actually applied.
@@ -151,7 +167,7 @@ LOG_COLUMNS = [
     'accel_x', 'accel_y', 'accel_z', 'gyro_x', 'gyro_y', 'gyro_z',
     'waketime', 'uptime', 'mcu_temp', 'imu_temp', 'dead_reckoning', 'vsys',
 ] + [column for column, _, _ in OBD_FIELDS.values()] + [
-    'combined_speed', 'track_mode', 'imu_burst',
+    'combined_speed', 'track_mode', 'imu_burst', 'rec_id', 'wake_ms',
 ]
 
 _TIMESTAMP_RE = re.compile(
@@ -193,6 +209,15 @@ def parse_csv_line(line):
             if '=' not in pair:
                 continue
             key, value = pair.split('=', 1)
+            if key == 'wt':
+                # <rid>:<ms> -- the record the figure belongs to, then the
+                # figure.  Kept apart from wake_ms's column so the reference
+                # is never mistaken for a value to store on this row.
+                ref, _, millis = value.partition(':')
+                if millis:
+                    data['wake_ref'] = ref
+                    data['wake_ms'] = millis
+                continue
             column = EXTRA_KEYS.get(key)
             if column:
                 data[column] = value
@@ -256,6 +281,15 @@ def _build_entry(data, device, ip, previous):
     for key in PER_PACKET_KEYS:
         if key in data:
             entry[key] = data[key]
+
+    # The device's own id for this record: what lets a later record name it,
+    # and what makes a gap in the sequence a record that never arrived.
+    if 'rec_id' in data:
+        try:
+            entry['rec_id'] = int(data['rec_id'])
+        except (TypeError, ValueError):
+            logs.app.warning('unparsable rid=%r from %s', data['rec_id'],
+                             device.get('imei', '?'))
 
     if 'track_mode' in data:
         try:
@@ -416,6 +450,88 @@ def _haversine_km(a, b):
     return 2 * 6371.0088 * math.asin(math.sqrt(h))
 
 
+def _wake_figure(data, imei):
+    """The ``(rec_id, ms)`` a record's ``wt=`` carries, or ``(None, None)``.
+
+    Anything that is not a pair of plausible integers is rejected: a corrupt
+    figure cannot be told from a real one once stored, and would skew every
+    average taken over the column.
+    """
+    if 'wake_ms' not in data or 'wake_ref' not in data:
+        return None, None
+    try:
+        ref = int(data['wake_ref'])
+        millis = int(data['wake_ms'])
+    except (TypeError, ValueError):
+        logs.app.warning('unparsable wt=%r:%r from %s', data.get('wake_ref'),
+                         data.get('wake_ms'), imei)
+        return None, None
+    if ref <= 0 or not 0 < millis <= WAKE_MS_MAX:
+        logs.app.warning('implausible wt=%d:%d from %s', ref, millis, imei)
+        return None, None
+    return ref, millis
+
+
+def _held_wake_for(device, rec_id):
+    """A figure being held for this record because it had not arrived yet."""
+    held = device.get('wake_pending_rec_id')
+    if held is None or rec_id is None:
+        return None
+    return device.get('wake_pending_ms') if int(held) == rec_id else None
+
+
+def _store_wake_figure(database, device, data, rec_id):
+    """File a record's ``wt=`` against the record it names.
+
+    A wake cannot measure itself -- the device is still awake when it builds
+    the record, and one that could not register spends most of its time after
+    the send, waiting for a registration that never comes -- so the figure is
+    finished once the wake is over and travels on a later record.
+
+    It names its record rather than meaning "the one before" because arrival
+    order does not identify it: a wake whose own send failed leaves its record
+    in the device's backlog, which is flushed *behind* the live record
+    describing it.  When the named record is not here yet the figure is held
+    on the device row, and the insert path applies it as the record lands.  At
+    most one is ever outstanding, since the device clears its own pending
+    figure as it emits it.
+    """
+    ref, millis = _wake_figure(data, device.get('imei', '?'))
+    if ref is None:
+        return
+    if ref == rec_id:
+        # A record cannot describe the wake that sent it; that is the whole
+        # reason the figure travels separately.  Corrupt, not merely late.
+        logs.app.warning('wt= names its own record (%d) from %s', ref,
+                         device.get('imei', '?'))
+        return
+
+    # The newest match: ids are consecutive within a boot and seeded at random
+    # at each one, so even a long-lived device has one plausible row per id.
+    target = database.one(
+        'SELECT `id`, `wake_ms` FROM `log` '
+        'WHERE `device_id` = %s AND `rec_id` = %s ORDER BY `id` DESC LIMIT 1',
+        (device['id'], ref),
+    )
+    if target is None:
+        database.query(
+            'UPDATE `device` SET `wake_pending_rec_id` = %s, '
+            '`wake_pending_ms` = %s WHERE `id` = %s',
+            (ref, millis, device['id']),
+        )
+        # The caller's copy of the row too: a datagram is read once and may
+        # carry several records, and the record this figure is waiting for
+        # can be one of them.
+        device['wake_pending_rec_id'] = ref
+        device['wake_pending_ms'] = millis
+        return
+    # Left alone if it already carries a figure, so a duplicate datagram
+    # cannot overwrite one with a stale repeat of itself.
+    if target['wake_ms'] is None:
+        database.query('UPDATE `log` SET `wake_ms` = %s WHERE `id` = %s',
+                       (millis, target['id']))
+
+
 def process_record(data, device, ip, database=None):
     """Store one telemetry record.
 
@@ -431,6 +547,12 @@ def process_record(data, device, ip, database=None):
 
     entry = _build_entry(data, device, ip, previous)
     now = datetime.datetime.now()
+
+    # A figure that arrived before the record it belongs to: this may be that
+    # record, flushed out of the backlog behind the one describing it.
+    held_wake = _held_wake_for(device, entry.get('rec_id'))
+    if held_wake is not None:
+        entry['wake_ms'] = held_wake
 
     # powered_on marks the record on which the ignition came up, so the
     # transition is queryable without comparing adjacent rows.
@@ -467,6 +589,17 @@ def process_record(data, device, ip, database=None):
         _update_journey(database, device, entry, log_id, powered_on)
     except Exception:
         logs.app.exception('journey update failed for %s', device.get('imei'))
+
+    # The held figure went onto the row just inserted, so stop holding it.
+    if held_wake is not None:
+        database.query(
+            'UPDATE `device` SET `wake_pending_rec_id` = NULL, '
+            '`wake_pending_ms` = NULL WHERE `id` = %s', (device['id'],)
+        )
+        device['wake_pending_rec_id'] = None
+        device['wake_pending_ms'] = None
+
+    _store_wake_figure(database, device, data, entry.get('rec_id'))
 
     # Ignition off ends track mode; see TRACK_MODE_IDLE_SECONDS.
     if entry['ignition_state'] == 0 and device.get('track_mode'):
@@ -690,20 +823,26 @@ def boot_wall_time(lines, now=None, device=None, database=None):
     """Estimate when the device booted, as a datetime, or None.
 
     Firmware log lines are stamped with uptime, which only means something
-    against a boot time.  The telemetry record in the same batch carries up=
-    (seconds since boot as of moments before the send), so now minus that is
-    the boot time to within a few seconds.  With no record in the batch, fall
-    back to the last stored row's uptime and receipt time; that is wrong if
-    the device rebooted since, but the line's own uptime is printed too, so
-    the reader can tell.
+    against a boot time.  The telemetry records in the same batch carry up=
+    (seconds since boot as of when each was built), so now minus the newest
+    of them is the boot time to within a few seconds.  It has to be the
+    newest: a batch that waited out a network outage starts with a record
+    built long before the send, and taking that one stamps every log line
+    in the batch late by the length of the outage.  With no record in the
+    batch, fall back to the last stored row's uptime and receipt time; that
+    is wrong if the device rebooted since, but the line's own uptime is
+    printed too, so the reader can tell.
     """
     now = now or datetime.datetime.now()
+    newest = None
     for line in lines:
         if line[:2] in ('A,', 'D,', 'L,'):
             continue
         m = _UPTIME_RE.search(line)
-        if m:
-            return now - datetime.timedelta(seconds=int(m.group(1)))
+        if m and (newest is None or int(m.group(1)) > newest):
+            newest = int(m.group(1))
+    if newest is not None:
+        return now - datetime.timedelta(seconds=newest)
 
     if device is None or database is None:
         return None

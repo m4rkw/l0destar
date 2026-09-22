@@ -73,6 +73,12 @@ CONFIG_APP_APN=""
 # CONFIG_APP_BATTERY_CHECK_INTERVAL=86400
 # CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT=60
 # CONFIG_APP_NETWORK_RETRY_INTERVAL=300
+# With the ignition off, how long the modem may search for a network before
+# the unit gives up and sleeps until the next timed report (0 = no limit).
+# CONFIG_APP_NETWORK_SEARCH_TIMEOUT=300
+# Each consecutive timed wake that finds no network doubles the wait until
+# the next one, up to this ceiling (0 = no backoff).
+# CONFIG_APP_NO_SIGNAL_MAX_INTERVAL=86400
 # CONFIG_APP_GPS_FIX_TIMEOUT_MS=60000
 
 # --- voltage thresholds (millivolts) ---------------------------------------

@@ -3,6 +3,10 @@ var pos = null;
 var marker = null;
 var accuracyCircle = null;
 var engineRunning = false;
+// When the device built the record on screen (gsm_ts, seconds).  A record
+// built earlier that arrives later — the backlog after an outage, sent behind
+// the live record — must not replace it.
+var shownGsmTs = null;
 
 // The device this page follows.  The server settles it when it renders the
 // page, and every request below names it rather than leaving the server to
@@ -61,6 +65,27 @@ function initMap() {
   setTimeout(function() {
     updateMap(map, marker);
   }, 500);
+}
+
+// The live sources — the websocket and the first /carpos fetch — go through
+// here, so a late record is left off the screen.  The track-mode switch it
+// carries still applies; it is read fresh for every row.  A row without a
+// usable device time (gsm_ts null: the server withholds it for a clock that
+// reads in the future) is shown but not remembered, so it cannot pin the page.
+function applyLive(data) {
+  if (!data.ping) {
+    var gsmTs = parseFloat(data['gsm_ts']);
+    if (!isNaN(gsmTs)) {
+      if (shownGsmTs !== null && gsmTs < shownGsmTs) {
+        if (data.track_mode !== undefined && data.track_mode !== null) {
+          setTrackViewFromServer(parseInt(data.track_mode) === 1);
+        }
+        return;
+      }
+      shownGsmTs = gsmTs;
+    }
+  }
+  applyPosition(data);
 }
 
 function applyPosition(data) {
@@ -275,7 +300,7 @@ function connectWebSocket() {
   ws.onmessage = function(event) {
     resetStaleTimer();
     var data = JSON.parse(event.data);
-    applyPosition(data);
+    applyLive(data);
   };
 
   ws.onclose = function() {
@@ -565,7 +590,7 @@ function fetchLivePosition() {
       accelBaseline = resp.accel_baseline || null;
       imuPrevSpeed = null;
       if (resp.track_mode !== undefined) setTrackViewFromServer(parseInt(resp.track_mode) === 1);
-      if (resp.position) applyPosition(resp.position);
+      if (resp.position) applyLive(resp.position);
     }
   });
 }

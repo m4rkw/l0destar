@@ -1,5 +1,96 @@
 # Changelog
 
+## 0.4.54
+
+### Every engine-off wake reports what it cost
+- **`wt=<rid>:<ms>` carries a wake's duration and names the record it sent.**
+Engine-off telemetry is where a parked unit spends its power — each wake pays
+for a modem bring-up, a registration, a fix and a send, and one that cannot
+register pays the whole `APP_NETWORK_SEARCH_TIMEOUT` before giving up — and
+none of that was visible afterwards: the stored row said what was sent, never
+what it took to send it.  The sleep loop now times from the wake to going
+back to sleep with the modem off, spanning the `RESEND_POLL_S` passes of a
+report that had to wait for registration, since that is exactly where a bad
+wake's power goes.  The server files it against the record named, in the new
+`wake_ms` column.
+- **The figure lags at least one record by necessity.**  A wake cannot measure
+itself: the device is still awake when it builds the record, and on a bad
+wake most of the time comes after that record exists.  So it is finished once
+the wake is over, held in `wake_pending`, and emitted on the next record of
+any kind.
+- **Every record now carries `rid=`, the device's own id for it.**
+Consecutive within a boot, so a gap in it is a record that never arrived, and
+seeded at random at each boot, so no two boots reuse the same ids.  It is
+what lets the wake figure name its record instead of meaning "the one
+before" — which is the wrong row in exactly the case the figure is most worth
+having.  A wake whose own send failed leaves its record in the backlog, and
+the backlog is flushed *behind* the live record that describes it; the server
+holds the figure on the `device` row until that record lands.
+- A wake that built no record at all has nothing to attribute the figure to,
+so it is logged and dropped rather than filed against an unrelated record; a
+wake that skipped its send on the battery gate is not measured at all.  On a
+Traccar build the pair goes out as `wakeRecordId` and `wakeMs` attributes of
+the record carrying them, since Traccar cannot amend a stored position.
+- Schema: `sql/2026-09-22_log_wake_ms.sql` and `sql/2026-09-22_log_rec_id.sql`
+(`migrations/` in the packaged server).  Not to be confused with the existing
+`waketime` column, which despite its name holds seconds of uptime.
+
+### A parked unit that cannot reach the network stops looking
+- **`CONFIG_APP_NETWORK_SEARCH_TIMEOUT` (default 300 s, 0 = no limit) bounds
+the search.**  With the ignition off, the radio is left looking for a network
+for this long — counted from the moment it is brought up, so the 60 s
+`APP_NETWORK_REGISTRATION_TIMEOUT` is part of it — and then powered off until
+the next timed report.  Nothing else keeps a parked unit awake, so this is
+what bounds the power it spends somewhere the network cannot be reached.
+Before, a timed wake that missed registration left the modem searching until
+the next wake, up to an hour (it was left up on purpose so the record could
+go out when registration arrived, and now still is, for the length of the
+window), and a boot with the key off idled in the main loop with GNSS and the
+modem both searching until the network came, however long that took.  A key
+that has been turned off again on a wake or a boot that never registered,
+and a drive that lost the network and then parked, waited the same way; they
+give up at the same point.  Anything recorded while waiting goes to the
+backlog for the next send that gets through.  The search is not limited with
+the ignition on: the car is running, and the drive should be reported as
+soon as coverage returns.
+- **No fix is attempted without a network to send it over.**  A timed wake
+that could not register ran the receiver anyway when a fix was due — up to
+the cold-start timeout, five minutes — for a record that could only go to the
+backlog.  The search is left to the next wake that has a network: the no-fix
+backoff (1st, 2nd, 4th, 8th, 16th wake, then every 16th) now counts only
+wakes with a network, so the first of them searches, and a movement fix stays
+wanted until then.  The same at boot: with no network and the key off the
+receiver is not started, and the unit goes to sleep with the modem searching
+for what is left of the window; the sleep loop sends the first record, and
+runs the power-on update check, if the modem registers in time.
+- **A wake with no stored position now polls for the registration it needs.**
+The report was only marked as owed when a record had been built and its send
+had failed, so a unit with no position since boot — which builds no record —
+left the modem searching with nothing watching for the registration that
+would have let it search for a fix.  The report is owed whenever the wake
+ends unregistered.
+- **The wake interval backs off while there is no network.**
+`ENGINE_OFF_BOOT_INTERVAL` — the cadence from boot until the first server
+reply sets one — is an hour rather than 900 s, and each consecutive timed
+wake that cannot register doubles the wait until the next, up to
+`CONFIG_APP_NO_SIGNAL_MAX_INTERVAL` (default 86400 s, 0 = no backoff): 1, 2,
+4, 8 and 16 hours, then a day.  A unit somewhere with no coverage at all —
+an underground car park, a container, a shipped spare — was waking on its
+full cadence to spend a bring-up and a search window on a send that could
+not happen.  The first registration puts it straight back to the configured
+interval, and so does confirmed movement, since the likeliest reason
+coverage returns is that the vehicle has been moved into it.  The server's
+interval is never overwritten: the backoff is local, and by the time a
+record reaches the server it has already been cleared, so the `int=` the
+device reports stays the one it was given.
+- **Key-off during an outage no longer floods the backlog.**  With the last
+send failed and the ignition off, the send state went round again to report
+the change — once a second, for the whole outage, each pass pushing another
+copy of the ignition-off record into the backlog and thinning the drive's own
+records out of it.  It now hands over to the idle state, which records the
+change once, holds it for the send that follows registration, and gives up at
+the timeout above.
+
 ## 0.4.51
 
 ### A stale reply no longer costs a warning

@@ -35,6 +35,20 @@ static bool s_connected;
  * trace of why. */
 static int64_t s_lost_ms;
 
+/* Uptime at which the search now in progress began: the CFUN=1 that has not
+ * registered yet, or the registration that was lost.  0 while registered or
+ * powered off.  Distinct from s_lost_ms, which only ever marks a loss: a
+ * bring-up that never registers has lost nothing, but it is searching all the
+ * same, and searching is what main.c's APP_NETWORK_SEARCH_TIMEOUT bounds. */
+static int64_t s_search_ms;
+
+static void search_started(void)
+{
+    if (!s_connected) {
+        s_search_ms = k_uptime_get();
+    }
+}
+
 static void lte_handler(const struct lte_lc_evt *evt)
 {
     switch (evt->type) {
@@ -50,6 +64,7 @@ static void lte_handler(const struct lte_lc_evt *evt)
             s_lost_ms = 0;
         } else if (!registered && s_connected) {
             s_lost_ms = k_uptime_get();
+            s_search_ms = s_lost_ms;
             LOG_WRN("registration lost (status %d) — waiting for the modem",
                     evt->nw_reg_status);
         } else {
@@ -57,6 +72,9 @@ static void lte_handler(const struct lte_lc_evt *evt)
         }
         s_connected = registered;
         network_ready = registered;
+        if (registered) {
+            s_search_ms = 0;
+        }
         break;
     }
     case LTE_LC_EVT_RRC_UPDATE:
@@ -238,6 +256,7 @@ static int wait_for_registration(int timeout_s)
         if (reg == 1 || reg == 5) {
             s_connected = true;
             network_ready = true;
+            s_search_ms = 0;
             return waited;
         }
     }
@@ -275,6 +294,7 @@ int modem_rescan_plmn(int timeout_s)
         LOG_ERR("lte_lc_normal: %d", err);
         return err;
     }
+    search_started();
 
     int waited = wait_for_registration(timeout_s);
 
@@ -328,8 +348,10 @@ int modem_radio_up(void)
 
     if (err) {
         LOG_ERR("lte_lc_normal: %d", err);
+        return err;
     }
-    return err;
+    search_started();
+    return 0;
 }
 
 /* Power the modem off on purpose: the end of a timed wake, the way into
@@ -352,6 +374,7 @@ void modem_power_off(void)
     }
     s_connected = false;
     s_lost_ms = 0;
+    s_search_ms = 0;
     network_ready = false;
 
     int err = lte_lc_power_off();
@@ -557,6 +580,20 @@ static int64_t s_last_escalation; /* so escalations cannot repeat immediately */
 bool modem_is_registered(void)
 {
     return s_connected;
+}
+
+/* Seconds the radio has been up without a registration — since the bring-up
+ * that has not registered yet, or since the registration that was lost — or
+ * -1 while it is registered or powered off.  The 60 s modem_connect() waits
+ * is part of it: the search starts at CFUN=1, not when the wait gives up.
+ * main.c compares this against APP_NETWORK_SEARCH_TIMEOUT to decide when a
+ * parked unit stops waiting for the network and sleeps. */
+int modem_unregistered_s(void)
+{
+    if (s_connected || s_search_ms == 0) {
+        return -1;
+    }
+    return (int)((k_uptime_get() - s_search_ms) / 1000);
 }
 
 /* Escalates and returns immediately: bringing the radio back up is CFUN=1

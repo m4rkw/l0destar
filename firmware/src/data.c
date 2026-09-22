@@ -42,6 +42,45 @@ static bool s_fw_pending = true;
  * vehicle stationary, or -1 when the hold is not running. */
 static int64_t s_low_voltage_since = -1;
 
+/* Device-side record id, stamped on every record as rid= and restarted at
+ * each boot.  The server stores it alongside the record, which is
+ * what lets a figure that can only be worked out after a record has gone —
+ * the wake duration in wt= — name the record it belongs to instead of
+ * relying on the order things arrive in.  That order is not dependable: a
+ * record whose send failed sits in the backlog and is delivered behind the
+ * live record that describes its wake, so "the row before this one" is
+ * simply the wrong row.  A backlogged record keeps the id it was built with,
+ * so it is still attributable whenever it turns up.
+ *
+ * Seeded at random rather than started from 1.  Ids are consecutive within a
+ * boot, which is what makes a gap in them a lost record, but a counter that
+ * restarted from 1 would hand a rebooted device the same ids it used before
+ * — and a wake figure still waiting for a record that never arrived would
+ * then attach itself to an unrelated record of the new boot.  A 16-bit seed
+ * makes that a one-in-65536 coincidence instead of the ordinary case, and
+ * costs a byte or two per record in width. */
+static uint32_t s_rec_id;
+static uint32_t s_last_rec_id;
+
+uint32_t data_last_rec_id(void)
+{
+    return s_last_rec_id;
+}
+
+static uint32_t next_rec_id(void)
+{
+    if (s_rec_id == 0) {
+        uint16_t seed = 0;
+
+        if (!crypto_random((uint8_t *)&seed, sizeof(seed))) {
+            seed = (uint16_t)k_uptime_get();
+        }
+        /* Never 0: that is this function's "not seeded yet". */
+        s_rec_id = seed ? seed : 1u;
+    }
+    return ++s_rec_id;
+}
+
 void data_reset(void)
 {
     memset(data_current, 0, sizeof(data_current));
@@ -162,6 +201,29 @@ static void append_sync_fields(void)
                      DATA_LIMIT - data_index - 1,
                      ",fw=%s", fota_version());
         if (n > 0) data_index += n;
+    }
+
+    /* This record's own id.  Every record carries one; the server keeps it
+     * so a later record can refer back to this one. */
+    s_last_rec_id = next_rec_id();
+    n = snprintf(&data_current[data_index],
+                 DATA_LIMIT - data_index - 1,
+                 ",rid=%u", s_last_rec_id);
+    if (n > 0) data_index += n;
+
+    /* How long the previous engine-off wake took, in milliseconds, and the
+     * record it belongs to.  A wake cannot report its own duration, so the
+     * figure lags at least one record — see wake_pending.  Cleared only once
+     * it is actually in the buffer. */
+    if (wake_pending.rec_id != 0 && wake_pending.ms > 0) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1,
+                     ",wt=%u:%lld", wake_pending.rec_id, wake_pending.ms);
+        if (n > 0 && n < DATA_LIMIT - data_index - 1) {
+            data_index += n;
+            wake_pending.rec_id = 0;
+            wake_pending.ms = 0;
+        }
     }
 
     /* Why this boot happened, once.  Rides with fw= on the first record

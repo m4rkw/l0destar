@@ -20,7 +20,7 @@ import re
 from flask import Blueprint, redirect, request
 
 from .. import config, db, notify, telemetry
-from . import devices, error, ok, unauthorised
+from . import audit, devices, error, ok, unauthorised
 from .auth import login_required
 
 bp = Blueprint('api', __name__, url_prefix='/api/1.0')
@@ -156,6 +156,8 @@ def trackmode():
         db.web.query('UPDATE `device` SET `track_mode` = %s WHERE `id` = %s',
                      (on, device['id']))
         device['track_mode'] = on
+        # Switching a vehicle's GNSS off is worth a line in the audit log.
+        audit('trackmode', 'on=%d imei=%s' % (on, device['imei']))
     return ok({'track_mode': 1 if device.get('track_mode') else 0})
 
 

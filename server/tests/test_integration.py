@@ -28,6 +28,111 @@ def last_journey(database):
 
 # -- storage -----------------------------------------------------------------
 
+def test_wake_figure_lands_on_the_record_it_names(device, database):
+    # A wake cannot measure itself, so the figure arrives on a later record
+    # and names the one it belongs to.
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100'))
+    first = last_log(database)
+    assert first['rec_id'] == 100
+    assert first['wake_ms'] is None
+
+    send(device, record(60, 51.5, -0.1, 0, extras=',rid=101,wt=100:73412'))
+    second = last_log(database)
+
+    updated = database.one('SELECT * FROM `log` WHERE `id` = %s', (first['id'],))
+    assert updated['wake_ms'] == 73412
+    # ...and never on the record carrying it, whose own wake is still running.
+    assert second['wake_ms'] is None
+    # The uptime column of the same-ish name is untouched.
+    assert updated['waketime'] == first['waketime']
+
+
+def test_wake_figure_skips_over_an_intervening_record(device, database):
+    # The named record is not always the one before: anything the device sent
+    # in between — a backlog flush, an ignition change — must not absorb it.
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100'))
+    target = last_log(database)
+    send(device, record(30, 51.5, -0.1, 1, extras=',rid=101'))
+    between = last_log(database)
+    send(device, record(60, 51.5, -0.1, 0, extras=',rid=102,wt=100:73412'))
+
+    assert database.one('SELECT * FROM `log` WHERE `id` = %s',
+                        (target['id'],))['wake_ms'] == 73412
+    assert database.one('SELECT * FROM `log` WHERE `id` = %s',
+                        (between['id'],))['wake_ms'] is None
+
+
+def test_wake_figure_waits_for_a_record_that_has_not_arrived(device, database):
+    # The case the tag exists for: the wake's own send failed, so its record
+    # is in the device's backlog and is flushed BEHIND the record describing
+    # it.  The figure is held until that record lands.
+    send(device, record(60, 51.5, -0.1, 0, extras=',rid=101,wt=100:73412'))
+    held = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
+    assert held['wake_pending_rec_id'] == 100
+    assert held['wake_pending_ms'] == 73412
+
+    # ...and the backlogged record arrives.
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100'))
+    late = last_log(database)
+    assert late['rec_id'] == 100
+    assert late['wake_ms'] == 73412
+
+    cleared = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
+    assert cleared['wake_pending_rec_id'] is None
+    assert cleared['wake_pending_ms'] is None
+
+
+def test_held_wake_figure_goes_only_to_its_own_record(device, database):
+    # Another record arriving first must not absorb a held figure.
+    send(device, record(60, 51.5, -0.1, 0, extras=',rid=101,wt=100:73412'))
+    send(device, record(70, 51.5, -0.1, 0, extras=',rid=102'))
+    assert last_log(database)['wake_ms'] is None
+    still_held = database.one('SELECT * FROM `device` WHERE `id` = %s',
+                              (device['id'],))
+    assert still_held['wake_pending_rec_id'] == 100
+
+
+def test_wake_figure_does_not_overwrite(device, database):
+    # A duplicate datagram must not replace a figure already stored.
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100'))
+    first = last_log(database)
+    send(device, record(60, 51.5, -0.1, 0, extras=',rid=101,wt=100:73412'))
+    send(device, record(61, 51.5, -0.1, 0, extras=',rid=102,wt=100:999'))
+
+    updated = database.one('SELECT * FROM `log` WHERE `id` = %s', (first['id'],))
+    assert updated['wake_ms'] == 73412
+
+
+def test_wake_figure_implausible_is_dropped(device, database):
+    # Two days awake is a corrupt field, and storing it would skew every
+    # average taken over the column.
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100'))
+    first = last_log(database)
+    send(device, record(60, 51.5, -0.1, 0,
+                        extras=',rid=101,wt=100:%d' % (telemetry.WAKE_MS_MAX + 1)))
+
+    updated = database.one('SELECT * FROM `log` WHERE `id` = %s', (first['id'],))
+    assert updated['wake_ms'] is None
+    assert database.one('SELECT * FROM `device` WHERE `id` = %s',
+                        (device['id'],))['wake_pending_rec_id'] is None
+
+
+def test_wake_figure_naming_its_own_record_is_dropped(device, database):
+    # A record cannot describe the wake that sent it.
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100,wt=100:73412'))
+    assert last_log(database)['wake_ms'] is None
+    assert database.one('SELECT * FROM `device` WHERE `id` = %s',
+                        (device['id'],))['wake_pending_rec_id'] is None
+
+
+def test_record_without_an_id_still_stores(device, database):
+    # rid= is new; a record built before it existed must not be rejected.
+    send(device, record(0, 51.5, -0.1, 0))
+    row = last_log(database)
+    assert row['rec_id'] is None
+    assert row['wake_ms'] is None
+
+
 def test_record_is_stored(device, database):
     response = send(device, record(
         0, 51.5, -0.1, 0,

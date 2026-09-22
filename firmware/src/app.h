@@ -79,6 +79,27 @@ extern char  ignition;
 extern int8_t previous_ignition;
 extern bool  engine_running;
 extern float battery_v;
+/* How long the last engine-off telemetry wake took, and which record it
+ * belongs to.  ms is measured from the moment the sleep loop woke to the
+ * moment it settled back down with the send done and the modem off; rec_id
+ * is the rid= of the record that wake produced, 0 when there is nothing to
+ * report (both are set and cleared together).
+ *
+ * The figure cannot ride the record it describes — the device is still awake
+ * when it builds one, and the expensive part of a bad wake comes after the
+ * send, while the loop waits for a registration that never arrives.  So it is
+ * finished once the wake is over and carried on the next record as
+ * wt=<rec_id>:<ms>, and the server files it against that record rather than
+ * against whatever happened to arrive before it.  Naming the record is what
+ * makes a wake whose own send failed reportable: that record goes to the
+ * backlog and is delivered after the wt= that describes it, so arrival order
+ * says nothing.  Cleared by append_sync_fields() as it emits them. */
+struct wake_report {
+    uint32_t rec_id;
+    int64_t  ms;
+};
+
+extern struct wake_report wake_pending;
 /* Live verdict from the ECU's RPM when a fresh figure exists, else from
  * battery_v, GNSS speed and a hold timer — see the note on the definition
  * for why the fallback cannot be a bare voltage threshold.  Callers deciding
@@ -115,6 +136,7 @@ void modem_set_apn(const char *apn);
 int  modem_at(const char *cmd, char *resp, size_t resp_len);
 int  modem_recover(void);               /* policy lives in modem.c */
 bool modem_is_registered(void);         /* from the LTE event handler, not inferred */
+int  modem_unregistered_s(void);        /* seconds up without a registration, -1 if not searching */
 void modem_send_ok(void);               /* a send got through: clear the stuck timer */
 int  modem_update_cell_info(void);
 const char *modem_rat(void);           /* "CATM1" / "NBIOT" / "UNKNOWN" */
@@ -170,6 +192,10 @@ int  transport_send(const uint8_t *plaintext, size_t pt_len);
 int  transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms);
 
 int  collect_data(int ignition_state);
+/* The rid= stamped on the most recently built record.  A record is only
+ * identifiable to the server once it has one, so this is how a caller names
+ * the record it has just built — see wake_pending.  0 before the first. */
+uint32_t data_last_rec_id(void);
 int  data_send_line(const char *line);   /* one raw line as its own datagram */
 /* Track-mode record: no GNSS wait, last known position, the fast OBD poll and
  * an IMU burst (tm=1, acc=...).  Returns 1 with a record in data_current. */

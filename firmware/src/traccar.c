@@ -246,6 +246,7 @@ static const struct {
     { "vs",    "battery",       1   },   /* the SiP's own supply, not the car's */
     { "rst",   "resetCause",    1   },
     { "tm",    "trackMode",     1   },
+    { "rid",   "recordId",      1   },
     { "orpm",  "rpm",           1   },
     { "ormin", "rpmMin",        1   },
     { "ormax", "rpmMax",        1   },
@@ -283,6 +284,26 @@ static void encode_extra(struct query *q, const char *key, const char *val,
     }
     if (strcmp(key, "cl") == 0) {
         *stale = atoi(val) != 0;
+        return;
+    }
+    /* wt=<rid>:<ms> is the duration of the wake that sent record <rid>, an
+     * earlier one.  Traccar has no way to amend a position it has already
+     * stored, so the pair goes out as two attributes of the record carrying
+     * them and the reader joins them on recordId; filing the duration as an
+     * attribute of this record would say it took that long to send this one,
+     * which is the one thing it does not mean. */
+    if (strcmp(key, "wt") == 0) {
+        const char *colon = strchr(val, ':');
+
+        if (colon && colon != val && colon[1] != '\0') {
+            char rec[12];
+            size_t len = MIN((size_t)(colon - val), sizeof(rec) - 1);
+
+            memcpy(rec, val, len);
+            rec[len] = '\0';
+            q_str(q, "wakeRecordId", rec);
+            q_str(q, "wakeMs", colon + 1);
+        }
         return;
     }
     for (size_t i = 0; i < ARRAY_SIZE(s_dropped); i++) {

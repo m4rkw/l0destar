@@ -43,6 +43,32 @@ def test_extras():
     assert d['request_int'] == '1'
 
 
+def test_record_id():
+    assert telemetry.parse_csv_line(FULL + ',rid=41238')['rec_id'] == '41238'
+
+
+def test_wake_figure_is_split_from_its_reference():
+    # wt=<rid>:<ms> names the record the figure belongs to.  The two must not
+    # be confused: the reference is another record's id, never a duration.
+    d = telemetry.parse_csv_line(FULL + ',wt=41237:73412')
+    assert d['wake_ref'] == '41237'
+    assert d['wake_ms'] == '73412'
+
+
+def test_wake_figure_absent_when_not_sent():
+    # Absent rather than 0: a record with no figure must leave the named
+    # row's wake_ms alone rather than overwrite it with nothing.
+    d = telemetry.parse_csv_line(FULL)
+    assert 'wake_ms' not in d and 'wake_ref' not in d
+
+
+def test_wake_figure_without_a_reference_is_dropped():
+    # An untagged figure cannot be attributed to anything, and guessing is
+    # what the tag exists to stop.
+    d = telemetry.parse_csv_line(FULL + ',wt=73412')
+    assert 'wake_ms' not in d and 'wake_ref' not in d
+
+
 def test_dbg_is_compound():
     # dbg's own body uses semicolons, so it must not be split on them like
     # every other extras group.
@@ -136,6 +162,18 @@ def test_device_log_line_is_dated_from_record_uptime():
     out = telemetry.format_device_log(batch[1], '355025936386877', boot)
     assert out == ('2026-09-06 11:59:55 IMEI=355025936386877 up=86395.500 '
                    'E transport: send failed: -116')
+
+
+def test_device_log_is_dated_from_the_newest_record():
+    import datetime
+    now = datetime.datetime(2026, 9, 6, 12, 0, 0)
+    # A batch flushed after an outage: the first record was built an hour
+    # before the send, the last one moments before it.  The boot time comes
+    # from the last, or every log line in the batch is stamped an hour late.
+    backlog = FULL.replace('up=86400', 'up=82800')
+    batch = [backlog, 'L,86395500,E,transport: send failed: -116', FULL]
+    assert telemetry.boot_wall_time(batch, now=now) == (
+        now - datetime.timedelta(seconds=86400))
 
 
 def test_device_log_text_keeps_its_commas():

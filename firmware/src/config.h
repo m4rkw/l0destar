@@ -50,13 +50,33 @@
  * came, so nothing scheduled a wake, and the unit sat idle for 90 minutes
  * until the key turned.  This is the retry cadence for that state, and the
  * first response replaces it — including with 0 for a unit the server
- * genuinely wants quiet. */
-#define ENGINE_OFF_BOOT_INTERVAL    900
+ * genuinely wants quiet.
+ *
+ * An hour: a parked unit that has lost touch with the server is in no hurry,
+ * and a wake costs a modem bring-up, a registration and a send whether or not
+ * anything has changed.  A wake that finds no network at all backs off
+ * further still — see NO_SIGNAL_MAX_INTERVAL. */
+#define ENGINE_OFF_BOOT_INTERVAL    3600
 #define IGNITION_ON_SLEEP_INTERVAL  CONFIG_APP_IGNITION_ON_SLEEP_INTERVAL
 #define VOLTAGE_POLL_INTERVAL       CONFIG_APP_VOLTAGE_POLL_INTERVAL
 #define BATTERY_CHECK_INTERVAL      CONFIG_APP_BATTERY_CHECK_INTERVAL
 #define NETWORK_REGISTRATION_TIMEOUT CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT
 #define NETWORK_RETRY_INTERVAL      CONFIG_APP_NETWORK_RETRY_INTERVAL
+/* With the ignition off, how long the radio is left searching for a network
+ * before the unit powers it off and sleeps until the next timed report.
+ * Counted from CFUN=1, so the registration timeout above is part of it.
+ * 0 = no limit, which is what every boot and wake had before: a boot idled
+ * with GNSS and the modem both searching until the network came, a timed
+ * wake left the modem searching until the next one. */
+#define NETWORK_SEARCH_TIMEOUT      CONFIG_APP_NETWORK_SEARCH_TIMEOUT
+/* Ceiling on the engine-off wake interval while there is no network at all.
+ * Each consecutive timed wake that cannot register doubles the wait, up to
+ * this, and the first registration puts it back to the configured interval.
+ * A unit somewhere with no coverage — an underground car park, a container,
+ * a shipped spare — has nothing to gain from waking on its usual cadence:
+ * every attempt costs a bring-up and a full search window, and none of them
+ * can send anything.  0 disables the backoff. */
+#define NO_SIGNAL_MAX_INTERVAL      CONFIG_APP_NO_SIGNAL_MAX_INTERVAL
 /* How often a parked unit that owes a timed report checks whether the modem
  * has registered.  On 2026-09-14 the 07:57 wake gave up after the 60 s
  * registration timeout, the modem registered at 08:00:31 with the radio left

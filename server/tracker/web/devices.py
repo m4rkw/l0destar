@@ -7,6 +7,8 @@ A write never does — a command queued, a setting changed or track mode
 switched on for the wrong vehicle is worse than an error.
 """
 
+import datetime
+
 from flask import request
 
 from .. import config, db
@@ -89,16 +91,56 @@ def from_request(allow_default=True):
                    allow_default=allow_default)
 
 
-def latest_log(device, database=None):
-    """The device's most recent record.
+# How far ahead of the present a record's device time may be before the
+# clock that stamped it is taken to be wrong.  The firmware writes UTC from
+# the network's time (docs/PROTOCOL.md), so an hour is drift, not time zones.
+DEVICE_CLOCK_SLACK = datetime.timedelta(hours=1)
 
-    Ordered by row id, not by the modem's own timestamp: id is arrival order,
-    which is what "latest" means here.  Ordering by the device clock would let
-    one record with a wrong or unset clock — which happens on a cold boot
-    before the network supplies the time — pin the display to a bogus row.
+_EPOCH = datetime.datetime(1970, 1, 1)
+
+
+def _clock_limit():
+    """The latest device time a record can plausibly carry right now."""
+    return (datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+            + DEVICE_CLOCK_SLACK)
+
+
+def gsm_epoch(row):
+    """When the device built a record, as seconds since the epoch.
+
+    The page keeps the newest record on screen by this rather than by
+    arrival: a backlog sent after an outage is stored behind the live record,
+    and by arrival the older record would replace the newer one.  None when
+    the row has no usable device time — including one dated in the future,
+    which the page would otherwise keep on screen for good.
+    """
+    stamp = row.get('gsm_timestamp')
+    if not isinstance(stamp, datetime.datetime) or stamp > _clock_limit():
+        return None
+    return (stamp - _EPOCH).total_seconds()
+
+
+def latest_log(device, database=None):
+    """The device's most recent record: the newest by when the device built
+    it, not by arrival.
+
+    The two differ after an outage.  The backlog is flushed behind the live
+    record, so it is stored last, and by arrival the map would show an old
+    position until the next live record came in.
+
+    A device clock can be wrong — unset before the network has supplied the
+    time — but a wrong clock is nearly always in the past, where it sorts
+    behind every genuine record and does no harm.  One in the future would
+    pin the display, so rows more than DEVICE_CLOCK_SLACK ahead of the
+    present are left out here, and a device with nothing else falls back
+    to the last arrival.
     """
     database = database or db.web
     return database.one(
+        'SELECT * FROM `log` WHERE `device_id` = %s AND `gsm_timestamp` <= %s '
+        'ORDER BY `gsm_timestamp` DESC, `id` DESC LIMIT 1',
+        (device['id'], _clock_limit()),
+    ) or database.one(
         'SELECT * FROM `log` WHERE `device_id` = %s ORDER BY `id` DESC LIMIT 1',
         (device['id'],),
     )
@@ -204,6 +246,8 @@ def position(row, database=None, track_mode=None):
         'altitude': to_float(row.get('altitude')),
         'heading': to_float(row.get('heading')),
         'timestamp': stamp.strftime('%d.%m.%Y %H:%M:%S') if stamp else '',
+        # When the device built it, for the page to keep the newest on screen.
+        'gsm_ts': gsm_epoch(row),
         'battery_level': to_float(row.get('battery_level')),
         'ignition_state': row.get('ignition_state'),
         'operator': db.lookup_operator(row.get('mcc'), row.get('mnc'),

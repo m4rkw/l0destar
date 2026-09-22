@@ -765,7 +765,7 @@ config APP_ENGINE_OFF_LOOP_INTERVAL
 	help
 	  Seconds between timed engine-off wakes from boot until the first
 	  server reply replaces it with the server's own value, which may be 0
-	  to stop timed wakes.  0 here uses ENGINE_OFF_BOOT_INTERVAL (900 s,
+	  to stop timed wakes.  0 here uses ENGINE_OFF_BOOT_INTERVAL (3600 s,
 	  src/config.h) instead, so a unit whose first record after a reboot
 	  is lost still wakes to try again.
 
@@ -788,6 +788,51 @@ config APP_NETWORK_REGISTRATION_TIMEOUT
 config APP_NETWORK_RETRY_INTERVAL
 	int "Network retry interval"
 	default 300
+
+config APP_NETWORK_SEARCH_TIMEOUT
+	int "Seconds a parked unit keeps the modem searching before sleeping (0 = no limit)"
+	default 300
+	range 0 86400
+	help
+	  With the ignition off, how long the radio is left looking for a
+	  network before the unit powers it off and sleeps until the next timed
+	  report.  Counted from the moment the radio is brought up, so it
+	  includes APP_NETWORK_REGISTRATION_TIMEOUT: at the defaults a boot or
+	  a wake that cannot register spends 60 s in the blocking connect and
+	  four more minutes polling, then gives up.  The record that could not
+	  go out waits in the backlog for the next report that gets through.
+
+	  This is what bounds the power a parked unit spends somewhere the
+	  network cannot be reached.  Without it a timed wake that missed
+	  registration left the modem searching until the next wake, up to an
+	  hour, and a boot idled with GNSS and the modem both searching until
+	  the network came, however long that took.  No fix is attempted
+	  while there is no network to send it over; the first wake that has
+	  one searches for it.
+
+	  With the ignition on the search is not limited: the car is running,
+	  and the drive should be reported as soon as coverage returns.
+
+config APP_NO_SIGNAL_MAX_INTERVAL
+	int "Ceiling on the engine-off wake interval with no network (0 = no backoff)"
+	default 86400
+	range 0 604800
+	help
+	  Each consecutive timed wake that cannot register doubles the wait
+	  until the next one, up to this; the first registration puts it
+	  straight back to the configured interval.  At the defaults that is
+	  1, 2, 4, 8 and 16 hours, then a day.
+
+	  A unit somewhere with no coverage at all has nothing to gain from
+	  waking on its usual cadence: every attempt costs a modem bring-up
+	  and a full APP_NETWORK_SEARCH_TIMEOUT of searching, and none of them
+	  can send anything.  The server's interval is never overwritten — the
+	  backoff is local, and by the time a record reaches the server there
+	  is signal and it has already been cleared — so the int= the device
+	  reports stays the interval it was given.
+
+	  Movement also clears it: the likeliest reason coverage returns is
+	  that the vehicle has been moved into it.
 
 config APP_GPS_FIX_TIMEOUT_MS
 	int "GPS fix timeout (ms)"
