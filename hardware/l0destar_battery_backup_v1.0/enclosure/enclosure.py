@@ -12,7 +12,7 @@ Coordinates: board-local, origin at the PCB's bottom-left corner as seen in
 the KiCad layout (x right, y up), z=0 at the enclosure floor (top of the
 bottom plate). PCB underside sits on 4 mm standoffs.
 """
-import os
+import os, math
 import FreeCAD, Part
 from FreeCAD import Vector as V
 
@@ -61,15 +61,22 @@ BOSS_CLR    = 0.5      # notch in the bottom wall around bosses that graze it
 INSERT_R    = 1.6      # M2 heat-set insert hole
 INSERT_D    = 4.6
 RELIEF_D    = 2.3      # plain hole past the insert so an M2 x 12 never bottoms out
-# Per-hole tweaks (all dims board-local, 0.3 mm clear of the neighbouring part):
-#  H2: C4's 10.3 mm square base plate (1.6 tall, corner at 49.47,25.01) is 2.36 mm from
-#      the hole, so the tip zone is extended to 1.9 mm with a flat at y=24.71 and the
-#      heat-set insert starts above the plate. Needs the M2 x 12 (engages 3.7 mm).
-#  H3: the Keystone 1051 body starts at x=5.43, so the boss gets a flat at x=5.13.
+MIN_WALL    = 1.0      # thinnest wall the printer can be relied on for
+# Per-hole tweaks (all dims board-local):
+#  H2: C4's 10.3 mm chamfered base plate (1.6 tall) is 2.43 mm from the hole at its
+#      nearest corner (47.27,25.01), up-left of the hole. A chord flat across the tip
+#      would leave only 0.68 mm between the screw hole and the flat, so instead the
+#      tip ring skips the 90..145 degree sector (CCW from +x): the cut faces are radial,
+#      so the ring keeps its full 1.35 mm wall right up to them. The tip zone is 1.9 mm
+#      tall and the heat-set insert starts above the plate. Needs the M2 x 12 (engages
+#      3.7 mm).
+#  H3: the Keystone 1051 body starts at x=5.43. The boss gets a flat on that side, set
+#      by MIN_WALL past the insert hole (x=5.22, 0.21 mm clear of the holder) rather
+#      than by clearance, which would leave 0.91 mm.
 BOSSES = {
     'H1': {},
-    'H2': {'tip_h': 1.9, 'tip_ymax': 24.71, 'insert_z0': PCB_TOP + 1.9},
-    'H3': {'xmax': 5.13},
+    'H2': {'tip_h': 1.9, 'tip_cut': (90, 145), 'insert_z0': PCB_TOP + 1.9},
+    'H3': {'xmax': HOLES['H3'][0] + INSERT_R + MIN_WALL},
     'H4': {},
 }
 
@@ -96,6 +103,13 @@ def cyl(r, z0, z1, x, y):
 
 def box(x0, y0, z0, x1, y1, z1):
     return Part.makeBox(x1 - x0, y1 - y0, z1 - z0, V(x0, y0, z0))
+
+def sector(x, y, a0, a1, z0, z1, r=6.0):
+    """Prism over the a0..a1 (degrees, CCW from +x) sector about (x, y), out past r."""
+    n = max(2, int((a1 - a0) / 10) + 2)
+    angs = [math.radians(a0 + (a1 - a0) * i / (n - 1)) for i in range(n)]
+    pts = [V(x, y, z0)] + [V(x + r * math.cos(a), y + r * math.sin(a), z0) for a in angs]
+    return Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(V(0, 0, z1 - z0))
 
 # ----------------------------------------------------------------- shell ----
 IX0, IY0 = -CLEAR, -CLEAR                    # cavity
@@ -139,8 +153,9 @@ for name, (hx, hy) in HOLES.items():
     tip_h = cfg.get('tip_h', BOSS_TIP_H)
     ins_z0 = cfg.get('insert_z0', PCB_TOP)
     tip = cyl(BOSS_TIP_R, PCB_TOP, PCB_TOP + tip_h + EPS, hx, hy)
-    if 'tip_ymax' in cfg:
-        tip = tip.cut(box(-BIG, cfg['tip_ymax'], -BIG, BIG, BIG, BIG))
+    if 'tip_cut' in cfg:
+        a0, a1 = cfg['tip_cut']
+        tip = tip.cut(sector(hx, hy, a0, a1, PCB_TOP - 1, PCB_TOP + tip_h + 1))
     b = tip.fuse(cyl(BOSS_R, PCB_TOP + tip_h, CAVITY_TOP + EPS, hx, hy))
     # bosses that graze the wall: tie them into it (above the split only)
     if hx - BOSS_R - IX0 < 1.0:
@@ -197,4 +212,6 @@ if mock is not None:
         col = top.common(cyl(BOSS_R + 0.01, PCB_TOP - EPS, CAVITY_TOP - EPS, hx, hy))
         d = min(sol.distToShape(col)[0] for sol in parts)
         print(f"boss {name}: nearest component {d:.2f} mm")
+print(f"walls: tip ring {BOSS_TIP_R - THRU_R:.2f}, boss around insert {BOSS_R - INSERT_R:.2f}, "
+      f"H3 flat to insert {BOSSES['H3']['xmax'] - HOLES['H3'][0] - INSERT_R:.2f} mm")
 print(f"outer size {OX1-OX0:.2f} x {OY1-OY0:.2f} x {Z_TOP-Z_BOT:.2f} mm; split at z={SPLIT_Z}")
