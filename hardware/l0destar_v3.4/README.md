@@ -2,7 +2,7 @@
 
 ## Overview
 
-**NOTE: THIS HAS NOT YET BEEN TESTED, USE AT YOUR OWN RISK**
+**NOTE: THIS HAS BEEN INDEPENDENTLY TESTED, USE AT YOUR OWN RISK**
 
 - This is a prototype l0destar vehicle tracker PCB designed to be
   hand-solderable (hot air required)
@@ -82,14 +82,14 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 
 | Item | Test | Result | Notes |
 |---------|------|--------|-------|
-| Input stage | 12V input reverse polarity | NOT TESTED | |
-| Input stage | 12V ignition input reverse polarity | NOT TESTED | |
-| INA228 | Voltage reading function | NOT TESTED | |
-| Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
-| LT8609 | 4.2V output | NOT TESTED | |
-| LT8609 | UVLO thresholds | NOT TESTED | |
-| MCU OVP | 4.2V passes through at nominal voltage | NOT TESTED | S11Q1 on, S12TP2 ≈ the buck output at S6C5 |
-| MCU OVP | Cuts off when the buck output (S6C5) is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
+| Input stage | 12V input reverse polarity | PASSED | |
+| Input stage | 12V ignition input reverse polarity | PASSED | |
+| INA228 | Voltage reading function | PASSED | |
+| Ignition presence | Ignition sense 3.3v signal | PASSED | |
+| LT8609 | 4.2V output | PASSED | |
+| LT8609 | UVLO thresholds | PASSED | |
+| MCU OVP | 4.2V passes through at nominal voltage | PASSED | S11Q1 on, S12TP2 ≈ the buck output at S6C5 |
+| MCU OVP | Cuts off when the buck output (S6C5) is driven above ~5V | PASSED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
 | MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | NOT TESTED | |
 | GPS auxiliary 3.3V rail | Switches on enable signal | NOT TESTED | |
 | CAN auxiliary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
@@ -104,7 +104,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 | K-wire | L-line sensing via L_SENSE | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | NOT TESTED | Expected ~35.5 µA at 12V with the default build (measured on a v3.2 board with the accelerometer NC pads lifted, which is electrically the same as v3.4 with S6R4 fitted as a 0R jumper). Fitting the optional enable divider adds around ~9 µA |
+| Board | Quiescent current | 35 µA | Fitting the optional enable divider adds around ~9 µA |
 
 ## Features
 
@@ -603,6 +603,7 @@ buck enable divider. Quantities are per board.
 
 ## Images
 
+![l0destar board](images/pcb0.png)
 ![l0destar board](images/pcb1.png)
 ![l0destar board](images/pcb2.png)
 ![l0destar board](images/pcb3.png)
