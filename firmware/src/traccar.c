@@ -247,6 +247,9 @@ static const struct {
     { "rst",   "resetCause",    1   },
     { "tm",    "trackMode",     1   },
     { "rid",   "recordId",      1   },
+    { "rsrp",  "rssi",          1   },   /* Traccar's name for serving-cell power */
+    { "snr",   "snr",           1   },
+    { "band",  "band",          1   },
     { "orpm",  "rpm",           1   },
     { "ormin", "rpmMin",        1   },
     { "ormax", "rpmMax",        1   },
@@ -293,16 +296,29 @@ static void encode_extra(struct query *q, const char *key, const char *val,
      * attribute of this record would say it took that long to send this one,
      * which is the one thing it does not mean. */
     if (strcmp(key, "wt") == 0) {
-        const char *colon = strchr(val, ':');
+        const char *first = strchr(val, ':');
 
-        if (colon && colon != val && colon[1] != '\0') {
-            char rec[12];
-            size_t len = MIN((size_t)(colon - val), sizeof(rec) - 1);
+        if (first && first != val && first[1] != '\0') {
+            const char *second = strchr(first + 1, ':');
+            char part[12];
+            size_t len = MIN((size_t)(first - val), sizeof(part) - 1);
 
-            memcpy(rec, val, len);
-            rec[len] = '\0';
-            q_str(q, "wakeRecordId", rec);
-            q_str(q, "wakeMs", colon + 1);
+            memcpy(part, val, len);
+            part[len] = '\0';
+            q_str(q, "wakeRecordId", part);
+
+            if (second) {
+                /* wt=<rid>:<total>:<attach> */
+                len = MIN((size_t)(second - first - 1), sizeof(part) - 1);
+                memcpy(part, first + 1, len);
+                part[len] = '\0';
+                q_str(q, "wakeMs", part);
+                if (second[1] != '\0') {
+                    q_str(q, "wakeAttachMs", second + 1);
+                }
+            } else {
+                q_str(q, "wakeMs", first + 1);
+            }
         }
         return;
     }

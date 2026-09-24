@@ -56,3 +56,26 @@ CONFIG_APP_BOARD_HAS_KLINE=y
 # comma-separated — see KWIRE.md, "Threshold alerts".  Needs
 # CONFIG_APP_KLINE_TELEMETRY=y.
 #CONFIG_APP_OBD_ALERTS="coolant>=90,rpm>6500"
+
+# --- diagnostics you might switch on for one device ------------------------
+# Ask the network whether it will grant PSM, and report the answer at WRN so
+# it rides telemetry to the server's device log.  Adopting PSM would turn a
+# wake's full LTE attach (measured 3.9-44.6 s on the car) into an RRC resume
+# for the same sleep current, but only if the network grants it -- and a
+# modem that never asks is never told.  This asks without adopting: sleep
+# still ends at CFUN=0, so nothing about the unit's behaviour changes.
+# Look for "PSM probe: granted" or "PSM probe: refused" in device.log.
+#CONFIG_APP_PSM_PROBE=y
+
+# Signal diagnostics, for deciding whether a weak RSRP is the location or the
+# antenna.  AT%XMONITOR runs unconditionally every APP_SIGNAL_SAMPLE_S, so a
+# drive already surveys the route; these two add to it.
+#
+# Path loss is the measurement that travels: RSRP says how strong the signal
+# arrived, path loss says how much was lost getting here, normalised against
+# what the cell says it transmits -- so it compares across cells and
+# distances, and excess attenuation in the antenna path shows up directly.
+#CONFIG_APP_CONN_EVAL=y
+# And what else the modem can hear.  Camped on -111 dBm with a neighbour at
+# -95 is a selection problem, not an antenna one.
+#CONFIG_APP_NCELLMEAS=y

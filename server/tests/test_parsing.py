@@ -62,6 +62,45 @@ def test_wake_figure_absent_when_not_sent():
     assert 'wake_ms' not in d and 'wake_ref' not in d
 
 
+def test_wake_figure_carries_the_attach_split():
+    d = telemetry.parse_csv_line(FULL + ',wt=41237:44620:41180')
+    assert d['wake_ref'] == '41237'
+    assert d['wake_ms'] == '44620'
+    assert d['wake_attach_ms'] == '41180'
+
+
+def test_wake_figure_without_the_attach_split_still_parses():
+    # A wake that found the modem already registered sends only two parts.
+    d = telemetry.parse_csv_line(FULL + ',wt=41237:4893')
+    assert d['wake_ms'] == '4893'
+    assert 'wake_attach_ms' not in d
+
+
+def test_signal_quality():
+    d = telemetry.parse_csv_line(FULL + ',rsrp=-87;snr=7;band=20')
+    assert d['rsrp'] == '-87'
+    assert d['snr'] == '7'
+    assert d['band'] == '20'
+
+
+def test_connection_evaluation_fields():
+    d = telemetry.parse_csv_line(
+        FULL + ',rsrp=-111;snr=-5;band=20;pathloss=128;rsrq=-145;ce=1;txrep=4')
+    assert d['pathloss'] == '128'
+    assert d['ce_level'] == '1'
+    assert d['tx_rep'] == '4'
+    # Sent in tenths: half-dB resolution would be lost to a whole number.
+    assert d['rsrq'] == '-14.5'
+
+
+def test_signal_without_an_evaluation_still_parses():
+    # The modem refuses an evaluation while the radio is busy, which on a
+    # drive is much of the time; the %XMONITOR figures stand without it.
+    d = telemetry.parse_csv_line(FULL + ',rsrp=-111;snr=-5;band=20')
+    assert d['rsrp'] == '-111'
+    assert 'pathloss' not in d and 'rsrq' not in d
+
+
 def test_wake_figure_without_a_reference_is_dropped():
     # An untagged figure cannot be attributed to anything, and guessing is
     # what the tag exists to stop.

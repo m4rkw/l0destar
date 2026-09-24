@@ -108,6 +108,20 @@
  * only requested once the receiver has flagged NOT_ENOUGH_WINDOW_TIME for
  * this many epochs in a row, the threshold Nordic's location library uses,
  * and never again while a window may still be running. */
+/* How old a serving-cell signal reading may be and still go out with a
+ * record.  The wake reads it just after the attach and builds the record
+ * moments later, so a genuine reading is always well inside this; anything
+ * older belongs to another moment, and on a moving vehicle possibly another
+ * cell, and is dropped rather than reported as this record's. */
+#define SIGNAL_FRESH_MS             60000
+/* How often a record may spend an AT round trip refreshing the signal
+ * reading.  One per wake answers "how strong is it where the car is parked";
+ * a drive needs readings from many places, because that is what separates a
+ * weak location from a weak antenna — genuine coverage swings tens of dB
+ * along a route, while a detuned or badly-fed antenna is the same offset
+ * everywhere. */
+#define SIGNAL_SAMPLE_MS            ((int64_t)CONFIG_APP_SIGNAL_SAMPLE_S * 1000)
+
 #define GNSS_PRIO_STARVED_EPOCHS    5
 #define GNSS_PRIO_WINDOW_MS         40000
 
@@ -194,6 +208,10 @@
  * the FOTA download, the registration polls), so this is a real ceiling on
  * one iteration, not a budget to be spent. */
 #define WATCHDOG_TIMEOUT_S          32
+/* The registration wait is a semaphore given by the LTE event handler, not a
+ * poll, so these slices only exist to feed the watchdog — a registration
+ * arriving mid-slice ends the wait at once.  Well inside WATCHDOG_TIMEOUT_S. */
+#define REG_WAIT_SLICE_S            5
 /* The engine-off sleep waits up to an hour in one k_sem_take, far past the
  * window above, so it waits in slices this long and kicks between them.  A
  * slice that times out does not take the semaphore, so wake behaviour is

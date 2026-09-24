@@ -47,6 +47,7 @@ CREATE TABLE `device` (
   -- figure as it emits it.
   `wake_pending_rec_id` INT UNSIGNED DEFAULT NULL COMMENT 'log.rec_id the held figure belongs to',
   `wake_pending_ms`     INT UNSIGNED DEFAULT NULL COMMENT 'that figure, applied when the record arrives',
+  `wake_pending_attach_ms` INT UNSIGNED DEFAULT NULL COMMENT 'attach part of the held figure, applied with it',
 
   -- Settings the server acts on; these never reach the device.
   `alarm`         TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'notify on ignition on',
@@ -127,6 +128,41 @@ CREATE TABLE `log` (
   -- and any row whose figure was lost.  Despite the name, `waketime` above
   -- is seconds of uptime and is unrelated.
   `wake_ms`       INT UNSIGNED DEFAULT NULL COMMENT 'ms awake to complete this send, reported on a later record',
+
+  -- How much of wake_ms went on the LTE attach.  A wake is dominated by it:
+  -- measured across six wakes on 2026-09-23 the send was uniformly 0.5-0.7 s
+  -- from record build to server store, while the wakes ran 3.9-44.6 s on the
+  -- same cell with no GPS involved.  Timed on the device from CFUN=1 to the
+  -- registration event, not from the 1 Hz poll, which rounds every attach up
+  -- to a whole second.  0 = the modem was already registered and the wake
+  -- paid no attach; NULL = none was measured.
+  `attach_ms`     INT UNSIGNED DEFAULT NULL COMMENT 'ms of wake_ms spent on the LTE attach; 0 = already registered',
+
+  -- Serving-cell signal quality at the time (AT%XMONITOR).  LTE-M raises its
+  -- repetition count as coverage worsens, so the same procedure on the same
+  -- cell takes several times longer at a lower RSRP -- these are what make
+  -- that testable rather than assumed.  Deliberately NOT carried forward
+  -- between rows, unlike the cell identity above: signal moves continuously,
+  -- so a copied value would read as a measurement that was never taken.
+  -- NULL means "not measured on this record".
+  `rsrp`          SMALLINT     DEFAULT NULL COMMENT 'serving cell RSRP in dBm, -140..-44',
+  `snr`           SMALLINT     DEFAULT NULL COMMENT 'serving cell SNR in dB, -24..+24',
+  `band`          TINYINT UNSIGNED DEFAULT NULL COMMENT 'LTE band in use',
+
+  -- One connection evaluation's worth, alongside the reading above.  RSRP
+  -- says how strong the signal arrived; `pathloss` says how much was lost
+  -- getting here, normalised against what the cell says it transmits -- so
+  -- unlike RSRP it compares across cells and distances, and excess
+  -- attenuation in the antenna path shows up in it directly.  `ce_level`
+  -- above 0 means LTE-M is using repetitions, which is what makes the same
+  -- attach take 40 s on a cell that answers in 2 s at good signal.
+  -- Absent whenever the modem refuses an evaluation -- "radio busy" is what
+  -- a drive with GNSS running usually answers -- so these are sparser than
+  -- rsrp/snr/band, and NULL means only that none ran.
+  `pathloss`      SMALLINT     DEFAULT NULL COMMENT 'downlink path loss in dB',
+  `rsrq`          DECIMAL(4,1) DEFAULT NULL COMMENT 'reference signal received quality, dB',
+  `ce_level`      TINYINT      DEFAULT NULL COMMENT 'LTE-M coverage enhancement level; >0 means repetitions',
+  `tx_rep`        SMALLINT     DEFAULT NULL COMMENT 'estimated transmit repetitions',
   `dead_reckoning` TINYINT(1)  DEFAULT NULL,
 
   `fw`            VARCHAR(16)  DEFAULT NULL COMMENT 'running firmware version, carried forward',

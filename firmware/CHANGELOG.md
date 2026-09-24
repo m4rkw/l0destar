@@ -1,5 +1,120 @@
 # Changelog
 
+## 0.4.61
+
+### Telling a weak location from a weak antenna
+The car reports -108 to -112 dBm on band 20, from two separate eNBs within
+4 dB of each other.  That is cell edge, and O2 carries LTE-M on band 20 only,
+so there is no better band being missed.  What a single reading from a single
+parked spot cannot say is whether that is the location or the hardware.
+- **Signal is sampled on its own cadence (`APP_SIGNAL_SAMPLE_S`, 60 s)**
+rather than riding the cell group.  One reading per wake describes the
+parking space and nothing else; separating a weak location from a weak
+antenna needs readings from many places, because coverage swings tens of dB
+along a route while a detuned or badly-fed antenna is close to the same
+offset everywhere.  A drive now surveys the route.  `AT%XMONITOR` is free on
+the radio — it reads measurements the modem already keeps for cell
+reselection — so this costs an AT round trip a minute and about 23 bytes on
+the records that carry it.  Skipped in track mode, which avoids AT commands
+by design.
+- **`CONFIG_APP_CONN_EVAL` (default n) adds path loss, RSRQ, CE level and TX
+repetitions.**  `dl_pathloss` is the one that travels: RSRP says how strong
+the signal arrived, path loss says how much was lost getting here,
+normalised against what the cell says it transmits — so unlike RSRP it is
+comparable across cells and distances, and excess attenuation in the antenna
+path shows up in it directly.  `ce_level` above 0 says LTE-M is using
+repetitions.  Off by default because unlike `%XMONITOR` it runs an
+evaluation and is refused while the radio is busy, which on a drive with
+GNSS running is much of the time; a refusal is not an error and the
+`%XMONITOR` figures still go out.
+- **`CONFIG_APP_NCELLMEAS` (default n) reports what else the modem can
+hear.**  Camped on -111 dBm while a neighbour reads -95 is a selection
+problem wearing an antenna problem's clothes.  The count matters too: a weak
+antenna pulls the serving cell and its neighbours down together, so levels
+alone cannot separate it from a bad location, but marginal neighbours fall
+below the detection floor and the list thins.  The scan is asynchronous, so
+the wake waits for it rather than powering the modem off underneath it.
+- New columns `pathloss`, `rsrq`, `ce_level`, `tx_rep`
+(`sql/2026-09-23_log_conn_eval.sql`).  None are carried forward: they are
+measurements of a moment, and NULL means no evaluation ran.
+
+### A wake stops paying for a second it did not need
+- **Registration is signalled, not polled.**  `wait_for_registration()` slept
+a whole second before its first look and stepped in seconds after that, so
+every wake paid at least 1 s however fast the modem actually was — a quarter
+of a 4 s wake.  It now waits on a semaphore the LTE event handler gives the
+moment registration arrives, and checks the status once before blocking in
+case the URC beat it there.  The slices left in the loop only feed the
+watchdog; a registration inside one ends the wait immediately.
+
+### PLMN selection optimization is back on
+- **`CONFIG_LTE_PLMN_SELECTION_OPTIMIZATION=y`** (NCS defaults it on; this
+build had turned it off).  Its help calls it faster "especially for
+stationary devices", which is what a parked car is, and the attach is where
+a wake's time goes.  It had been disabled so the modem would re-evaluate
+operators each connection rather than stick with the last one — a fix for EE
+on B3 winning selection over O2/Vodafone on B20, which locking the band list
+to 8 and 20 has since settled on its own.  `attach_ms` now measures the
+difference directly, so this is falsifiable rather than a hunch.
+
+### A diagnostic for whether PSM is worth adopting
+- **`CONFIG_APP_PSM_PROBE` (default n) asks the network for PSM and reports
+the answer.**  The modem is at CFUN=0 for the whole sleep with PSM disabled,
+so every wake re-attaches from scratch; PSM would make a wake an RRC resume
+while drawing what an off modem draws.  Whether that is available cannot be
+read off a modem that has never asked — `AT%XMONITOR` reports the
+network-provided Active-Time, but a UE that does not request PSM is never
+assigned one, so the field is empty either way.  The probe requests PSM
+before CFUN=1 and logs `LTE_LC_EVT_PSM_UPDATE` at WRN, so on an
+`APP_DEBUG_LOG` build the answer reaches the server's device log without
+needing a console: "granted" with the timers, or "refused" when the network
+returns an active time of −1.  Repeats are demoted to INF.
+- **It observes without adopting.**  Sleep still ends at CFUN=0, which
+detaches long before the requested active time could expire, so PSM never
+engages and neither sleep current nor wake behaviour moves; the request only
+adds a few IEs to the attach.  The requested active time (60 s) is
+deliberately clear of both the timed wake, which powers the modem off within
+a second or two of its send, and the 30 s ignition-sleep cadence.  Safe to
+enable on a deployed vehicle, which is the point — it is the one place the
+question can currently be asked.
+
+### A slow wake says why it was slow
+Six wakes on 2026-09-23 ran 3.9 s to 44.6 s on one cell, same RAT, no GPS
+involved.  The records themselves showed the send was not the problem — 0.51
+to 0.72 s from the device building a record to the server storing it, on the
+fast wakes and the slow ones alike — so all of the variance is before the
+record exists.  That is the LTE attach, which every wake pays in full: the
+modem is at CFUN=0 for the whole sleep and PSM and eDRX are disabled, so
+there is no registration to resume.  Neither of these changes that; they make
+it measurable.
+- **`wt=` gained a third part: how much of the wake was the attach.**
+`wt=<rid>:<total_ms>:<attach_ms>`, stored in the new `attach_ms` column
+alongside `wake_ms`.  Timed from the CFUN=1 that started the search to the
+registration event that ended it, not from `wait_for_registration()`'s return
+— that polls at 1 Hz and sleeps a second before its first look, so every
+attach read as at least 1 s and was rounded to the second.  The event handler
+runs on the URC, so this is the modem's own timing.  0 means the modem was
+already registered and the wake paid no attach.
+- **Records carry the serving cell's signal quality.**  One `AT%XMONITOR`
+after each attach yields `rsrp=` (dBm), `snr=` (dB) and `band=`, converted
+from the 3GPP indices on the device since that mapping is fixed by the spec.
+The command is free on the radio — it reads measurements the modem already
+keeps for cell reselection, with no over-the-air transaction — and costs one
+round trip per wake, not one per record.  The figures ride the existing cell
+group, but only while the reading is that record's own: the group also goes
+out on a cell change and on a record built from a stored position, and on
+those there is no fresh reading, so an old one is dropped rather than sent as
+if it were taken now (`SIGNAL_FRESH_MS`, and the cell-change event drops the
+reading it invalidates).  Never carried forward by the server either, unlike
+the cell identity: signal moves continuously, and a copied value would read
+as a measurement that was never taken.  This is what
+makes the obvious hypothesis testable — LTE-M raises its repetition count as
+coverage worsens, so the same procedure on the same cell takes several times
+longer at a lower RSRP.
+- Schema: `sql/2026-09-23_log_attach_signal.sql`.  On a Traccar build the
+attach rides as a `wakeAttachMs` attribute and the signal as `rssi`/`snr`/
+`band`.
+
 ## 0.4.55
 
 ### A quiet tilt poll no longer wakes the console

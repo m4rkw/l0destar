@@ -125,6 +125,86 @@ def test_wake_figure_naming_its_own_record_is_dropped(device, database):
                         (device['id'],))['wake_pending_rec_id'] is None
 
 
+def test_attach_split_lands_with_the_wake(device, database):
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100'))
+    first = last_log(database)
+    send(device, record(60, 51.5, -0.1, 0, extras=',rid=101,wt=100:44620:41180'))
+
+    updated = database.one('SELECT * FROM `log` WHERE `id` = %s', (first['id'],))
+    assert updated['wake_ms'] == 44620
+    assert updated['attach_ms'] == 41180
+
+
+def test_attach_split_survives_being_held(device, database):
+    # Out of order, as a failed wake's record always is: both parts wait.
+    send(device, record(60, 51.5, -0.1, 0, extras=',rid=100,wt=99:44620:41180'))
+    held = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
+    assert held['wake_pending_ms'] == 44620
+    assert held['wake_pending_attach_ms'] == 41180
+
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=99'))
+    late = last_log(database)
+    assert late['wake_ms'] == 44620
+    assert late['attach_ms'] == 41180
+
+
+def test_attach_longer_than_the_wake_is_dropped(device, database):
+    # The attach is part of the wake, so it cannot exceed it; the total is
+    # still worth keeping.
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100'))
+    first = last_log(database)
+    send(device, record(60, 51.5, -0.1, 0, extras=',rid=101,wt=100:4893:9999'))
+
+    updated = database.one('SELECT * FROM `log` WHERE `id` = %s', (first['id'],))
+    assert updated['wake_ms'] == 4893
+    assert updated['attach_ms'] is None
+
+
+def test_signal_quality_is_stored(device, database):
+    send(device, record(0, 51.5, -0.1, 0,
+                        extras=',mcc=234;mnc=10;lac=1a;cid=ff;rat=CATM1'
+                               ';rsrp=-87;snr=7;band=20'))
+    row = last_log(database)
+    assert row['rsrp'] == -87
+    assert row['snr'] == 7
+    assert row['band'] == 20
+
+
+def test_connection_evaluation_is_stored(device, database):
+    send(device, record(0, 51.5, -0.1, 0,
+                        extras=',rsrp=-111;snr=-5;band=20'
+                               ';pathloss=128;rsrq=-145;ce=1;txrep=4'))
+    row = last_log(database)
+    assert row['pathloss'] == 128
+    assert float(row['rsrq']) == -14.5
+    assert row['ce_level'] == 1
+    assert row['tx_rep'] == 4
+
+
+def test_evaluation_fields_are_not_carried_forward(device, database):
+    # They are measurements of a moment, and the modem often cannot run one.
+    send(device, record(0, 51.5, -0.1, 0,
+                        extras=',rsrp=-111;snr=-5;band=20'
+                               ';pathloss=128;rsrq=-145;ce=1;txrep=4'))
+    send(device, record(1, 51.5, -0.1, 0, extras=',rsrp=-109;snr=-3;band=20'))
+    row = last_log(database)
+    assert row['rsrp'] == -109          # the free reading still lands
+    assert row['pathloss'] is None      # the evaluation did not run
+    assert row['rsrq'] is None
+
+
+def test_signal_quality_is_not_carried_forward(device, database):
+    # Unlike the cell identity it rides with: signal moves continuously, so a
+    # copied value would read as a measurement that was never taken.
+    send(device, record(0, 51.5, -0.1, 0,
+                        extras=',mcc=234;mnc=10;lac=1a;cid=ff;rat=CATM1'
+                               ';rsrp=-87;snr=7;band=20'))
+    send(device, record(1, 51.5, -0.1, 0))
+    row = last_log(database)
+    assert row['rsrp'] is None and row['snr'] is None and row['band'] is None
+    assert row['rat'] == 'CATM1'      # the cell identity still carries
+
+
 def test_record_without_an_id_still_stores(device, database):
     # rid= is new; a record built before it existed must not be rejected.
     send(device, record(0, 51.5, -0.1, 0))

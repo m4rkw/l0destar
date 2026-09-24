@@ -68,7 +68,10 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `tm` | 1 = built in track mode: GNSS off, position is the last fix, speed the ECU's | per-packet |
 | `acc` | IMU burst: `ax/ay/az/gx/gy/gz` per sample, samples joined by `:`, oldest first, 26 Hz; accel milli-g, gyro raw LSB | per-packet |
 | `rid` | the device's own id for this record, consecutive within a boot | per-packet |
-| `wt` | `<rid>:<ms>` — how long the device was awake for the send of record `<rid>` | retrospective |
+| `rsrp` | serving cell RSRP, dBm (−140…−44) | per-packet |
+| `snr` | serving cell SNR, dB (−24…+24) | per-packet |
+| `band` | LTE band in use | per-packet |
+| `wt` | `<rid>:<ms>[:<attach_ms>]` — how long the device was awake for the send of record `<rid>`, and how much of that was the LTE attach | retrospective |
 
 "Carried forward" means the device sends the field only when it changes or on
 the first record after a wake, and the server copies the previous row's value
@@ -99,6 +102,33 @@ before is the wrong row. When the named record has not arrived yet the figure
 is held on the `device` row (`wake_pending_rec_id`, `wake_pending_ms`) and
 applied as the record lands; at most one is outstanding per device, since the
 device clears its own pending figure as it emits it.
+
+`attach_ms` is the part of `wake_ms` that went on registering. It is the part
+that matters: on the car, the send is uniformly 0.5–0.7 s from the device
+building a record to the server storing it, while the wakes themselves ran
+3.9 s to 44.6 s on one cell with no GPS involved — so a slow wake is a slow
+attach, and nothing else. It is timed on the device from CFUN=1 to the
+registration event rather than from the 1 Hz registration poll, which sleeps a
+second before its first look and rounds every attach up to a whole second. 0
+means the modem was already registered and the wake paid no attach.
+
+`rsrp`, `snr` and `band` come from one `AT%XMONITOR`, taken once per wake just
+after the attach they exist to explain — not per record, which would cost an
+AT round trip each time for a figure nothing would read. `AT%XMONITOR` itself
+is free on the radio: it reads measurements the modem already maintains for
+cell reselection, with no over-the-air transaction.
+
+They ride the cell group, but only while the reading is the record's own. That
+group goes out for other reasons too — a cell change, a record built from a
+stored position — and on those there is no fresh reading, so a device drops
+the figure rather than send one measured earlier. Unlike the cell identity
+they are never carried forward by the server either: signal moves
+continuously, so a copied value would read as a measurement that was never
+taken, and NULL honestly means "not measured on this record".
+
+They are there to attribute a slow attach: LTE-M raises its repetition count
+as coverage worsens, so the same procedure on the same cell takes several
+times longer at a lower RSRP.
 
 `wake_ms` is NULL where nothing was reported for a row — every ignition-on
 record, the first after a boot, a wake that built no record to attribute it

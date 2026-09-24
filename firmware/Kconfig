@@ -813,6 +813,191 @@ config APP_NETWORK_SEARCH_TIMEOUT
 	  With the ignition on the search is not limited: the car is running,
 	  and the drive should be reported as soon as coverage returns.
 
+config APP_SIGNAL_SAMPLE_S
+	int "Seconds between serving-cell signal readings (0 = only at wakes)"
+	default 60
+	help
+	  AT%XMONITOR is free on the radio -- it reads measurements the modem
+	  already keeps for cell reselection -- so the only cost is an AT
+	  round trip and about 23 bytes on the records that carry it.
+
+	  Taking one per wake answers how strong the signal is where the car
+	  is parked, and nothing else.  Sampling along a drive answers the
+	  question that matters when a signal looks weak: coverage varies by
+	  tens of dB over a route, while a detuned or badly-fed antenna is
+	  close to the same offset everywhere, so a route's worth of readings
+	  separates the two without a VNA.
+
+	  0 falls back to the old behaviour: a reading when the cell context
+	  is refreshed, which is once per wake and once per bring-up.
+
+config APP_CONN_EVAL
+	bool "Report path loss, RSRQ, CE level and TX repetitions"
+	default n
+	select LTE_LC_CONN_EVAL_MODULE
+	help
+	  Adds lte_lc_conn_eval_params_get() to each signal reading.
+
+	  dl_pathloss is why: RSRP says how strong the signal arrived, path
+	  loss says how much was lost getting here -- normalised against what
+	  the cell says it transmits, so it is comparable across cells and
+	  distances in a way raw RSRP is not.  Excess attenuation in the
+	  antenna path shows up in it directly, which is the measurement a
+	  suspected hardware fault actually needs.  ce_level and tx_rep come
+	  with it, and say whether LTE-M is leaning on repetitions -- the
+	  mechanism that would explain an attach taking 40 s on the same cell
+	  that answers in 2 s at better signal.
+
+	  Off by default because unlike %XMONITOR it is not free: it runs an
+	  evaluation, and it fails outright while the radio is busy, which on
+	  a drive with GNSS running is much of the time.  A failed evaluation
+	  is not an error -- the %XMONITOR figures still go out -- so the
+	  survey degrades to RSRP where it cannot run.
+
+config APP_NCELLMEAS
+	bool "Report neighbouring cells once per wake (diagnostic)"
+	default n
+	select LTE_LC_NEIGHBOR_CELL_MEAS_MODULE
+	help
+	  Measures every cell the modem can hear and reports the count and the
+	  strongest neighbour alongside the serving cell, at WRN so it reaches
+	  the server's device log.
+
+	  It answers a question RSRP alone cannot.  Camped on a cell at
+	  -111 dBm while a neighbour reads -95 is a selection problem, not an
+	  antenna problem, and wants a completely different fix.  The count
+	  says something too: a weak antenna attenuates the serving cell and
+	  its neighbours alike, so levels cannot separate it from a bad
+	  location -- but marginal neighbours drop below the detection floor,
+	  so the list thins out.  Hearing nothing at all in a built-up area
+	  says more than any single reading.
+
+	  It cannot detect a uniform offset by itself, since everything it
+	  measures comes through the same antenna.  It is a cheap first cut
+	  that can find a different problem.
+
+	  Off by default: unlike AT%XMONITOR this runs a real scan, which
+	  costs radio time and lengthens the wake it runs in.
+
+config APP_NCELLMEAS_COMPLETE
+	bool "Sweep the whole band rather than just the current carrier"
+	default n
+	depends on APP_NCELLMEAS
+	help
+	  The default search measures only the carrier already camped on, so
+	  finding nothing means "no same-frequency neighbour" rather than
+	  "nothing reaches this antenna" -- which is the stronger claim, and
+	  the one worth making when the antenna is what is in doubt.  This
+	  sweeps the band properly.  Slower, and it lengthens the wake it runs
+	  in, so it is for answering a question rather than for leaving on.
+
+config APP_NCELLMEAS_TIMEOUT_S
+	int "Seconds to wait for the neighbour scan to report"
+	default 10
+	depends on APP_NCELLMEAS
+	help
+	  The scan is asynchronous, and the wake would otherwise power the
+	  modem off underneath it.  The watchdog is fed while waiting; a scan
+	  that has not reported by then is abandoned and the wake carries on.
+
+config APP_PSM_PROBE
+	bool "Ask the network for PSM and report what it grants (diagnostic)"
+	default n
+	select LTE_LC_PSM_MODULE
+	help
+	  A parked unit spends its wake on the LTE attach: with the modem at
+	  CFUN=0 for the whole sleep and PSM disabled, every wake re-attaches
+	  from scratch.  PSM would replace that with an RRC resume while
+	  drawing what an off modem draws -- but only if the network grants
+	  it, and that cannot be read off a modem that has never asked.
+	  AT%XMONITOR reports the network-provided Active-Time, and a UE that
+	  does not request PSM is never assigned one, so the field is empty
+	  whether or not PSM is available.
+
+	  This asks.  It sets the PSM timers and issues the request before
+	  CFUN=1, then reports what came back from LTE_LC_EVT_PSM_UPDATE:
+	  "granted" with the timers, or "refused" when the network returns an
+	  active time of -1.  At WRN, so on a build with APP_DEBUG_LOG the
+	  answer rides telemetry to the server's device log rather than
+	  needing a console.
+
+	  Deliberately a probe and not an adoption: sleep still ends at
+	  CFUN=0, which detaches long before the requested active time could
+	  expire, so PSM never actually engages.  Neither sleep current nor
+	  wake behaviour changes -- the request only adds a few IEs to the
+	  attach.  Safe to enable on a deployed unit to find out whether the
+	  real change is worth making.
+
+config APP_PSM_SLEEP
+	bool "Sleep in PSM instead of powering the modem off"
+	default n
+	select APP_PSM_PROBE
+	select LTE_LC_MODEM_SLEEP_MODULE
+	help
+	  Adopts what APP_PSM_PROBE measures.  Sleep stops taking the modem to
+	  CFUN=0 and leaves it registered instead; the modem drops into PSM on
+	  its own once the active timer expires, the network keeps the
+	  context, and the next wake resumes rather than re-attaching.  On the
+	  car that attach was 2.2 s at best and 41 s at worst, at an RSRP of
+	  -111 dBm where LTE-M leans on repetitions -- so this is the change
+	  that matters at that signal level, not shaving the attach down.
+
+	  Only when the network actually grants PSM.  Until the grant arrives,
+	  and whenever it is withdrawn, sleep is the CFUN=0 it always was, so
+	  a network that says no costs nothing.
+
+	  The failure worth guarding is a modem that stays registered without
+	  ever entering PSM: telemetry cannot tell that from a working one --
+	  both give a fast wake and attach_ms 0 -- but it draws milliamps
+	  rather than microamps, on a parked vehicle battery.  So the sleep
+	  loop watches for LTE_LC_EVT_MODEM_SLEEP_ENTER, reports the first one
+	  at WRN as proof, and if none arrives within
+	  APP_PSM_SLEEP_GRACE_S of settling it powers the modem off and says
+	  so.  The bad case self-heals into the old behaviour.
+
+config APP_PSM_SLEEP_GRACE_S
+	int "Seconds to wait for the modem to enter PSM before giving up on it"
+	default 60
+	depends on APP_PSM_SLEEP
+	help
+	  Measured from the end of the wake, and on top of the active time the
+	  modem must run down first, so the default is generous.  Exceeding it
+	  means PSM is not happening however it was negotiated, and sleep
+	  falls back to CFUN=0 for the rest of this sleep.
+
+config APP_PSM_TAU_S
+	int "Periodic TAU to request (seconds)"
+	default 86400
+	depends on APP_PSM_PROBE
+	help
+	  T3412.  Ask for at least the longest engine-off wake interval, or a
+	  unit that adopted PSM would wake on its own for tracking area
+	  updates between reports -- see APP_NO_SIGNAL_MAX_INTERVAL, which
+	  reaches a day.  Only the network's answer matters while this is a
+	  probe; the value is what that answer is a response to.
+
+config APP_PSM_ACTIVE_S
+	int "Active time to request (seconds)"
+	default 10 if APP_PSM_SLEEP
+	default 60
+	depends on APP_PSM_PROBE
+	help
+	  T3324: how long the modem stays reachable after the last activity
+	  before entering PSM.
+
+	  Probing without adopting, the default is deliberately long so PSM
+	  cannot engage anywhere: a timed wake powers the modem off within a
+	  second or two of its send, and the busiest awake cadence is a send
+	  every APP_IGNITION_ON_SLEEP_INTERVAL (30 s), so 60 s clears both.
+	  A probe on a deployed vehicle should observe and change nothing.
+
+	  Adopting it, the default drops to 10 s: every second of active time
+	  is idle-mode paging before the modem may sleep, and the exchange is
+	  over as soon as the server's reply lands -- RAI already tells the
+	  network so.  It stays under the 30 s awake cadence, so a key-on
+	  engine-off wait sleeps between its sends rather than idling through
+	  them.
+
 config APP_NO_SIGNAL_MAX_INTERVAL
 	int "Ceiling on the engine-off wake interval with no network (0 = no backoff)"
 	default 86400

@@ -27,6 +27,16 @@
 
 LOG_MODULE_REGISTER(main, CONFIG_APP_LOG_LEVEL);
 
+/* The PSM timers only exist in Kconfig while APP_PSM_SLEEP is on.  The code
+ * that reads them is behind IS_ENABLED(), which drops the branch but still
+ * compiles it, so they need a value either way. */
+#ifndef CONFIG_APP_PSM_ACTIVE_S
+#define CONFIG_APP_PSM_ACTIVE_S 0
+#endif
+#ifndef CONFIG_APP_PSM_SLEEP_GRACE_S
+#define CONFIG_APP_PSM_SLEEP_GRACE_S 0
+#endif
+
 /* -- shared state used across modules (declared in app.h) ------------------ */
 char     pending_server_cmd[128];
 bool     read_udp_response;
@@ -594,8 +604,8 @@ static void do_sleep(void)
         LOG_INF("sleep: modem left searching (%d s so far, report owed)",
                 modem_unregistered_s());
     } else {
-        LOG_INF("sleep: modem power off");
-        modem_power_off();
+        LOG_INF("sleep: modem down");
+        modem_sleep();
     }
     LOG_INF("sleep: CAN power off");
     hw_can_power_off();
@@ -628,6 +638,15 @@ static void do_sleep(void)
 
     int telemetry_remaining = telemetry_interval();
 
+    /* When to check that a modem left registered for PSM has actually gone
+     * to sleep, 0 when nothing is owed a check.  A modem that stays
+     * registered without entering PSM is indistinguishable from a working
+     * one in telemetry — same fast wake, same absent attach — and draws
+     * milliamps rather than microamps out of a parked vehicle battery.  So
+     * it is checked rather than assumed, and the failure falls back to the
+     * CFUN=0 this replaced. */
+    int64_t psm_check_at = 0;
+
     /* Uptime at which the timed report now in progress woke the unit, 0 when
      * none is.  The wake is not over when the send is: one that could not
      * register keeps the modem up and the loop polling for it every
@@ -639,6 +658,9 @@ static void do_sleep(void)
      * from the last record the report actually built: a resend builds a
      * fresh one, and it is that record the wake ends up delivering. */
     uint32_t wake_rec_id = 0;
+    /* How much of the wake went on the attach.  -1 until one is measured;
+     * a wake that found the modem already registered paid none. */
+    int32_t  wake_attach_ms = -1;
 
     ign_irq_enable();
     atomic_clear(&s_ign_int_flag);
@@ -955,7 +977,7 @@ static void do_sleep(void)
                  * sends first. */
                 if (sleep_modem_release(modem_raised, resend_owed)) {
                     transport_teardown();
-                    modem_power_off();
+                    modem_sleep();
                 }
                 accel_read_baseline();
                 accel_irq_enable();
@@ -1076,7 +1098,20 @@ static void do_sleep(void)
 
             watchdog_kick();
             int reg = modem_get_network_status();
-            if (reg != 1 && reg != 5) modem_connect();
+            if (reg != 1 && reg != 5) {
+                modem_connect();
+                /* Whatever the attach cost, or -1 if it never registered.
+                 * Read straight after, before anything else can start a
+                 * fresh search under it. */
+                wake_attach_ms = modem_attach_ms();
+            } else {
+                /* Already registered — the search was paid for on an
+                 * earlier pass of this same wake, so leave what it
+                 * measured rather than calling this one free. */
+                if (wake_attach_ms < 0) {
+                    wake_attach_ms = 0;
+                }
+            }
             modem_update_cell_info();
 
             /* No position since boot means no record can be built, so a unit
@@ -1180,7 +1215,7 @@ static void do_sleep(void)
         if (sleep_modem_release(modem_raised, resend_owed)) {
             console_resume();
             transport_teardown();
-            modem_power_off();
+            modem_sleep();
         }
 
         /* The report is done with — sent, or given up on — and the modem is
@@ -1197,14 +1232,46 @@ static void do_sleep(void)
             if (wake_rec_id != 0) {
                 wake_pending.rec_id = wake_rec_id;
                 wake_pending.ms = awake_ms;
-                LOG_INF("timed wake done: %lld ms awake (record %u)",
-                        awake_ms, wake_rec_id);
+                wake_pending.attach_ms = wake_attach_ms;
+                LOG_INF("timed wake done: %lld ms awake, %d ms of it "
+                        "attaching (record %u)",
+                        awake_ms, wake_attach_ms, wake_rec_id);
             } else {
                 LOG_INF("timed wake done: %lld ms awake, no record to "
                         "attribute it to", awake_ms);
             }
             wake_at = 0;
             wake_rec_id = 0;
+            wake_attach_ms = -1;
+        }
+
+        /* Did the modem we left registered actually go to sleep?  Armed
+         * whenever a pass ends with PSM granted and the radio still up, and
+         * the grace period runs on top of the active timer the modem has to
+         * run down first.  Nothing here infers PSM from being registered —
+         * that is exactly the pair this cannot tell apart from outside. */
+        if (IS_ENABLED(CONFIG_APP_PSM_SLEEP) && network_ready &&
+            modem_psm_granted()) {
+            if (psm_check_at == 0) {
+                psm_check_at = k_uptime_get() +
+                    (int64_t)(CONFIG_APP_PSM_ACTIVE_S +
+                              CONFIG_APP_PSM_SLEEP_GRACE_S) * 1000;
+            } else if (k_uptime_get() >= psm_check_at) {
+                if (modem_psm_asleep()) {
+                    psm_check_at = 0;      /* satisfied; re-armed next pass */
+                } else {
+                    console_resume();
+                    LOG_WRN("PSM granted but the modem is still awake %ds "
+                            "on — powering it off instead",
+                            CONFIG_APP_PSM_ACTIVE_S +
+                            CONFIG_APP_PSM_SLEEP_GRACE_S);
+                    transport_teardown();
+                    modem_power_off();
+                    psm_check_at = 0;
+                }
+            }
+        } else {
+            psm_check_at = 0;
         }
 
         /* re-read baseline and re-arm accel interrupt before next sleep cycle */
@@ -1711,6 +1778,15 @@ int main(void)
         if (agnss_fetch(NULL)) {
             LOG_WRN("A-GNSS fetch failed — first fix will take longer");
         }
+        /* And the cell context, in the same window and for the same reason.
+         * Left to STATE_GPS_COLLECT, where it would otherwise first run, it
+         * happens with the receiver already started — which is the "radio
+         * busy" a connection evaluation refuses outright and a neighbour
+         * scan has to compete with.  So the one reading a boot takes, which
+         * after an update is the first thing the server hears, would be the
+         * worst of the run.  Costs a few AT commands on an ordinary build;
+         * only the diagnostics make it slow, and only where asked for. */
+        modem_update_cell_info();
     } else if (ignition_read() != 0) {
         /* Key off and no network: a fix could not be sent, so the receiver
          * is not started and the unit goes to sleep with the modem left
