@@ -933,6 +933,7 @@ config APP_PSM_SLEEP
 	default n
 	select APP_PSM_PROBE
 	select LTE_LC_MODEM_SLEEP_MODULE
+	select LTE_LC_MODEM_SLEEP_NOTIFICATIONS
 	help
 	  Adopts what APP_PSM_PROBE measures.  Sleep stops taking the modem to
 	  CFUN=0 and leaves it registered instead; the modem drops into PSM on
@@ -954,6 +955,15 @@ config APP_PSM_SLEEP
 	  at WRN as proof, and if none arrives within
 	  APP_PSM_SLEEP_GRACE_S of settling it powers the modem off and says
 	  so.  The bad case self-heals into the old behaviour.
+
+# The sleep module only subscribes to %XMODEMSLEEP when notifications are on,
+# and then only reports sleeps longer than this.  The stock 20 minutes is
+# built for "tell me about the long ones"; here the notification is evidence
+# that PSM engaged at all, and the check that wants it runs about a minute
+# into the sleep.  A minute is long enough that nothing but a real PSM sleep
+# clears it, and short enough to arrive before it is looked for.
+config LTE_LC_MODEM_SLEEP_NOTIFICATIONS_THRESHOLD_MS
+	default 60000 if APP_PSM_SLEEP
 
 config APP_PSM_SLEEP_GRACE_S
 	int "Seconds to wait for the modem to enter PSM before giving up on it"
