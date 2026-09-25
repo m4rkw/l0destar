@@ -42,12 +42,150 @@ static int64_t s_lost_ms;
  * same, and searching is what main.c's APP_NETWORK_SEARCH_TIMEOUT bounds. */
 static int64_t s_search_ms;
 
+/* How long the last attach took: CFUN=1 to the registration that ended the
+ * search, in milliseconds.  -1 when the search now in progress has not
+ * finished (or never did).
+ *
+ * Taken from the registration event rather than from wait_for_registration()'s
+ * return, because that wait polls at 1 Hz and sleeps a second before its first
+ * look — so every attach reads as at least 1 s and is rounded to the second.
+ * The event handler runs on the URC, so this is the modem's own timing.  It is
+ * the figure worth having: an engine-off wake is dominated by the attach, and
+ * without splitting it out a slow wake cannot be told from a slow send. */
+static int32_t s_attach_ms = -1;
+
+/* Given by the LTE event handler the moment registration arrives, so the
+ * wait below is woken by the URC instead of polling for it. */
+static K_SEM_DEFINE(s_reg_sem, 0, 1);
+
 static void search_started(void)
 {
     if (!s_connected) {
         s_search_ms = k_uptime_get();
+        s_attach_ms = -1;
+        /* A registration that beats this reset is not lost: the wait checks
+         * the status once before it ever blocks. */
+        k_sem_reset(&s_reg_sem);
     }
 }
+
+/* The search is over.  Idempotent: whichever of the event handler and the
+ * polling wait notices first records the time, and the handler normally wins. */
+static void search_ended(void)
+{
+    if (s_search_ms) {
+        s_attach_ms = (int32_t)(k_uptime_get() - s_search_ms);
+        s_search_ms = 0;
+    }
+}
+
+int modem_attach_ms(void)
+{
+    return s_attach_ms;
+}
+
+#if IS_ENABLED(CONFIG_APP_PSM_PROBE)
+/* The network's answer, as last reported.  active_time < 0 is the library's
+ * "PSM is deactivated" — which is also what a deliberate CFUN=0 produces, so
+ * s_psm_offline says which of the two we are looking at. */
+static int  s_psm_active_s = -1;
+static int  s_psm_tau_s = -1;
+static bool s_psm_offline;
+
+/* The modem's own account of whether it is in PSM, from
+ * LTE_LC_EVT_MODEM_SLEEP_ENTER/EXIT.  A modem that stays registered without
+ * ever entering PSM looks identical from telemetry — fast wake, no attach —
+ * and draws milliamps instead of microamps, so nothing infers this. */
+static bool s_psm_asleep;
+
+bool modem_psm_granted(void)
+{
+    return s_psm_active_s >= 0;
+}
+
+bool modem_psm_asleep(void)
+{
+    return s_psm_asleep;
+}
+
+/* What the network said about PSM, once per answer.
+ *
+ * At WRN rather than INF so it reaches the server: a deployed unit has no
+ * console, and dbglog carries warnings out with the next record that gets
+ * through.  Repeats are demoted to INF — the same answer comes back on every
+ * attach, and one line an hour saying nothing has changed would drown the
+ * log it is supposed to inform. */
+static void psm_report(const struct lte_lc_psm_cfg *cfg)
+{
+    static bool seen;
+    bool changed = !seen || cfg->tau != s_psm_tau_s ||
+                   cfg->active_time != s_psm_active_s;
+
+    seen = true;
+    s_psm_tau_s = cfg->tau;
+    s_psm_active_s = cfg->active_time;
+
+    if (!changed) {
+        LOG_INF("PSM unchanged: tau=%ds active=%ds",
+                cfg->tau, cfg->active_time);
+        return;
+    }
+
+    /* -1 means PSM is deactivated — but so does every deliberate CFUN=0,
+     * which deregisters and takes the PSM config with it.  Reporting that
+     * as a refusal put a warning an hour into the captured log saying the
+     * network had turned us down, seconds after it had granted us: the
+     * same mistake as reading a modem powered off on purpose as a lost
+     * registration.  A power-off is logged at INF and says what it is. */
+    if (cfg->active_time < 0) {
+        if (s_psm_offline) {
+            LOG_INF("PSM cleared by the modem going offline");
+        } else {
+            LOG_WRN("PSM: refused (active_time=-1, tau=%ds) — every wake "
+                    "keeps paying a full attach", cfg->tau);
+        }
+        s_psm_asleep = false;
+    } else {
+        LOG_WRN("PSM: granted, active=%ds tau=%ds — a wake can resume "
+                "instead of re-attaching", cfg->active_time, cfg->tau);
+    }
+}
+
+#if IS_ENABLED(CONFIG_APP_PSM_SLEEP)
+/* Proof, not inference: the modem says when it has actually gone to sleep
+ * and what kind.  The first PSM entry is a WRN so it reaches the server's
+ * log as evidence the adoption works; the rest are INF, since one line an
+ * hour saying the same thing would bury what it was meant to show. */
+static void sleep_report(const struct lte_lc_evt *evt, bool entering)
+{
+    static bool proved;
+    enum lte_lc_modem_sleep_type type = evt->modem_sleep.type;
+
+    if (entering) {
+        s_psm_asleep = (type == LTE_LC_MODEM_SLEEP_PSM ||
+                        type == LTE_LC_MODEM_SLEEP_PROPRIETARY_PSM);
+        if (s_psm_asleep && !proved) {
+            proved = true;
+            LOG_WRN("modem entered PSM (type %d, %lld ms) — registered and "
+                    "drawing what CFUN=0 would", (int)type,
+                    evt->modem_sleep.time);
+        } else {
+            LOG_INF("modem sleep enter: type %d, %lld ms",
+                    (int)type, evt->modem_sleep.time);
+        }
+    } else {
+        s_psm_asleep = false;
+        LOG_INF("modem sleep exit: type %d", (int)type);
+    }
+}
+#endif
+#endif
+
+#if IS_ENABLED(CONFIG_APP_NCELLMEAS)
+/* Defined with the scan that triggers it, further down; the handler is where
+ * its result arrives. */
+static void ncell_report(const struct lte_lc_cells_info *info);
+#endif
 
 static void lte_handler(const struct lte_lc_evt *evt)
 {
@@ -73,7 +211,10 @@ static void lte_handler(const struct lte_lc_evt *evt)
         s_connected = registered;
         network_ready = registered;
         if (registered) {
-            s_search_ms = 0;
+            /* Timed before the semaphore is given, so a waiter that wakes
+             * on it already sees the finished figure. */
+            search_ended();
+            k_sem_give(&s_reg_sem);
         }
         break;
     }
@@ -82,6 +223,24 @@ static void lte_handler(const struct lte_lc_evt *evt)
                 evt->rrc_mode == LTE_LC_RRC_MODE_CONNECTED
                     ? "Connected" : "Idle");
         break;
+#if IS_ENABLED(CONFIG_APP_NCELLMEAS)
+    case LTE_LC_EVT_NEIGHBOR_CELL_MEAS:
+        ncell_report(&evt->cells_info);
+        break;
+#endif
+#if IS_ENABLED(CONFIG_APP_PSM_PROBE)
+    case LTE_LC_EVT_PSM_UPDATE:
+        psm_report(&evt->psm_cfg);
+        break;
+#endif
+#if IS_ENABLED(CONFIG_APP_PSM_SLEEP)
+    case LTE_LC_EVT_MODEM_SLEEP_ENTER:
+        sleep_report(evt, true);
+        break;
+    case LTE_LC_EVT_MODEM_SLEEP_EXIT:
+        sleep_report(evt, false);
+        break;
+#endif
     case LTE_LC_EVT_CELL_UPDATE:
         LOG_INF("cell %u tac %u", evt->cell.id, evt->cell.tac);
         if (evt->cell.id != 0 && evt->cell.id != UINT32_MAX) {
@@ -89,6 +248,12 @@ static void lte_handler(const struct lte_lc_evt *evt)
             g_cell.tac = evt->cell.tac;
             g_cell.valid = true;
             g_cell.dirty = true;
+            /* Whatever signal we hold was measured on the cell we have just
+             * left.  Dropped rather than carried over: this flag raises
+             * dirty, and dirty is what puts the cell group on the next
+             * record, so a stale figure would ride out as that record's own
+             * measurement.  The next modem_read_signal() replaces it. */
+            g_cell.signal_valid = false;
         }
         break;
     default:
@@ -188,7 +353,29 @@ static void apply_link_settings(void)
      * automatic PLMN selection in case a manual selection was ever stored. */
     nrf_modem_at_printf("AT+COPS=0");
 
+#if IS_ENABLED(CONFIG_APP_PSM_PROBE)
+    /* Ask, so the network has something to answer.  This does not adopt PSM:
+     * the wake powers the modem off at CFUN=0 within a second or two of its
+     * send, long before the requested active time could expire, so PSM never
+     * engages and neither sleep current nor wake behaviour moves.  All it
+     * buys is LTE_LC_EVT_PSM_UPDATE telling us whether adoption is possible.
+     * Set before CFUN=1, like everything else here — +CPSMS after attach
+     * would not reach this registration. */
+    {
+        int psm_err = lte_lc_psm_param_set_seconds(CONFIG_APP_PSM_TAU_S,
+                                                   CONFIG_APP_PSM_ACTIVE_S);
+        if (psm_err) {
+            LOG_WRN("PSM params rejected: %d", psm_err);
+        } else {
+            psm_err = lte_lc_psm_req(true);
+            if (psm_err) {
+                LOG_WRN("PSM request failed: %d", psm_err);
+            }
+        }
+    }
+#else
     nrf_modem_at_printf("AT+CPSMS=0");
+#endif
     nrf_modem_at_printf("AT%%XEDRX=0");
     nrf_modem_at_printf("AT+CEDRXS=0,4");
 
@@ -247,18 +434,35 @@ bool modem_is_nbiot(void)
  * the caller's loop is a better place to keep waiting than this one. */
 static int wait_for_registration(int timeout_s)
 {
-    for (int waited = 1; waited <= timeout_s; waited++) {
-        k_sleep(K_SECONDS(1));
-        watchdog_kick();
+    int64_t start = k_uptime_get();
 
-        int reg = modem_get_network_status();
+    /* Once, before blocking: the URC can land between CFUN=1 and this call,
+     * and on a modem that was already registered there is nothing to wait
+     * for at all. */
+    int reg = modem_get_network_status();
 
-        if (reg == 1 || reg == 5) {
-            s_connected = true;
-            network_ready = true;
-            s_search_ms = 0;
-            return waited;
+    if (reg == 1 || reg == 5) {
+        s_connected = true;
+        network_ready = true;
+        search_ended();
+        return 0;
+    }
+
+    /* Woken by the event handler rather than polling.  The poll this
+     * replaced slept a whole second before its first look and stepped in
+     * seconds after that, so every attach cost at least 1 s of the wake
+     * however fast the modem actually was — a quarter of a 4 s wake, and
+     * the dominant cost if PSM ever removes the attach.  The slices below
+     * exist only to feed the watchdog; a registration arriving inside one
+     * ends the wait immediately. */
+    for (int left = timeout_s; left > 0; left -= REG_WAIT_SLICE_S) {
+        int slice = MIN(left, REG_WAIT_SLICE_S);
+
+        if (k_sem_take(&s_reg_sem, K_SECONDS(slice)) == 0) {
+            /* The handler has already set the flags and timed the attach. */
+            return (int)((k_uptime_get() - start) / 1000);
         }
+        watchdog_kick();
     }
     return -ETIMEDOUT;
 }
@@ -340,6 +544,10 @@ int modem_radio_up(void)
         return 0;
     }
 
+#if IS_ENABLED(CONFIG_APP_PSM_PROBE)
+    s_psm_offline = false;
+#endif
+
     modem_set_apn(g_settings.apn);
 
     apply_link_settings();
@@ -366,6 +574,29 @@ int modem_radio_up(void)
  *
  * A genuine outage that is still open gets its closing line here, so the
  * captured log never shows a loss without an end. */
+/* The way into sleep for the radio.
+ *
+ * With PSM granted the modem is left registered: it falls into PSM on its
+ * own once the active timer runs down, the network holds the context, and
+ * the next wake resumes instead of re-attaching — which on this unit was
+ * 2.2 s at best and 41 s at worst.  Its sleep current there is what CFUN=0
+ * would have cost, which is the whole point of PSM.
+ *
+ * Without a grant this is the CFUN=0 it always was, so a network that
+ * refuses costs nothing.  Whether the modem then really sleeps is not
+ * assumed — see modem_psm_asleep(), and the fallback in do_sleep(). */
+void modem_sleep(void)
+{
+#if IS_ENABLED(CONFIG_APP_PSM_SLEEP)
+    if (modem_psm_granted() && s_connected) {
+        LOG_INF("sleep: modem left registered (PSM, active %ds)",
+                s_psm_active_s);
+        return;
+    }
+#endif
+    modem_power_off();
+}
+
 void modem_power_off(void)
 {
     if (s_lost_ms) {
@@ -376,6 +607,11 @@ void modem_power_off(void)
     s_lost_ms = 0;
     s_search_ms = 0;
     network_ready = false;
+#if IS_ENABLED(CONFIG_APP_PSM_PROBE)
+    /* So the PSM deactivation this causes is read as our own doing. */
+    s_psm_offline = true;
+    s_psm_asleep = false;
+#endif
 
     int err = lte_lc_power_off();
 
@@ -452,9 +688,286 @@ int modem_at(const char *cmd, char *resp, size_t resp_len)
     return nrf_modem_at_cmd(resp, resp_len, "%s", cmd);
 }
 
+/* One field of a %XMONITOR line, 0-based after the "%XMONITOR: " prefix, with
+ * any surrounding quotes stripped.  Commas inside quotes do not separate
+ * fields — operator names contain them — and empty fields are normal: the
+ * modem leaves out whatever the network did not provide, and returns the
+ * short form with nothing past the registration status when it is not
+ * registered. */
+static bool xmon_field(const char *line, int want, char *out, size_t out_sz)
+{
+    const char *p = strchr(line, ':');
+
+    if (!p || out_sz == 0) {
+        return false;
+    }
+    p++;
+    while (*p == ' ') p++;
+
+    const char *start = p;
+    int idx = 0;
+    bool quoted = false;
+
+    for (;; p++) {
+        if (*p == '"') {
+            quoted = !quoted;
+            continue;
+        }
+        if (*p == '\0' || *p == '\r' || *p == '\n') {
+            break;
+        }
+        if (*p == ',' && !quoted) {
+            if (idx == want) {
+                break;
+            }
+            idx++;
+            start = p + 1;
+        }
+    }
+    if (idx != want) {
+        return false;
+    }
+
+    size_t o = 0;
+
+    for (const char *q = start; q < p && o < out_sz - 1; q++) {
+        if (*q != '"') out[o++] = *q;
+    }
+    out[o] = '\0';
+    return true;
+}
+
+#if IS_ENABLED(CONFIG_APP_CONN_EVAL)
+/* The RSRQ index has half-dB steps, so it is carried in tenths rather than
+ * rounded to a whole dB — the same trick the OBD fields use to keep a
+ * decimal point off the wire.  Index 0 is "not used"; the mapping either
+ * side of it is offset by one step, which is why this is not one line. */
+static int16_t rsrq_idx_to_x10(int16_t idx)
+{
+    if (idx >= 1) {
+        return (int16_t)(idx * 5 - 200);     /* 1 -> -19.5 dB, 34 -> -3.0 */
+    }
+    return (int16_t)(idx * 5 - 195);         /* -1 -> -20.0 dB */
+}
+
+/* Path loss, RSRQ, CE level and TX repetitions.  Failure is ordinary and
+ * quiet: a positive return is the modem declining (4 is "radio busy", which
+ * is what a drive with GNSS running answers most of the time), and the
+ * %XMONITOR figures taken alongside stand without it. */
+static void read_conn_eval(void)
+{
+    struct lte_lc_conn_eval_params p;
+
+    g_cell.conn_valid = false;
+
+    int err = lte_lc_conn_eval_params_get(&p);
+
+    if (err) {
+        LOG_DBG("conn eval unavailable (%d)", err);
+        return;
+    }
+
+    g_cell.pathloss_db = p.dl_pathloss;
+    g_cell.rsrq_x10 = (p.rsrq == LTE_LC_CELL_RSRQ_INVALID)
+                          ? 0 : rsrq_idx_to_x10(p.rsrq);
+    g_cell.ce_level = (int8_t)p.ce_level;
+    g_cell.tx_rep = p.tx_rep;
+    g_cell.conn_valid = true;
+
+    LOG_INF("conn eval: pathloss=%ddB rsrq=%d.%ddB ce=%d txrep=%d",
+            p.dl_pathloss, g_cell.rsrq_x10 / 10, abs(g_cell.rsrq_x10 % 10),
+            (int)p.ce_level, p.tx_rep);
+}
+#endif
+
+#if IS_ENABLED(CONFIG_APP_NCELLMEAS)
+/* Neighbouring cells, measured once per wake.
+ *
+ * The scan is asynchronous — lte_lc_neighbor_cell_measurement() returns
+ * immediately and the result arrives as an event — so this waits for it
+ * rather than letting the wake power the modem off underneath the scan.
+ *
+ * What it is for: camped on -111 dBm while a neighbour reads -95 is a
+ * selection problem wearing an antenna problem's clothes, and the two want
+ * entirely different fixes.  The count matters as well as the levels — a
+ * weak antenna pulls the serving cell and its neighbours down together, so
+ * levels alone cannot separate it from a bad location, but marginal
+ * neighbours fall below the detection floor and the list thins. */
+static K_SEM_DEFINE(s_ncell_sem, 0, 1);
+
+static void ncell_report(const struct lte_lc_cells_info *info)
+{
+    int16_t serving = info->current_cell.rsrp;
+    int count = info->ncells_count;
+
+    /* Timing advance is the distance to the serving tower, and the scan is
+     * the only thing that reports it — %XMONITOR and a connection evaluation
+     * both leave it out.  One TA step is 16 Ts, a 520.8 ns round trip, so
+     * 78 m one way.
+     *
+     * It is what makes the path loss mean anything.  126 dB is unremarkable
+     * for a tower two kilometres off and around 20 dB more than a tower at
+     * 300 m should cost, and only the distance says which of those this is —
+     * which is the whole question when a signal looks weak and the antenna
+     * is suspect.  The modem answers it without any tower database, which
+     * matters here: neither OpenCelliD nor Unwired Labs holds these cells,
+     * since crowdsourced data comes from phones and phones never camp on an
+     * LTE-M carrier.
+     *
+     * May be stale: it is only measured when the uplink transmits, so the
+     * age goes out with it rather than being silently trusted. */
+    uint16_t ta = info->current_cell.timing_advance;
+
+    if (ta != LTE_LC_CELL_TIMING_ADVANCE_INVALID && ta <= LTE_LC_CELL_TIMING_ADVANCE_MAX) {
+        int64_t age_ms = (int64_t)info->current_cell.measurement_time -
+                         (int64_t)info->current_cell.timing_advance_meas_time;
+
+        LOG_WRN("serving cell: ta=%u (~%u m), measured %llds before the "
+                "scan", ta, (unsigned)(ta * 78),
+                age_ms > 0 ? age_ms / 1000 : 0);
+    } else {
+        LOG_WRN("serving cell: no valid timing advance — distance unknown");
+    }
+
+    if (count == 0) {
+        LOG_WRN("neighbours: none heard (serving %d dBm) — nothing else "
+                "reaches this antenna", serving - 141);
+    } else {
+        int best = -1;
+        int16_t best_rsrp = INT16_MIN;
+
+        for (int i = 0; i < count; i++) {
+            if (info->neighbor_cells[i].rsrp > best_rsrp) {
+                best_rsrp = info->neighbor_cells[i].rsrp;
+                best = i;
+            }
+        }
+        LOG_WRN("neighbours: %d heard, serving %d dBm, best %d dBm "
+                "(pci %u, earfcn %u)", count, serving - 141, best_rsrp - 141,
+                info->neighbor_cells[best].phys_cell_id,
+                info->neighbor_cells[best].earfcn);
+    }
+    k_sem_give(&s_ncell_sem);
+}
+
+static void read_neighbours(void)
+{
+    /* The default search type only measures the carrier already camped on,
+     * so "none heard" from it means "no same-frequency neighbour" and not
+     * "nothing out there" — a distinction worth having when the question is
+     * whether the antenna is deaf.  The complete search sweeps properly, at
+     * the cost of radio time, which is why it is a choice and not a
+     * default. */
+    struct lte_lc_ncellmeas_params params = {
+        .search_type = IS_ENABLED(CONFIG_APP_NCELLMEAS_COMPLETE)
+                           ? LTE_LC_NEIGHBOR_SEARCH_TYPE_EXTENDED_COMPLETE
+                           : LTE_LC_NEIGHBOR_SEARCH_TYPE_DEFAULT,
+    };
+
+    k_sem_reset(&s_ncell_sem);
+
+    int err = lte_lc_neighbor_cell_measurement(&params);
+
+    if (err) {
+        LOG_WRN("neighbour scan refused: %d", err);
+        return;
+    }
+
+    /* Waited out in slices so the watchdog keeps being fed: a scan is
+     * seconds and the window is 32. */
+    for (int left = CONFIG_APP_NCELLMEAS_TIMEOUT_S; left > 0; left--) {
+        if (k_sem_take(&s_ncell_sem, K_SECONDS(1)) == 0) {
+            return;
+        }
+        watchdog_kick();
+    }
+    LOG_WRN("neighbour scan did not report in %ds",
+            CONFIG_APP_NCELLMEAS_TIMEOUT_S);
+    (void)lte_lc_neighbor_cell_measurement_cancel();
+}
+#endif
+
+/* Serving-cell signal quality, from a single AT%XMONITOR.
+ *
+ * Without it a slow wake cannot be attributed: the attach is what varies, and
+ * whether a 40 s attach was bad coverage or a busy cell is not answerable from
+ * a cell id alone.  LTE-M raises its repetition count as coverage worsens, so
+ * the same procedure on the same cell takes several times longer at a lower
+ * RSRP — which is the hypothesis this makes testable.
+ *
+ * Both indices are 3GPP-mapped and the mapping is fixed by the spec, so they
+ * are converted here and stored as dBm and dB rather than kept raw: unlike the
+ * IMU's full-scale range, nothing in firmware can reinterpret them later.
+ *   rsrp  1..97 -> -140..-44 dBm   (0 = below range, 255 = unknown)
+ *   snr   1..49 ->  -24..+24 dB    (0 = below range, 127 = unknown)
+ *
+ * Failure is not an error worth logging loudly: an unregistered modem answers
+ * with the short form and there is simply nothing to read.
+ */
+int modem_read_signal(void)
+{
+    char resp[320];
+    char field[24];
+
+    g_cell.signal_valid = false;
+
+    if (nrf_modem_at_cmd(resp, sizeof(resp), "AT%%XMONITOR") != 0) {
+        return -EIO;
+    }
+
+    /* Field 0 is the registration status; anything but registered means the
+     * rest of the line is absent. */
+    if (!xmon_field(resp, 0, field, sizeof(field))) {
+        return -EINVAL;
+    }
+
+    int reg = atoi(field);
+
+    if (reg != 1 && reg != 5) {
+        return -ENOTCONN;
+    }
+
+    int band = 0, rsrp_idx = 255, snr_idx = 127;
+
+    if (xmon_field(resp, 6, field, sizeof(field)) && field[0]) {
+        band = atoi(field);
+    }
+    if (xmon_field(resp, 10, field, sizeof(field)) && field[0]) {
+        rsrp_idx = atoi(field);
+    }
+    if (xmon_field(resp, 11, field, sizeof(field)) && field[0]) {
+        snr_idx = atoi(field);
+    }
+
+    if (rsrp_idx < 1 || rsrp_idx > 97) {
+        return -ENODATA;
+    }
+
+    g_cell.rsrp_dbm = (int16_t)(rsrp_idx - 141);
+    g_cell.snr_db = (snr_idx >= 1 && snr_idx <= 49)
+                        ? (int16_t)(snr_idx - 25) : 0;
+    g_cell.band = (uint8_t)band;
+    g_cell.signal_ms = k_uptime_get();
+    g_cell.signal_valid = true;
+    g_cell.dirty = true;
+
+#if IS_ENABLED(CONFIG_APP_CONN_EVAL)
+    read_conn_eval();
+#endif
+#if IS_ENABLED(CONFIG_APP_NCELLMEAS)
+    read_neighbours();
+#endif
+
+    LOG_INF("signal: rsrp=%ddBm snr=%ddB band=%d on %s",
+            g_cell.rsrp_dbm, g_cell.snr_db, g_cell.band, modem_rat());
+    return 0;
+}
+
 int modem_update_cell_info(void)
 {
     char resp[128];
+
+    (void)modem_read_signal();
 
     int err = nrf_modem_at_printf("AT+COPS=3,2");
     if (err) {

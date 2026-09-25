@@ -385,6 +385,10 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_NETWORK_RETRY_INTERVAL` | 300 | Network retry interval (s) |
 | `APP_NETWORK_SEARCH_TIMEOUT` | 300 | With the ignition off, how long the modem may search for a network before the unit powers it off and sleeps (s; 0 = no limit) |
 | `APP_NO_SIGNAL_MAX_INTERVAL` | 86400 | Ceiling on the engine-off wake interval while there is no network: each dead wake doubles the wait up to this (s; 0 = no backoff) |
+| `APP_SIGNAL_SAMPLE_S` | 60 | Seconds between serving-cell signal readings (`AT%XMONITOR`, free on the radio). 0 = only when the cell context is refreshed |
+| `APP_CONN_EVAL` | n | Also report path loss, RSRQ, CE level and TX repetitions. Costs an evaluation and is refused while the radio is busy |
+| `APP_NCELLMEAS` | n | Diagnostic: measure neighbouring cells once per wake and report the count and the strongest. Runs a real scan |
+| `APP_PSM_PROBE` | n | Diagnostic: request PSM and report what the network grants (`APP_PSM_PROBE_TAU_S` / `_ACTIVE_S`). Does not adopt PSM — sleep still ends at CFUN=0, so nothing about sleep current or wake behaviour changes |
 | `APP_GPS_FIX_TIMEOUT_MS` | 60000 | GNSS fix timeout (ms) |
 | `APP_GPS_COLD_FIX_TIMEOUT_MS` | 300000 | Cold-start fix timeout (ms) |
 | `APP_BATTERY_WARNING_MV` / `_POWEROFF_MV` | 11900 / 11800 | Battery warning / power-off (mV) |

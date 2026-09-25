@@ -90,20 +90,20 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 | LT8609 | UVLO thresholds | PASSED | |
 | MCU OVP | 4.2V passes through at nominal voltage | PASSED | S11Q1 on, S12TP2 ≈ the buck output at S6C5 |
 | MCU OVP | Cuts off when the buck output (S6C5) is driven above ~5V | PASSED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
-| MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | NOT TESTED | |
-| GPS auxiliary 3.3V rail | Switches on enable signal | NOT TESTED | |
-| CAN auxiliary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
-| K-line auxiliary 3.3V rail | Switches on K-enable signal | NOT TESTED | |
-| K-line auxiliary 12V rail | Switches on K-enable signal | NOT TESTED | |
-| Accelerometer | Operates while awake | NOT TESTED | |
-| Accelerometer | Wake on motion | NOT TESTED | |
-| GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
-| K-wire | K wire connectivity | NOT TESTED | |
-| K-wire | L-line pulldown | NOT TESTED | |
-| K-wire | L-line external short to 12V while L\_SEND high | NOT TESTED | Added to cover the L-line defect in earlier boards |
-| K-wire | L-line sensing via L_SENSE | NOT TESTED | |
-| CAN | Connectivity | NOT TESTED | |
-| CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
+| MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | PASSED | |
+| GPS auxiliary 3.3V rail | Switches on enable signal | PASSED | |
+| CAN auxiliary 3.3V rail | Switches on CAN-enable signal | PASSED | |
+| K-line auxiliary 3.3V rail | Switches on K-enable signal | PASSED | |
+| K-line auxiliary 12V rail | Switches on K-enable signal | PASSED | |
+| Accelerometer | Operates while awake | PASSED | |
+| Accelerometer | Wake on motion | PASSED | |
+| GPS antenna bias tee | Obtains GPS signal | PASSED | |
+| K-wire | K wire connectivity | PASSED | |
+| K-wire | L-line pulldown | PASSED | |
+| K-wire | L-line external short to 12V while L\_SEND high | PASSED | Added to cover the L-line defect in earlier boards |
+| K-wire | L-line sensing via L_SENSE | PASSED | |
+| CAN | Connectivity | PASSED | |
+| CAN standby via XSTBY signal | Low standby current | PASSED | |
 | Board | Quiescent current | 35 µA | Fitting the optional enable divider adds around ~9 µA |
 
 ## Features

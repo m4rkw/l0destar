@@ -88,7 +88,7 @@ features:
     label: "CAN termination jumper\n120 Ω across CAN H/L"
     side: top
   - refs: [S9U1]
-    label: "MAX33041 CAN transceiver"
+    label: "TCAN3414DR CAN transceiver"
     side: top
   - refs: [S9U2, S9Y1]
     label: "MCP2518FD CAN FD controller\nSPI to the nRF9151, 40 MHz crystal"

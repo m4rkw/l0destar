@@ -216,13 +216,23 @@ static void append_sync_fields(void)
      * figure lags at least one record — see wake_pending.  Cleared only once
      * it is actually in the buffer. */
     if (wake_pending.rec_id != 0 && wake_pending.ms > 0) {
-        n = snprintf(&data_current[data_index],
-                     DATA_LIMIT - data_index - 1,
-                     ",wt=%u:%lld", wake_pending.rec_id, wake_pending.ms);
+        /* A third part when the attach was measured: the send is uniformly
+         * sub-second, so this is the part that explains a slow wake. */
+        if (wake_pending.attach_ms >= 0) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1,
+                         ",wt=%u:%lld:%d", wake_pending.rec_id,
+                         wake_pending.ms, wake_pending.attach_ms);
+        } else {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1,
+                         ",wt=%u:%lld", wake_pending.rec_id, wake_pending.ms);
+        }
         if (n > 0 && n < DATA_LIMIT - data_index - 1) {
             data_index += n;
             wake_pending.rec_id = 0;
             wake_pending.ms = 0;
+            wake_pending.attach_ms = -1;
         }
     }
 
@@ -426,7 +436,45 @@ int collect_data(int ignitionState)
                      g_cell.tac, g_cell.cid, stale ? 1 : 0,
                      modem_rat());
         if (n > 0) data_index += n;
+
         g_cell.dirty = false;
+    }
+
+    /* Serving-cell signal quality, on its own cadence rather than the cell
+     * group's.  One reading per wake says how strong the signal is where
+     * the car is parked and nothing else; separating a weak location from a
+     * weak antenna needs readings from many places, because coverage swings
+     * tens of dB along a route while a detuned or badly-fed antenna is
+     * close to the same offset everywhere.  See SIGNAL_SAMPLE_MS.
+     *
+     * Only while registered — there is nothing to measure otherwise — and
+     * never in track mode, which builds two records a second and skips
+     * every AT command for exactly that reason. */
+    if (network_ready && SIGNAL_SAMPLE_MS > 0 &&
+        k_uptime_get() - g_cell.signal_ms >= SIGNAL_SAMPLE_MS) {
+        modem_read_signal();
+    }
+
+    /* Emitted only while the reading is this record's own.  A figure older
+     * than SIGNAL_FRESH_MS belongs to another moment, and on a moving
+     * vehicle possibly another cell, so it is dropped rather than reported
+     * as if it had been taken now. */
+    if (g_cell.signal_valid &&
+        k_uptime_get() - g_cell.signal_ms <= SIGNAL_FRESH_MS) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1,
+                     ",rsrp=%d;snr=%d;band=%d",
+                     g_cell.rsrp_dbm, g_cell.snr_db, g_cell.band);
+        if (n > 0) data_index += n;
+
+        if (g_cell.conn_valid) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1,
+                         ";pathloss=%d;rsrq=%d;ce=%d;txrep=%d",
+                         g_cell.pathloss_db, g_cell.rsrq_x10,
+                         (int)g_cell.ce_level, g_cell.tx_rep);
+            if (n > 0) data_index += n;
+        }
     }
 
     /* OBD-II data over the K wire: the live snapshot the fix-wait tick has

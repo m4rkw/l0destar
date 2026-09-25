@@ -52,6 +52,37 @@ struct cell_info {
     int mnc;
     uint32_t cid;
     uint32_t tac;
+    /* Serving-cell signal quality from AT%XMONITOR, converted to the units
+     * the 3GPP indices mean (see modem_read_signal).  signal_valid is false
+     * until a reading has been taken on this cell — an unregistered modem
+     * has nothing to report — and snr_db is 0 both for "0 dB" and for a
+     * network that gave no SNR, which is why only rsrp gates validity. */
+    int16_t  rsrp_dbm;
+    int16_t  snr_db;
+    uint8_t  band;
+    bool     signal_valid;
+    /* Uptime of the reading.  A signal figure is a measurement, not a
+     * condition: g_cell.dirty is also raised by a cell change, which carries
+     * no fresh reading with it, so without a timestamp a record built after
+     * one would have emitted an RSRP measured hours earlier on a different
+     * cell — dressed up as this record's own.  See SIGNAL_FRESH_MS. */
+    int64_t  signal_ms;
+    /* From lte_lc_conn_eval_params_get(), which unlike %XMONITOR costs an
+     * evaluation and can be refused outright — "radio busy" is what a drive
+     * with GNSS running usually answers.  conn_valid says whether the last
+     * attempt produced anything; the %XMONITOR figures above stand on their
+     * own either way.
+     *
+     * pathloss_db is the one worth having.  RSRP says how strong the signal
+     * arrived; path loss says how much was lost getting here, normalised
+     * against what the cell says it transmits, so it compares across cells
+     * and distances where a raw RSRP does not.  Excess attenuation in the
+     * antenna path shows up in it directly. */
+    int16_t  pathloss_db;
+    int16_t  rsrq_x10;      /* tenths of a dB; the index has 0.5 dB steps */
+    int16_t  tx_rep;
+    int8_t   ce_level;
+    bool     conn_valid;
     bool valid;
     bool dirty;
 };
@@ -97,6 +128,11 @@ extern float battery_v;
 struct wake_report {
     uint32_t rec_id;
     int64_t  ms;
+    /* How much of ms went on the LTE attach, which is what actually varies:
+     * the send is uniformly sub-second, so a wake that took 44 s spent 41 of
+     * them registering.  -1 when there was no attach to pay for (the modem
+     * was already registered) or it never completed. */
+    int32_t  attach_ms;
 };
 
 extern struct wake_report wake_pending;
@@ -130,6 +166,16 @@ int  modem_provision_tls(void);
 int  modem_connect(void);
 int  modem_radio_up(void);              /* settings + CFUN=1, no wait */
 void modem_power_off(void);             /* CFUN=0 on purpose: not an outage */
+/* The way into sleep: PSM when the network has granted it (the modem stays
+ * registered and sleeps itself), else modem_power_off(). */
+void modem_sleep(void);
+#if IS_ENABLED(CONFIG_APP_PSM_PROBE)
+bool modem_psm_granted(void);           /* the network gave us an active time */
+bool modem_psm_asleep(void);            /* the modem says it is in PSM now */
+#else
+static inline bool modem_psm_granted(void) { return false; }
+static inline bool modem_psm_asleep(void)  { return false; }
+#endif
 int  modem_get_imei(char *out, size_t out_len);
 int  modem_get_network_status(void);   /* 1=home, 5=roaming */
 void modem_set_apn(const char *apn);
@@ -139,6 +185,12 @@ bool modem_is_registered(void);         /* from the LTE event handler, not infer
 int  modem_unregistered_s(void);        /* seconds up without a registration, -1 if not searching */
 void modem_send_ok(void);               /* a send got through: clear the stuck timer */
 int  modem_update_cell_info(void);
+/* Serving-cell RSRP/SNR/band into g_cell; folded into modem_update_cell_info,
+ * so callers refreshing cell context get it without asking. */
+int  modem_read_signal(void);
+/* How long the last attach took, in ms, or -1 if none has completed since the
+ * search began.  Measured from the registration event, not the 1 Hz poll. */
+int  modem_attach_ms(void);
 const char *modem_rat(void);           /* "CATM1" / "NBIOT" / "UNKNOWN" */
 bool modem_is_nbiot(void);
 int  modem_rescan_plmn(int timeout_s); /* force cell/PLMN reselection */

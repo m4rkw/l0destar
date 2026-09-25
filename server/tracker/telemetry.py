@@ -83,6 +83,13 @@ EXTRA_KEYS = {
     'tm':  'track_mode',         # 1 = built in track mode (GNSS off, fast poll)
     'acc': 'imu_burst',          # IMU samples since the previous record
     'rid': 'rec_id',             # the device's own id for this record
+    'rsrp': 'rsrp',              # serving cell, dBm (AT%XMONITOR)
+    'snr': 'snr',                # serving cell, dB
+    'band': 'band',              # LTE band in use
+    'pathloss': 'pathloss',      # downlink path loss, dB
+    'ce': 'ce_level',            # LTE-M coverage enhancement level
+    'txrep': 'tx_rep',           # estimated transmit repetitions
+    # 'rsrq' is handled in parse_csv_line: sent in tenths of a dB.
     # 'wt' is handled in parse_csv_line: it is <rid>:<ms>, and the one field
     # that describes another record rather than this one.
 }
@@ -112,6 +119,9 @@ PER_PACKET_KEYS = (
     'accel_x', 'accel_y', 'accel_z', 'gyro_x', 'gyro_y', 'gyro_z',
     'mcu_temp', 'imu_temp', 'uptime', 'waketime', 'dead_reckoning', 'vsys',
     'cell_location',
+    # Signal quality is a measurement, not a condition: carrying it forward
+    # would put a reading on a row where none was taken.
+    'rsrp', 'snr', 'band', 'pathloss', 'rsrq', 'ce_level', 'tx_rep',
 )
 
 # Track mode (firmware TRACK_MODE.md).  A record built with GNSS off carries
@@ -168,6 +178,8 @@ LOG_COLUMNS = [
     'waketime', 'uptime', 'mcu_temp', 'imu_temp', 'dead_reckoning', 'vsys',
 ] + [column for column, _, _ in OBD_FIELDS.values()] + [
     'combined_speed', 'track_mode', 'imu_burst', 'rec_id', 'wake_ms',
+    'attach_ms', 'rsrp', 'snr', 'band',
+    'pathloss', 'rsrq', 'ce_level', 'tx_rep',
 ]
 
 _TIMESTAMP_RE = re.compile(
@@ -209,14 +221,25 @@ def parse_csv_line(line):
             if '=' not in pair:
                 continue
             key, value = pair.split('=', 1)
+            if key == 'rsrq':
+                # Tenths of a dB: the 3GPP index has half-dB steps, so a
+                # whole number would throw half the resolution away.
+                try:
+                    data['rsrq'] = '%.1f' % (int(value) / 10.0)
+                except (TypeError, ValueError):
+                    pass
+                continue
             if key == 'wt':
-                # <rid>:<ms> -- the record the figure belongs to, then the
-                # figure.  Kept apart from wake_ms's column so the reference
-                # is never mistaken for a value to store on this row.
-                ref, _, millis = value.partition(':')
-                if millis:
-                    data['wake_ref'] = ref
-                    data['wake_ms'] = millis
+                # <rid>:<ms>[:<attach_ms>] -- the record the figure belongs
+                # to, how long that wake took, and how much of it was the LTE
+                # attach.  The reference is kept apart from wake_ms's column
+                # so it is never mistaken for a value to store on this row.
+                bits = value.split(':')
+                if len(bits) >= 2 and bits[1]:
+                    data['wake_ref'] = bits[0]
+                    data['wake_ms'] = bits[1]
+                    if len(bits) >= 3 and bits[2]:
+                        data['wake_attach_ms'] = bits[2]
                 continue
             column = EXTRA_KEYS.get(key)
             if column:
@@ -451,33 +474,47 @@ def _haversine_km(a, b):
 
 
 def _wake_figure(data, imei):
-    """The ``(rec_id, ms)`` a record's ``wt=`` carries, or ``(None, None)``.
+    """The ``(rec_id, ms, attach_ms)`` a ``wt=`` carries, or three ``None``.
 
-    Anything that is not a pair of plausible integers is rejected: a corrupt
+    Anything that is not a set of plausible integers is rejected: a corrupt
     figure cannot be told from a real one once stored, and would skew every
-    average taken over the column.
+    average taken over the column.  The attach part is optional -- a wake that
+    found the modem already registered paid none -- and is dropped on its own
+    if it does not parse, since the total is still worth having.
     """
     if 'wake_ms' not in data or 'wake_ref' not in data:
-        return None, None
+        return None, None, None
     try:
         ref = int(data['wake_ref'])
         millis = int(data['wake_ms'])
     except (TypeError, ValueError):
         logs.app.warning('unparsable wt=%r:%r from %s', data.get('wake_ref'),
                          data.get('wake_ms'), imei)
-        return None, None
+        return None, None, None
     if ref <= 0 or not 0 < millis <= WAKE_MS_MAX:
         logs.app.warning('implausible wt=%d:%d from %s', ref, millis, imei)
-        return None, None
-    return ref, millis
+        return None, None, None
+
+    attach = None
+    if 'wake_attach_ms' in data:
+        try:
+            attach = int(data['wake_attach_ms'])
+        except (TypeError, ValueError):
+            attach = None
+        # The attach is part of the wake, so it cannot exceed it.
+        if attach is None or not 0 <= attach <= millis:
+            logs.app.warning('implausible attach %r in wt= from %s (wake %d ms)',
+                             data.get('wake_attach_ms'), imei, millis)
+            attach = None
+    return ref, millis, attach
 
 
 def _held_wake_for(device, rec_id):
-    """A figure being held for this record because it had not arrived yet."""
+    """The ``(ms, attach_ms)`` held for a record that had not arrived yet."""
     held = device.get('wake_pending_rec_id')
-    if held is None or rec_id is None:
+    if held is None or rec_id is None or int(held) != rec_id:
         return None
-    return device.get('wake_pending_ms') if int(held) == rec_id else None
+    return device.get('wake_pending_ms'), device.get('wake_pending_attach_ms')
 
 
 def _store_wake_figure(database, device, data, rec_id):
@@ -496,7 +533,7 @@ def _store_wake_figure(database, device, data, rec_id):
     most one is ever outstanding, since the device clears its own pending
     figure as it emits it.
     """
-    ref, millis = _wake_figure(data, device.get('imei', '?'))
+    ref, millis, attach = _wake_figure(data, device.get('imei', '?'))
     if ref is None:
         return
     if ref == rec_id:
@@ -516,20 +553,24 @@ def _store_wake_figure(database, device, data, rec_id):
     if target is None:
         database.query(
             'UPDATE `device` SET `wake_pending_rec_id` = %s, '
-            '`wake_pending_ms` = %s WHERE `id` = %s',
-            (ref, millis, device['id']),
+            '`wake_pending_ms` = %s, `wake_pending_attach_ms` = %s '
+            'WHERE `id` = %s',
+            (ref, millis, attach, device['id']),
         )
         # The caller's copy of the row too: a datagram is read once and may
         # carry several records, and the record this figure is waiting for
         # can be one of them.
         device['wake_pending_rec_id'] = ref
         device['wake_pending_ms'] = millis
+        device['wake_pending_attach_ms'] = attach
         return
     # Left alone if it already carries a figure, so a duplicate datagram
     # cannot overwrite one with a stale repeat of itself.
     if target['wake_ms'] is None:
-        database.query('UPDATE `log` SET `wake_ms` = %s WHERE `id` = %s',
-                       (millis, target['id']))
+        database.query(
+            'UPDATE `log` SET `wake_ms` = %s, `attach_ms` = %s WHERE `id` = %s',
+            (millis, attach, target['id']),
+        )
 
 
 def process_record(data, device, ip, database=None):
@@ -552,7 +593,7 @@ def process_record(data, device, ip, database=None):
     # record, flushed out of the backlog behind the one describing it.
     held_wake = _held_wake_for(device, entry.get('rec_id'))
     if held_wake is not None:
-        entry['wake_ms'] = held_wake
+        entry['wake_ms'], entry['attach_ms'] = held_wake
 
     # powered_on marks the record on which the ignition came up, so the
     # transition is queryable without comparing adjacent rows.
@@ -594,10 +635,12 @@ def process_record(data, device, ip, database=None):
     if held_wake is not None:
         database.query(
             'UPDATE `device` SET `wake_pending_rec_id` = NULL, '
-            '`wake_pending_ms` = NULL WHERE `id` = %s', (device['id'],)
+            '`wake_pending_ms` = NULL, `wake_pending_attach_ms` = NULL '
+            'WHERE `id` = %s', (device['id'],)
         )
         device['wake_pending_rec_id'] = None
         device['wake_pending_ms'] = None
+        device['wake_pending_attach_ms'] = None
 
     _store_wake_figure(database, device, data, entry.get('rec_id'))
 

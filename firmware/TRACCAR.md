@@ -79,7 +79,8 @@ other tracker; the rest keep the record's key.
 | `ax`..`gz` | `ax`..`gz` | Accelerometer in milli-g, gyro in raw LSB, as in the record |
 | `tm` | `trackMode` | |
 | `rid` | `recordId` | The device's own id for the record: consecutive within a boot, seeded at random at each one, so a gap is a record that never arrived |
-| `wt` | `wakeRecordId` + `wakeMs` | Milliseconds awake for the send of record `wakeRecordId`, an earlier one. Traccar has no way to amend a position it has already stored, so the pair goes out as two attributes of the record carrying them and the reader joins them on `recordId`; filing the duration against this record would say it took that long to send this one, which is the one thing it does not mean |
+| `rsrp`, `snr`, `band` | `rssi`, `snr`, `band` | Serving cell, dBm / dB / LTE band. `rssi` is Traccar's name for serving-cell power |
+| `wt` | `wakeRecordId` + `wakeMs` + `wakeAttachMs` | Milliseconds awake for the send of record `wakeRecordId`, an earlier one, and how much of that was the LTE attach. Traccar has no way to amend a position it has already stored, so the pair goes out as two attributes of the record carrying them and the reader joins them on `recordId`; filing the duration against this record would say it took that long to send this one, which is the one thing it does not mean |
 | `orpm`, `ormin`, `ormax`, `oravg` | `rpm`, `rpmMin`, `rpmMax`, `rpmAvg` | |
 | `ospd` | `obdSpeed` | km/h |
 | `ocl`, `oit` | `coolantTemp`, `intakeTemp` | °C |
