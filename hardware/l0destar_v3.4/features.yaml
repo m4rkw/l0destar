@@ -135,17 +135,11 @@ features:
   - refs: [S15J1]
     label: "GPS antenna, U.FL\nconnection to the Makerdiary board"
     side: right
-  - refs: [S15D2]
-    label: "GPS ESD protection\nTPD1E05U06"
-    side: right
   - refs: [S15J4]
     label: "LTE antenna, SMA\nv3.3: inner-layer keepout under the centre pin"
     side: right
   - refs: [S15J3]
     label: "LTE antenna, U.FL\nconnection to the Makerdiary board"
-    side: right
-  - refs: [S15D1]
-    label: "LTE ESD protection\nTPD1E05U06"
     side: right
 
   # ---- misc ----

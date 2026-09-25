@@ -111,7 +111,6 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
  - 12V live and 12V ignition inputs with TVS and reverse polarity protection
  - Enhanced input protection sized for pulse 2a at the ISO 7637-2:2011 maximum
  - Onboard 2A fusing
- - ESD protection at the external antenna connectors
  - Ignition presence sensing
  - INA228 voltage reading
  - High efficiency buck converter
@@ -386,8 +385,8 @@ separate load switches.
 | S15C2 | 100pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
 | S15C3 | 10nF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [GRM1555C1H103JE01D](https://uk.farnell.com/murata/grm1555c1h103je01d/cap-mlcc-0-01uf-5-c0g-50vdc-0402/dp/4803046RL) | |
 | S15C4 | 2.2uF capacitor | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |
-| S15D1 | ESD protection diode (GSM path) | TPD1E05U06DPYR X1SON-2 | [TPD1E05U06DPYR](https://www.digikey.com/en/products/detail/texas-instruments/TPD1E05U06DPYR/3844805) | |
-| S15D2 | ESD protection diode (GPS path) | TPD1E05U06DPYR X1SON-2 | [TPD1E05U06DPYR](https://www.digikey.com/en/products/detail/texas-instruments/TPD1E05U06DPYR/3844805) | |
+| S15D1 | DNP - ESD protection diode (GSM path) | DNP - not necessary | | |
+| S15D2 | DNP - ESD protection diode (GPS path) | DNP - not necessary | | |
 | S15R1 | Bias tee feed resistor | 0508 15R 5% 1W | [3430A2F15RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f15rtdf/res-15r-1w-thick-film-0508-wide/dp/4206818) | |
 | - | u.FL cable - LTE | 50 ohm 35mm | [U.FL-2LPHF6-04N1TV-A-35](https://uk.farnell.com/hirose-hrs/u-fl-2lphf6-04n1tv-a-35/cbl-assy-u-fl-r-a-plug-r-a-plug/dp/4294251) | |
 | - | u.FL cable - GPS | 50 ohm 35mm | [U.FL-2LPHF6-04N1TV-A-35](https://uk.farnell.com/hirose-hrs/u-fl-2lphf6-04n1tv-a-35/cbl-assy-u-fl-r-a-plug-r-a-plug/dp/4294251) | |
@@ -551,7 +550,6 @@ buck enable divider. Quantities are per board.
 | All | MOSFET | 1 | 2N7002 SOT-23 | [2N7002](https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174) | |
 | All | 15V Zener diode | 3 | BZX84C15 | [BZX84C15](https://uk.farnell.com/multicomp-pro/bzx84c15/zener-diode-0-3w-15v-sot-23/dp/2675186) | |
 | All | 400W TVS diode | 2 | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://uk.farnell.com/nexperia/ptvs33vs1utr-115/tvs-diode-aecq101-unidir-33v-400w/dp/3440137) | |
-| All | ESD protection diode | 2 | TPD1E05U06DPYR X1SON-2 | [TPD1E05U06DPYR](https://www.digikey.com/en/products/detail/texas-instruments/TPD1E05U06DPYR/3844805) | 1x GSM path, 1x GPS path |
 | All | Ideal diode | 1 | LM66100 | [LM66100](https://www.aliexpress.com/item/1005008565117953.html) | |
 | All | INA228 voltage read IC | 1 | INA228 10-VSSOP | [INA228](https://www.aliexpress.com/item/1005008704299153.html) | |
 | All | Buck converter | 1 | LT8609AIMSE MSOP-EP-10 | [LT8609AIMSE#PBF](https://uk.farnell.com/analog-devices/lt8609aimse-pbf/dc-dc-conv-sync-buck-2mhz-125deg/dp/4025049) | |

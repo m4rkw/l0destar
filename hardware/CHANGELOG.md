@@ -3,6 +3,11 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 25/09/2026
+
+- Removed the ESD diodes from the SMA connectors, these are unnecessary and
+  detrimental to signal performance.
+
 ## 12/09/2026
 
 - Swapped MAX33041EASA+ for TCAN3414DR in v3.4. Identical footprint/pinout
