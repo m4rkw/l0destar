@@ -160,7 +160,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Sensor_Energy:INA228"
+		(symbol "Sensor_Energy:INA238"
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
@@ -176,7 +176,7 @@
 					)
 				)
 			)
-			(property "Value" "INA228"
+			(property "Value" "INA238"
 				(at 3.81 11.43 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -197,7 +197,7 @@
 					)
 				)
 			)
-			(property "Datasheet" "https://www.ti.com/lit/ds/symlink/ina228.pdf"
+			(property "Datasheet" "https://www.ti.com/lit/ds/symlink/ina238.pdf"
 				(at 8.89 -2.54 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -219,7 +219,7 @@
 					)
 				)
 			)
-			(property "ki_keywords" "ADC I2C 20-Bit Oversampling Current Shunt"
+			(property "ki_keywords" "ADC I2C 16-Bit Oversampling Current Shunt"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -241,7 +241,7 @@
 					)
 				)
 			)
-			(symbol "INA228_0_1"
+			(symbol "INA238_0_1"
 				(rectangle
 					(start 7.62 10.16)
 					(end -7.62 -10.16)
@@ -254,7 +254,7 @@
 					)
 				)
 			)
-			(symbol "INA228_1_1"
+			(symbol "INA238_1_1"
 				(pin input line
 					(at 10.16 7.62 180)
 					(length 2.54)
@@ -604,7 +604,7 @@
 		)
 		(uuid "8f976532-0407-4a71-b637-e920b8572011")
 	)
-	(text "INA228 VOLTAGE READING"
+	(text "INA238 VOLTAGE READING"
 		(exclude_from_sim no)
 		(at 44.704 22.352 0)
 		(effects
@@ -614,7 +614,7 @@
 		)
 		(uuid "94ff598d-f7f7-462d-8d10-e7d2317c643b")
 	)
-	(text "Vehicle voltage reading via INA228 using the I2C bus\n100nF / 2.2uF decoupling"
+	(text "Vehicle voltage reading via INA238 using the I2C bus\n100nF / 2.2uF decoupling"
 		(exclude_from_sim no)
 		(at 179.07 169.545 0)
 		(effects
@@ -1327,7 +1327,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Sensor_Energy:INA228")
+		(lib_id "Sensor_Energy:INA238")
 		(at 63.5 58.42 0)
 		(unit 1)
 		(body_style 1)
@@ -1349,7 +1349,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "INA228"
+		(property "Value" "INA238"
 			(at 65.6433 45.72 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1371,7 +1371,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/ina228.pdf"
+		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/ina238.pdf"
 			(at 72.39 60.96 0)
 			(hide yes)
 			(show_name no)
@@ -1393,7 +1393,7 @@
 				)
 			)
 		)
-		(property "Manufacturer_Part_Number" "INA228"
+		(property "Manufacturer_Part_Number" "INA238"
 			(at 72.39 60.96 0)
 			(hide yes)
 			(show_name no)

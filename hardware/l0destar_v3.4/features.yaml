@@ -77,7 +77,7 @@ features:
 
   # ---- sensing ----
   - refs: [S3U1]
-    label: "INA228\nbattery voltage monitor, I²C"
+    label: "INA238\nbattery voltage monitor, I²C"
     side: right
   - refs: [S8U1, S8R1]
     label: "ASM330LHH 6-axis IMU\nwake-on-motion accel + gyro, ferrite-fed"

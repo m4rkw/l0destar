@@ -2048,7 +2048,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "0ad56b50-f3a7-4684-9c67-c9963296b795")
 		(property "Reference" "S15D1"
@@ -2061,7 +2061,7 @@
 				)
 			)
 		)
-		(property "Value" "TPD1E05U06DPYR"
+		(property "Value" "DNP - TPD1E05U06DPYR"
 			(at 86.36 33.655 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2677,7 +2677,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "6b69d227-ca67-4bcf-88cc-f76456c809a3")
 		(property "Reference" "S15D2"
@@ -2690,7 +2690,7 @@
 				)
 			)
 		)
-		(property "Value" "TPD1E05U06DPYR"
+		(property "Value" "DNP - TPD1E05U06DPYR"
 			(at 118.11 109.22 0)
 			(show_name no)
 			(do_not_autoplace no)

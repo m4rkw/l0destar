@@ -3,6 +3,11 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 26/09/2026
+
+- Swap INA228 for INA238, cheaper part with identical functionality for this
+  use-case.
+
 ## 25/09/2026
 
 - Removed the ESD diodes from the SMA connectors, these are unnecessary and

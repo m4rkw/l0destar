@@ -84,7 +84,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
 |---------|------|--------|-------|
 | Input stage | 12V input reverse polarity | PASSED | |
 | Input stage | 12V ignition input reverse polarity | PASSED | |
-| INA228 | Voltage reading function | PASSED | |
+| INA238 | Voltage reading function | PASSED | |
 | Ignition presence | Ignition sense 3.3v signal | PASSED | |
 | LT8609 | 4.2V output | PASSED | |
 | LT8609 | UVLO thresholds | PASSED | |
@@ -112,7 +112,7 @@ feeds have also been recalculated for the JLC04161H-7628 stack-up.
  - Enhanced input protection sized for pulse 2a at the ISO 7637-2:2011 maximum
  - Onboard 2A fusing
  - Ignition presence sensing
- - INA228 voltage reading
+ - INA238 voltage reading
  - High efficiency buck converter
  - Auxiliary 3.3V rail for the GPS antenna bias tee
  - ASM330LHHXTR 6-axis IMU gyro/accelerometer
@@ -321,7 +321,7 @@ separate load switches.
 | S2C1 | 47uF input capacitor | 2220 >= 50V 20% X7R | [CKG57NX7R1H476M500JH](https://uk.farnell.com/tdk/ckg57nx7r1h476m500jh/cap-stacked-47uf-50v-mlcc-2220/dp/3816888) | |
 | S2C2 | 47uF input capacitor | 2220 >= 50V 20% X7R | [CKG57NX7R1H476M500JH](https://uk.farnell.com/tdk/ckg57nx7r1h476m500jh/cap-stacked-47uf-50v-mlcc-2220/dp/3816888) | |
 | S2C3 | 10uF input capacitor | 1210 >= 50V 10% X7R SOFT TERMINATION | [MCJCU32MLB7106KPPDT1](https://uk.farnell.com/taiyo-yuden/mcjcu32mlb7106kppdt1/capacitor-mlcc-10uf-50v-x7r-1210/dp/4666637) | |
-| S3U1 | INA228 voltage read IC | INA228 10-VSSOP | [INA228](https://www.aliexpress.com/item/1005008704299153.html) | |
+| S3U1 | INA238 voltage read IC | INA238 10-VSSOP | [INA238AIDGSR](https://www.digikey.co.uk/en/products/detail/texas-instruments/INA238AIDGSR/15857213) | |
 | S3C1 | 2.2uF capacitor | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |
 | S3C2 | 100nF capacitor | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | S4Q1 | Ignition sense MOSFET | 2N7002 SOT-23 | [2N7002](https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174) | |
@@ -551,7 +551,7 @@ buck enable divider. Quantities are per board.
 | All | 15V Zener diode | 3 | BZX84C15 | [BZX84C15](https://uk.farnell.com/multicomp-pro/bzx84c15/zener-diode-0-3w-15v-sot-23/dp/2675186) | |
 | All | 400W TVS diode | 2 | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://uk.farnell.com/nexperia/ptvs33vs1utr-115/tvs-diode-aecq101-unidir-33v-400w/dp/3440137) | |
 | All | Ideal diode | 1 | LM66100 | [LM66100](https://www.aliexpress.com/item/1005008565117953.html) | |
-| All | INA228 voltage read IC | 1 | INA228 10-VSSOP | [INA228](https://www.aliexpress.com/item/1005008704299153.html) | |
+| All | INA238 voltage read IC | 1 | INA238 10-VSSOP | [INA238AIDGSR](https://www.digikey.co.uk/en/products/detail/texas-instruments/INA238AIDGSR/15857213) | |
 | All | Buck converter | 1 | LT8609AIMSE MSOP-EP-10 | [LT8609AIMSE#PBF](https://uk.farnell.com/analog-devices/lt8609aimse-pbf/dc-dc-conv-sync-buck-2mhz-125deg/dp/4025049) | |
 | All | Reverse-blocking load switch | 1 | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://uk.farnell.com/vishay/sip32431dr3-t1ge3/ic-load-switch-1-1v-5-5v-1a-sc70/dp/2361509) | |
 | All | ASM330LHHXTR accelerometer | 1 | ASM330LHHXTR | [ASM330LHHXTR](https://estore.st.com/en/products/mems-and-sensors/inemo-inertial-modules/asm330lhhx.html) | |
