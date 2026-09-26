@@ -112,9 +112,9 @@ extern bool  engine_running;
 extern float battery_v;
 /* How long the last engine-off telemetry wake took, and which record it
  * belongs to.  ms is measured from the moment the sleep loop woke to the
- * moment it settled back down with the send done and the modem off; rec_id
- * is the rid= of the record that wake produced, 0 when there is nothing to
- * report (both are set and cleared together).
+ * moment it settled back down with the send done and the modem off (or left
+ * to fall into PSM); rec_id is the rid= of the record that wake produced, 0
+ * when there is nothing to report (both are set and cleared together).
  *
  * The figure cannot ride the record it describes — the device is still awake
  * when it builds one, and the expensive part of a bad wake comes after the
@@ -133,6 +133,16 @@ struct wake_report {
      * them registering.  -1 when there was no attach to pay for (the modem
      * was already registered) or it never completed. */
     int32_t  attach_ms;
+    /* The serving cell as the wake left it, when its record went out without
+     * a reading of its own.  A wake that finds the modem in PSM builds its
+     * record before the radio is up, and a sleeping modem has no measurement
+     * to give; the send wakes it, so the reading is taken once the reply is
+     * in.  Carried beside wt= as ws=<rec_id>:<rsrp>:<snr>:<band> and filed
+     * against the same record.  signal is false when there is none. */
+    bool     signal;
+    int16_t  rsrp_dbm;
+    int16_t  snr_db;
+    uint8_t  band;
 };
 
 extern struct wake_report wake_pending;
@@ -175,6 +185,13 @@ bool modem_psm_asleep(void);            /* the modem says it is in PSM now */
 #else
 static inline bool modem_psm_granted(void) { return false; }
 static inline bool modem_psm_asleep(void)  { return false; }
+#endif
+#if IS_ENABLED(CONFIG_APP_PSM_SLEEP)
+/* Milliseconds since the radio's last registration, RRC change or wake from
+ * PSM: how long a modem that is not in PSM has had to get there. */
+int64_t modem_radio_quiet_ms(void);
+#else
+static inline int64_t modem_radio_quiet_ms(void) { return 0; }
 #endif
 int  modem_get_imei(char *out, size_t out_len);
 int  modem_get_network_status(void);   /* 1=home, 5=roaming */

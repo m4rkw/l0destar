@@ -108,6 +108,37 @@ def test_wake_figure_without_a_reference_is_dropped():
     assert 'wake_ms' not in d and 'wake_ref' not in d
 
 
+def test_wake_signal_is_kept_apart_from_this_records_signal():
+    # ws=<rid>:<rsrp>:<snr>:<band> is the reading an earlier wake took after
+    # its send.  It must never land in this record's own signal columns.
+    d = telemetry.parse_csv_line(FULL + ',wt=41237:1009:0,ws=41237:-108:-2:20')
+    assert d['wake_signal_ref'] == '41237'
+    assert d['wake_rsrp'] == '-108'
+    assert d['wake_snr'] == '-2'
+    assert d['wake_band'] == '20'
+    assert 'rsrp' not in d and 'snr' not in d and 'band' not in d
+
+
+def test_wake_signal_short_of_a_part_is_dropped():
+    # All four or nothing: a partial reading is not stored.
+    for ws in ('ws=41237:-108:-2', 'ws=41237:-108::20', 'ws=:-108:-2:20'):
+        d = telemetry.parse_csv_line(FULL + ',' + ws)
+        assert 'wake_signal_ref' not in d and 'wake_rsrp' not in d
+
+
+def test_wake_signal_validation():
+    assert telemetry._wake_signal(
+        {'wake_signal_ref': '41237', 'wake_rsrp': '-108', 'wake_snr': '-2',
+         'wake_band': '20'}, 'imei') == (41237, -108, -2, 20)
+    # Outside what the modem can report, or not a number: a corrupt field.
+    for rsrp, snr, band in (('-141', '0', '20'), ('-43', '0', '20'),
+                            ('-100', '25', '20'), ('-100', '0', '0'),
+                            ('x', '0', '20')):
+        assert telemetry._wake_signal(
+            {'wake_signal_ref': '41237', 'wake_rsrp': rsrp, 'wake_snr': snr,
+             'wake_band': band}, 'imei') == (None, None, None, None)
+
+
 def test_dbg_is_compound():
     # dbg's own body uses semicolons, so it must not be split on them like
     # every other extras group.

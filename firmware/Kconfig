@@ -970,10 +970,11 @@ config APP_PSM_SLEEP_GRACE_S
 	default 60
 	depends on APP_PSM_SLEEP
 	help
-	  Measured from the end of the wake, and on top of the active time the
-	  modem must run down first, so the default is generous.  Exceeding it
-	  means PSM is not happening however it was negotiated, and sleep
-	  falls back to CFUN=0 for the rest of this sleep.
+	  Measured from the radio's last activity -- its registration, an RRC
+	  change or a wake from PSM -- and on top of the active time the modem
+	  must run down first, so the default is generous.  Exceeding it means
+	  PSM is not happening however it was negotiated, and sleep falls back
+	  to CFUN=0 for the rest of this sleep.
 
 config APP_PSM_TAU_S
 	int "Periodic TAU to request (seconds)"
@@ -1180,6 +1181,23 @@ config APP_TOW_POLL_S
 	  Sleep-loop wake cadence for the tilt check.  Each poll is a single
 	  accelerometer read (~ms); the power cost is negligible on vehicle
 	  power.
+
+config APP_HW_FAULT_PRIORITY
+	int "Priority for a peripheral that did not answer at boot"
+	default 1
+	range -2 2
+	help
+	  Sent as A,<prio>,<msg> when a fitted part fails to initialise.
+
+	  Above the 0 used for settings changes, because these are silent
+	  losses of what the device is for and nothing else reports them: the
+	  unit carries on sending position exactly as though it were whole.
+	  Below the 2 the movement alarm uses, because a dead sensor is not an
+	  emergency that needs acknowledging at 3am -- it needs noticing.
+
+	  -2 silences them (Pushover's lowest priority raises no
+	  notification), for a bench board deliberately running without part
+	  of its hardware.
 
 config APP_ACCEL_ALERT_PRIORITY
 	int "Priority for accelerometer-derived alerts"

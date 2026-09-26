@@ -160,6 +160,43 @@ def test_attach_longer_than_the_wake_is_dropped(device, database):
     assert updated['attach_ms'] is None
 
 
+def test_wake_signal_lands_on_the_record_it_names(device, database):
+    # A wake from PSM builds its record before the radio is up, so the record
+    # goes out without a reading; the one taken after the send follows on the
+    # next record and fills the gap on the record it names.
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100'))
+    first = last_log(database)
+    assert first['rsrp'] is None
+    send(device, record(60, 51.5, -0.1, 0,
+                        extras=',rid=101,wt=100:1009:0,ws=100:-108:-2:20'))
+    second = last_log(database)
+
+    updated = database.one('SELECT * FROM `log` WHERE `id` = %s', (first['id'],))
+    assert (updated['rsrp'], updated['snr'], updated['band']) == (-108, -2, 20)
+    # ...and never on the record carrying it.
+    assert second['rsrp'] is None
+
+
+def test_wake_signal_does_not_replace_a_records_own_reading(device, database):
+    send(device, record(0, 51.5, -0.1, 0,
+                        extras=',rsrp=-87;snr=7;band=20,rid=100'))
+    first = last_log(database)
+    send(device, record(60, 51.5, -0.1, 0,
+                        extras=',rid=101,wt=100:1009:0,ws=100:-108:-2:20'))
+
+    updated = database.one('SELECT * FROM `log` WHERE `id` = %s', (first['id'],))
+    assert (updated['rsrp'], updated['snr'], updated['band']) == (-87, 7, 20)
+
+
+def test_wake_signal_for_a_missing_record_is_dropped(device, database):
+    # Unlike a wake figure it is not held: the device only reads it after a
+    # send the server answered, so a record that is not here is not coming.
+    send(device, record(60, 51.5, -0.1, 0, extras=',rid=101,ws=100:-108:-2:20'))
+    assert last_log(database)['rsrp'] is None
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100'))
+    assert last_log(database)['rsrp'] is None
+
+
 def test_signal_quality_is_stored(device, database):
     send(device, record(0, 51.5, -0.1, 0,
                         extras=',mcc=234;mnc=10;lac=1a;cid=ff;rat=CATM1'

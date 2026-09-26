@@ -638,15 +638,6 @@ static void do_sleep(void)
 
     int telemetry_remaining = telemetry_interval();
 
-    /* When to check that a modem left registered for PSM has actually gone
-     * to sleep, 0 when nothing is owed a check.  A modem that stays
-     * registered without entering PSM is indistinguishable from a working
-     * one in telemetry — same fast wake, same absent attach — and draws
-     * milliamps rather than microamps out of a parked vehicle battery.  So
-     * it is checked rather than assumed, and the failure falls back to the
-     * CFUN=0 this replaced. */
-    int64_t psm_check_at = 0;
-
     /* Uptime at which the timed report now in progress woke the unit, 0 when
      * none is.  The wake is not over when the send is: one that could not
      * register keeps the modem up and the loop polling for it every
@@ -661,6 +652,12 @@ static void do_sleep(void)
     /* How much of the wake went on the attach.  -1 until one is measured;
      * a wake that found the modem already registered paid none. */
     int32_t  wake_attach_ms = -1;
+    /* The serving cell as that wake left it, when its record went out
+     * without a reading of its own — see wake_report.signal. */
+    bool     wake_signal = false;
+    int16_t  wake_rsrp_dbm = 0;
+    int16_t  wake_snr_db = 0;
+    uint8_t  wake_band = 0;
 
     ign_irq_enable();
     atomic_clear(&s_ign_int_flag);
@@ -1151,6 +1148,19 @@ static void do_sleep(void)
             if (collect_data(ignition) > 0) {
                 wake_rec_id = data_last_rec_id();
                 send_data();
+                /* A wake that found the modem in PSM built this record before
+                 * the radio was up, and a sleeping modem has no measurement to
+                 * give, so the record went out without a signal reading.  The
+                 * send has woken the radio: read it now, while the connection
+                 * that carried the reply is still up, for the wake figure to
+                 * carry to the server as ws=, filed against this record. */
+                if (last_send_ok && !g_cell.signal_valid &&
+                    modem_read_signal() == 0) {
+                    wake_signal = true;
+                    wake_rsrp_dbm = g_cell.rsrp_dbm;
+                    wake_snr_db = g_cell.snr_db;
+                    wake_band = g_cell.band;
+                }
                 if (pending_server_cmd[0] != '\0') {
                     cmd_run(pending_server_cmd);
                     pending_server_cmd[0] = '\0';
@@ -1233,6 +1243,10 @@ static void do_sleep(void)
                 wake_pending.rec_id = wake_rec_id;
                 wake_pending.ms = awake_ms;
                 wake_pending.attach_ms = wake_attach_ms;
+                wake_pending.signal = wake_signal;
+                wake_pending.rsrp_dbm = wake_rsrp_dbm;
+                wake_pending.snr_db = wake_snr_db;
+                wake_pending.band = wake_band;
                 LOG_INF("timed wake done: %lld ms awake, %d ms of it "
                         "attaching (record %u)",
                         awake_ms, wake_attach_ms, wake_rec_id);
@@ -1243,35 +1257,35 @@ static void do_sleep(void)
             wake_at = 0;
             wake_rec_id = 0;
             wake_attach_ms = -1;
+            wake_signal = false;
         }
 
-        /* Did the modem we left registered actually go to sleep?  Armed
-         * whenever a pass ends with PSM granted and the radio still up, and
-         * the grace period runs on top of the active timer the modem has to
-         * run down first.  Nothing here infers PSM from being registered —
-         * that is exactly the pair this cannot tell apart from outside. */
+        /* Did the modem we left registered actually go to sleep?  One that
+         * stays registered without entering PSM is indistinguishable from a
+         * working one in telemetry — same fast wake, same absent attach — and
+         * draws milliamps rather than microamps out of a parked vehicle
+         * battery.  So it is checked rather than assumed, and the failure
+         * falls back to the CFUN=0 this replaced.
+         *
+         * The window is the active timer the modem has to run down plus a
+         * grace period, and it runs from the radio's last activity as
+         * modem.c records it, never from an earlier pass: a deadline set
+         * while the modem slept used to fall due on the pass of the next
+         * timed report, a second after the send had woken it, and so
+         * powered off a modem that PSM was working on.  Nothing here infers
+         * PSM from being registered — that is exactly the pair this cannot
+         * tell apart from outside. */
         if (IS_ENABLED(CONFIG_APP_PSM_SLEEP) && network_ready &&
-            modem_psm_granted()) {
-            if (psm_check_at == 0) {
-                psm_check_at = k_uptime_get() +
-                    (int64_t)(CONFIG_APP_PSM_ACTIVE_S +
-                              CONFIG_APP_PSM_SLEEP_GRACE_S) * 1000;
-            } else if (k_uptime_get() >= psm_check_at) {
-                if (modem_psm_asleep()) {
-                    psm_check_at = 0;      /* satisfied; re-armed next pass */
-                } else {
-                    console_resume();
-                    LOG_WRN("PSM granted but the modem is still awake %ds "
-                            "on — powering it off instead",
-                            CONFIG_APP_PSM_ACTIVE_S +
-                            CONFIG_APP_PSM_SLEEP_GRACE_S);
-                    transport_teardown();
-                    modem_power_off();
-                    psm_check_at = 0;
-                }
-            }
-        } else {
-            psm_check_at = 0;
+            modem_psm_granted() && !modem_psm_asleep() &&
+            modem_radio_quiet_ms() >=
+                (int64_t)(CONFIG_APP_PSM_ACTIVE_S +
+                          CONFIG_APP_PSM_SLEEP_GRACE_S) * 1000) {
+            console_resume();
+            LOG_WRN("PSM granted but the modem is still awake %ds after its "
+                    "last radio activity — powering it off instead",
+                    CONFIG_APP_PSM_ACTIVE_S + CONFIG_APP_PSM_SLEEP_GRACE_S);
+            transport_teardown();
+            modem_power_off();
         }
 
         /* re-read baseline and re-arm accel interrupt before next sleep cycle */
@@ -1654,8 +1668,34 @@ int main(void)
         hw_selftest();
     }
 
-    if (hw_power_init())  LOG_WRN("INA228 init failed — voltage unavailable");
-    if (hw_accel_init())  LOG_WRN("accel init failed — readings unavailable");
+    /* A part on the I2C bus that did not answer.
+     *
+     * The warnings already reach the captured log, but a log line is
+     * something you find after going to look, and these are silent losses of
+     * what the device is for: with no accelerometer there is no movement,
+     * impact or tow detection, and with no INA228 there is no battery
+     * voltage — which the low-battery alert, the sleep safety gate and the
+     * engine-running fallback all read.  The unit carries on reporting
+     * position exactly as though it were whole, so without an alert nothing
+     * would ever say otherwise.  Seen on a new bench build on 2026-09-24,
+     * where the INA228 did not ACK while the accelerometer on the same bus
+     * was fine.
+     *
+     * Queued, not sent: the radio is not up yet, so these ride out with the
+     * first record.  Once per boot — there is no persistent store to
+     * remember having said it, so a board with a dead part reports again
+     * after every restart, FOTA reboots included. */
+    if (hw_power_init()) {
+        LOG_WRN("INA228 init failed — voltage unavailable");
+        alert_enqueue("INA228 not responding (I2C): no battery voltage",
+                      CONFIG_APP_HW_FAULT_PRIORITY);
+    }
+    if (hw_accel_init()) {
+        LOG_WRN("accel init failed — readings unavailable");
+        alert_enqueue("accelerometer not responding (I2C): no movement, "
+                      "impact or tow detection",
+                      CONFIG_APP_HW_FAULT_PRIORITY);
+    }
     if (hw_can_init())    LOG_WRN("CAN controller init failed");
     if (IS_ENABLED(CONFIG_APP_BOARD_HAS_L_SENSE) && kline_l_sense_init()) {
         LOG_WRN("L sense init failed — no L-line short detection");

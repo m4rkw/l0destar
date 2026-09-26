@@ -90,8 +90,10 @@ EXTRA_KEYS = {
     'ce': 'ce_level',            # LTE-M coverage enhancement level
     'txrep': 'tx_rep',           # estimated transmit repetitions
     # 'rsrq' is handled in parse_csv_line: sent in tenths of a dB.
-    # 'wt' is handled in parse_csv_line: it is <rid>:<ms>, and the one field
-    # that describes another record rather than this one.
+    # 'wt' is handled in parse_csv_line: it is <rid>:<ms>, and one of the two
+    # fields that describe another record rather than this one.
+    # 'ws' is the other: <rid>:<rsrp>:<snr>:<band>, the signal read after
+    # that record's send.
 }
 
 # Upper bound on a reported wake, in milliseconds.  The device's own ceiling
@@ -99,6 +101,12 @@ EXTRA_KEYS = {
 # at most, so anything near a day is a corrupt field rather than a very
 # patient tracker -- and storing it would skew every average over the column.
 WAKE_MS_MAX = 24 * 60 * 60 * 1000
+
+# What a ws= reading can hold: the firmware converts the 3GPP indices, which
+# cover RSRP -140..-44 dBm and SNR -24..+24 dB, and names an LTE band.
+WAKE_RSRP_RANGE = (-140, -44)
+WAKE_SNR_RANGE = (-24, 24)
+WAKE_BAND_RANGE = (1, 255)
 
 # Config the device may report back, mirrored onto the `device` row so the
 # server's view of a unit's settings tracks what the unit actually applied.
@@ -240,6 +248,20 @@ def parse_csv_line(line):
                     data['wake_ms'] = bits[1]
                     if len(bits) >= 3 and bits[2]:
                         data['wake_attach_ms'] = bits[2]
+                continue
+            if key == 'ws':
+                # <rid>:<rsrp>:<snr>:<band> -- the serving cell as the wake
+                # that sent record <rid> left it.  A wake from PSM builds its
+                # record before the radio is up, and a sleeping modem has no
+                # measurement to give, so the device reads it after the send.
+                # Kept under names of its own for the same reason as wt=:
+                # these are that record's figures, not this one's.
+                bits = value.split(':')
+                if len(bits) >= 4 and all(bits[:4]):
+                    data['wake_signal_ref'] = bits[0]
+                    data['wake_rsrp'] = bits[1]
+                    data['wake_snr'] = bits[2]
+                    data['wake_band'] = bits[3]
                 continue
             column = EXTRA_KEYS.get(key)
             if column:
@@ -573,6 +595,68 @@ def _store_wake_figure(database, device, data, rec_id):
         )
 
 
+def _wake_signal(data, imei):
+    """The ``(rec_id, rsrp, snr, band)`` a ``ws=`` carries, or four ``None``.
+
+    All four or nothing: a reading is only worth storing whole, and one
+    outside what the modem can report is a corrupt field, not a measurement.
+    """
+    if 'wake_signal_ref' not in data:
+        return None, None, None, None
+    try:
+        ref = int(data['wake_signal_ref'])
+        rsrp = int(data['wake_rsrp'])
+        snr = int(data['wake_snr'])
+        band = int(data['wake_band'])
+    except (TypeError, ValueError):
+        logs.app.warning('unparsable ws=%r:%r:%r:%r from %s',
+                         data.get('wake_signal_ref'), data.get('wake_rsrp'),
+                         data.get('wake_snr'), data.get('wake_band'), imei)
+        return None, None, None, None
+    if (ref <= 0
+            or not WAKE_RSRP_RANGE[0] <= rsrp <= WAKE_RSRP_RANGE[1]
+            or not WAKE_SNR_RANGE[0] <= snr <= WAKE_SNR_RANGE[1]
+            or not WAKE_BAND_RANGE[0] <= band <= WAKE_BAND_RANGE[1]):
+        logs.app.warning('implausible ws=%d:%d:%d:%d from %s',
+                         ref, rsrp, snr, band, imei)
+        return None, None, None, None
+    return ref, rsrp, snr, band
+
+
+def _store_wake_signal(database, device, data, rec_id):
+    """File a record's ``ws=`` against the record it names.
+
+    The signal a wake read after its send, for a record that went out without
+    a reading of its own: a wake from PSM builds its record before the radio
+    is up.  It only ever fills a gap -- a record that carried its own reading
+    keeps it -- and it is never held the way a wake figure is: the device
+    reads it only after a send the server answered, so the record it names
+    is already stored, and one that is not is dropped rather than waited for.
+    """
+    ref, rsrp, snr, band = _wake_signal(data, device.get('imei', '?'))
+    if ref is None:
+        return
+    if ref == rec_id:
+        logs.app.warning('ws= names its own record (%d) from %s', ref,
+                         device.get('imei', '?'))
+        return
+    target = database.one(
+        'SELECT `id`, `rsrp` FROM `log` '
+        'WHERE `device_id` = %s AND `rec_id` = %s ORDER BY `id` DESC LIMIT 1',
+        (device['id'], ref),
+    )
+    if target is None:
+        logs.app.info('ws= names record %d, which is not stored, from %s',
+                      ref, device.get('imei', '?'))
+        return
+    if target['rsrp'] is None:
+        database.query(
+            'UPDATE `log` SET `rsrp` = %s, `snr` = %s, `band` = %s '
+            'WHERE `id` = %s',
+            (rsrp, snr, band, target['id']),
+        )
+
+
 def process_record(data, device, ip, database=None):
     """Store one telemetry record.
 
@@ -643,6 +727,7 @@ def process_record(data, device, ip, database=None):
         device['wake_pending_attach_ms'] = None
 
     _store_wake_figure(database, device, data, entry.get('rec_id'))
+    _store_wake_signal(database, device, data, entry.get('rec_id'))
 
     # Ignition off ends track mode; see TRACK_MODE_IDLE_SECONDS.
     if entry['ignition_state'] == 0 and device.get('track_mode'):

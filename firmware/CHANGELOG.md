@@ -1,5 +1,80 @@
 # Changelog
 
+## 0.4.62
+
+### PSM sleep engages
+The car has run `CONFIG_APP_PSM_SLEEP=y` since 0.4.58.  When the network
+grants PSM, sleep leaves the modem registered instead of taking it to CFUN=0:
+the modem falls into PSM on its own once the active timer runs down, and the
+next wake resumes instead of attaching again.  A modem that stays registered
+without ever reaching PSM would draw milliamps, so the sleep loop checks for
+that and falls back to CFUN=0.  On the car the fallback fired on every parked
+wake from 0.4.58 to 0.4.61 — "PSM granted but the modem is still awake 70s
+on", about 90 s after each send — so every wake still paid the full attach
+PSM exists to avoid, on top of the tail PSM adds.
+- **The modem's sleep notifications are compiled in.**  `APP_PSM_SLEEP` now
+selects `LTE_LC_MODEM_SLEEP_NOTIFICATIONS`.  Without it the link controller
+never subscribes to `%XMODEMSLEEP`, so `LTE_LC_EVT_MODEM_SLEEP_ENTER` never
+arrived and the check could not see a modem that had gone to sleep.  The
+modem was very probably in PSM for most of those 90 s — on the bench, on the
+car's home cell, it gets there 12 s after the reply — and the fallback then
+woke it only to power it off.  The notification threshold comes down from
+the stock 20 minutes to 60 s
+(`LTE_LC_MODEM_SLEEP_NOTIFICATIONS_THRESHOLD_MS`).
+- **The check measures from the radio's last activity.**  It used to arm a
+deadline on one pass and judge it about 90 s later.  When that deadline fell
+due on the pass of a timed report, the send had just woken the modem out of
+PSM, so it read as awake and was powered off — one wake in four.  On the
+bench, with 150 s wakes, it fired on the fourth wake as predicted from the
+log, and the wake after it attached again (3.9 s, 3.3 s of it attaching).
+modem.c now records the radio's last sign of life — a registration, an RRC
+change or a wake from PSM — and the loop falls back only when the modem is
+not in PSM and the radio has been quiet for the active time plus
+`APP_PSM_SLEEP_GRACE_S`.  Six bench wakes, no false fallback.  The warning
+now reads "still awake 70s after its last radio activity".
+- **A wake from PSM takes about a second.**  On the bench, on the car's home
+cell (O2 234-10), a timed wake that resumes from PSM was awake 0.92 to 1.35 s
+with no attach, against 3 to 4 s when it attaches (0.4.61 on the car: median
+3.0 s, 2.6 s of it attaching).  The modem enters PSM about 12 s after the
+reply: the network releases the connection about 2 s after the last data,
+then the 10 s active timer runs.  `wake_ms` ends when the modem is left to
+fall asleep, so a PSM wake's figure leaves that tail out.
+- **No RAI on this network.**  `%RAI` reports neither AS nor CP RAI on O2's
+cells here, so the `SO_RAI` hints transport.c gives are ignored and the
+connection stays up until the network's inactivity timer releases it.
+
+### A wake from PSM still reports the signal
+- **The reading is taken after the send.**  A wake that finds the modem in
+PSM builds its record before the radio is up, and `%XMONITOR` has no
+measurement to give from a sleeping modem, so on the bench every PSM wake's
+record went out without `rsrp`/`snr`/`band`.  When a record goes out without
+a reading, the wake now reads `%XMONITOR` once the reply is in, while the
+connection that carried it is still up.
+- **It travels as `ws=<rid>:<rsrp>:<snr>:<band>`,** beside `wt=` on the next
+record, and like `wt=` it describes the record it names.  The server files
+it there only where that record has no reading of its own, and never holds
+it the way it holds a wake figure: the reading follows a send the server
+answered, so the record is already stored.  No schema change; a server
+without the change ignores the field.  On a Traccar build it rides as
+`wakeRssi`/`wakeSnr`/`wakeBand` attributes, joined on the same
+`wakeRecordId`.
+
+### A part that does not answer at boot raises an alert
+- **An INA228 or accelerometer that does not answer on I2C is alerted, not
+just logged.**  The warnings reached the captured log, but they are silent
+losses of what the device is for: with no accelerometer there is no
+movement, impact or tow detection, and with no INA228 there is no battery
+voltage, which the low-battery alert, the sleep safety gate and the
+engine-running fallback all read.  The unit carries on reporting position as
+though it were whole.  Seen on a new bench build on 2026-09-24, where the
+INA228 did not ACK while the accelerometer on the same bus was fine.  Queued
+to ride out with the first record, once per boot, so a board with a dead
+part reports again after every restart, FOTA reboots included.
+- **`CONFIG_APP_HW_FAULT_PRIORITY` (default 1)** sits above the 0 used for
+settings changes and below the movement alarm's 2: a dead sensor needs
+noticing, not acknowledging at 3am.  -2 silences it, for a bench board
+deliberately running without part of its hardware.
+
 ## 0.4.61
 
 ### Telling a weak location from a weak antenna

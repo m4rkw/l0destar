@@ -230,9 +230,24 @@ static void append_sync_fields(void)
         }
         if (n > 0 && n < DATA_LIMIT - data_index - 1) {
             data_index += n;
+            /* The signal that wake read after its send, for the same
+             * record: a wake from PSM built that record before the radio
+             * was up, so it went out without one.  Dropped with the figure
+             * if it does not fit, never sent on its own. */
+            if (wake_pending.signal) {
+                n = snprintf(&data_current[data_index],
+                             DATA_LIMIT - data_index - 1,
+                             ",ws=%u:%d:%d:%u", wake_pending.rec_id,
+                             wake_pending.rsrp_dbm, wake_pending.snr_db,
+                             wake_pending.band);
+                if (n > 0 && n < DATA_LIMIT - data_index - 1) {
+                    data_index += n;
+                }
+            }
             wake_pending.rec_id = 0;
             wake_pending.ms = 0;
             wake_pending.attach_ms = -1;
+            wake_pending.signal = false;
         }
     }
 

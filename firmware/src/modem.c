@@ -84,6 +84,28 @@ int modem_attach_ms(void)
     return s_attach_ms;
 }
 
+#if IS_ENABLED(CONFIG_APP_PSM_SLEEP)
+/* Uptime of the radio's last sign of life: a registration, an RRC change
+ * either way, or a wake from PSM.  The sleep loop's PSM check measures its
+ * window from here rather than from a deadline set on an earlier pass: that
+ * deadline could fall due on the pass of the next timed report, a second
+ * after the send had woken the modem out of PSM, and it then powered off a
+ * modem that PSM was working on (bench, 2026-09-25: one wake in four). */
+static int64_t s_radio_active_ms;
+
+static void radio_active(void)
+{
+    s_radio_active_ms = k_uptime_get();
+}
+
+int64_t modem_radio_quiet_ms(void)
+{
+    return k_uptime_get() - s_radio_active_ms;
+}
+#else
+static inline void radio_active(void) { }
+#endif
+
 #if IS_ENABLED(CONFIG_APP_PSM_PROBE)
 /* The network's answer, as last reported.  active_time < 0 is the library's
  * "PSM is deactivated" — which is also what a deliberate CFUN=0 produces, so
@@ -175,6 +197,7 @@ static void sleep_report(const struct lte_lc_evt *evt, bool entering)
         }
     } else {
         s_psm_asleep = false;
+        radio_active();
         LOG_INF("modem sleep exit: type %d", (int)type);
     }
 }
@@ -214,11 +237,15 @@ static void lte_handler(const struct lte_lc_evt *evt)
             /* Timed before the semaphore is given, so a waiter that wakes
              * on it already sees the finished figure. */
             search_ended();
+            radio_active();
             k_sem_give(&s_reg_sem);
         }
         break;
     }
     case LTE_LC_EVT_RRC_UPDATE:
+        /* Either way: going idle is where the active timer starts, and PSM
+         * is due that long after it. */
+        radio_active();
         LOG_DBG("RRC mode: %s",
                 evt->rrc_mode == LTE_LC_RRC_MODE_CONNECTED
                     ? "Connected" : "Idle");

@@ -322,6 +322,23 @@ static void encode_extra(struct query *q, const char *key, const char *val,
         }
         return;
     }
+    /* ws=<rid>:<rsrp>:<snr>:<band> is the serving cell as the wake that sent
+     * record <rid> left it, read after the send because a wake from PSM
+     * builds its record before the radio is up.  It rides beside wt=, so the
+     * reader joins it on the same wakeRecordId. */
+    if (strcmp(key, "ws") == 0) {
+        char buf[32];
+        char *f[4];
+
+        strncpy(buf, val, sizeof(buf) - 1);
+        buf[sizeof(buf) - 1] = '\0';
+        if (split(buf, ':', f, ARRAY_SIZE(f)) == 4) {
+            q_str(q, "wakeRssi", f[1]);
+            q_str(q, "wakeSnr", f[2]);
+            q_str(q, "wakeBand", f[3]);
+        }
+        return;
+    }
     for (size_t i = 0; i < ARRAY_SIZE(s_dropped); i++) {
         if (strcmp(key, s_dropped[i]) == 0) return;
     }
