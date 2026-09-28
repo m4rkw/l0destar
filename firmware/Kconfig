@@ -42,6 +42,18 @@ config APP_DEBUG_BATTERY_MV
 	  Debug override for benches without the INA228/vehicle supply:
 	  e.g. 13000 reports 13.0 V.  0 = live reading.
 
+config APP_DEBUG_DROP_DATAGRAMS
+	int "Discard every Nth telemetry datagram as if the network lost it (0 = never)"
+	default 0
+	range 0 100
+	help
+	  Bench only.  The UDP transport reports every Nth send as sent but
+	  never hands it to the modem, which is what a datagram lost in the
+	  modem or on the air looks like from here: no error, and no reply.
+	  Exercises the path that notices the missing reply and sends the
+	  records again (APP_DATABUF_UNACKED_SLOTS).  Never set it for a
+	  deployed unit.
+
 config APP_ACCEL_TEST
 	bool "Stream accelerometer data at boot"
 	default n
@@ -1351,6 +1363,42 @@ config APP_DATABUF_FLUSH_PER_CYCLE
 	  The backlog must not delay live telemetry, so it drains alongside
 	  the current record rather than in one burst.  Two datagrams a cycle
 	  clears a full buffer in about a minute at a 5 s cadence.
+
+config APP_DATABUF_UNACKED_SLOTS
+	int "Sent datagrams whose records are held until the server answers"
+	default 0 if APP_TRACCAR
+	default 6
+	range 0 16
+	help
+	  A UDP send returning 0 only means the modem queued the datagram.
+	  The server answers every datagram, and that answer is the only
+	  proof one arrived, so the records in each of the last few sends
+	  are kept until their answer comes back.  If it has not come within
+	  APP_ACK_TIMEOUT_S they go back into the backlog and are sent again,
+	  and the server drops any copy it already has.  On 2026-09-27 a
+	  tracking-area update the network rejected (EMM cause 9) made the
+	  modem discard what it had queued, twice in one short drive: three
+	  records at 10:57, and at 11:50 the last position and the
+	  ignition-off record, each of them counted as sent.
+
+	  Each slot is a datagram's worth of BSS (UDP_PACKET_SIZE, 1200
+	  bytes).  With every slot waiting, the oldest goes back to the
+	  backlog to make room.  0 turns this off: a send the modem takes
+	  counts as delivered, as before.  The Traccar transport needs none,
+	  since its HTTP response is already the receipt.
+
+config APP_ACK_TIMEOUT_S
+	int "Seconds without an answer before a datagram's records are sent again"
+	default 30
+	range 5 600
+	help
+	  Replies normally arrive within a second.  A modem that cannot get
+	  an RRC connection holds what it is given and delivers it late, all
+	  at once: 38 s on 2026-09-27 at 11:48, on a weak cell.  Resending
+	  too early only duplicates what is on its way, which the server
+	  discards; resending too late leaves a hole in the track for longer.
+	  While driving, the copy waits in the backlog until a reply shows
+	  the link is delivering again, rather than joining the stall.
 
 # --- captured warnings/errors ----------------------------------------------
 

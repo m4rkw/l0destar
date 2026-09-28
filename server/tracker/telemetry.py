@@ -22,6 +22,16 @@ sent record ``<rid>`` lasted.  That figure names its record because arrival
 order cannot identify it: a wake whose own send failed leaves its record in
 the device's backlog, which is flushed behind the live record describing it.
 
+``rid=`` is also how a copy is recognised.  The device holds a datagram's
+records until this server's reply to it comes back, and sends them again if it
+never does, so a datagram that arrived but whose reply was lost arrives twice;
+the second copy of a record (same rid, same fix time) is dropped.  ``age=<s>``
+is on a record sent long after it was built — from the backlog, or again after
+its first datagram went unanswered.  It is filed at the time it was built
+rather than on arrival, and when something newer is already stored it is
+history: it takes its place in the track and does nothing a live record would
+(no ignition alert, no journey change, no settings or track-mode change).
+
 Everything after the twelve fixed fields is an "extras" group: comma-separated
 groups of ``key=value`` pairs joined by semicolons.  Extras are optional and
 sparse by design.  The device pays for every byte in radio time, so fields
@@ -236,6 +246,11 @@ def parse_csv_line(line):
                     data['rsrq'] = '%.1f' % (int(value) / 10.0)
                 except (TypeError, ValueError):
                     pass
+                continue
+            if key == 'age':
+                # Seconds between the device building the record and sending
+                # it; not a column, but when the record belongs.
+                data['age'] = value
                 continue
             if key == 'wt':
                 # <rid>:<ms>[:<attach_ms>] -- the record the figure belongs
@@ -466,9 +481,12 @@ def _journey_miles(database, device_id, start_log_id, end_log_id):
     """
     if start_log_id is None:
         return None
+    # In time order, not arrival order: a record sent again after its first
+    # datagram went unanswered arrives after later ones, and summed where it
+    # landed it would add a detour the vehicle never drove.
     rows = database.all(
         'SELECT `latitude`, `longitude` FROM `log` WHERE `device_id` = %s '
-        'AND `id` >= %s AND `id` <= %s ORDER BY `id`',
+        'AND `id` >= %s AND `id` <= %s ORDER BY `timestamp`, `id`',
         (device_id, start_log_id, end_log_id),
     )
     total_km = 0.0
@@ -657,6 +675,62 @@ def _store_wake_signal(database, device, data, rec_id):
         )
 
 
+# Longest hold age= is believed for: well past any backlog the device can keep
+# (it thins a long outage rather than stopping), well short of a garbled field
+# putting a record in another year.
+RECORD_AGE_MAX = 7 * 24 * 60 * 60
+
+
+def _record_age(data, imei):
+    """Seconds between the device building this record and sending it, from
+    ``age=``, or None for a record sent fresh (or an unusable field)."""
+    raw = data.get('age')
+    if raw is None:
+        return None
+    try:
+        age = int(raw)
+    except (TypeError, ValueError):
+        logs.app.warning('unparsable age=%r from %s', raw, imei)
+        return None
+    if age < 0 or age > RECORD_AGE_MAX:
+        logs.app.warning('age=%d out of range from %s', age, imei)
+        return None
+    return age
+
+
+def _latest_row(database, device_id):
+    """The device's latest state: of its last few rows by arrival, the one
+    built last.  Arrival order stopped saying that once late records were
+    filed at the time they were built — a backlog flushed behind the live
+    record, a record sent again after its datagram went unanswered."""
+    rows = database.all(
+        'SELECT `id`, `timestamp` FROM `log` WHERE `device_id` = %s '
+        'ORDER BY `id` DESC LIMIT 50',
+        (device_id,),
+    )
+    if not rows:
+        return None
+    newest = max(rows, key=lambda r: (r['timestamp'], r['id']))
+    return database.one('SELECT * FROM `log` WHERE `id` = %s', (newest['id'],))
+
+
+def _is_copy(database, device, data):
+    """Whether this record is already stored: the device sent it again
+    because the reply to its first datagram never reached it, and the first
+    did arrive.  rid is consecutive within a boot and the fix time pins it to
+    that boot, so the pair is the record."""
+    try:
+        rec_id = int(data['rec_id'])
+    except (KeyError, TypeError, ValueError):
+        return False
+    stamp, _ = _parse_gsm_timestamp(data['gsm_timestamp'])
+    return database.one(
+        'SELECT `id` FROM `log` WHERE `device_id` = %s AND `rec_id` = %s '
+        'AND `gsm_timestamp` = %s LIMIT 1',
+        (device['id'], rec_id, stamp.strftime('%Y-%m-%d %H:%M:%S.%f')),
+    ) is not None
+
+
 def process_record(data, device, ip, database=None):
     """Store one telemetry record.
 
@@ -665,13 +739,41 @@ def process_record(data, device, ip, database=None):
     """
     database = database or db.web
 
-    previous = database.one(
-        'SELECT * FROM `log` WHERE `device_id` = %s ORDER BY `id` DESC LIMIT 1',
-        (device['id'],),
+    if 'gsm_timestamp' not in data:
+        raise ValueError('missing field: gsm_timestamp')
+
+    # A copy is answered like any other record — the reply is the receipt
+    # that stops the device sending it a third time — and stored once.
+    if _is_copy(database, device, data):
+        logs.udp.info('duplicate rid=%s from %s dropped', data.get('rec_id'),
+                      device.get('imei', '?'))
+        return None
+
+    now = datetime.datetime.now()
+
+    # Filed at the time it was built, not on arrival, when the device held it
+    # (age=).  History when something built later is already stored.
+    age = _record_age(data, device.get('imei', '?'))
+    built = now - datetime.timedelta(seconds=age) if age is not None else now
+
+    # The newest state stored before this record: what an ignition change is
+    # measured against and sticky fields carry forward from.  History has its
+    # own predecessor, the row before it in time.
+    previous = _latest_row(database, device['id'])
+    history = bool(
+        age is not None and previous is not None and previous['timestamp']
+        and built < previous['timestamp'] - datetime.timedelta(seconds=1)
     )
+    if history:
+        stamp, _ = _parse_gsm_timestamp(data['gsm_timestamp'])
+        previous = database.one(
+            'SELECT * FROM `log` WHERE `device_id` = %s AND `gsm_timestamp` <= %s '
+            'ORDER BY `gsm_timestamp` DESC, `id` DESC LIMIT 1',
+            (device['id'], stamp.strftime('%Y-%m-%d %H:%M:%S.%f')),
+        )
 
     entry = _build_entry(data, device, ip, previous)
-    now = datetime.datetime.now()
+    entry['timestamp'] = built.strftime('%Y-%m-%d %H:%M:%S.%f')
 
     # A figure that arrived before the record it belongs to: this may be that
     # record, flushed out of the backlog behind the one describing it.
@@ -680,9 +782,13 @@ def process_record(data, device, ip, database=None):
         entry['wake_ms'], entry['attach_ms'] = held_wake
 
     # powered_on marks the record on which the ignition came up, so the
-    # transition is queryable without comparing adjacent rows.
+    # transition is queryable without comparing adjacent rows.  Only a record
+    # that is the latest state can switch it on: a late ignition-on record
+    # behind an ignition-off one is the drive that already ended, and
+    # alerting on it would be a false alarm.
     powered_on = bool(
-        previous
+        not history
+        and previous
         and str(previous['ignition_state']) == '0'
         and entry['ignition_state'] == 1
     )
@@ -710,10 +816,14 @@ def process_record(data, device, ip, database=None):
         'INSERT INTO `log` (%s) VALUES (%s)' % (columns, placeholders), values
     )
 
-    try:
-        _update_journey(database, device, entry, log_id, powered_on)
-    except Exception:
-        logs.app.exception('journey update failed for %s', device.get('imei'))
+    # History fills in a journey's track (its miles are summed in time
+    # order) but opens and closes nothing: a late ignition-on record would
+    # reopen the journey that ended with the ignition-off already stored.
+    if not history:
+        try:
+            _update_journey(database, device, entry, log_id, powered_on)
+        except Exception:
+            logs.app.exception('journey update failed for %s', device.get('imei'))
 
     # The held figure went onto the row just inserted, so stop holding it.
     if held_wake is not None:
@@ -729,12 +839,16 @@ def process_record(data, device, ip, database=None):
     _store_wake_figure(database, device, data, entry.get('rec_id'))
     _store_wake_signal(database, device, data, entry.get('rec_id'))
 
-    # Ignition off ends track mode; see TRACK_MODE_IDLE_SECONDS.
-    if entry['ignition_state'] == 0 and device.get('track_mode'):
+    # Ignition off ends track mode; see TRACK_MODE_IDLE_SECONDS.  Not for
+    # history: that drive is over, and a newer one may be in the mode.
+    if (entry['ignition_state'] == 0 and device.get('track_mode')
+            and not history):
         clear_track_mode(device, database, 'ignition off')
 
-    # Mirror config the device reported back onto its row.
-    updates = [(key, int(data[key])) for key in DEVICE_SYNC_KEYS if key in data]
+    # Mirror config the device reported back onto its row — from a live
+    # record only, since a late one can carry a setting since changed.
+    updates = [(key, int(data[key])) for key in DEVICE_SYNC_KEYS
+               if key in data and not history]
     if updates:
         assignments = ', '.join('`%s` = %%s' % key for key, _ in updates)
         database.query(
@@ -763,11 +877,7 @@ def expire_track_mode(device, database):
     for the next drive to be found still on."""
     if not device.get('track_mode'):
         return
-    row = database.one(
-        'SELECT `timestamp` FROM `log` WHERE `device_id` = %s '
-        'ORDER BY `id` DESC LIMIT 1',
-        (device['id'],),
-    )
+    row = _latest_row(database, device['id'])
     stamp = row.get('timestamp') if row else None
     if isinstance(stamp, str):
         try:
@@ -886,11 +996,7 @@ def _handle_alert(line, device, database, log):
     # reading still relays, at normal priority.
     suppress = False
     if message.lower().startswith('low battery'):
-        latest = database.one(
-            'SELECT `ignition_state` FROM `log` WHERE `device_id` = %s '
-            'ORDER BY `id` DESC LIMIT 1',
-            (device['id'],),
-        )
+        latest = _latest_row(database, device['id'])
         if latest and str(latest['ignition_state']) == '1':
             suppress = True
         else:

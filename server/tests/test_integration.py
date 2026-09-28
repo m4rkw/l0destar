@@ -358,6 +358,118 @@ def test_malformed_record_does_not_lose_the_batch(device, database):
     assert database.one('SELECT COUNT(*) c FROM `log`')['c'] == before + 1
 
 
+# -- copies and late records ------------------------------------------------
+# The device holds a datagram's records until the reply to it comes back and
+# sends them again if it never does, marking anything sent long after it was
+# built with age=<seconds>.
+
+def rows(database):
+    return database.all('SELECT * FROM `log` ORDER BY `id`')
+
+
+def restamp(database, rec_id, seconds_ago):
+    """Put a stored row back in time, the way a drive's rows are spread out
+    in reality rather than a few milliseconds apart as in a test."""
+    database.query(
+        'UPDATE `log` SET `timestamp` = NOW(6) - INTERVAL %s SECOND '
+        'WHERE `rec_id` = %s', (seconds_ago, rec_id))
+
+
+def test_copy_of_a_record_is_dropped(device, database):
+    # The first datagram arrived; its reply did not, so the device sent the
+    # record again.  Answered, stored once.
+    line = record(0, 51.5, -0.1, 1, extras=',rid=100')
+    send(device, line)
+    response = send(device, line + ',age=40')
+    assert len(rows(database)) == 1
+    assert response.startswith('1,')
+
+
+def test_record_without_an_id_is_never_a_copy(device, database):
+    line = record(0, 51.5, -0.1, 1)
+    send(device, line)
+    send(device, line)
+    assert len(rows(database)) == 2
+
+
+def test_same_id_at_another_time_is_not_a_copy(device, database):
+    # ids restart at a random seed each boot, so an id alone can repeat.
+    send(device, record(0, 51.5, -0.1, 1, extras=',rid=100'))
+    send(device, record(1, 51.5, -0.1, 1, extras=',rid=100'))
+    assert len(rows(database)) == 2
+
+
+def test_late_record_is_filed_at_its_build_time(device, database):
+    send(device, record(1, 51.5, -0.1, 1, extras=',rid=101'))
+    send(device, record(0, 51.5, -0.1, 1, extras=',rid=100,age=35'))
+    late = database.one('SELECT * FROM `log` WHERE `rec_id` = 100')
+    now = database.one('SELECT NOW(6) AS n')['n']
+    assert 33 <= (now - late['timestamp']).total_seconds() <= 40
+
+
+def test_late_ignition_on_raises_no_alert_or_journey(device, database, monkeypatch):
+    # 11:50 on 2026-09-27: the last position went missing, the ignition-off
+    # record behind it arrived, and the position was sent again after it.
+    alerts = []
+    monkeypatch.setattr(telemetry.notify, 'send',
+                        lambda message, **kw: alerts.append(message))
+    database.query('UPDATE `device` SET `alarm` = 1 WHERE `id` = %s', (device['id'],))
+    device = db.lookup_device(imei=device['imei'])
+
+    send(device, record(0, 51.50, -0.1, 0, extras=',rid=1'))
+    send(device, record(1, 51.50, -0.1, 1, extras=',rid=2'))
+    send(device, record(2, 51.51, -0.1, 1, extras=',rid=3'))
+    send(device, record(4, 51.52, -0.1, 0, extras=',rid=5'))
+    assert len(alerts) == 1                      # the real ignition-on
+    assert last_journey(database)['end_time'] is not None
+
+    send(device, record(3, 51.515, -0.1, 1, extras=',rid=4,age=20'))
+    late = database.one('SELECT * FROM `log` WHERE `rec_id` = 4')
+    assert not late['powered_on']
+    assert len(alerts) == 1
+    journey = last_journey(database)
+    assert journey['end_time'] is not None
+    assert database.one('SELECT COUNT(*) c FROM `journey`')['c'] == 1
+
+
+def test_held_ignition_off_closes_the_journey_when_it_happened(device, database):
+    # An ignition-off recorded during an outage and sent when the network
+    # came back is still the latest state: the journey ends at its time.
+    send(device, record(0, 51.50, -0.1, 1, extras=',rid=1'))
+    send(device, record(1, 51.51, -0.1, 1, extras=',rid=2'))
+    restamp(database, 1, 200)
+    restamp(database, 2, 190)
+    send(device, record(2, 51.52, -0.1, 0, extras=',rid=3,age=120'))
+
+    journey = last_journey(database)
+    now = database.one('SELECT NOW(6) AS n')['n']
+    assert journey['end_time'] is not None
+    assert 115 <= (now - journey['end_time']).total_seconds() <= 125
+
+
+def test_journey_miles_follow_time_not_arrival(device, database):
+    # A record sent again mid-drive arrives after later ones; summed in
+    # arrival order it would add a detour back to where the car had been.
+    send(device, record(0, 51.50, -0.1, 1, extras=',rid=1'))
+    send(device, record(1, 51.51, -0.1, 1, extras=',rid=2'))
+    send(device, record(3, 51.53, -0.1, 1, extras=',rid=4'))
+    restamp(database, 1, 50)
+    restamp(database, 2, 40)
+    restamp(database, 4, 20)
+    send(device, record(2, 51.52, -0.1, 1, extras=',rid=3,age=30'))
+    send(device, record(4, 51.54, -0.1, 0, extras=',rid=5'))
+
+    # 51.50 to 51.54 is about 4.45 km, 2.77 miles; in arrival order it
+    # would read 4.1.
+    assert 2.6 <= float(last_journey(database)['miles']) <= 2.9
+
+
+def test_late_record_leaves_settings_alone(device, database):
+    send(device, record(1, 51.5, -0.1, 1, extras=',rid=11'))
+    send(device, record(0, 51.5, -0.1, 1, extras=',rid=10,int=60,age=60'))
+    assert db.lookup_device(imei=device['imei'])['int'] == 3600
+
+
 # -- journeys ----------------------------------------------------------------
 
 def test_journey_opens_on_ignition(device, database):

@@ -1,5 +1,111 @@
 # Changelog
 
+## 0.4.63
+
+### A datagram the modem accepted is not taken as delivered
+Both drives on 2026-09-27 lost records the firmware had counted as sent.
+Where tracking area 4096 meets 12296 (Morden/Mitcham) the network rejects
+the tracking-area update with EMM cause 9, "UE identity cannot be derived",
+and the modem drops its registration, attaches again and discards whatever
+it had queued.  The device log has 16 such rejects at that boundary since
+2026-09-11, on nearly every crossing and on Vodafone as well as O2, so it is
+the network's and not ours.  At 10:57 it took a batch of three (rid
+30531-30533).  At 11:50, pulling up at home, it took the last position and
+the ignition-off record (30662-30663): the send that carried them had waited
+for its reply, got none, and still counted.  Apart from that boundary, about
+1% of driving records vanish with no network event at all (17 datagrams on
+2026-09-26).  `transport_send()` returning 0 only ever meant the modem had
+the datagram.
+- **The reply is the receipt.**  The server answers every datagram, bound
+to the request's nonce, so a reply identifies exactly the send it answers.
+Each send now gets an id, the transport keeps the last eight nonces, and a
+reply is credited to its send however late it turns up.  The socket is
+kept between sends instead of closed after each one, so the replies have
+somewhere to land.  That costs the radio nothing: the reply was always
+transmitted, and was thrown away with the socket.  The release hint is now
+`RAI_ONE_RESP` on every send, since a reply is always wanted.
+- **Records are held until answered for.**  `databuf.c` keeps each sent
+datagram's records under its id (`APP_DATABUF_UNACKED_SLOTS`, 6).  Once the
+reply is in they are dropped.  If it has not come within
+`APP_ACK_TIMEOUT_S` (30 s) they go back into the backlog and are sent again,
+and the server drops the copy of anything that did arrive (same rid, same fix
+time).  With every slot waiting, the oldest makes room the same way.  The
+log says so at WRN, "datagram #N unanswered after S s — K records back in
+the backlog", so the device log shows every datagram that went missing.
+- **The backlog waits for proof the link works.**  It is flushed only once
+something sent since the previous record — or since the network came back —
+has been answered.  At 11:48 the modem sat on seven datagrams for 38 s on a
+weak cell and delivered them in one burst, and the one after them never
+arrived.  Resent records now wait for the link to come back instead of
+joining the pile; the live record still goes each cycle, as before.
+- **Before sleep, what is owed goes.**  Going to sleep, and at the end of
+each timed wake, the device waits up to 4 s for the replies still owed
+(`databuf_settle`), then sends the backlog while the radio is up, a couple
+of datagrams at a time for as long as they are answered (`databuf_deliver`).
+The ignition-off record's reply is collected rather than closed on, and a
+backlog no longer waits an hour for the next wake.
+- **Every reply is read, and so are its commands.**  Replies to sends that
+were not waited for used to arrive at a closed socket.  The server deletes
+a command once it has put it in a reply, so a command in one of those was
+lost.  Each reply's settings and commands are now applied whichever send it
+answers.  Several can arrive between two runs of the command parser, so they
+merge: one-shot commands accumulate, and `fota=` and `track=` come from the
+newest reply.
+- Track mode's records are not held: they carry an IMU burst too big for the
+backlog's slots, and a second copy of a one-second sample, a minute late, is
+not worth the airtime.  The Traccar transport is unchanged: its HTTP 2xx
+already is the receipt, and `APP_DATABUF_UNACKED_SLOTS` defaults to 0 there.
+- **`APP_DEBUG_DROP_DATAGRAMS`** (bench only, default 0) reports every Nth
+send as sent and discards it, which is how a lost datagram looks from here.
+- **Needs the server's copy detection.**  A server without it stores a
+resent record twice.  Both the l0destar server (`server/`, with tests) and
+the car's deployment have it.
+
+### A drive keeps recording without a network
+`STATE_IDLE` parked the loop while there was no registration and recorded
+nothing but ignition changes.  The backlog's "drive into the backlog" path
+only ran if a send failed first, and a modem in the middle of a
+tracking-area update accepts sends.  At 10:57 the receiver kept fixing
+through the 16 s outage and a single record was built.
+- **With the key on, recording carries on into the backlog.**  `send_data()`
+puts the records straight into it rather than hand them to a modem with no
+registration, which would take them and then lose them with its bearer.
+The first send after the network returns leads, and the backlog follows
+once that send is answered.
+- **The radio's retry timer runs from `STATE_SEND` too**, since a drive
+recording through an outage cycles between collecting and sending without
+passing the idle poll.  It is reset whenever a send finds the modem
+registered, so a later outage is not measured from an earlier one.
+- The ignition-on fault-code read and the update check wait for a
+registration.  The read goes out as its own datagram at once and would be
+lost, and an update cannot download without one.
+
+### A late record says when it was built
+The server filed every record at the moment it arrived.  So a record sent
+late, from the backlog after an outage or again after an unanswered send,
+landed in the track and the journey after records built later than it.  A
+late ignition-on record behind an ignition-off one was worse: the server
+saw an ignition-on and would have raised the ignition alert for a drive that
+had already ended.
+- **`age=<s>`**: a record sent 10 s or more after it was built carries its
+age, worked out afresh at each send from its own `up=`.
+- **The server files it at arrival time less age**, and when something
+built later is already stored treats it as history.  History fills in the
+track but raises no ignition alert, opens or closes no journey, and changes
+no settings or track mode.  The packaged server sums journey miles in time
+order, so a resent record adds no detour.  A late record that is still the
+newest, such as an ignition-off recorded during an outage, is the latest
+state and acts like one, at the time it happened.
+
+### The report owed after an outage goes when the network returns
+A drive that ends without a registration leaves a report owed, sent once the
+modem registers.  The sleep loop only looked every `RESEND_POLL_S` (30 s),
+and an accelerometer wake that came to nothing skipped the look altogether.
+On 2026-09-27 the modem was registered again at 11:50:54 and the report went
+at 11:51:32.  The LTE handler now ends the sleep wait as registration lands
+(`modem_on_registered()`), and a pass that finds the report owed on a
+registration already there goes straight to it.
+
 ## 0.4.62
 
 ### PSM sleep engages

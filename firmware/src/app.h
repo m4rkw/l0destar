@@ -199,6 +199,9 @@ void modem_set_apn(const char *apn);
 int  modem_at(const char *cmd, char *resp, size_t resp_len);
 int  modem_recover(void);               /* policy lives in modem.c */
 bool modem_is_registered(void);         /* from the LTE event handler, not inferred */
+/* Called from the LTE event handler's thread each time registration arrives.
+ * Keep it to signalling a waiter. */
+void modem_on_registered(void (*cb)(void));
 int  modem_unregistered_s(void);        /* seconds up without a registration, -1 if not searching */
 void modem_send_ok(void);               /* a send got through: clear the stuck timer */
 int  modem_update_cell_info(void);
@@ -243,9 +246,11 @@ int  agnss_fetch(void *agnss_request);  /* NULL = request all; else nrf_modem_gn
  * lines), which is what data.c, databuf.c and alert.c produce. */
 int  transport_open(void);
 /* The exchange is over: let the radio go.  The UDP transport closes its
- * socket; the Traccar one keeps its TCP connection for the next send and
- * only hints the release, since closing would cost a fresh RRC connection
- * for the FIN. */
+ * socket, after reading any replies already in, and a reply that arrives
+ * later has nowhere to land — so its send stays unanswered and its records
+ * are sent again; databuf_settle() first if that matters.  The Traccar one
+ * keeps its TCP connection for the next send and only hints the release,
+ * since closing would cost a fresh RRC connection for the FIN. */
 void transport_close(void);
 /* Streaming: keep the socket and the RRC connection up between sends
  * (RAI_ONGOING) instead of releasing the radio after each one.  Only
@@ -257,8 +262,23 @@ void transport_teardown(void);
 int  transport_send(const uint8_t *plaintext, size_t pt_len);
 /* The server's reply to the last send, "1,<interval>,<movement_alarm>[,cmd]".
  * UDP waits up to timeout_ms for the datagram; Traccar already has it (a
- * 2xx, and any queued command) and answers at once. */
+ * 2xx, and any queued command) and answers at once.  Replies to earlier
+ * sends met on the way go to data_reply(). */
 int  transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms);
+/* Delivery.  A UDP send returning 0 means the modem queued the datagram,
+ * nothing more; the server's reply is the proof it arrived.  Each send gets
+ * an id, and a reply is matched to the send it answers however late it
+ * comes, so the records in a datagram can be held until then (databuf_sent).
+ * transport_sent_id() is the last send's id, or 0 when that send was its own
+ * receipt (Traccar's HTTP 2xx) and there is nothing to wait for.
+ * transport_poll() reads whatever replies have come in, without waiting,
+ * and hands each to data_reply(); -ENOTCONN with no socket to read. */
+uint32_t transport_sent_id(void);
+int  transport_poll(void);
+bool transport_is_streaming(void);
+/* A reply to an earlier send that was not waited for: the receipt for that
+ * datagram (databuf_ack), and whatever settings or commands it carries. */
+void data_reply(uint32_t id, const char *resp);
 
 int  collect_data(int ignition_state);
 /* The rid= stamped on the most recently built record.  A record is only
@@ -280,6 +300,26 @@ int      databuf_flush(int max_datagrams);   /* returns records sent */
 int      databuf_count(void);
 uint32_t databuf_dropped(void);
 void     databuf_reset(void);
+/* Records a send has put out, held under its transport id until the server
+ * answers for them (databuf_ack) — see APP_DATABUF_UNACKED_SLOTS.  Records
+ * whose answer does not come in APP_ACK_TIMEOUT_S go back into the backlog
+ * (databuf_expire), as does whatever is still unanswered when the socket
+ * is about to go (databuf_settle). */
+void     databuf_sent(uint32_t id, const char *recs, size_t len);
+void     databuf_ack(uint32_t id);
+int      databuf_expire(void);               /* returns datagrams requeued */
+int      databuf_unacked(void);
+int64_t  databuf_last_ack_ms(void);          /* when an answer last came in */
+/* Wait up to timeout_ms for the answers still owed, then requeue what is
+ * left; returns the datagrams requeued. */
+int      databuf_settle(int timeout_ms);
+/* The radio is about to go down: settle, then send as much of the backlog
+ * as the link will take, a few datagrams at a time. */
+void     databuf_deliver(int timeout_ms);
+/* Copy newline-separated records, adding age=<s> to any built long enough
+ * ago that the server would otherwise file it at the wrong time.  Returns
+ * the bytes written, or -1 if they do not fit. */
+int      databuf_stamp(const char *in, size_t len, char *out, size_t cap);
 void data_reset(void);
 int  send_data(void);
 

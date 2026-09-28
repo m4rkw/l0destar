@@ -1,9 +1,21 @@
 /*
  * Plain UDP transport with ChaCha20-Poly1305 AEAD encryption.
  *
- * Each send is a single UDP datagram — no handshake, no session state.
- * The socket is closed after each send/recv cycle so the LTE radio is
- * fully released for GNSS.
+ * Each send is a single UDP datagram — no handshake, no session state.  The
+ * server answers every one, and its answer is the only evidence the datagram
+ * arrived: a send that returns 0 means the modem queued it, nothing more.  A
+ * modem that loses its registration discards whatever it had queued, and on
+ * 2026-09-27 a tracking-area update the network rejected (EMM cause 9) took
+ * three records at 10:57 and the ignition-off record at 11:50 that way, each
+ * one "sent" as far as this side knew.  So every send gets an id, the socket
+ * is kept between sends, and each reply is matched to the send it answers —
+ * however late it comes — which is what lets databuf.c hold a datagram's
+ * records until they are known to have arrived.  The socket is closed when
+ * the unit goes to sleep, and dropped on errors.
+ *
+ * Keeping it costs the radio nothing.  The server replies whether or not
+ * anything is listening, and it is the release hint (SO_RAI), not the socket,
+ * that lets the modem leave connected mode.
  *
  * Wire format (matches the server's _decrypt_request / _encrypt_response):
  *   request:  [1] imei_len  [imei_len] IMEI  [12] nonce  [N+16] ct+tag
@@ -31,38 +43,124 @@ LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
 
 #define NONCE_LEN    12
 #define TAG_LEN      16
+#define IMEI_MAX     20
+
+/* How many recent sends a reply can still be credited to.  More than one
+ * telemetry cycle puts out (the record, two of backlog, an alert), so a reply
+ * that turns up a cycle late — or several, behind a stall — still counts. */
+#define SENT_TRACK   8
 
 static int s_sock = -1;
 static struct sockaddr_in s_server;
 static bool s_resolved;
-static uint8_t s_req_nonce[NONCE_LEN];
-/* Track mode: hold the socket and the RRC connection between sends. */
+/* Track mode: hold the RRC connection between sends. */
 static bool s_streaming;
+
+/* The server binds each reply to the nonce of the request it answers (the
+ * response AAD is IMEI || request nonce), so a reply authenticates against
+ * that send's nonce and no other.  Keeping the last few by id is therefore
+ * all it takes to say which datagram a reply is for. */
+static struct {
+    uint32_t id;                  /* 0: empty, or already answered */
+    uint8_t  nonce[NONCE_LEN];
+} s_sent[SENT_TRACK];
+static uint32_t s_last_id;       /* the latest send's, 0 before the first */
+
+/* Static rather than on the stack: the main thread's 8 KB also carries the
+ * record builder and the OBD poll, and a reply read happens inside a send. */
+static uint8_t s_rx[UDP_PACKET_SIZE];
+static char    s_reply[256];
+
+#if CONFIG_APP_DEBUG_DROP_DATAGRAMS > 0
+static unsigned s_drop_count;
+#endif
 
 void transport_set_streaming(bool on)
 {
     s_streaming = on;
 }
 
-/* Streaming keeps the socket open, and the server answers every datagram
- * whether or not this side waits for the reply, so between reads the
- * replies to the sends that were not waited for queue up in the modem.  The
- * first recv would then return the oldest of them — authenticated against
- * an earlier request's nonce, so it fails the tag check — and the reply
- * actually wanted would sit behind it.  Discard whatever is queued before a
- * request goes out; with the socket closed after each send, as it is when
- * not streaming, there is never anything to discard. */
-static void transport_drain(void)
+bool transport_is_streaming(void)
 {
-    uint8_t buf[UDP_PACKET_SIZE];
-    int dropped = 0;
+    return s_streaming;
+}
 
-    while (zsock_recv(s_sock, buf, sizeof(buf), ZSOCK_MSG_DONTWAIT) > 0) {
-        dropped++;
+uint32_t transport_sent_id(void)
+{
+    return s_last_id;
+}
+
+/* The id of the send the reply now in s_rx answers, with its plaintext in
+ * s_reply, or 0 when it answers none of the sends still remembered. */
+static uint32_t match_reply(int n)
+{
+    size_t imei_len = strlen(g_settings.imei);
+
+    if (n < NONCE_LEN + TAG_LEN || imei_len == 0 || imei_len > IMEI_MAX) {
+        LOG_DBG("unusable reply: %d bytes", n);
+        return 0;
     }
-    if (dropped) {
-        LOG_DBG("drained %d unread replies", dropped);
+
+    uint8_t aad[IMEI_MAX + NONCE_LEN];
+
+    memcpy(aad, g_settings.imei, imei_len);
+
+    /* Newest first: nearly every reply answers one of the last sends.  A
+     * tag mismatch is the expected answer for every other one, and crypto.c
+     * keeps it quiet. */
+    for (int k = 0; k < SENT_TRACK; k++) {
+        uint32_t id = s_last_id - (uint32_t)k;
+        int slot = (int)(id % SENT_TRACK);
+        size_t pt_len;
+
+        if (id == 0 || s_sent[slot].id != id) {
+            continue;
+        }
+        memcpy(aad + imei_len, s_sent[slot].nonce, NONCE_LEN);
+        if (crypto_decrypt(s_rx + NONCE_LEN, (size_t)n - NONCE_LEN,
+                           aad, imei_len + NONCE_LEN, s_rx,
+                           (uint8_t *)s_reply, sizeof(s_reply) - 1,
+                           &pt_len) == 0) {
+            s_reply[pt_len] = '\0';
+            s_sent[slot].id = 0;        /* a second copy would be a replay */
+            return id;
+        }
     }
+    return 0;
+}
+
+int transport_poll(void)
+{
+    int matched = 0;
+
+    if (s_sock < 0) {
+        return -ENOTCONN;
+    }
+    /* Bounded, so a socket that keeps returning something unusable cannot
+     * hold the loop; whatever is left is read on the next look. */
+    for (int i = 0; i < 2 * SENT_TRACK; i++) {
+        int n = zsock_recv(s_sock, s_rx, sizeof(s_rx), ZSOCK_MSG_DONTWAIT);
+
+        if (n < 0) {
+            if (errno != EAGAIN) {
+                /* ENETDOWN after a re-attach: the PDN this socket belonged
+                 * to is gone, and so is anything still on its way to it. */
+                LOG_WRN("recv: %d", errno);
+                transport_teardown();
+            }
+            break;
+        }
+
+        uint32_t id = match_reply(n);
+
+        if (id != 0) {
+            data_reply(id, s_reply);
+            matched++;
+        } else {
+            LOG_DBG("reply to no recent send ignored (%d bytes)", n);
+        }
+    }
+    return matched;
 }
 
 static int transport_resolve(void)
@@ -120,6 +218,10 @@ int transport_open(void)
 
 void transport_close(void)
 {
+    /* A last look first: a reply that has already landed is a datagram
+     * whose records need not go again. */
+    (void)transport_poll();
+
     if (s_sock >= 0) {
         int rai = RAI_NO_DATA;
         zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
@@ -138,13 +240,17 @@ void transport_teardown(void)
 
 int transport_send(const uint8_t *plaintext, size_t pt_len)
 {
+    /* Replies that came in since the last send: each is a datagram that
+     * arrived.  It can also drop a socket that has gone bad. */
+    (void)transport_poll();
+
     if (s_sock < 0) {
         int err = transport_open();
         if (err) return err;
     }
 
     size_t imei_len = strlen(g_settings.imei);
-    if (imei_len == 0 || imei_len > 20) {
+    if (imei_len == 0 || imei_len > IMEI_MAX) {
         LOG_WRN("IMEI not set, dropping packet");
         return -EACCES;
     }
@@ -158,20 +264,21 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
     }
 
     uint8_t buf[UDP_PACKET_SIZE];
+    uint8_t nonce[NONCE_LEN];
 
     buf[0] = (uint8_t)imei_len;
     memcpy(buf + 1, g_settings.imei, imei_len);
 
-    if (!crypto_random(s_req_nonce, NONCE_LEN)) {
+    if (!crypto_random(nonce, NONCE_LEN)) {
         LOG_ERR("nonce generation failed");
         return -EIO;
     }
-    memcpy(buf + 1 + imei_len, s_req_nonce, NONCE_LEN);
+    memcpy(buf + 1 + imei_len, nonce, NONCE_LEN);
 
     size_t ct_len;
     int err = crypto_encrypt(plaintext, pt_len,
                              (const uint8_t *)g_settings.imei, imei_len,
-                             s_req_nonce,
+                             nonce,
                              buf + hdr_len, UDP_PACKET_SIZE - hdr_len,
                              &ct_len);
     if (err) {
@@ -181,18 +288,24 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
 
     size_t total = hdr_len + ct_len;
 
-    /* Release-assistance hint.  Normally the radio is let go as soon as
-     * this datagram (and, if wanted, its reply) is done, so GNSS gets the
-     * antenna back.  Streaming keeps the connection up for the next one. */
-    int rai = s_streaming      ? RAI_ONGOING
-            : read_udp_response ? RAI_ONE_RESP : RAI_LAST;
+    /* Release-assistance hint.  The reply is always wanted now — it is the
+     * receipt — so the radio may go once that one packet is in, and GNSS
+     * gets the antenna back.  Streaming keeps the connection up for the
+     * next send instead. */
+    int rai = s_streaming ? RAI_ONGOING : RAI_ONE_RESP;
     zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
 
-    if (s_streaming) {
-        transport_drain();
-    }
+    bool dropped = false;
 
-    if (zsock_send(s_sock, buf, total, 0) < 0) {
+#if CONFIG_APP_DEBUG_DROP_DATAGRAMS > 0
+    if (++s_drop_count % CONFIG_APP_DEBUG_DROP_DATAGRAMS == 0) {
+        LOG_INF("bench: %u bytes discarded on purpose "
+                "(APP_DEBUG_DROP_DATAGRAMS)", (unsigned)total);
+        dropped = true;
+    }
+#endif
+
+    if (!dropped && zsock_send(s_sock, buf, total, 0) < 0) {
         LOG_WRN("send failed (%d), reconnecting", errno);
         transport_teardown();
         err = transport_open();
@@ -205,7 +318,16 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
         }
     }
 
-    LOG_INF("sent %u bytes", (unsigned)total);
+    /* Filed under a fresh id with the nonce its reply will be bound to. */
+    if (++s_last_id == 0) {
+        s_last_id = 1;
+    }
+    int slot = (int)(s_last_id % SENT_TRACK);
+
+    s_sent[slot].id = s_last_id;
+    memcpy(s_sent[slot].nonce, nonce, NONCE_LEN);
+
+    LOG_INF("sent %u bytes (#%u)", (unsigned)total, s_last_id);
 
     return 0;
 }
@@ -214,83 +336,58 @@ int transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms)
 {
     if (s_sock < 0) return -ENOTCONN;
 
-    struct zsock_timeval tv = {
-        .tv_sec  = timeout_ms / 1000,
-        .tv_usec = (timeout_ms % 1000) * 1000,
-    };
-    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-
-    /* Response: [12 nonce][ct + 16 tag], AAD = IMEI || request_nonce */
-    size_t imei_len = strlen(g_settings.imei);
-    uint8_t aad[20 + NONCE_LEN];
-    memcpy(aad, g_settings.imei, imei_len);
-    memcpy(aad + imei_len, s_req_nonce, NONCE_LEN);
-
-    uint8_t buf[UDP_PACKET_SIZE];
-    int64_t deadline = k_uptime_get() + timeout_ms;
-    int stale = 0;
+    /* A reply to an earlier send can arrive first — one that was not
+     * waited for, or a late one — and is credited to that send on the way:
+     * the reply wanted may be right behind it.  Nothing is trusted that does
+     * not authenticate against one of our own nonces; the wait only decides
+     * how long to listen. */
+    const uint32_t want = s_last_id;
+    const int64_t deadline = k_uptime_get() + timeout_ms;
 
     for (;;) {
-        int n = zsock_recv(s_sock, buf, sizeof(buf), 0);
-        if (n < 0) {
-            if (errno != EAGAIN) {
-                LOG_WRN("recv: %d", errno);
-            } else if (stale) {
-                LOG_WRN("%d stale repl%s, none for this request in %d ms",
-                        stale, stale == 1 ? "y" : "ies", timeout_ms);
-            }
-            /* A missed reply is routine when streaming; keep the socket. */
-            if (!s_streaming || errno != EAGAIN) {
-                transport_close();
-            }
-            return -errno;
-        }
-
-        int err = -EPROTO;
-
-        if (n < NONCE_LEN + TAG_LEN) {
-            LOG_WRN("response too short: %d", n);
-        } else {
-            size_t pt_len;
-
-            err = crypto_decrypt(buf + NONCE_LEN, n - NONCE_LEN,
-                                 aad, imei_len + NONCE_LEN,
-                                 buf,
-                                 (uint8_t *)out_plaintext, out_len - 1,
-                                 &pt_len);
-            if (err == 0) {
-                if (stale) {
-                    LOG_INF("skipped %d stale repl%s", stale,
-                            stale == 1 ? "y" : "ies");
-                }
-                if (!s_streaming) transport_close();
-                out_plaintext[pt_len] = '\0';
-                return (int)pt_len;
-            }
-        }
-
-        /* Not a reply to this request.  The response AAD binds it to the
-         * request nonce, which is fresh per send, so a reply the server
-         * sent to an earlier datagram fails the tag check by construction —
-         * and on a slow link a reply routinely arrives after the window it
-         * was waited for, which made every one of them cost a warning, a
-         * closed socket and the RRC connection the next send had to build
-         * again.  The one being waited for may be right behind it, so keep
-         * reading until the deadline the caller set.  Nothing is trusted
-         * that does not authenticate: this only decides how long to listen.
-         */
         int64_t left = deadline - k_uptime_get();
 
         if (left <= 0) {
-            LOG_WRN("response decrypt failed: %d (%d stale skipped)",
-                    err, stale);
-            if (!s_streaming) transport_close();
-            return -EPROTO;
+            return -EAGAIN;
         }
-        stale++;
-        LOG_DBG("stale reply skipped (%d), %lld ms left", err, left);
-        tv.tv_sec  = left / 1000;
-        tv.tv_usec = (left % 1000) * 1000;
+
+        struct zsock_timeval tv = {
+            .tv_sec  = left / 1000,
+            .tv_usec = (left % 1000) * 1000,
+        };
         zsock_setsockopt(s_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+        int n = zsock_recv(s_sock, s_rx, sizeof(s_rx), 0);
+
+        if (n < 0) {
+            int err = errno;
+
+            /* Late is routine, and the socket stays for it: the reply can
+             * still be credited when it does turn up. */
+            if (err != EAGAIN) {
+                LOG_WRN("recv: %d", err);
+                transport_teardown();
+            }
+            return -err;
+        }
+
+        uint32_t id = match_reply(n);
+
+        if (id != 0 && id == want) {
+            databuf_ack(id);
+            size_t len = strlen(s_reply);
+
+            if (len >= out_len) {
+                len = out_len - 1;
+            }
+            memcpy(out_plaintext, s_reply, len);
+            out_plaintext[len] = '\0';
+            return (int)len;
+        }
+        if (id != 0) {
+            data_reply(id, s_reply);
+        } else {
+            LOG_DBG("reply to no recent send ignored (%d bytes)", n);
+        }
     }
 }

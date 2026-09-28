@@ -84,6 +84,27 @@ static bool s_ign_cb_installed;
  * ~0.4 s, so by the time the loop's debounce re-reads it the level is gone. */
 static atomic_t s_ign_int_flag;
 
+/* The sleep loop owes a report the moment the modem registers (resend_owed
+ * in do_sleep).  Registration used to be noticed only by the loop's own
+ * poll, every RESEND_POLL_S: on 2026-09-27 the network was back at 11:50:54
+ * and the ignition-off report went at 11:51:32.  Now the LTE handler ends
+ * the wait as registration lands. */
+static atomic_t s_report_owed;
+
+static void report_owed_set(bool *owed, bool on)
+{
+    *owed = on;
+    atomic_set(&s_report_owed, on ? 1 : 0);
+}
+
+/* From the LTE event handler's thread: only signal. */
+static void on_registered(void)
+{
+    if (atomic_get(&s_report_owed)) {
+        k_sem_give(&s_wake_sem);
+    }
+}
+
 static void ign_isr(const struct device *dev, struct gpio_callback *cb,
                     uint32_t pins)
 {
@@ -356,6 +377,32 @@ static bool network_search_expired(void)
            modem_unregistered_s() >= NETWORK_SEARCH_TIMEOUT;
 }
 
+/* Bring the radio up again every retry interval while there is no
+ * registration.  The only thing that brings it back after a modem fault:
+ * the reset thread reinitialises the library but leaves the modem offline
+ * with none of the app's settings.  A modem that is already up and
+ * searching is left alone (modem_radio_up checks), since reapplying +COPS=0
+ * to it restarts the PLMN search it is in the middle of.  Not a blocking
+ * connect — the caller's loop is already the wait, and it keeps servicing
+ * the ignition line and the K-wire keep-alive while the network is away.
+ * Called from STATE_IDLE's poll, and from STATE_SEND for a drive recording
+ * through the outage, which never passes that poll. */
+static void network_retry_tick(void)
+{
+    int64_t now = k_uptime_get();
+
+    if (s_unregistered_ms == 0) {
+        s_unregistered_ms = now;
+    } else if (NETWORK_RETRY_INTERVAL > 0 &&
+               now - s_unregistered_ms >=
+                   (int64_t)NETWORK_RETRY_INTERVAL * 1000) {
+        LOG_WRN("no registration for %ds — bringing the "
+                "radio up again", NETWORK_RETRY_INTERVAL);
+        modem_radio_up();
+        s_unregistered_ms = now;
+    }
+}
+
 /* Consecutive timed wakes that found no network.  Each one doubles the wait
  * until the next, up to NO_SIGNAL_MAX_INTERVAL — see the note there for why a
  * unit with no coverage should not keep waking on its usual cadence. */
@@ -578,6 +625,13 @@ static void do_sleep(void)
     led_sleep_enter();
     LOG_INF("sleep: GNSS stop");
     gnss_stop();
+    /* Replies to the last sends may still be on their way — the ignition-off
+     * record's among them — and once the socket is closed they have nowhere
+     * to land.  So collect them first, then send what the backlog holds
+     * while the radio is still up rather than an hour from now.  Whatever
+     * goes unanswered stays in the backlog for the next report. */
+    LOG_INF("sleep: delivering what is still owed");
+    databuf_deliver(RESPONSE_TIMEOUT_MS);
     LOG_INF("sleep: transport close");
     transport_close();
     transport_teardown();   /* the connection does not survive the modem going off */
@@ -589,8 +643,10 @@ static void do_sleep(void)
      * backlog until the following timed wake an hour on.  Owed until the
      * modem registers, the search window closes (APP_NETWORK_SEARCH_TIMEOUT)
      * or the next timed report runs. */
-    bool    resend_owed = false;
+    bool    resend_owed;
     int64_t resend_owed_ms = 0;
+
+    report_owed_set(&resend_owed, false);
 
     /* A modem that is up, unregistered and still inside its search window
      * is left to it, with the report owed, rather than powered off: the
@@ -599,7 +655,7 @@ static void do_sleep(void)
      * record — and runs the power-on update check — if it registers in
      * time.  A search that has already run its course is ended here. */
     if (modem_unregistered_s() >= 0 && !network_search_expired()) {
-        resend_owed = true;
+        report_owed_set(&resend_owed, true);
         resend_owed_ms = k_uptime_get();
         LOG_INF("sleep: modem left searching (%d s so far, report owed)",
                 modem_unregistered_s());
@@ -688,6 +744,13 @@ static void do_sleep(void)
          * debounce) is latched but its semaphore was just reset: give it
          * back so the wait returns at once instead of at the next timer. */
         if (atomic_get(&s_ign_int_flag)) {
+            k_sem_give(&s_wake_sem);
+        }
+        /* Likewise a report owed on a registration that has already
+         * arrived: the LTE handler signals it only as it lands, and a pass
+         * that ends early — an accelerometer wake that came to nothing —
+         * never reaches the check below. */
+        if (resend_owed && modem_is_registered()) {
             k_sem_give(&s_wake_sem);
         }
         int64_t t0 = k_uptime_get();
@@ -864,6 +927,7 @@ static void do_sleep(void)
             ign_now = ignition_read();
             if (ign_now == 0) {
                 LOG_INF("wake: ignition ON");
+                atomic_set(&s_report_owed, 0);
                 ignition = 0;
                 s_key_wake = true;
                 movement_reset();
@@ -1036,7 +1100,7 @@ static void do_sleep(void)
 
         /* --- owed timed report --- */
         if (resend_owed && modem_is_registered()) {
-            resend_owed = false;
+            report_owed_set(&resend_owed, false);
             if (g_settings.loop_interval > 0) {
                 LOG_WRN("registered — sending the timed report owed for "
                         "%lld s",
@@ -1048,7 +1112,7 @@ static void do_sleep(void)
              * not registered.  Whatever record there was is in the backlog
              * for the next report that gets through; nothing else keeps
              * the radio up, so it goes off until the next timed wake. */
-            resend_owed = false;
+            report_owed_set(&resend_owed, false);
             LOG_WRN("no registration %d s after bringing the radio up — "
                     "modem off until the next timed report",
                     modem_unregistered_s());
@@ -1059,7 +1123,7 @@ static void do_sleep(void)
         /* --- timer telemetry (and the report a backup wake owes) --- */
         if ((telemetry_remaining <= 0 && g_settings.loop_interval > 0) ||
             backup_wake) {
-            resend_owed = false;
+            report_owed_set(&resend_owed, false);
             LOG_INF("sleep: INA228 wake for voltage read");
             hw_power_wake();
             float v = battery_read_voltage();
@@ -1176,7 +1240,7 @@ static void do_sleep(void)
              * would let it search for a fix: this is what makes the loop
              * look, every RESEND_POLL_S, for as long as the window allows. */
             if (!modem_is_registered()) {
-                resend_owed = true;
+                report_owed_set(&resend_owed, true);
                 resend_owed_ms = k_uptime_get();
                 /* Stop counting at the ceiling; the interval is capped
                  * there anyway and the count has nowhere useful to go. */
@@ -1195,6 +1259,10 @@ static void do_sleep(void)
                 s_move_needs_gps = false;
             }
             use_cached_gps = false;
+            /* What the wake still has to deliver goes while the radio is up
+             * for it — the replies to its sends, and any backlog — and what
+             * goes unanswered is kept for the next one. */
+            databuf_deliver(RESPONSE_TIMEOUT_MS);
             transport_close();
 
             /* Tell the server about a reverted update before asking it
@@ -1302,6 +1370,7 @@ static void do_sleep(void)
         if (ign_now == 0) {
             console_resume();
             LOG_INF("wake: ignition ON");
+            atomic_set(&s_report_owed, 0);
             ignition = 0;
             s_key_wake = true;
             movement_reset();
@@ -1354,8 +1423,9 @@ static void do_ignition_sleep(void)
             force_record = false;
             gnss_stop();
             if (have_record > 0) {
+                /* The socket stays: do_sleep() collects the reply, which
+                 * is what says this record arrived. */
                 send_data();
-                transport_close();
                 data_reset();
             }
             previous_ignition = ignition;
@@ -1388,8 +1458,8 @@ static void do_ignition_sleep(void)
             read_udp_response = true;
             if (collect_data(ignition) > 0) {
                 gnss_stop();
+                /* The socket stays open for the replies — see send_data(). */
                 send_data();
-                transport_close();
                 data_reset();
                 if (pending_server_cmd[0] != '\0') {
                     cmd_run(pending_server_cmd);
@@ -1475,9 +1545,10 @@ static void do_track(void)
             int have_record = collect_data(ignition);
             force_record = false;
             if (have_record > 0) {
+                /* Not streaming any more, so held until answered for; the
+                 * socket stays for do_sleep() to collect the reply. */
                 send_data();
             }
-            transport_close();
             data_reset();
             previous_ignition = ignition;
             engine_running = false;
@@ -1498,11 +1569,13 @@ static void do_track(void)
             if (want_resp) {
                 last_resp = k_uptime_get();
                 s_last_resp_ms = last_resp;
-                if (pending_server_cmd[0] != '\0') {
-                    cmd_run(pending_server_cmd);
-                    pending_server_cmd[0] = '\0';
-                    if (alert_count > 0) alert_send();
-                }
+            }
+            /* From any reply: every one is read now, and the server deletes
+             * a command once it has put it in one. */
+            if (pending_server_cmd[0] != '\0') {
+                cmd_run(pending_server_cmd);
+                pending_server_cmd[0] = '\0';
+                if (alert_count > 0) alert_send();
             }
             if (!last_send_ok) {
                 modem_recover();
@@ -1783,6 +1856,7 @@ int main(void)
         LOG_ERR("modem init failed");
         return 0;
     }
+    modem_on_registered(on_registered);
     /* Before connecting: a modem that registers after the start-up wait
      * would otherwise leave the IMEI unset, and every send dropped, for the
      * whole boot. */
@@ -1910,7 +1984,10 @@ int main(void)
 #endif
 
         switch (s_state) {
-        case STATE_IDLE:
+        case STATE_IDLE: {
+            /* The key is on and there is no registration: carry on below,
+             * recording into the backlog, instead of waiting here. */
+            bool offline = false;
 
             if (network_ready) {
                 /* Registered — whether the poll below saw it or the LTE
@@ -1934,30 +2011,26 @@ int main(void)
                     s_unregistered_ms = 0;
                     LOG_INF("network ready");
                     fota_report_flush();
-                } else {
-                    /* Bring the radio up again every retry interval.  The
-                     * only thing that brings it back after a modem fault:
-                     * the reset thread reinitialises the library but leaves
-                     * the modem offline with none of the app's settings.  A
-                     * modem that is already up and searching is left alone
-                     * (modem_radio_up checks), since reapplying +COPS=0 to
-                     * it restarts the PLMN search it is in the middle of.
-                     * Not a blocking connect — the poll below is already
-                     * the wait, and it keeps servicing the ignition line
-                     * and the K-wire keep-alive while the network is
-                     * away. */
-                    int64_t now = k_uptime_get();
+                } else if (ignition == 0) {
+                    network_retry_tick();
 
-                    if (s_unregistered_ms == 0) {
-                        s_unregistered_ms = now;
-                    } else if (NETWORK_RETRY_INTERVAL > 0 &&
-                               now - s_unregistered_ms >=
-                                   (int64_t)NETWORK_RETRY_INTERVAL * 1000) {
-                        LOG_WRN("no registration for %ds — bringing the "
-                                "radio up again", NETWORK_RETRY_INTERVAL);
-                        modem_radio_up();
-                        s_unregistered_ms = now;
+                    /* The key is on: the vehicle is being driven, or is
+                     * about to be.  Nothing can be sent, but everything can
+                     * be recorded — the backlog holds it and delivers it
+                     * once the network is back (send_data() puts it there
+                     * rather than hand it to a modem with no registration).
+                     * This used to wait here instead, recording nothing: on
+                     * 2026-09-27 at 10:57 the receiver kept fixing through
+                     * a 16 s outage in the middle of a drive, and a single
+                     * record was built. */
+                    if (!s_wait_logged) {
+                        s_wait_logged = true;
+                        LOG_INF("no registration — recording into the "
+                                "backlog");
                     }
+                    offline = true;
+                } else {
+                    network_retry_tick();
 
                     /* Nothing can be sent, but the key turning still has
                      * to be captured now: the modem can spend a quarter of
@@ -2030,7 +2103,9 @@ int main(void)
                     break;
                 }
             }
-            s_wait_logged = false;
+            if (!offline) {
+                s_wait_logged = false;
+            }
 
             /* The registration handler can flip network_ready on its own,
              * so this is outside the poll above.  Send what was recorded
@@ -2079,8 +2154,14 @@ int main(void)
              *
              * Latched on its own state, not previous_ignition, which is only
              * advanced when a position actually goes out — keying off it
-             * would repeat the read every second until a fix appeared. */
-            if (ignition == 0 && s_dtc_last_ign != 0) {
+             * would repeat the read every second until a fix appeared.
+             *
+             * And only with a registration: the report goes out at once as
+             * its own datagram, and with no network the send would fail and
+             * the read be lost.  A key-on without one records into the
+             * backlog meanwhile, and reads the codes once the network is
+             * back. */
+            if (ignition == 0 && s_dtc_last_ign != 0 && network_ready) {
                 s_dtc_last_ign = 0;
                 k_msleep(CONFIG_APP_KLINE_DTC_ON_DELAY_MS);
                 watchdog_kick();
@@ -2097,8 +2178,9 @@ int main(void)
              * flag test) when nothing is pending.  Not while the engine runs:
              * a download stops GNSS and telemetry for minutes and ends in a
              * reboot, so a drive keeps its tracking and the update waits for
-             * the engine to stop, key-off (STATE_SEND) or a timed wake. */
-            if (!engine_running) {
+             * the engine to stop, key-off (STATE_SEND) or a timed wake.
+             * Nor without a registration, which it could not download over. */
+            if (!engine_running && network_ready) {
                 fota_check(FOTA_CTX_AWAKE);
             }
 
@@ -2145,6 +2227,7 @@ int main(void)
             }
             status_delay(1000);
             break;
+        }
 
         case STATE_GPS_COLLECT: {
             led_gps_searching();
@@ -2218,8 +2301,10 @@ int main(void)
             LOG_INF("sending %d records", s_buffered_records);
             led_sending();
             gnss_stop();
+            /* The socket is kept after the send, not closed: the server's
+             * reply is what says the records arrived, and it lands on it.
+             * The release hint set on the send is what frees the radio. */
             send_data();
-            transport_close();
             k_msleep(200);
             led_sent();
             s_last_send_ms = k_uptime_get();
@@ -2230,10 +2315,23 @@ int main(void)
             if (read_udp_response && last_send_ok) {
                 s_last_resp_ms = k_uptime_get();
             }
-            if (pending_server_cmd[0] != '\0' && read_udp_response) {
+            /* From any reply, not only one this send waited for: every
+             * reply is read now, and the server deletes a command once it
+             * has put it in one. */
+            if (pending_server_cmd[0] != '\0') {
                 cmd_run(pending_server_cmd);
                 pending_server_cmd[0] = '\0';
                 if (alert_count > 0) alert_send();
+            }
+
+            /* A drive recording through an outage cycles between here and
+             * STATE_GPS_COLLECT without passing STATE_IDLE's poll, so the
+             * radio's retry timer is kept from here too — and reset here,
+             * so a later outage is not measured from an earlier one. */
+            if (modem_is_registered()) {
+                s_unregistered_ms = 0;
+            } else {
+                network_retry_tick();
             }
 
             /* network error recovery */

@@ -58,6 +58,15 @@ static int32_t s_attach_ms = -1;
  * wait below is woken by the URC instead of polling for it. */
 static K_SEM_DEFINE(s_reg_sem, 0, 1);
 
+/* The same moment, for a waiter outside this file: the sleep loop, when it
+ * has a report to send as soon as the network is back. */
+static void (*s_registered_cb)(void);
+
+void modem_on_registered(void (*cb)(void))
+{
+    s_registered_cb = cb;
+}
+
 static void search_started(void)
 {
     if (!s_connected) {
@@ -239,6 +248,9 @@ static void lte_handler(const struct lte_lc_evt *evt)
             search_ended();
             radio_active();
             k_sem_give(&s_reg_sem);
+            if (s_registered_cb) {
+                s_registered_cb();
+            }
         }
         break;
     }

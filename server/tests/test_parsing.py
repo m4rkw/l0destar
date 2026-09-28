@@ -367,10 +367,14 @@ class _SwitchDB:
 
     def one(self, sql, params=None):
         if 'FROM `log`' in sql:
-            return {'timestamp': self.latest_stamp} if self.latest_stamp else None
+            return ({'id': 1, 'timestamp': self.latest_stamp}
+                    if self.latest_stamp else None)
         return None
 
     def all(self, sql, params=None):
+        # The latest-row lookup reads the last few rows' ids and times first.
+        if 'FROM `log`' in sql and self.latest_stamp:
+            return [{'id': 1, 'timestamp': self.latest_stamp}]
         return []
 
     def query(self, sql, params=None):

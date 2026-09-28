@@ -109,6 +109,23 @@ void transport_set_streaming(bool on)
     s_streaming = on;
 }
 
+bool transport_is_streaming(void)
+{
+    return s_streaming;
+}
+
+/* A request's 2xx is its receipt, so a send that returned 0 has arrived and
+ * there is nothing to hold its records for, or to read later. */
+uint32_t transport_sent_id(void)
+{
+    return 0;
+}
+
+int transport_poll(void)
+{
+    return 0;
+}
+
 /* -- query string ---------------------------------------------------------- */
 
 struct query {

@@ -338,6 +338,7 @@ for imei in "${DEVICES[@]}"; do
     }
     bench_check APP_DEBUG_IGNITION -1      # live ignition GPIO, not forced
     bench_check APP_DEBUG_BATTERY_MV 0     # live INA228 reading, not forced
+    bench_check APP_DEBUG_DROP_DATAGRAMS 0 # no datagrams discarded on purpose
     bench_check APP_CAN_TEST n             # boot-time loopback harnesses
     bench_check APP_KLINE_TEST n
     bench_check APP_ACCEL_TEST n

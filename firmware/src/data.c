@@ -721,10 +721,125 @@ int data_send_line(const char *line)
     return transport_send((const uint8_t *)line, strlen(line));
 }
 
+/* -- server replies --------------------------------------------------------- */
+
+/* A command out of a reply, kept for the state machine to run (cmd_run) at
+ * its next safe point.  Every reply reaches here now, not only the ones a
+ * send waited for, and several can arrive between two runs — so a command is
+ * merged in rather than overwriting the one before: the server deletes a
+ * command once it has put it in a reply, and this is the only copy.  The
+ * fields that ride every reply (fota=, track=) are taken from the newest
+ * reply, which goes first, since cmd_run acts on the first of each it finds;
+ * the older copies are dropped. */
+static void pending_cmd_add(const char *cmd)
+{
+    char merged[sizeof(pending_server_cmd)];
+    size_t used = strlen(cmd);
+
+    if (used >= sizeof(merged)) {
+        used = sizeof(merged) - 1;
+    }
+    memcpy(merged, cmd, used);
+    merged[used] = '\0';
+
+    const char *p = pending_server_cmd;
+
+    while (*p) {
+        const char *comma = strchr(p, ',');
+        size_t len = comma ? (size_t)(comma - p) : strlen(p);
+        bool routine = (len >= 5 && strncmp(p, "fota=", 5) == 0) ||
+                       (len >= 6 && strncmp(p, "track=", 6) == 0);
+
+        if (len > 0 && !routine) {
+            if (used + 1 + len < sizeof(merged)) {
+                merged[used++] = ',';
+                memcpy(&merged[used], p, len);
+                used += len;
+                merged[used] = '\0';
+            } else {
+                LOG_WRN("server command dropped, no room: %.*s", (int)len, p);
+            }
+        }
+        if (!comma) {
+            break;
+        }
+        p = comma + 1;
+    }
+
+    memcpy(pending_server_cmd, merged, used + 1);
+}
+
+/* What a reply says, "1,<interval>,<movement_alarm>[,cmd]", applied. */
+static void reply_apply(const char *resp)
+{
+    int interval = -1, ma = -1;
+    char cmd[128] = "";
+    int matched = sscanf(resp, "1,%d,%d,%127[^\n]", &interval, &ma, cmd);
+
+    /* A decodable response is proof a datagram arrived, which is the only
+     * evidence that fw= and rst= landed.  Clearing s_fw_pending on the send
+     * instead threw the boot diagnostics away whenever the record was lost —
+     * and a lost boot record is exactly the case where the reset cause is
+     * worth having.  Left set, they ride the next record.  (The record that
+     * carried them is held until answered for, and sent again if it is
+     * not, so any reply will do.) */
+    s_fw_pending = false;
+
+    if (matched >= 2) {
+        if (!send_int_to_server) {
+            if (interval >= 0) g_settings.loop_interval = interval;
+            if (ma >= 0)       g_settings.movement_alarm = (int8_t)ma;
+        }
+        if (matched == 3 && cmd[0]) {
+            pending_cmd_add(cmd);
+        }
+    }
+}
+
+void data_reply(uint32_t id, const char *resp)
+{
+    databuf_ack(id);
+    LOG_INF("resp #%u: %s", id, resp);
+    reply_apply(resp);
+}
+
 /* -- send ----------------------------------------------------------------- */
+
+/* The datagram being sent: the records, stamped with their ages, then the
+ * log lines that ride along.  data_current itself is left as the records
+ * alone, which is what the backlog takes if the send fails. */
+static char s_tx[UDP_PACKET_SIZE];
+
+/* When the previous record went out.  A reply from anything sent since then
+ * is the evidence that the link is delivering, and the backlog waits for it:
+ * pushed into a modem that has stopped delivering, it would only queue up
+ * behind the stall and wait there with everything else. */
+static int64_t s_prev_send_ms;
+
+/* The records did not go.  Keep them rather than discard them: the caller
+ * resets the send buffer either way, so without this the position is gone
+ * for good and an outage costs a hole in the journey, not just late
+ * telemetry.  Only a failure that means something is counted: with no
+ * registration the send was never going to succeed and the modem is already
+ * dealing with it — counting those is what used to escalate a tunnel into a
+ * modem teardown. */
+static int send_failed(bool counts)
+{
+    last_send_ok = false;
+    if (counts && modem_is_registered()) {
+        gsm_send_failures++;
+    }
+    databuf_push_lines(data_current, (size_t)data_index);
+    return 0;
+}
 
 int send_data(void)
 {
+    /* Replies that came in since the last send are receipts; sends that
+     * have waited too long for theirs go back in the backlog. */
+    (void)transport_poll();
+    databuf_expire();
+
     int rec_count = 1;
     for (int i = 0; i < data_index; i++) {
         if (data_current[i] == '\n') rec_count++;
@@ -746,56 +861,66 @@ int send_data(void)
         p += len + 1;
     }
 
-    /* Captured warnings/errors ride along as "L," lines after the record,
-     * within what the datagram has room for and a per-record cap so a busy
-     * log never crowds out the position.  They are appended only to the
-     * live send, never to a record bound for the backlog: the backlog's
-     * slots are sized for a record alone, and the lines are kept here
-     * until a datagram carrying them actually gets through. */
-    int rec_end = data_index;
-    int added = 0;
-    int room = (UDP_PACKET_SIZE - 64) - data_index;   /* transport envelope */
+    /* No registration: nothing handed to the modem now would reach the
+     * server.  It would take the datagram all the same — in the middle of a
+     * tracking-area update it still has its bearer — and then lose it with
+     * the bearer, the way the datagrams it already held were lost at 10:57
+     * and 11:50 on 2026-09-27.  So the records go straight to the backlog,
+     * and the send counts as failed but not towards a recovery: the modem is
+     * already dealing with it. */
+    if (!modem_is_registered()) {
+        /* And a reply from before the outage says nothing about the link
+         * after it: the backlog waits for one to a send made since. */
+        s_prev_send_ms = k_uptime_get();
+        return send_failed(false);
+    }
 
-    if (room > DATA_LIMIT - 1 - data_index) {
-        room = DATA_LIMIT - 1 - data_index;
+    /* The records, each marked with its age if it is not fresh — one held
+     * through an outage says when it was built (see databuf_stamp) — then
+     * the captured warnings/errors as "L," lines, within what the datagram
+     * has room for and a per-record cap so a busy log never crowds out the
+     * position.  The lines ride only the live send, never a record bound
+     * for the backlog: the backlog's slots are sized for a record alone,
+     * and the lines stay in their own buffer until a datagram carrying them
+     * has gone. */
+    int rec_len = databuf_stamp(data_current, (size_t)data_index,
+                                s_tx, sizeof(s_tx) - 1);
+
+    if (rec_len < 0) {
+        if (data_index >= (int)sizeof(s_tx)) {
+            /* More than a datagram holds: the backlog packs it smaller. */
+            return send_failed(true);
+        }
+        /* No room for the ages: the records as they are. */
+        memcpy(s_tx, data_current, (size_t)data_index);
+        rec_len = data_index;
+    }
+
+    int tx_len = rec_len;
+    int room = (UDP_PACKET_SIZE - 64) - tx_len;   /* transport envelope */
+
+    if (room > (int)sizeof(s_tx) - 1 - tx_len) {
+        room = (int)sizeof(s_tx) - 1 - tx_len;
     }
     if (room > CONFIG_APP_DEBUG_LOG_PER_RECORD) {
         room = CONFIG_APP_DEBUG_LOG_PER_RECORD;
     }
     if (room > 0) {
         size_t pending = dbglog_pending();
+        int added = dbglog_take(&s_tx[tx_len], (size_t)room);
 
-        added = dbglog_take(&data_current[data_index], (size_t)room);
         if (added > 0) {
-            data_index += added;
-            data_current[data_index] = '\0';
+            tx_len += added;
             LOG_INF("log: sending %d of %u pending bytes", added,
                     (unsigned)pending);
         }
     }
 
-    int err = transport_send((const uint8_t *)data_current,
-                             (size_t)data_index);
+    int err = transport_send((const uint8_t *)s_tx, (size_t)tx_len);
     if (err) {
-        last_send_ok = false;
-        /* Put the record back the way it was: the log lines stay in their
-         * buffer for the next attempt and must not be pushed as records. */
-        data_index = rec_end;
-        data_current[data_index] = '\0';
+        /* The log lines stay in their buffer for the next attempt. */
         dbglog_ack(false);
-        /* Only count a failure that means something.  With no registration
-         * the send was never going to succeed and the modem is already
-         * dealing with it; counting those is what used to escalate a tunnel
-         * into a modem teardown. */
-        if (modem_is_registered()) {
-            gsm_send_failures++;
-        }
-        /* Keep the record rather than discard it.  The caller resets the
-         * send buffer either way, so without this the position is gone for
-         * good and an outage costs a hole in the journey, not just late
-         * telemetry. */
-        databuf_push_lines(data_current, (size_t)data_index);
-        return 0;
+        return send_failed(true);
     }
     last_send_ok = true;
     gsm_send_failures = 0;
@@ -803,12 +928,18 @@ int send_data(void)
     powered_on = false;
     dbglog_ack(true);
 
-    /* The link is working, so drain a little of whatever the last outage
-     * left behind.  Bounded per cycle so a backlog never delays the live
-     * position. */
-    if (databuf_count() > 0) {
-        databuf_flush(CONFIG_APP_DATABUF_FLUSH_PER_CYCLE);
+    /* The modem has the datagram; the records are held until the server
+     * answers for them, and go again if it does not.  Not in track mode:
+     * its records carry an IMU burst too big for the backlog's slots, and a
+     * second copy of a one-second sample, a minute late, is not worth the
+     * airtime. */
+    if (!transport_is_streaming()) {
+        databuf_sent(transport_sent_id(), s_tx, (size_t)rec_len);
     }
+
+    int64_t prev_send_ms = s_prev_send_ms;
+
+    s_prev_send_ms = k_uptime_get();
 
     /* Server response, if requested */
     if (read_udp_response) {
@@ -817,30 +948,16 @@ int send_data(void)
                                         RESPONSE_TIMEOUT_MS);
         if (n > 0) {
             LOG_INF("resp: %s", resp);
-            /* Plaintext shape:  "1,int,ma[,cmd]"  */
-            int interval = -1, ma = -1;
-            char cmd[128] = "";
-            int matched = sscanf(resp, "1,%d,%d,%127[^\n]",
-                                 &interval, &ma, cmd);
-            /* A decodable response is proof the datagram it answers
-             * arrived, which is the only evidence that fw= and rst= landed.
-             * Clearing s_fw_pending on the send instead threw the boot
-             * diagnostics away whenever the record was lost — and a lost
-             * boot record is exactly the case where the reset cause is
-             * worth having.  Left set, they ride the next record. */
-            s_fw_pending = false;
-
-            if (matched >= 2) {
-                if (!send_int_to_server) {
-                    if (interval >= 0) g_settings.loop_interval = interval;
-                    if (ma >= 0)       g_settings.movement_alarm = (int8_t)ma;
-                }
-                if (matched == 3 && cmd[0]) {
-                    strncpy(pending_server_cmd, cmd,
-                            sizeof(pending_server_cmd) - 1);
-                }
-            }
+            reply_apply(resp);
         }
+    }
+
+    /* Drain a little of whatever an outage, or an unanswered send, left
+     * behind — once something sent since the last record has been answered,
+     * so the link is known to be delivering.  Bounded per cycle so a
+     * backlog never delays the live position. */
+    if (databuf_count() > 0 && databuf_last_ack_ms() >= prev_send_ms) {
+        databuf_flush(CONFIG_APP_DATABUF_FLUSH_PER_CYCLE);
     }
 
     send_int_to_server = false;

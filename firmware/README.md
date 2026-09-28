@@ -152,6 +152,15 @@ that decrypts is authenticated as well as private.
   [PROTOCOL.md](../server/docs/PROTOCOL.md).
 - `modem.c` enables release assistance (`AT%RAI`), so the radio is released
   soon after each exchange and GNSS gets the shared antenna back.
+- Delivery is confirmed, not assumed. The modem accepting a datagram only
+  means it is queued, and a modem that loses its registration discards what
+  it holds, so each send's records are kept until the server's reply to that
+  datagram comes back (the reply is bound to the request's nonce, so it names
+  the datagram) and sent again from the backlog if it has not within
+  `APP_ACK_TIMEOUT_S` (`databuf.c`). The server drops the copy of anything
+  that did arrive, and a record sent late carries `age=` so it is filed at
+  the time it was built. A drive that loses the network keeps recording into
+  the backlog.
 
 The CA in `src/ca_cert.h` is for updates only: `modem.c` writes it into the
 modem on first boot, and the update server's certificate is checked against it.
@@ -365,6 +374,7 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_PIN_*` | PCB map | Every signal's P0.x GPIO (K-line, I²C, IMU INTs, ignition) - remap per-board in `local.conf` |
 | `APP_DEBUG_IGNITION` | -1 | Force ignition state (0=ON, 1=OFF, -1=live GPIO) |
 | `APP_DEBUG_BATTERY_MV` | 0 | Force battery voltage in mV (0=live INA228) |
+| `APP_DEBUG_DROP_DATAGRAMS` | 0 | Bench only: discard every Nth datagram as if lost, to exercise the resend (0 = never) |
 | `APP_CRASH_THRESHOLD_MG` | 4000 | Impact alert threshold while awake (mg) |
 | `APP_PARKED_IMPACT_MG` | 800 | Parked-impact threshold from FIFO peak (mg) |
 | `APP_IMPACT_IMMEDIATE_MG` | 700 | Parked hit reported without waiting for the movement confirm (mg, 0 = never) |
@@ -402,6 +412,8 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_COAST_STOP_SPEED_KMH_X10` | 50 | Coast-to-stop speed threshold (km/h ×10) |
 | `APP_COAST_MAX_ITERATIONS` | 60 | Coast-to-stop max iterations |
 | `APP_BATCH_SIZE` | 3 | Records per datagram while driving |
+| `APP_DATABUF_UNACKED_SLOTS` | 6 | Sent datagrams whose records are held until the server answers (0 = take a send at its word; 0 under Traccar, whose HTTP 2xx is the receipt) |
+| `APP_ACK_TIMEOUT_S` | 30 | Seconds without an answer before a datagram's records go back to the backlog to be sent again |
 | `APP_MODEM_STUCK_CFUN_S` | 600 | Registered but unable to send this long: CFUN cycle (s) |
 | `APP_MODEM_STUCK_RESET_S` | 1800 | Registered but unable to send this long: modem restart (s) |
 

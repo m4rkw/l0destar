@@ -68,6 +68,7 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `tm` | 1 = built in track mode: GNSS off, position is the last fix, speed the ECU's | per-packet |
 | `acc` | IMU burst: `ax/ay/az/gx/gy/gz` per sample, samples joined by `:`, oldest first, 26 Hz; accel milli-g, gyro raw LSB | per-packet |
 | `rid` | the device's own id for this record, consecutive within a boot | per-packet |
+| `age` | seconds between the device building the record and sending it — only on a record sent late | per-packet, not stored |
 | `rsrp` | serving cell RSRP, dBm (−140…−44) | per-packet |
 | `snr` | serving cell SNR, dB (−24…+24) | per-packet |
 | `band` | LTE band in use | per-packet |
@@ -83,6 +84,28 @@ build.
 consecutive within a boot, so a gap in it is a record that never arrived, and
 it is seeded at random at each boot, so no two boots reuse the same ids and a
 reference to one can never be resolved against the wrong record.
+
+It is also how a copy is recognised. A send the modem accepts is not a send
+the server got — a modem that loses its registration discards what it had
+queued — so the device holds each datagram's records until the reply to that
+datagram comes back, and sends them again if it has not within
+`APP_ACK_TIMEOUT_S`. A datagram that arrived but whose reply was lost
+therefore arrives twice. A record whose `rid` and fix time are both already
+stored for the device is a copy: it is answered like any other, and not
+stored again. Records without a `rid` (firmware before 0.4.62) are never
+treated as copies.
+
+`age` is on a record sent long after it was built: one held in the backlog
+through an outage, or sent again after its datagram went unanswered. Such a
+record is filed at the time it was built (`timestamp` is arrival time less
+`age`) rather than on arrival, so the track and the journey put it in its
+place. When something built later is already stored it is *history*: it
+fills in the track, and journey distances are summed in time order so it
+adds no detour, but it does nothing a live record would — no ignition-on
+alert, no journey opened or closed, no settings or track-mode change. A late
+record that is still the newest, such as an ignition-off recorded during an
+outage and sent when the network came back, is the latest state and acts
+like one, at the time it happened.
 
 "Retrospective" is `wt` alone: it describes the record it names, not the one
 it rides on, and the server writes it back to that row's `wake_ms` column. It
@@ -207,9 +230,12 @@ genuine resting low reading still relays.
 1,<interval>,<movement_alarm>[,<commands>][,fota=<version>][,track=<0|1>]
 ```
 
-The leading `1` is the ack the firmware checks before clearing its send
-buffer. The firmware applies a reply only when it carries both the interval
-and movement_alarm.
+Every datagram is answered, and the reply is the receipt: it is bound to the
+request's nonce (see Transport), so the firmware knows exactly which datagram
+it answers, and only then lets go of the records that datagram carried. The
+firmware reads every reply — not only those it waits for — and applies the
+settings and commands in each. It applies the settings only when a reply
+carries both the interval and movement_alarm.
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is
