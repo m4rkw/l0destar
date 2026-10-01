@@ -365,7 +365,14 @@ int         fota_check(enum fota_ctx ctx);
 void alert_enqueue(const char *msg, int priority);
 int  alert_send(void);
 int  alert_send_standalone(void);
-extern int  alert_count;
+extern int  alert_count;             /* waiting for a send */
+/* Alerts are held until the reply to the datagram that carried them comes in,
+ * like records (see alert.c).  databuf_ack() passes every reply on, and
+ * databuf_settle() waits for these too before the socket goes. */
+void alert_ack(uint32_t id);
+int  alert_unanswered(void);         /* sent, reply not yet in */
+void alert_expire(void);             /* unanswered past APP_ACK_TIMEOUT_S: queue again */
+void alert_settle(void);             /* all unanswered: queue again */
 
 void led_on(void);
 void led_off(void);
@@ -584,8 +591,9 @@ int   modem_read_temp(float *temp_c);
 int   modem_read_vbat(int *mv);        /* nRF9151 VDD (= VSYS), millivolts */
 int   ignition_read(void);
 float battery_read_voltage(void);
+float battery_poll_voltage(void);       /* one conversion from a shut-down INA, left shut down */
 bool  battery_on_backup(float v);       /* supply is the inline backup module, not the car */
-extern bool backup_woke;                /* this wake was the module's ignition pulse: alert without the settle wait */
+extern bool backup_woke;                /* this wake found the module taking over: alert without the settle wait */
 
 int  accel_crash_int_enable(int threshold_mg);
 int  accel_crash_int_disable(void);

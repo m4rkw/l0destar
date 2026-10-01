@@ -150,6 +150,34 @@ float battery_read_voltage(void)
 #endif
 }
 
+/* One bus conversion from a shut-down INA, for the sleep loop's backup-rail
+ * poll: the band it looks for is volts away from a car battery, so one
+ * conversion does, and it costs a fifth of battery_read_voltage()'s average
+ * on every tilt poll.  Leaves the INA shut down. */
+float battery_poll_voltage(void)
+{
+#if CONFIG_APP_DEBUG_BATTERY_MV > 0
+	return CONFIG_APP_DEBUG_BATTERY_MV / 1000.0f;
+#else
+	if (!s_ok) return -1.0f;
+
+	uint8_t buf[3];
+	bool ok;
+
+	bb_write16(&ina_bus, INA228_ADDR, INA228_ADC_CFG, INA228_ADC_CONT);
+	k_msleep(3);    /* past the first bus conversion (~1.05 ms), so not the
+			 * value left over from before the shutdown */
+	ok = bb_read_regs(&ina_bus, INA228_ADDR, 0x05, buf, 3);
+	bb_write16(&ina_bus, INA228_ADDR, INA228_ADC_CFG, INA228_ADC_SHUT);
+	if (!ok) {
+		return -1.0f;
+	}
+	uint32_t raw = ((uint32_t)buf[0] << 16 |
+			(uint32_t)buf[1] << 8 | buf[2]) >> 4;
+	return (float)raw * 195.3125e-6f;
+#endif
+}
+
 void hw_power_shutdown(void)
 {
 	if (!s_ok) return;

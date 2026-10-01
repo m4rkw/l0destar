@@ -147,6 +147,44 @@
 #define BACKUP_SUPPLY_MAX           0.0f
 #endif
 
+/* -- ignition wake from sleep ---------------------------------------------- */
+/* A wake on the ignition line is a key-on when the line is still on this long
+ * after the interrupt.  Anything shorter is a blip and ignored. */
+#define IGN_WAKE_DEBOUNCE_MS        200
+/* The line has to read off for this long before a pulse counts as over, so
+ * contact bounce on a key-on is not taken for the end of it. */
+#define IGN_OFF_CONFIRM_MS          50
+/* With the module, a line still on after this is a key.  The module's wake
+ * pulse is C17 discharging into the tracker's 236K sense divider at ~15 V/s
+ * from ~11.5 V, which holds the sense on for 0.1-0.7 s depending on where
+ * the 2N7002's threshold falls (4.2-10 V at the connector). */
+#define BACKUP_PULSE_MAX_MS         1500
+/* The pulse fires as the car rail (VCAR, upstream of the module's ideal
+ * diode) falls through ~10.06 V.  The tracker's rail is downstream of that
+ * diode and still held at 10 V or more by ~190 uF of input capacitance, so
+ * the backup band is not what a read taken at the pulse sees.  It gets there
+ * as the tracker's own draw runs the capacitance down to the boost's ~9.1 V:
+ * a second or two with the unit awake, but tens of seconds on the bench,
+ * where USB powers the module and the 12 V rail carries only the INA and the
+ * idle buck.  So the rail is watched for this long. */
+#define BACKUP_SETTLE_MS            60000
+/* ...and has to stay in the band, with the line off, for this long.  A crank
+ * sag passes through the band too, on a circuit that can drop out while
+ * cranking, but it is over within a second or two. */
+#define BACKUP_CONFIRM_MS           2000
+/* A rail above the band that falls by less than this over a second is held
+ * up by a supply, not coasting down on capacitance, so the car is still
+ * connected and the pulse was a key.  The slowest coast, on the bench with
+ * USB carrying the module, is estimated at 50 mV/s or more (tens of uA from
+ * ~190 uF); not yet measured. */
+#define BACKUP_FALL_MIN_V           0.02f
+#define BACKUP_POLL_MS              250
+/* The pulse is only the fast path.  The sleep loop also reads the rail on
+ * every pass, at most this far apart: the tilt poll's cadence, so with tow
+ * detection on it adds no wakes.  A cut is then found within a poll or two
+ * of the rail settling, whatever the ignition wire is doing. */
+#define BACKUP_RAIL_POLL_S          30
+
 /* -- engine-running detection, voltage fallback ---------------------------- */
 /* Only consulted when the ECU is not answering — see engine_is_running().
  * Demoting to "engine stopped" needs the rail low AND the vehicle standing

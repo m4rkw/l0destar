@@ -209,12 +209,21 @@ receipt time, marked `(rx)`.
 A line beginning `A,` is an alert rather than a position:
 
 ```
-A,<priority>,<message>
+A,<priority>,<message>[,aid=<n>]
 ```
 
 Priority follows Pushover's scale: `-1` quiet, `0` normal, `2` requires
 acknowledgement. A message prefixed `google: ` or `tomtom: ` carries
 `lat,lon` and is turned into a tappable navigation link.
+
+The firmware holds an alert until the reply to the datagram that carried it
+comes back, the same as a record, and sends it again if it does not. So an
+alert whose reply was lost arrives twice. `aid=` is the alert's id,
+consecutive within a boot from a random start, and a second copy with the same
+id and message is dropped instead of being notified again. The server
+remembers ids for a week, in memory, so a copy that arrives across a server
+restart is notified twice. Firmware that sends no `aid=` does not resend
+either, and every alert it sends is relayed.
 
 Two rules are applied server-side. A device marked `garage` has priority-2
 alerts downgraded, because a vehicle that is expected to be moved should not

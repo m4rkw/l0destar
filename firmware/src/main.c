@@ -51,9 +51,13 @@ int8_t   previous_ignition = -1;
  * key is confirmed on, or reports once and sleeps if the key is already off
  * again (a short key cycle) — see the ignition-off branch there. */
 static bool s_key_wake;
-/* The sleep loop was woken by the backup module's ignition pulse (see
- * ign_isr and the ignition check in do_sleep).  data.c reads and clears it. */
+/* The sleep loop found the backup module taking over — by its ignition pulse
+ * or by the rail poll, see do_sleep.  data.c reads and clears it. */
 bool     backup_woke;
+/* The sleep loop has reported the module carrying the rail, so the rail poll
+ * does not report it again every pass.  Cleared by a poll that finds the rail
+ * back above the band. */
+static bool s_backup_seen;
 bool     engine_running;
 float    battery_v;
 struct wake_report wake_pending;
@@ -83,6 +87,9 @@ static bool s_ign_cb_installed;
  * module's wake pulse (CONFIG_APP_BACKUP_SUPPLY) holds the line for only
  * ~0.4 s, so by the time the loop's debounce re-reads it the level is gone. */
 static atomic_t s_ign_int_flag;
+/* k_uptime_get_32() when ign_isr fired: where the pulse began, for timing
+ * how long the line stays on. */
+static atomic_t s_ign_int_ms;
 
 /* The sleep loop owes a report the moment the modem registers (resend_owed
  * in do_sleep).  Registration used to be noticed only by the loop's own
@@ -113,6 +120,7 @@ static void ign_isr(const struct device *dev, struct gpio_callback *cb,
      * back-to-back and starve the sleep loop.  Disarm here; the loop
      * re-arms before each wait. */
     gpio_pin_interrupt_configure(dev, PIN_IGN_SENSE, GPIO_INT_DISABLE);
+    atomic_set(&s_ign_int_ms, (atomic_val_t)k_uptime_get_32());
     atomic_set(&s_ign_int_flag, 1);
     k_sem_give(&s_wake_sem);
 }
@@ -442,10 +450,21 @@ static int telemetry_interval(void)
  * Something must have brought it up (or it is registered), and no timed
  * report may be owed on a search that is still inside its window: that
  * report goes out the moment the modem registers, and the alert paths that
- * raise the radio for their own send must not take it down under it. */
+ * raise the radio for their own send must not take it down under it.
+ *
+ * A modem the modem itself says is asleep in PSM, with nothing on this pass
+ * having raised it, has nothing to release.  Registered counts as "brought
+ * up" above, and in PSM it is registered for good, so every tilt poll used
+ * to come through here: woke the console, and had modem_sleep() log that it
+ * was leaving the modem registered — ~9 ms of UART and HF clock every 30 s,
+ * as much as the pass's own work.  A modem that is registered but awake
+ * (just used, back on its own, or not entering PSM) still gets released. */
 static bool sleep_modem_release(bool raised, bool owed)
 {
     if (!raised && !network_ready) {
+        return false;
+    }
+    if (!raised && modem_psm_asleep()) {
         return false;
     }
     if (owed && (modem_is_registered() || !network_search_expired())) {
@@ -600,6 +619,97 @@ static bool nofix_search_due(void)
     return (n % 16) == 0;
 }
 
+/* After a wake on the ignition line, watch it to tell a key from a pulse.
+ * True if it is still on window_ms after `since` (the interrupt, or the poll
+ * that noticed the change).  False once it has read off for
+ * IGN_OFF_CONFIRM_MS, with *on_ms how long after `since` it was last seen on,
+ * or -1 if it was already off at the first look: a pulse latched while the
+ * loop was busy, over before anything looked at it. */
+static bool ign_line_held(uint32_t since, int window_ms, int *on_ms)
+{
+    int last_on = -1;
+
+    for (;;) {
+        int age = (int)(k_uptime_get_32() - since);
+
+        if (ignition_read() == 0) {
+            last_on = age;
+            if (age >= window_ms) {
+                *on_ms = age;
+                return true;
+            }
+        } else if (last_on < 0 || age - last_on >= IGN_OFF_CONFIRM_MS) {
+            *on_ms = last_on;
+            return false;
+        }
+        k_msleep(5);
+    }
+}
+
+/* After a pulse on the ignition line with the backup module fitted: was it
+ * the module taking over the rail?  Watched rather than read once, because
+ * the pulse comes before the rail has fallen to the module's level (see
+ * BACKUP_SETTLE_MS).  A cut is the rail falling into the band and staying
+ * there with the line off.  The watch ends early when the line comes back on
+ * (a key, or a crank finishing) or the rail holds steady above the band (the
+ * car is still connected).  *v comes in as the reading just taken and goes
+ * out as the last one.  Never true without CONFIG_APP_BACKUP_SUPPLY, since
+ * battery_on_backup() is not. */
+static bool backup_cut_confirm(float *v)
+{
+    int64_t start = k_uptime_get();
+    int64_t ref_ms = start;
+    int64_t in_band_ms = -1;
+    float   ref_v = *v;
+
+    for (;;) {
+        int64_t now = k_uptime_get();
+        int     t = (int)(now - start);
+
+        if (*v < 0) {
+            LOG_WRN("wake: no rail reading - cannot tell whether that pulse "
+                    "was the backup module");
+            return false;
+        }
+        if (ignition_read() == 0) {
+            LOG_INF("wake: ignition back on %d ms into the rail watch "
+                    "(%.2fV) — not a cut", t, (double)*v);
+            return false;
+        }
+        if (battery_on_backup(*v)) {
+            if (in_band_ms < 0) {
+                in_band_ms = now;
+            }
+            if (now - in_band_ms >= BACKUP_CONFIRM_MS) {
+                LOG_WRN("wake: rail in the backup band at %.2fV, %d ms after "
+                        "the pulse - backup module, reporting the cut",
+                        (double)*v, (int)(in_band_ms - start));
+                return true;
+            }
+        } else {
+            in_band_ms = -1;
+            if (now - ref_ms >= 1000) {
+                if (*v > BACKUP_SUPPLY_MAX && ref_v - *v < BACKUP_FALL_MIN_V) {
+                    LOG_INF("wake: rail holding at %.2fV (%.2fV a second "
+                            "earlier) — car supply present, not a cut",
+                            (double)*v, (double)ref_v);
+                    return false;
+                }
+                ref_v = *v;
+                ref_ms = now;
+            }
+        }
+        if (t >= BACKUP_SETTLE_MS) {
+            LOG_INF("wake: rail still %.2fV %d s after the pulse — not a cut",
+                    (double)*v, BACKUP_SETTLE_MS / 1000);
+            return false;
+        }
+        watchdog_kick();
+        k_msleep(BACKUP_POLL_MS);
+        *v = battery_read_voltage();
+    }
+}
+
 /* The 6D orientation tamper check in the sleep loop, and the flag it
  * keeps across wakes.  TODO: re-enable once the unit is permanently
  * mounted.  One switch for both, so they cannot drift apart. */
@@ -715,6 +825,13 @@ static void do_sleep(void)
     int16_t  wake_snr_db = 0;
     uint8_t  wake_band = 0;
 
+    /* A report owed on the module taking over the rail (the pulse or the
+     * rail poll found it), or on the car supply coming back.  Kept across
+     * passes until the report runs: a cut that also jolts the car can land
+     * in a pass the movement check ends early. */
+    bool backup_wake = false;
+    bool restore_wake = false;
+
     ign_irq_enable();
     atomic_clear(&s_ign_int_flag);
     int ign_before = ignition_read();
@@ -731,6 +848,9 @@ static void do_sleep(void)
             sleep_secs = s_move_cooldown_secs;
         if (TOW_TILT_DEG > 0 && sleep_secs > TOW_POLL_S)
             sleep_secs = TOW_POLL_S;   /* slow-tilt poll cadence */
+        if (IS_ENABLED(CONFIG_APP_BACKUP_SUPPLY) &&
+            sleep_secs > BACKUP_RAIL_POLL_S)
+            sleep_secs = BACKUP_RAIL_POLL_S;   /* backup rail poll */
         if (resend_owed && sleep_secs > RESEND_POLL_S)
             sleep_secs = RESEND_POLL_S;   /* notice the registration */
         if (sleep_secs < 1) sleep_secs = 1;
@@ -776,7 +896,8 @@ static void do_sleep(void)
 
         /* A quiet pass — the timer ran out, no wake interrupt is latched and
          * no report is due — is the tow poll every TOW_POLL_S: two accel
-         * reads and an ignition read, none of which log.  Leave the console
+         * reads, an ignition read and, with the backup module, one rail
+         * conversion, none of which log.  Leave the console
          * suspended for it rather than hold the HF clock for nothing.  Every
          * branch a quiet pass can still fall into (tilt over threshold, a
          * polled ignition change, INT1 still high, the tow re-arm, the modem
@@ -785,7 +906,7 @@ static void do_sleep(void)
         bool quiet = !woke &&
                      !atomic_get(&s_ign_int_flag) &&
                      !atomic_get(&s_accel_int_flag) &&
-                     !resend_owed &&
+                     !resend_owed && !backup_wake && !restore_wake &&
                      !(g_settings.loop_interval > 0 &&
                        telemetry_remaining - elapsed <= 0);
         if (!quiet) {
@@ -895,57 +1016,112 @@ static void do_sleep(void)
 #endif
 
         /* --- ignition check --- */
-        /* The inline backup module lifts the ignition line to ~12 V for
-         * about 0.4 s when its boost takes over the rail, so a power cut
-         * wakes the unit instead of waiting for the timer.  The rail tells
-         * that apart from a key-on: on the module it reads ~9 V, and a car
-         * with its key turned is never in that band. */
-        bool backup_wake = false;
+        /* A wake on the ignition line is a key-on if the line stays on.
+         * The inline backup module lifts it to ~12 V for a fraction of a
+         * second as its boost takes over the rail, so a power cut wakes the
+         * unit instead of waiting for the timer.  What tells that pulse from
+         * a key is the rail afterwards: it falls into the backup band and
+         * stays there, where a car with its key turned never sits.  Not the
+         * rail at the pulse, which is still at the car's level then (see
+         * BACKUP_SETTLE_MS).  Every pulse that is not a key is logged, so one
+         * that is ignored still shows on the console. */
+        bool key_wake = false;
         bool ign_int = atomic_clear(&s_ign_int_flag) != 0;
         int ign_now = ignition_read();
         if (ign_int || ign_now != ign_before) {
+            uint32_t since = ign_int ? (uint32_t)atomic_get(&s_ign_int_ms)
+                                     : k_uptime_get_32();
+            int window = IS_ENABLED(CONFIG_APP_BACKUP_SUPPLY)
+                             ? BACKUP_PULSE_MAX_MS : IGN_WAKE_DEBOUNCE_MS;
+            int on_ms;
+
             console_resume();
-            hw_power_wake();
-            float v = battery_read_voltage();
-            battery_v = v;
-            if (battery_on_backup(v)) {
-                LOG_WRN("wake: ignition pulse with the rail at %.2fV - "
-                        "backup module, reporting the cut", (double)v);
-                backup_wake = true;
-                backup_woke = true;
-                telemetry_remaining = 0;
-                k_msleep(500);           /* let the pulse pass before anything reads the line */
-                ign_now = ignition_read();
-                ign_before = ign_now;
-                ign_int = false;
+            if (ign_line_held(since, window, &on_ms)) {
+                key_wake = true;
             } else {
-                hw_power_shutdown();
-            }
-        }
-        if (!backup_wake && (ign_int || ign_now != ign_before)) {
-            k_msleep(200);
-            ign_now = ignition_read();
-            if (ign_now == 0) {
-                LOG_INF("wake: ignition ON");
-                atomic_set(&s_report_owed, 0);
-                ignition = 0;
-                s_key_wake = true;
-                movement_reset();
-                ign_irq_disable();
-                accel_irq_disable();
-                LOG_INF("wake: INA228 wake");
                 hw_power_wake();
-                LOG_INF("wake: aux power on");
-                hw_aux_power_on();
-                led_on();
-                LOG_INF("wake: modem connect");
-                modem_connect();
-                LOG_INF("wake: GNSS start");
-                gnss_start();
-                s_state = STATE_IDLE;
-                return;
+                float v = battery_read_voltage();
+
+                if (on_ms >= 0) {
+                    LOG_INF("wake: ignition pulse, on for %d ms, rail %.2fV",
+                            on_ms, (double)v);
+                } else {
+                    LOG_INF("wake: ignition pulse, over within %d ms, "
+                            "rail %.2fV",
+                            (int)(k_uptime_get_32() - since), (double)v);
+                }
+                if (IS_ENABLED(CONFIG_APP_BACKUP_SUPPLY) && !s_backup_seen &&
+                    backup_cut_confirm(&v)) {
+                    backup_wake = true;
+                    backup_woke = true;
+                    s_backup_seen = true;
+                    telemetry_remaining = 0;
+                } else if (on_ms >= IGN_WAKE_DEBOUNCE_MS) {
+                    /* Long enough for a key: a short key cycle, which IDLE
+                     * reports once — the same as before the module. */
+                    LOG_INF("wake: long enough for a key — reporting it");
+                    key_wake = true;
+                } else {
+                    LOG_INF("wake: too short for a key — ignored");
+                }
+                battery_v = v;
+                hw_power_shutdown();    /* the report wakes it again */
             }
-            ign_before = ign_now;
+            ign_before = ignition_read();
+        }
+        if (key_wake) {
+            LOG_INF("wake: ignition ON");
+            atomic_set(&s_report_owed, 0);
+            ignition = 0;
+            s_key_wake = true;
+            movement_reset();
+            ign_irq_disable();
+            accel_irq_disable();
+            LOG_INF("wake: INA228 wake");
+            hw_power_wake();
+            LOG_INF("wake: aux power on");
+            hw_aux_power_on();
+            led_on();
+            LOG_INF("wake: modem connect");
+            modem_connect();
+            LOG_INF("wake: GNSS start");
+            gnss_start();
+            s_state = STATE_IDLE;
+            return;
+        }
+
+        /* --- backup rail poll --- */
+        /* The module's wake pulse only reaches the sense if nothing else on
+         * the ignition wire holds it down, which a car's own ignition loads
+         * can, and on the first bench tests it never arrived.  So the rail
+         * is read on every pass as well: one INA conversion, silent unless
+         * it finds something.  Settled in the band (confirmed a moment
+         * later) is the module carrying the tracker, reported once; back
+         * above it is the car supply returning, reported once, which also
+         * re-arms the poll for the next cut. */
+        if (IS_ENABLED(CONFIG_APP_BACKUP_SUPPLY) && !backup_wake &&
+            !restore_wake) {
+            float v = battery_poll_voltage();
+
+            if (!s_backup_seen && battery_on_backup(v)) {
+                k_msleep(BACKUP_CONFIRM_MS);
+                v = battery_poll_voltage();
+                if (battery_on_backup(v)) {
+                    console_resume();
+                    LOG_WRN("sleep: rail %.2fV - backup module carrying the "
+                            "tracker, reporting the cut", (double)v);
+                    backup_wake = true;
+                    backup_woke = true;
+                    s_backup_seen = true;
+                    telemetry_remaining = 0;
+                }
+            } else if (s_backup_seen && v > BACKUP_SUPPLY_MAX) {
+                console_resume();
+                LOG_WRN("sleep: rail %.2fV - car supply back, reporting it",
+                        (double)v);
+                s_backup_seen = false;
+                restore_wake = true;
+            }
         }
 
         /* --- movement check (interrupt woke us, confirm sustained) --- */
@@ -1106,6 +1282,11 @@ static void do_sleep(void)
                         "%lld s",
                         (k_uptime_get() - resend_owed_ms) / 1000);
                 telemetry_remaining = 0;
+            } else if (alert_count > 0) {
+                /* Timed reports are off, so no report would carry them. */
+                LOG_WRN("registered — sending the %d alert%s owed",
+                        alert_count, alert_count == 1 ? "" : "s");
+                alert_send_standalone();
             }
         } else if (resend_owed && network_search_expired()) {
             /* The modem has had its APP_NETWORK_SEARCH_TIMEOUT and is still
@@ -1120,9 +1301,16 @@ static void do_sleep(void)
             modem_power_off();
         }
 
-        /* --- timer telemetry (and the report a backup wake owes) --- */
+        /* --- timer telemetry (and the report a backup or restore owes) --- */
         if ((telemetry_remaining <= 0 && g_settings.loop_interval > 0) ||
-            backup_wake) {
+            backup_wake || restore_wake) {
+            /* The restore report goes out whatever the rail reads: it is one
+             * record, and the only way the server hears the car supply is
+             * back before the next timed wake. */
+            bool forced = restore_wake;
+
+            backup_wake = false;
+            restore_wake = false;
             report_owed_set(&resend_owed, false);
             LOG_INF("sleep: INA228 wake for voltage read");
             hw_power_wake();
@@ -1137,13 +1325,13 @@ static void do_sleep(void)
             if (on_backup) {
                 LOG_INF("battery %.2fV: backup power, reporting", (double)v);
             }
-            if (!on_backup && v > 0 && v < BATTERY_POWEROFF_LEVEL) {
+            if (!on_backup && !forced && v > 0 && v < BATTERY_POWEROFF_LEVEL) {
                 LOG_WRN("battery %.2fV < poweroff", (double)v);
                 hw_power_shutdown();
                 telemetry_remaining = BATTERY_CHECK_INTERVAL;
                 continue;
             }
-            if (!on_backup && v > 0 && v < SLEEP_SAFETY_VOLTAGE) {
+            if (!on_backup && !forced && v > 0 && v < SLEEP_SAFETY_VOLTAGE) {
                 LOG_WRN("battery %.2fV, skipping send", (double)v);
                 hw_power_shutdown();
                 telemetry_remaining = telemetry_interval();
@@ -1265,6 +1453,23 @@ static void do_sleep(void)
             databuf_deliver(RESPONSE_TIMEOUT_MS);
             transport_close();
 
+            /* An alert that went with the registration — the reject that
+             * loses a datagram usually loses the registration too — is owed
+             * like a report: the loop keeps the modem searching and sends it
+             * the moment the network is back, not an hour on with the next
+             * timed report.  On 2026-09-30 the bench's cut alert went at
+             * 19:55:19 into exactly that and was never seen again.  One
+             * unanswered with the network still up (a reply that never
+             * came) waits for the next send, so a server that is not
+             * answering is not asked again every RESEND_POLL_S. */
+            if (alert_count > 0 && !resend_owed && !modem_is_registered()) {
+                LOG_WRN("%d alert%s unsent with the network gone — owed "
+                        "until it is back", alert_count,
+                        alert_count == 1 ? "" : "s");
+                report_owed_set(&resend_owed, true);
+                resend_owed_ms = k_uptime_get();
+            }
+
             /* Tell the server about a reverted update before asking it
              * for another one: a unit that goes straight back to sleep
              * after a revert would otherwise never get the report out. */
@@ -1360,13 +1565,10 @@ static void do_sleep(void)
         accel_read_baseline();
         accel_irq_enable();
 
-        /* re-check ignition before going back to sleep.  After a backup wake
-         * a line still reading on is the module's pulse, not a key-on: the
-         * rail says so. */
+        /* re-check ignition before going back to sleep.  A backup wake only
+         * counts once the line has been off for BACKUP_CONFIRM_MS, so a line
+         * on here is a key, whatever woke this pass. */
         ign_now = ignition_read();
-        if (ign_now == 0 && backup_wake && battery_on_backup(battery_v)) {
-            ign_now = 1;
-        }
         if (ign_now == 0) {
             console_resume();
             LOG_INF("wake: ignition ON");

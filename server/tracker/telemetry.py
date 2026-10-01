@@ -40,7 +40,9 @@ change or on the first record after a wake, and the server carries the last
 known value forward so every row is still self-describing.
 
 A line beginning ``A,`` is an alert rather than a position record:
-``A,<priority>,<message>``.  ``D,<code>,<code>...`` is the vehicle's complete
+``A,<priority>,<message>``, with ``,aid=<n>`` on the end from firmware that
+holds alerts until answered; a copy of one already relayed is dropped the same
+way a record's is.  ``D,<code>,<code>...`` is the vehicle's complete
 set of stored fault codes (``D,`` alone means none), and
 ``L,<uptime_ms>,<E|W>,<text>`` is a warning or error the firmware captured
 between sends.
@@ -49,6 +51,8 @@ between sends.
 import datetime
 import math
 import re
+import threading
+import time
 
 from . import config, db, logs, notify
 
@@ -976,14 +980,60 @@ def process_dtc_report(device, codes, database, log):
 
 # -- alerts ------------------------------------------------------------------
 
+# The device holds an alert until this server's reply to the datagram that
+# carried it comes back, and sends it again if it never does, so an alert
+# whose reply was lost arrives twice.  Each carries an id, ``,aid=<n>`` at the
+# end of the line (consecutive within a boot from a random start), and the
+# copy is dropped here rather than notified a second time.
+#
+# Remembered in memory: the listeners are threads of one process, and a copy
+# follows its original by minutes (the next send) or at most a day or two
+# (the next wake that gets through).  The message is part of the key, so two
+# boots that happen to reuse an id cannot swallow a real alert.  A copy that
+# arrives across a restart of this server is notified again.
+_ALERT_SEEN_SECONDS = 7 * 86400
+_ALERT_SEEN_MAX = 256                   # per device
+_ALERT_ID_RE = re.compile(r',aid=(\d+)$')
+_alert_seen = {}                        # device id -> {(aid, message): seen}
+_alert_seen_lock = threading.Lock()
+
+
+def _alert_copy(device_id, aid, message, now=None):
+    """True if this alert was relayed already; otherwise remember it."""
+    now = time.time() if now is None else now
+    key = (aid, message)
+    with _alert_seen_lock:
+        seen = _alert_seen.setdefault(device_id, {})
+        for old in [k for k, t in seen.items()
+                    if now - t > _ALERT_SEEN_SECONDS]:
+            del seen[old]
+        if key in seen:
+            return True
+        if len(seen) >= _ALERT_SEEN_MAX:
+            del seen[min(seen, key=seen.get)]
+        seen[key] = now
+        return False
+
+
 def _handle_alert(line, device, database, log):
-    """Relay a device-originated alert line (``A,<priority>,<message>``)."""
+    """Relay a device-originated alert line
+    (``A,<priority>,<message>[,aid=<n>]``)."""
     body = line[2:]
+    aid = None
+    m = _ALERT_ID_RE.search(body)
+    if m:
+        aid = int(m.group(1))
+        body = body[:m.start()]
     parts = body.split(',', 1)
     if len(parts) == 2 and parts[0].lstrip('-').isdigit():
         priority, message = int(parts[0]), parts[1]
     else:
         priority, message = 0, body
+
+    if aid is not None and _alert_copy(device['id'], aid, message):
+        log.info('duplicate alert aid=%d from %s dropped', aid,
+                 device['imei'])
+        return
 
     if device.get('garage') and priority == 2:
         priority = 0

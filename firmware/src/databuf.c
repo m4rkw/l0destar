@@ -469,6 +469,8 @@ void databuf_sent(uint32_t id, const char *recs, size_t len)
 void databuf_ack(uint32_t id)
 {
     s_last_ack_ms = k_uptime_get();
+    /* Every reply comes through here, and an alert may be what it answers. */
+    alert_ack(id);
 #if UNANSWERED > 0
     for (int i = 0; i < UNANSWERED; i++) {
         if (s_out[i].id == id) {
@@ -521,9 +523,12 @@ int databuf_settle(int timeout_ms)
 #if UNANSWERED > 0
     int64_t deadline = k_uptime_get() + timeout_ms;
 
-    while (databuf_unacked() > 0) {
+    /* Alerts are held the same way (alert.c), so their replies are waited
+     * for too: one requeued here that had only been slow is sent again. */
+    while (databuf_unacked() > 0 || alert_unanswered() > 0) {
         /* No socket: nothing more can arrive. */
-        if (transport_poll() < 0 || databuf_unacked() == 0 ||
+        if (transport_poll() < 0 ||
+            (databuf_unacked() == 0 && alert_unanswered() == 0) ||
             k_uptime_get() >= deadline) {
             break;
         }
@@ -536,6 +541,7 @@ int databuf_settle(int timeout_ms)
         requeue(i);
         n++;
     }
+    alert_settle();
 #else
     ARG_UNUSED(timeout_ms);
 #endif

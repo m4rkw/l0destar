@@ -1,5 +1,93 @@
 # Changelog
 
+## 0.4.64
+
+### A power cut is reported, with or without the module's wake pulse
+The first bench tests of the inline battery backup, on 2026-09-30, found two
+things wrong with how a sleeping tracker learned of a cut.  The module fires
+its ignition pulse as the car rail falls through about 10.06 V, but its
+switchover comparator watches the car side of its ideal diode, and at that
+moment the tracker's own rail is still held at the car's level by its input
+capacitance: 11.31-11.35 V at the pulse, in the backup band 4.4-4.7 s later.
+0.4.47 read the rail at the pulse and required the band, so it could never
+recognise a cut, and without `APP_BACKUP_SUPPLY` a pulse that had ended by
+the 200 ms re-read left nothing in the log at all.  Separately, IGN passes
+straight through the module and the pulse goes in through 10K, so a bench
+lead holding pin 5 at ground for "ignition off" shorted it; with pin 5 open
+the tracker saw 482 ms and 706 ms pulses.  In a car the ignition wire's own
+loads hold it down the same way, which is a module fix (an isolation diode),
+so the firmware no longer depends on the pulse.
+- **A pulse is told from a key by how long it lasts.**  With
+`APP_BACKUP_SUPPLY`, the line still on 1.5 s after the interrupt
+(`BACKUP_PULSE_MAX_MS`) is a key, timed from the interrupt itself.  So a
+key-on from sleep is recognised after 1.5 s instead of 200 ms.  Without the
+option the 200 ms debounce is unchanged.
+- **Then the rail is watched, not read once.**  Up to 60 s for it to fall into
+the band and stay there 2 s with the line off (`BACKUP_SETTLE_MS`,
+`BACKUP_CONFIRM_MS`).  The watch gives up early if the line comes back on (a
+key, or a crank ending) or the rail holds steady above the band, falling less
+than 20 mV in a second, which is a car still connected.  A pulse that was
+not a cut but lasted 200 ms or more is reported as a short key cycle, as
+before; a shorter one is ignored.
+- **Every ignition wake that is not a key is logged**, with the pulse length
+and the rail: "wake: ignition pulse, on for 482 ms, rail 11.35V".
+- **The rail is also polled while asleep.**  With `APP_BACKUP_SUPPLY`, every
+sleep-loop pass takes one INA conversion (`battery_poll_voltage()`, about
+5 ms) at the tilt poll's 30 s, so no extra wakes (`BACKUP_RAIL_POLL_S` sets
+the cadence if tow detection is off).  In the band, confirmed 2 s later, it
+reports the cut once.  Back above it, it reports the car supply's return
+once, past the battery gates, so `car power restored` goes out straight
+away.  On the bench a cut was reported 37 s after the supply went off
+without the pulse, and 8.3 s after with it; a return 20 s after the supply
+came back.
+- **A report owed on a cut or a return survives the pass.**  It was a
+per-pass flag, and a movement check that ended the pass early (a cut that
+also jolts the car) dropped it.
+- The `APP_BACKUP_SUPPLY` help said the module runs from an LTO pack; it is a
+CR123A cell.
+
+### Quiet sleep passes stay quiet with the modem in PSM
+`sleep_modem_release()` counted a registered modem as one to release, and in
+PSM the modem is registered for good.  So every 30 s tilt poll woke the
+console and called `modem_sleep()`, which only logged "sleep: modem left
+registered": about 9 ms of UART and HF clock per pass, as much as the pass's
+own work.  A pass that raised nothing now leaves alone a modem that says it
+is asleep in PSM (`modem_psm_asleep()`).  One that is registered but awake —
+just used, back on the network by itself, or not getting into PSM — is still
+released as before.  Not yet seen on a cell that grants PSM: the bench's
+refused it for the whole test.
+
+### Alerts are held until answered
+On 2026-09-30 at 19:55:19 the bench's `backup power: 9.19V` went out two
+seconds before the network rejected the registration (EMM cause 9, TAC
+12296), and the server never saw it.  The record sent with it was held and
+arrived three minutes later; the alert, forgotten the moment the modem took
+it, did not.
+- **Alerts are held like records.**  Each keeps its slot until the reply to
+the datagram that carried it comes in (`databuf_ack()` credits alerts too).
+Unanswered after `APP_ACK_TIMEOUT_S`, or when the socket is about to close
+(`databuf_settle()`, which now waits for alert replies as well), an alert is
+sent again with the next send.  The queue is 8 alerts, up from 5.
+- **An alert lost with the network is owed like a report.**  The sleep loop
+keeps the modem searching and sends it as the network returns, rather than
+an hour later with the next timed report.  One unanswered with the network
+still up waits for the next send, so a server that is not answering is not
+asked again every 30 s.  With timed reports off, an owed alert goes on its
+own.
+- **An alert sent on its own waits for its reply**, up to 4 s
+(`RESPONSE_TIMEOUT_MS`), since the radio goes down straight after.
+- **`aid=<n>`**: each alert line now ends `,aid=<n>`, consecutive within a
+boot from a random start like `rid=`, and the server drops a copy rather
+than notify twice.  Traccar builds are unchanged: they hold nothing and send
+no id.
+- **Needs the server's alert dedup.**  A server without it shows the
+`,aid=<n>` in the alert text and relays a resent copy twice.  Both the
+l0destar server (`server/`, with tests) and the car's deployment have it.
+It remembers ids in memory, so a copy that arrives across a server restart
+is relayed again.
+- Not yet proven on hardware: the bench test with `APP_DEBUG_DROP_DATAGRAMS`
+was cut short when the module came off the bench.
+
 ## 0.4.63
 
 ### A datagram the modem accepted is not taken as delivered

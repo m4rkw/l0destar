@@ -1077,7 +1077,7 @@ config APP_BACKUP_SUPPLY
 	default n
 	help
 	  The l0destar inline battery backup holds the tracker's supply at
-	  about 9 V from its LTO pack while car power is absent.  With this
+	  about 9 V from its CR123A cell while car power is absent.  With this
 	  enabled, a supply between APP_BACKUP_MIN_MV and APP_BACKUP_MAX_MV
 	  with the ignition off is taken as backup power rather than a flat
 	  car battery: timed reports keep going, the power-off and sleep-safety
