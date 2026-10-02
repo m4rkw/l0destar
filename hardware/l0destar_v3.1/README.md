@@ -281,7 +281,7 @@ are generated directly and only the enabled interface is ever powered.
 | S15L1 | RF inductor | 0603 47-100 nH, SRF > 2GHz | [LQW18AN68NJ00D](https://uk.farnell.com/murata/lqw18an68nj00d/inductor-68nh-2-2ghz-0-34a-0603/dp/3471533) | |
 | S15C1 | 47pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [CBR04C470J5GACAUTO](https://uk.farnell.com/kemet/cbr04c470j5gacauto/rf-capacitor-47pf-50v-125deg-c/dp/4062386) | |
 | S15C2 | 100pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [CBR04C101J5GACAUTO](https://uk.farnell.com/kemet/cbr04c101j5gacauto/rf-capacitor-100pf-50v-125deg/dp/4062389) | |
-| S15C3 | 10nF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [GRM1555CYA103JE01D](https://uk.farnell.com/murata/grm1555cya103je01d/cap-mlcc-0-01uf-c0g-np0-35v-0402/dp/4792250) | |
+| S15C3 | 10nF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [GRM1555CYA103JE01D](https://www.ebay.co.uk/itm/178474039004) | |
 | S15C4 | 1uF RF capacitor | 0402 >= 10V 10% X7R | [KAM05CR71A105KH](https://uk.farnell.com/kyocera-avx/kam05cr71a105kh/capacitor-mlcc-1uf-x7r-10v-0402/dp/4365709) | |
 | S15D1 | ESD protection diode (GSM path) | TPD1E05U06DPYR X1SON-2 | [TPD1E05U06DPYR](https://www.digikey.com/en/products/detail/texas-instruments/TPD1E05U06DPYR/3844805) | |
 | S15D2 | ESD protection diode (GPS path) | TPD1E05U06DPYR X1SON-2 | [TPD1E05U06DPYR](https://www.digikey.com/en/products/detail/texas-instruments/TPD1E05U06DPYR/3844805) | |
@@ -387,7 +387,7 @@ on which interfaces are fitted. Quantities are per board.
 | All | 10pF 0402 capacitor | 1 | 0402 >= 50V 1% C0G/NP0 | [GRT1555C1H100FA02D](https://uk.farnell.com/murata/grt1555c1h100fa02d/cap-10pf-50v-0402-c0g-np0/dp/4128544) | |
 | All | 47pF RF capacitor | 1 | 0402 >= 50V 5% C0G / NP0 | [CBR04C470J5GACAUTO](https://uk.farnell.com/kemet/cbr04c470j5gacauto/rf-capacitor-47pf-50v-125deg-c/dp/4062386) | |
 | All | 100pF RF capacitor | 1 | 0402 >= 50V 5% C0G / NP0 | [CBR04C101J5GACAUTO](https://uk.farnell.com/kemet/cbr04c101j5gacauto/rf-capacitor-100pf-50v-125deg/dp/4062389) | |
-| All | 10nF RF capacitor | 1 | 0402 >= 50V 5% C0G / NP0 | [GRM1555CYA103JE01D](https://uk.farnell.com/murata/grm1555cya103je01d/cap-mlcc-0-01uf-c0g-np0-35v-0402/dp/4792250) | |
+| All | 10nF RF capacitor | 1 | 0402 >= 50V 5% C0G / NP0 | [GRM1555CYA103JE01D](https://www.ebay.co.uk/itm/178474039004) | |
 | All | 100nF 50V 0402 capacitor | 8 | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | All | 1uF 0402 capacitor | 4 | 0402 >= 10V 10% X7R | [KAM05CR71A105KH](https://uk.farnell.com/kyocera-avx/kam05cr71a105kh/capacitor-mlcc-1uf-x7r-10v-0402/dp/4365709) | |
 | All | 4.7uF 0805 capacitor | 1 | 0805 >= 50V 10% X7R | [GRM21BZ71H475KE15K](https://uk.farnell.com/murata/grm21bz71h475ke15k/cap-4-7uf-50v-mlcc-0805/dp/3582887) | |
