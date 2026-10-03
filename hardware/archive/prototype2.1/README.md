@@ -51,8 +51,8 @@ power.
 | [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) | MCU and GSM/GPS | 1 |
 | [Molex 43045-1400](https://uk.farnell.com/molex/43045-1400/conn-r-a-pcb-hdr-14pos-2row-3mm/dp/9732985) | Main connector | 1 |
 | [20-pin pcb header](https://amzn.to/44hTFGN) | Makerdiary board connector | 2 |
-| [U.FL-R-SMT(01) RF COAXIAL, U.FL, STRAIGHT JACK, 50O](https://uk.farnell.com/3908021) | u.FL connectors | 2 |
-| [SMA-J-P-H-RA-TH1 RF COAXIAL, SMA JACK, 50 OHM](https://uk.farnell.com/2856817) | through-hole SMA connectors | 2 |
+| [U.FL-R-SMT(01) RF COAXIAL, U.FL, STRAIGHT JACK, 50O](https://www.ebay.co.uk/itm/178540053901) | u.FL connectors | 2 |
+| [SMA-J-P-H-RA-TH1 RF COAXIAL, SMA JACK, 50 OHM](https://www.ebay.co.uk/itm/178540028662) | through-hole SMA connectors | 2 |
 | [3521510RFT RES, 510R, 1%, 2W, 2512](https://uk.farnell.com/2117495) | >= 1W K-line pullup resistor | 1 |
 | 0805 1K resistor | 1% 0805 | 3 |
 | 0805 4.7K resistor | 1% 0805 | 2 |
@@ -90,11 +90,11 @@ power.
 | [BLM18KG601SN1D](https://uk.farnell.com/murata/blm18kg601sn1d/ferrite-bead-0603-600r-1-3a/dp/1781094) | Ferrite bead 600R | 1 |
 | [INA228](https://www.aliexpress.com/item/1005005873662957.html) | INA228, voltage reading | 1 |
 | [RT424F12](https://uk.farnell.com/schrack-te-connectivity/rt424f12/relay-dpdt-250vac-8a/dp/1175085) | 12V bistable relay | 1 |
-| [LM66100](https://www.aliexpress.com/item/1005008565117953.html) | LM66100, ideal diode | 9 |
+| [LM66100](https://www.ebay.co.uk/itm/178539979903) | LM66100, ideal diode | 9 |
 | [LT8609AIMSE](https://www.aliexpress.com/item/1005008917068578.html) | LT8609, buck converter | 2 |
 | [STEVAL-MKI212V1](https://www.st.com/en/evaluation-tools/steval-mki212v1.html) | ASM330LHHX accelerometer breakout module | 1 |
 | [TJA1051T-3](https://uk.farnell.com/nxp/tja1051t-3-1j/can-fd-transceiver-5mbps-soic/dp/2574963) | TJA1051T-3, CAN interface | 1 |
-| [NUP2105L](https://uk.farnell.com/diotec/nup2105l/tvs-diode-bidir-44v-sot-23-350w/dp/4574509) | NUP2105L, CAN protector | 1 |
+| [NUP2105L](https://www.ebay.co.uk/itm/178539794622) | NUP2105L, CAN protector | 1 |
 | [MCP2518FD](https://uk.farnell.com/microchip/mcp2518fdt-e-sl/can-controller-aec-q100-40to125deg/dp/3796956) | MCP2518FD, CAN FD controller | 1 |
 | [TXS0104ED](https://uk.farnell.com/texas-instruments/txs0104edr/volt-level-translator-4-bit-soic/dp/3120986) | TXS0104ED, level shifter | 1 |
 | [L9637D](https://uk.farnell.com/stmicroelectronics/e-l9637d/monolithic-bus-driver-40-to-150deg/dp/3129892) | L9637D K-line transceiver | 1 |

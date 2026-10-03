@@ -206,11 +206,11 @@ depassivation bleed. Either is a sheet 2 change.
 |------|-------------|---------------|---------|-------|
 | S1J1 | Car harness connector | Molex Micro-Fit 3.0 2x03 43045-0600 | [43045-0600](https://uk.farnell.com/molex/43045-0600/conn-r-a-pcb-hdr-6pos-2row-3mm/dp/1012252) | |
 | S1J2 | Tracker harness connector | Molex Micro-Fit 3.0 2x03 43045-0600 | [43045-0600](https://uk.farnell.com/molex/43045-0600/conn-r-a-pcb-hdr-6pos-2row-3mm/dp/1012252) | |
-| S1F1 | 2A fuse, car input | 1206 2A time-lag | [0407002.WRA](https://www.digikey.co.uk/en/products/detail/littelfuse-inc/0407002-WRA/14640147) | Time-lag, same as tracker S2F1/S2F2 |
-| S1Z1 | 33V TVS diode | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://uk.farnell.com/nexperia/ptvs33vs1utr-115/tvs-diode-aecq101-unidir-33v-400w/dp/3440137) | Do not lower the standoff, see [Notes](#notes) |
+| S1F1 | 2A fuse, car input | 1206 2A time-lag | [0407002.WRA](https://www.ebay.co.uk/itm/178539955750) | Time-lag, same as tracker S2F1/S2F2 |
+| S1Z1 | 33V TVS diode | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://www.ebay.co.uk/itm/178539916580) | Do not lower the standoff, see [Notes](#notes) |
 | S1U1 | Smart diode controller | LM74610-Q1 VSSOP-8 | [LM74610QDGKRQ1](https://www.digikey.co.uk/en/products/detail/texas-instruments/LM74610QDGKRQ1/5702219) | Zero Iq, floating |
 | S1Q1 | Ideal diode MOSFET | IRLR2905 DPAK, 55V, 27 mΩ | [IRLR2905TRPBF](https://www.digikey.co.uk/en/products/detail/infineon-technologies/IRLR2905TRPBF/811417) | Backordered at DigiKey when checked, see Notes |
-| S1D2 | OR-ing diode from VBOOST | S1B SMA, 100V 1A silicon | [S1B-13-F](https://www.digikey.co.uk/en/products/detail/diodes-incorporated/S1B-13-F/725026) | Silicon, not Schottky |
+| S1D2 | OR-ing diode from VBOOST | S1B SMA, 100V 1A silicon | [S1B-13-F](https://www.ebay.co.uk/itm/178539943449) | Silicon, not Schottky |
 | S1C1 | 100nF capacitor | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | S1C2 | 47uF electrolytic, VCAR | 63V SMD, 105 °C | [EEE-FK1J470P](https://www.digikey.co.uk/en/products/detail/panasonic-electronic-components/EEE-FK1J470P/765992) | |
 | S1C3 | 2.2uF charge-pump capacitor | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |
@@ -218,8 +218,8 @@ depassivation bleed. Either is a sheet 2 change.
 | S1C5 | 10uF capacitor, PPTRACKER | 1210 >= 50V 10% X7R SOFT TERMINATION | [MCJCU32MLB7106KPPDT1](https://uk.farnell.com/taiyo-yuden/mcjcu32mlb7106kppdt1/capacitor-mlcc-10uf-50v-x7r-1210/dp/4666637) | Flex-crack rule |
 | S1C6 | 10uF capacitor, VCAR | 1210 >= 50V 10% X7R SOFT TERMINATION | [MCJCU32MLB7106KPPDT1](https://uk.farnell.com/taiyo-yuden/mcjcu32mlb7106kppdt1/capacitor-mlcc-10uf-50v-x7r-1210/dp/4666637) | Flex-crack rule |
 | S3BT1 | CR123A holder | Keystone 1051, through-hole | [1051](https://uk.farnell.com/keystone/1051/battery-holder-cr123a-through/dp/3759162) | Pin 1 is + |
-| S3F1 | 2A fuse, cell | 1206 2A time-lag | [0407002.WRA](https://www.digikey.co.uk/en/products/detail/littelfuse-inc/0407002-WRA/14640147) | Not a PTC: the 2A 0ZCJ part is only rated 6V |
-| S3U1 | Ideal diode | LM66100 SC70-6 | [LM66100DCKR](https://www.digikey.co.uk/en/products/detail/texas-instruments/LM66100DCKR/10273183) | Same part as tracker S11U1 |
+| S3F1 | 2A fuse, cell | 1206 2A time-lag | [0407002.WRA](https://www.ebay.co.uk/itm/178539955750) | Not a PTC: the 2A 0ZCJ part is only rated 6V |
+| S3U1 | Ideal diode | LM66100 SC70-6 | [LM66100DCKR](https://www.ebay.co.uk/itm/178539979903) | Same part as tracker S11U1 |
 | S3C1 | 2.2uF capacitor | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |
 | S4U5 | Boost converter | LTC3122EMSE MSOP-12-EP | [LTC3122EMSE#PBF](https://www.digikey.co.uk/en/products/detail/analog-devices-inc/LTC3122EMSE-PBF/3516527) | Solder the exposed pad, it is PGND |
 | S4L1 | Inductor | XFL4020-222ME 2.2uH | [XFL4020-222MEC](https://uk.farnell.com/coilcraft/xfl4020-222mec/inductor-2-2uh-8a-20-pwr-38mhz/dp/2289216) | Same part as tracker S6L1 |
@@ -237,8 +237,8 @@ depassivation bleed. Either is a sheet 2 change.
 | S4R20 | FB divider bottom | 0402 130K 1% | Any 0402 130K 1% | Keep 1% |
 | S4C17 | Wake pulse flying capacitor | 0805 >= 50V 10% X7R | [GRM21BZ71H475KE15K](https://uk.farnell.com/murata/grm21bz71h475ke15k/cap-4-7uf-50v-mlcc-0805/dp/3582887) | 50V part so it keeps ~4 µF at 12V bias |
 | S4Q6 | Wake pulse switch | 2N7002 SOT-23 | [2N7002](https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174) | Any vendor |
-| S4Q7 | Wake pulse high-side PNP | BC856B SOT-23 | [BC856BLT1G](https://uk.farnell.com/onsemi/bc856blt1g/transistor-pnp-sot-23/dp/1459043) | |
-| S4D3 | Wake pulse isolation diode | S1B SMA, 100V 1A silicon | [S1B-13-F](https://www.digikey.co.uk/en/products/detail/diodes-incorporated/S1B-13-F/725026) | Silicon, not Schottky |
+| S4Q7 | Wake pulse high-side PNP | BC856B SOT-23 | [BC856BLT1G](https://www.ebay.co.uk/itm/178539823265) | |
+| S4D3 | Wake pulse isolation diode | S1B SMA, 100V 1A silicon | [S1B-13-F](https://www.ebay.co.uk/itm/178539943449) | Silicon, not Schottky |
 | S4R21 | Wake pulse series resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S4R22 | Wake capacitor charge resistor | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | S4R24 | Q7 base drive resistor | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
@@ -246,7 +246,7 @@ depassivation bleed. Either is a sheet 2 change.
 | S5U1 | Car-rail sense comparator | TLV3012 SOT-23-6 | [TLV3012AIDBVR](https://www.digikey.co.uk/en/products/detail/texas-instruments/TLV3012AIDBVR/1678203) | 1.242V reference, 2.8 µA |
 | S5U4 | Cell lockout comparator | TLV3012 SOT-23-6 | [TLV3012AIDBVR](https://www.digikey.co.uk/en/products/detail/texas-instruments/TLV3012AIDBVR/1678203) | |
 | S5U3 | AND gate | SN74AUP1G08 SOT-23-5 | [SN74AUP1G08DBVR](https://www.digikey.co.uk/en/products/detail/texas-instruments/SN74AUP1G08DBVR/864078) | Schmitt inputs; do not substitute an LVC part |
-| S5D1 | Pacing discharge diode | PMEG2010ER SOD-123W | [PMEG2010ER,115](https://uk.farnell.com/nexperia/pmeg2010er-115/diode-rect-sch-20v-1a-sod123w/dp/1907681) | |
+| S5D1 | Pacing discharge diode | PMEG2010ER SOD-123W | [PMEG2010ER,115](https://www.ebay.co.uk/itm/178539872847) | |
 | S5R32 | Car-rail divider top | 0603 6.8M 1% | Any 0603 6.8M 1% 75V | 0603 for the 75V rating |
 | S5R33 | Car-rail divider bottom | 0402 909K 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-07909KL](https://www.digikey.co.uk/en/products/detail/yageo/AF0402FR-07909KL/16992580) | Same part as S4R19; anti-sulfur not required here |
 | S5R38 | Car-sense hysteresis | 0402 47K 5% | [ERJ2RKF4702X](https://uk.farnell.com/panasonic/erj2rkf4702x/res-47k-1-0-1w-0402-thick-film/dp/2302806) | |
@@ -270,19 +270,19 @@ Aggregated from the bill of materials above. Quantities are per board.
 |------|----------|---------------|---------|-------|
 | Molex Micro-Fit 3.0 2x03 PCB connector | 2 | 43045-0600 | [43045-0600](https://uk.farnell.com/molex/43045-0600/conn-r-a-pcb-hdr-6pos-2row-3mm/dp/1012252) | |
 | CR123A holder | 1 | Keystone 1051 | [1051](https://uk.farnell.com/keystone/1051/battery-holder-cr123a-through/dp/3759162) | |
-| 2A fuse | 2 | 1206 2A time-lag | [0407002.WRA](https://www.digikey.co.uk/en/products/detail/littelfuse-inc/0407002-WRA/14640147) | 1x car input, 1x cell |
-| 33V TVS diode | 1 | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://uk.farnell.com/nexperia/ptvs33vs1utr-115/tvs-diode-aecq101-unidir-33v-400w/dp/3440137) | |
-| S1B rectifier | 2 | SMA 100V 1A silicon | [S1B-13-F](https://www.digikey.co.uk/en/products/detail/diodes-incorporated/S1B-13-F/725026) | |
-| PMEG2010ER Schottky | 1 | SOD-123W | [PMEG2010ER,115](https://uk.farnell.com/nexperia/pmeg2010er-115/diode-rect-sch-20v-1a-sod123w/dp/1907681) | |
+| 2A fuse | 2 | 1206 2A time-lag | [0407002.WRA](https://www.ebay.co.uk/itm/178539955750) | 1x car input, 1x cell |
+| 33V TVS diode | 1 | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://www.ebay.co.uk/itm/178539916580) | |
+| S1B rectifier | 2 | SMA 100V 1A silicon | [S1B-13-F](https://www.ebay.co.uk/itm/178539943449) | |
+| PMEG2010ER Schottky | 1 | SOD-123W | [PMEG2010ER,115](https://www.ebay.co.uk/itm/178539872847) | |
 | Smart diode controller | 1 | LM74610-Q1 VSSOP-8 | [LM74610QDGKRQ1](https://www.digikey.co.uk/en/products/detail/texas-instruments/LM74610QDGKRQ1/5702219) | |
 | N-channel MOSFET, DPAK | 1 | IRLR2905 55V 27 mΩ | [IRLR2905TRPBF](https://www.digikey.co.uk/en/products/detail/infineon-technologies/IRLR2905TRPBF/811417) | See Notes for substitutes |
-| Ideal diode | 1 | LM66100 SC70-6 | [LM66100DCKR](https://www.digikey.co.uk/en/products/detail/texas-instruments/LM66100DCKR/10273183) | |
+| Ideal diode | 1 | LM66100 SC70-6 | [LM66100DCKR](https://www.ebay.co.uk/itm/178539979903) | |
 | Boost converter | 1 | LTC3122EMSE MSOP-12-EP | [LTC3122EMSE#PBF](https://www.digikey.co.uk/en/products/detail/analog-devices-inc/LTC3122EMSE-PBF/3516527) | |
 | Nanopower comparator | 2 | TLV3012 SOT-23-6 | [TLV3012AIDBVR](https://www.digikey.co.uk/en/products/detail/texas-instruments/TLV3012AIDBVR/1678203) | |
 | AND gate | 1 | SN74AUP1G08 SOT-23-5 | [SN74AUP1G08DBVR](https://www.digikey.co.uk/en/products/detail/texas-instruments/SN74AUP1G08DBVR/864078) | |
 | Inductor | 1 | XFL4020-222ME 2.2uH | [XFL4020-222MEC](https://uk.farnell.com/coilcraft/xfl4020-222mec/inductor-2-2uh-8a-20-pwr-38mhz/dp/2289216) | |
 | 2N7002 MOSFET | 1 | SOT-23 | [2N7002](https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174) | |
-| PNP transistor | 1 | BC856B SOT-23 | [BC856BLT1G](https://uk.farnell.com/onsemi/bc856blt1g/transistor-pnp-sot-23/dp/1459043) | |
+| PNP transistor | 1 | BC856B SOT-23 | [BC856BLT1G](https://www.ebay.co.uk/itm/178539823265) | |
 | 47uF 63V electrolytic | 1 | SMD 105 °C | [EEE-FK1J470P](https://www.digikey.co.uk/en/products/detail/panasonic-electronic-components/EEE-FK1J470P/765992) | |
 | 100uF 63V electrolytic | 1 | SMD 105 °C | [EEE-FK1J101P](https://www.digikey.co.uk/en/products/detail/panasonic-electronic-components/EEE-FK1J101P/765988) | |
 | 10uF 1210 soft-termination capacitor | 4 | 1210 >= 50V 10% X7R SOFT TERMINATION | [MCJCU32MLB7106KPPDT1](https://uk.farnell.com/taiyo-yuden/mcjcu32mlb7106kppdt1/capacitor-mlcc-10uf-50v-x7r-1210/dp/4666637) | |
