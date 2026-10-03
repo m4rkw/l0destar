@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.4.67
+
+### An unfitted interface's rail senses are left disconnected
+The parts that drive each rail-status line belong to its interface: S7R3/S7R4
+for CAN, and S7R8/S7R9 plus the S7Q1/S7R7 inverter for the K line.  A board
+built with one interface leaves the other's sense lines as bare nets, but
+`hw_domain_init()` made all four connected inputs on every v3.1+ board.  So a
+CAN-only board had P0.00 and P0.31 (PP3V3_K_ST, PP12V_K_ST) floating with
+their input buffers on.  A K-line board without the CAN parts had P0.22
+(PP3V3_CAN_ST) the same way.  Nothing reads them on such a board, and a
+floating connected input can only cost current: Nordic give no figure for
+it, and it depends on where the node drifts.  A sense line is now an input
+only when `APP_BOARD_HAS_CAN` or `APP_BOARD_HAS_KLINE` says its interface is
+fitted.  Otherwise it is set to the reset state (input disconnected), written
+through the HAL because `GPIO_DISCONNECTED` leaves alone a pin the driver has
+not configured.  It is not driven low or pulled down: on a board with both
+interfaces fitted, S7R7 holds PP12V_K_ST at 3.3 V and either would draw ~30 uA.
+The other K pins needed nothing.  On a CAN build K_TX, K_RX, K_SLEEP and
+L_SEND are never configured, and K_EN is driven low, so the K pull-downs
+missing on such a board (S1R5, S10R5, S10R6, S10R9) cost nothing.
+
 ## 0.4.66
 
 ### Setting off is not a tow

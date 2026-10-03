@@ -47,6 +47,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include <hal/nrf_gpio.h>
 
 #include "app.h"
 #include "hw_common.h"
@@ -144,6 +145,33 @@ static void dom_add_sense(struct domain *d, int pin, bool active_low,
 	d->sense[d->nsense++] = (struct domain_sense){ (int8_t)pin,
 						       active_low ? 0 : 1,
 						       name };
+}
+
+/* A rail-status input, if its interface is fitted: attached to the domain
+ * and read as a plain input, since the board's divider or pull-up defines
+ * both levels (an internal pulldown would fight the 100K/1M dividers).
+ *
+ * If it is not fitted, the pin is left disconnected instead.  The parts that
+ * drive a sense line belong to its interface (S7R3/S7R4 for CAN; S7R8/S7R9
+ * and S7Q1/S7R7 for the K line), so on a board built with one interface the
+ * other's sense lines are bare nets, and a connected input on a bare net
+ * floats.  Disconnected draws nothing whatever is fitted.  A low output or
+ * the internal pulldown would not: on a board with both interfaces fitted,
+ * S7R7 holds PP12V_K_ST at 3.3 V and either would sink ~30 uA from it.
+ * Written through the HAL, because GPIO_DISCONNECTED leaves alone a pin
+ * the driver has not configured, whatever state it is actually in. */
+static void dom_rail_sense(struct domain *d, int pin, bool active_low,
+			   const char *name, bool fitted)
+{
+	if (pin < 0) {
+		return;
+	}
+	if (!fitted) {
+		nrf_gpio_cfg_default(NRF_GPIO_PIN_MAP(0, pin));
+		return;
+	}
+	dom_add_sense(d, pin, active_low, name);
+	gpio_pin_configure(hw_gpio0, pin, GPIO_INPUT);
 }
 
 /* True once every sense line for this domain reads the wanted state. */
@@ -264,29 +292,23 @@ int hw_domain_init(void)
 	}
 
 	/* Rail-sense inputs (v3.1+): always-on status from the load switches.
-	 * The external divider / pull-up defines both levels, so no internal
-	 * pull (an internal pulldown would fight the 100K/1M dividers).
 	 * Attaching them to their domains is what lets hw_domain_request()
-	 * verify the rail instead of assuming the enable worked. */
+	 * verify the rail instead of assuming the enable worked.  Only the
+	 * fitted interfaces' senses are inputs; see dom_rail_sense(). */
 	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_RAIL_SENSE)) {
 		const bool inv_12v =
 			IS_ENABLED(CONFIG_APP_BOARD_RAIL_ST_12V_ACTIVE_LOW);
+		const bool has_can = IS_ENABLED(CONFIG_APP_BOARD_HAS_CAN);
+		const bool has_k = IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE);
 
-		dom_add_sense(aux, PIN_GPS_RAIL_ST,  false,   "PP3V3_GPS");
-		dom_add_sense(can, PIN_CAN_RAIL_ST,  false,   "PP3V3_CAN");
-		dom_add_sense(k,   PIN_K3V3_RAIL_ST, false,   "PP3V3_K");
-		dom_add_sense(k,   PIN_K12V_RAIL_ST, inv_12v, "PP12V_K");
-
-		static const int8_t rail_st[] = {
-			PIN_GPS_RAIL_ST, PIN_CAN_RAIL_ST,
-			PIN_K3V3_RAIL_ST, PIN_K12V_RAIL_ST
-		};
-		for (int i = 0; i < (int)ARRAY_SIZE(rail_st); i++) {
-			if (rail_st[i] >= 0) {
-				gpio_pin_configure(hw_gpio0, rail_st[i],
-						   GPIO_INPUT);
-			}
-		}
+		dom_rail_sense(aux, PIN_GPS_RAIL_ST,  false,   "PP3V3_GPS",
+			       true);
+		dom_rail_sense(can, PIN_CAN_RAIL_ST,  false,   "PP3V3_CAN",
+			       has_can);
+		dom_rail_sense(k,   PIN_K3V3_RAIL_ST, false,   "PP3V3_K",
+			       has_k);
+		dom_rail_sense(k,   PIN_K12V_RAIL_ST, inv_12v, "PP12V_K",
+			       has_k);
 	}
 
 	/* AIO inputs (v2.1): external 100K/10K dividers define the level. */
