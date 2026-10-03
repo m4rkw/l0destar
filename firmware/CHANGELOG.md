@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.4.66
+
+### Setting off is not a tow
+At 10:01 on 2026-10-03 the car sent "tilt 24.5deg - possible tow/jack" as it
+pulled away, and at 23:37 on 2026-10-01 it sent "movement: 17.6deg tilt" the
+same way.  Both times the next record had the key on and the car rolling, at
+21 km/h and 4 km/h on the ECU.  A sleep pass checked tilt, then the ignition,
+then movement, and the tilt debounce (2 s) and the movement confirm (up to
+10 s) can each hold a pass that long.  A driver who gets in, starts up and
+drives off inside one pass was measured as a parked car being tilted or
+moved: the tilt check compares single accelerometer reads with the parked
+attitude, and pulling out of a junction is many degrees of that.
+- **The ignition comes first in every pass.**  A pass that starts with the key
+on goes straight to the drive without looking at tilt or movement.
+- **A key that comes on during the pass ends it.**  After the tilt debounce,
+and during and after the movement confirm, the line reading on (or an edge
+the interrupt latched) drops the alert and leaves the key to the next pass.
+The confirm now stops at the first 100 ms poll that sees it, rather than
+running out its 10 s.  No parked-impact fallback is sent from such a pass
+either.
+- **A key turned straight through to the starter is a key.**  The car's sense
+line drops out while the starter turns.  If that happened inside the 200 ms a
+wake waits for, the pass logged "too short for a key" and went on to the tilt
+and movement checks.  A short pulse now gets `IGN_CRANK_MAX_MS` (5 s) for the
+line to come back before it is ignored.
+
+### A crank is not a low battery
+At 10:16 the same day the car sent "low battery: 9.82V" as it was started
+after an 11-minute stop.  The key-on woke it, and when IDLE first looked a
+second or two later the starter was turning and the sense line was out.
+IDLE took that for a short key cycle: it built an ignition-off record at the
+bottom of the sag and went back to sleep, and the same key woke it again
+four seconds later.  The 60 s settle guard (`BATTERY_WARN_SETTLE_S`) did not
+hold the alert back, because it counted from the last record that said the
+ignition went off, the key-off eleven minutes earlier.
+- **IDLE gives the line `IGN_CRANK_MAX_MS` to come back** before it reports a
+short key cycle after a key-on wake.  A crank no longer produces a record, a
+sleep and a second wake.
+- **The settle time also counts from the last time the line read on**,
+wherever it was read (`ignition_last_on_ms()`).  So no reading taken within a
+minute of a key-on alerts, by any path.  The backup-power alert uses the
+same guard.
+
+### Movement alerts give the real deviation
+Every movement alert from the car has said about 3000 mg (3010 on 2026-10-01,
+3225-3484 in September), however gently the car moved.  The figure was read
+straight after `accel_irq_disable()` moved the IMU from ±2 g low-power to
+±8 g, before it had a valid sample at the new setting.  On the bench, a read
+at that point was wrong on 5 tries out of 8 (11-14 g from a unit at rest),
+while the same read taken at ±2 g just before the switch was 1-18 mg every
+time.  The figure is now read before the switch, at the ±2 g the confirm ran
+at.
+
 ## 0.4.65
 
 ### No more phantom impacts from FIFO samples read at the wrong full-scale

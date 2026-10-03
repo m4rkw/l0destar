@@ -271,7 +271,9 @@ BUILD_ASSERT(MOVEMENT_CONFIRM_HITS < MOVEMENT_CONFIRM_MS / 100,
 	     "APP_MOVEMENT_CONFIRM_HITS must be below APP_MOVEMENT_CONFIRM_MS/100 "
 	     "(the number of 100 ms polls in the window)");
 
-int accel_confirm_movement(void)
+/* Gives up, unconfirmed, at the first poll where stop() is true (NULL for
+ * never): the sleep loop stops it as the key comes on. */
+int accel_confirm_movement(bool (*stop)(void))
 {
 	if (!s_ok) return 0;
 
@@ -280,6 +282,8 @@ int accel_confirm_movement(void)
 
 	s_confirm_peak_mg = 0;
 	for (int i = 0; i < polls; i++) {
+		if (stop && stop()) return 0;
+
 		int tilt, delta;
 		accel_get_movement_info(&tilt, &delta);
 		if (delta > s_confirm_peak_mg) s_confirm_peak_mg = delta;

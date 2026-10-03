@@ -154,6 +154,12 @@
 /* The line has to read off for this long before a pulse counts as over, so
  * contact bounce on a key-on is not taken for the end of it. */
 #define IGN_OFF_CONFIRM_MS          50
+/* The car's sense line drops out while the starter turns (the 2026-09-15 and
+ * 2026-10-03 records: off at 9.8-11.5 V between on records seconds apart).
+ * A key-on whose line goes off inside the wake window above, or reads off
+ * when IDLE first looks, is given this long for the line to come back before
+ * it counts as a blip or a short key cycle. */
+#define IGN_CRANK_MAX_MS            5000
 /* With the module, a line still on after this is a key.  The module's wake
  * pulse is C17 discharging into the tracker's 236K sense divider at ~15 V/s
  * from ~11.5 V, which holds the sense on for 0.1-0.7 s depending on where
@@ -204,7 +210,10 @@
  * sense line can read "off" for a moment inside that, which used to yield an
  * ignition-off record built at the bottom of the sag and a "low battery:
  * 9.8V" alert on every cold start.  A genuinely flat battery is still flat a
- * minute later. */
+ * minute later.  Counted from the later of that record and the last time
+ * anything read the line on: a key-on wake from sleep reads it on, and the
+ * record built in its crank comes after an ignition-off record from before
+ * the sleep. */
 #define BATTERY_WARN_SETTLE_S       60
 
 /* -- battery voltage sampling ---------------------------------------------- */

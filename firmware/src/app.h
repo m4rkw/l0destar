@@ -590,6 +590,7 @@ int   accel_read_temp(float *temp_c);
 int   modem_read_temp(float *temp_c);
 int   modem_read_vbat(int *mv);        /* nRF9151 VDD (= VSYS), millivolts */
 int   ignition_read(void);
+int64_t ignition_last_on_ms(void);      /* uptime of the last read that found it on, -1 if none */
 float battery_read_voltage(void);
 float battery_poll_voltage(void);       /* one conversion from a shut-down INA, left shut down */
 bool  battery_on_backup(float v);       /* supply is the inline backup module, not the car */
@@ -630,7 +631,7 @@ int  accel_fifo_drain_samples(struct accel_sample *out, int max);
 #define ACCEL_FIFO_SAMPLE_MS 38
 
 int  accel_read_baseline(void);
-int  accel_confirm_movement(void);
+int  accel_confirm_movement(bool (*stop)(void));
 int  accel_confirm_peak_mg(void);
 void accel_get_movement_info(int *tilt_tenths, int *delta_mg);
 int  accel_enable_wake_int(void);

@@ -646,6 +646,35 @@ static bool ign_line_held(uint32_t since, int window_ms, int *on_ms)
     }
 }
 
+/* For a sleep pass past its ignition check: has the key come on since?  The
+ * line reading on, or the edge the interrupt latched, which also covers a
+ * key whose line is out for the crank at the moment of looking.  A driver
+ * who gets in, starts up and pulls away does all of that inside one pass's
+ * tilt debounce or movement confirm, and the pass then finds the car being
+ * driven.  The caller drops its alert and ends the pass; the next one, which
+ * checks the ignition first, takes the key. */
+static bool ign_on_since_check(void)
+{
+    return ignition_read() == 0 || atomic_get(&s_ign_int_flag) != 0;
+}
+
+/* After a key-on, the line reading off can be the starter turning rather
+ * than the key going off — see IGN_CRANK_MAX_MS.  Either inside the wake's
+ * own window, with the key turned straight through, or by the time IDLE
+ * first looks.  True once it is back on, false if it stays off throughout. */
+static bool ign_back_from_crank(void)
+{
+    int64_t start = k_uptime_get();
+
+    while (k_uptime_get() - start < IGN_CRANK_MAX_MS) {
+        if (ignition_read() == 0) {
+            return true;
+        }
+        k_msleep(20);
+    }
+    return false;
+}
+
 /* After a pulse on the ignition line with the backup module fitted: was it
  * the module taking over the rail?  Watched rather than read once, because
  * the pulse comes before the rail has fallen to the module's level (see
@@ -927,6 +956,95 @@ static void do_sleep(void)
         if (s_move_idle_secs >= MOVEMENT_INACTIVITY_RESET)
             s_move_alert_level = 0;
 
+        /* --- ignition check --- */
+        /* A wake on the ignition line is a key-on if the line stays on.
+         * The inline backup module lifts it to ~12 V for a fraction of a
+         * second as its boost takes over the rail, so a power cut wakes the
+         * unit instead of waiting for the timer.  What tells that pulse from
+         * a key is the rail afterwards: it falls into the backup band and
+         * stays there, where a car with its key turned never sits.  Not the
+         * rail at the pulse, which is still at the car's level then (see
+         * BACKUP_SETTLE_MS).  Every pulse that is not a key is logged, so one
+         * that is ignored still shows on the console.
+         *
+         * First in the pass, ahead of the tilt and movement checks: with the
+         * key on, what they measure is the car being started and driven off.
+         * On 2026-10-03 the tilt check ran first, read the car pulling away
+         * at 21 km/h as 24.5 deg off its parked attitude and raised a
+         * tow/jack alert, and only then did this check find the key.  The
+         * same order sent "movement: 17.6deg tilt" as the car set off at
+         * 23:37 on 2026-10-01.  A key that comes on later in the pass is
+         * caught by ign_on_since_check() before either of them alerts. */
+        bool key_wake = false;
+        bool ign_int = atomic_clear(&s_ign_int_flag) != 0;
+        int ign_now = ignition_read();
+        if (ign_int || ign_now != ign_before) {
+            uint32_t since = ign_int ? (uint32_t)atomic_get(&s_ign_int_ms)
+                                     : k_uptime_get_32();
+            int window = IS_ENABLED(CONFIG_APP_BACKUP_SUPPLY)
+                             ? BACKUP_PULSE_MAX_MS : IGN_WAKE_DEBOUNCE_MS;
+            int on_ms;
+
+            console_resume();
+            if (ign_line_held(since, window, &on_ms)) {
+                key_wake = true;
+            } else {
+                hw_power_wake();
+                float v = battery_read_voltage();
+
+                if (on_ms >= 0) {
+                    LOG_INF("wake: ignition pulse, on for %d ms, rail %.2fV",
+                            on_ms, (double)v);
+                } else {
+                    LOG_INF("wake: ignition pulse, over within %d ms, "
+                            "rail %.2fV",
+                            (int)(k_uptime_get_32() - since), (double)v);
+                }
+                if (IS_ENABLED(CONFIG_APP_BACKUP_SUPPLY) && !s_backup_seen &&
+                    backup_cut_confirm(&v)) {
+                    backup_wake = true;
+                    backup_woke = true;
+                    s_backup_seen = true;
+                    telemetry_remaining = 0;
+                } else if (on_ms >= IGN_WAKE_DEBOUNCE_MS) {
+                    /* Long enough for a key: a short key cycle, which IDLE
+                     * reports once — the same as before the module. */
+                    LOG_INF("wake: long enough for a key — reporting it");
+                    key_wake = true;
+                } else if (ign_back_from_crank()) {
+                    /* A key turned straight through to the starter: the
+                     * line dropped out for the crank inside the window. */
+                    LOG_INF("wake: line back on — a key, cranking at once");
+                    key_wake = true;
+                } else {
+                    LOG_INF("wake: too short for a key — ignored");
+                }
+                battery_v = v;
+                hw_power_shutdown();    /* the report wakes it again */
+            }
+            ign_before = ignition_read();
+        }
+        if (key_wake) {
+            LOG_INF("wake: ignition ON");
+            atomic_set(&s_report_owed, 0);
+            ignition = 0;
+            s_key_wake = true;
+            movement_reset();
+            ign_irq_disable();
+            accel_irq_disable();
+            LOG_INF("wake: INA228 wake");
+            hw_power_wake();
+            LOG_INF("wake: aux power on");
+            hw_aux_power_on();
+            led_on();
+            LOG_INF("wake: modem connect");
+            modem_connect();
+            LOG_INF("wake: GNSS start");
+            gnss_start();
+            s_state = STATE_IDLE;
+            return;
+        }
+
         /* --- slow-tilt check (tow / jack) --- */
         if (TOW_TILT_DEG > 0 && accel_available()) {
             int tilt = accel_tilt_from_ref_tenths();
@@ -950,6 +1068,11 @@ static void do_sleep(void)
                 console_resume();
                 k_msleep(2000);                       /* debounce */
                 tilt = accel_tilt_from_ref_tenths();
+                if (ign_on_since_check()) {
+                    LOG_INF("tilt %d.%ddeg with the key on — not a tow",
+                            tilt / 10, tilt % 10);
+                    continue;           /* the next pass takes the key */
+                }
                 if (tilt >= TOW_TILT_DEG * 10 && !tow_alerted) {
                     tow_alerted = true;
                     tow_stable_secs = 0;
@@ -1014,81 +1137,6 @@ static void do_sleep(void)
             }
         }
 #endif
-
-        /* --- ignition check --- */
-        /* A wake on the ignition line is a key-on if the line stays on.
-         * The inline backup module lifts it to ~12 V for a fraction of a
-         * second as its boost takes over the rail, so a power cut wakes the
-         * unit instead of waiting for the timer.  What tells that pulse from
-         * a key is the rail afterwards: it falls into the backup band and
-         * stays there, where a car with its key turned never sits.  Not the
-         * rail at the pulse, which is still at the car's level then (see
-         * BACKUP_SETTLE_MS).  Every pulse that is not a key is logged, so one
-         * that is ignored still shows on the console. */
-        bool key_wake = false;
-        bool ign_int = atomic_clear(&s_ign_int_flag) != 0;
-        int ign_now = ignition_read();
-        if (ign_int || ign_now != ign_before) {
-            uint32_t since = ign_int ? (uint32_t)atomic_get(&s_ign_int_ms)
-                                     : k_uptime_get_32();
-            int window = IS_ENABLED(CONFIG_APP_BACKUP_SUPPLY)
-                             ? BACKUP_PULSE_MAX_MS : IGN_WAKE_DEBOUNCE_MS;
-            int on_ms;
-
-            console_resume();
-            if (ign_line_held(since, window, &on_ms)) {
-                key_wake = true;
-            } else {
-                hw_power_wake();
-                float v = battery_read_voltage();
-
-                if (on_ms >= 0) {
-                    LOG_INF("wake: ignition pulse, on for %d ms, rail %.2fV",
-                            on_ms, (double)v);
-                } else {
-                    LOG_INF("wake: ignition pulse, over within %d ms, "
-                            "rail %.2fV",
-                            (int)(k_uptime_get_32() - since), (double)v);
-                }
-                if (IS_ENABLED(CONFIG_APP_BACKUP_SUPPLY) && !s_backup_seen &&
-                    backup_cut_confirm(&v)) {
-                    backup_wake = true;
-                    backup_woke = true;
-                    s_backup_seen = true;
-                    telemetry_remaining = 0;
-                } else if (on_ms >= IGN_WAKE_DEBOUNCE_MS) {
-                    /* Long enough for a key: a short key cycle, which IDLE
-                     * reports once — the same as before the module. */
-                    LOG_INF("wake: long enough for a key — reporting it");
-                    key_wake = true;
-                } else {
-                    LOG_INF("wake: too short for a key — ignored");
-                }
-                battery_v = v;
-                hw_power_shutdown();    /* the report wakes it again */
-            }
-            ign_before = ignition_read();
-        }
-        if (key_wake) {
-            LOG_INF("wake: ignition ON");
-            atomic_set(&s_report_owed, 0);
-            ignition = 0;
-            s_key_wake = true;
-            movement_reset();
-            ign_irq_disable();
-            accel_irq_disable();
-            LOG_INF("wake: INA228 wake");
-            hw_power_wake();
-            LOG_INF("wake: aux power on");
-            hw_aux_power_on();
-            led_on();
-            LOG_INF("wake: modem connect");
-            modem_connect();
-            LOG_INF("wake: GNSS start");
-            gnss_start();
-            s_state = STATE_IDLE;
-            return;
-        }
 
         /* --- backup rail poll --- */
         /* The module's wake pulse only reaches the sense if nothing else on
@@ -1183,7 +1231,19 @@ static void do_sleep(void)
                  * have a movement alert to send on the same session. */
             }
 
-            if (!accel_confirm_movement()) {
+            /* The confirm stops as the key comes on.  Then the movement was
+             * the driver getting in and setting off, and so was any peak the
+             * fallback below would report: no alert, and the next pass takes
+             * the key.  The accel is re-armed as after a bump, in case the
+             * line was the backup module's pulse rather than a key. */
+            int moved = accel_confirm_movement(ign_on_since_check);
+            if (ign_on_since_check()) {
+                LOG_INF("key on during the movement confirm — not an alarm");
+                accel_read_baseline();
+                accel_irq_enable();
+                continue;
+            }
+            if (!moved) {
                 /* Only fall back to the polled peak if the drain came up
                  * empty — it is the weaker measurement. */
                 if (!have_imp) peak = accel_confirm_peak_mg();
@@ -1220,6 +1280,14 @@ static void do_sleep(void)
                 accel_irq_enable();
                 continue;
             }
+            /* Read before accel_irq_disable(), at the ±2 g the confirm ran
+             * at.  It sets ±8 g, and a read straight after it comes before the
+             * IMU has a valid sample at the new setting: every movement alert
+             * from the car said ~3000 mg (3010 on 2026-10-01, 3225-3484
+             * before), and on the bench 5 such reads in 8 gave 11-14 g from a
+             * unit at rest, against 1-18 mg read at ±2 g first. */
+            int mv_tilt, mv_delta;
+            accel_get_movement_info(&mv_tilt, &mv_delta);
             accel_irq_disable();
             LOG_INF("movement confirmed");
             /* The unit may have been carried into coverage, so the next
@@ -1231,12 +1299,10 @@ static void do_sleep(void)
             s_move_needs_gps = true;
 
             if (s_move_cooldown_secs <= 0) {
-                int tilt, delta;
-                accel_get_movement_info(&tilt, &delta);
                 char msg[80];
                 snprintf(msg, sizeof(msg),
                          "movement: %d.%ddeg tilt, %dmg",
-                         tilt / 10, tilt % 10, delta);
+                         mv_tilt / 10, mv_tilt % 10, mv_delta);
                 alert_enqueue(msg, accel_alert_priority());
 
                 watchdog_kick();
@@ -2405,6 +2471,19 @@ int main(void)
              * gets one record from the cached position before sleeping. */
             if (ignition != 0 && previous_ignition != -1 && !s_coasting &&
                 s_buffered_records == 0) {
+                /* Off at the first look after a key-on wake is usually the
+                 * starter turning, since the car's sense drops out for the
+                 * crank (IGN_CRANK_MAX_MS) and the wake gets here a second
+                 * or two after the key.  On 2026-10-03 at 10:16 this
+                 * reported that as a short key cycle: a record built at the
+                 * bottom of the sag, 9.82 V with the ignition "off", which
+                 * also went out as "low battery", then a sleep the same key
+                 * woke again four seconds later. */
+                if (s_key_wake && ign_back_from_crank()) {
+                    LOG_INF("ignition back on — that was the crank, not a "
+                            "key cycle");
+                    break;              /* re-read at the top of the loop */
+                }
                 if (s_key_wake) {
                     s_key_wake = false;
                     LOG_INF("ignition off again since the wake — reporting "

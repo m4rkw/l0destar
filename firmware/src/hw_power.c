@@ -191,13 +191,31 @@ void hw_power_wake(void)
 	k_msleep(2);
 }
 
+/* Uptime of the last ignition_read() that found the line on, -1 before any.
+ * Every caller is on the main thread. */
+static int64_t s_ign_on_ms = -1;
+
 int ignition_read(void)
 {
+	int v;
+
 #if CONFIG_APP_DEBUG_IGNITION >= 0
 	/* bench override from local.conf: 0 = ON, 1 = OFF */
-	return CONFIG_APP_DEBUG_IGNITION;
+	v = CONFIG_APP_DEBUG_IGNITION;
 #else
 	/* Active-low sense (pulled up): pin low = ignition present = 0 (ON) */
-	return gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
+	v = gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
 #endif
+	if (v == 0) {
+		s_ign_on_ms = k_uptime_get();
+	}
+	return v;
+}
+
+/* When anything last saw the ignition on: a key-on wake reads the line, and
+ * the record that follows can be built a second later with the line off for
+ * the crank — see BATTERY_WARN_SETTLE_S. */
+int64_t ignition_last_on_ms(void)
+{
+	return s_ign_on_ms;
 }

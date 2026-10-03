@@ -31,8 +31,9 @@ static int  s_battery_warning_status;
 /* Set once the "backup power" alert has gone out; cleared, with a "car power
  * restored" alert, by the first record built above the backup band again. */
 static bool s_on_backup;
-/* Uptime at which the ignition was last seen going off, for the warning's
- * settle time.  -1 until a record has been built with it off. */
+/* Uptime at which a record first carried the ignition off, for the warning's
+ * settle time (with ignition_last_on_ms() — see ign_off_settled()).  -1
+ * until a record has been built with it off. */
 static int64_t s_ign_off_ms = -1;
 static int8_t  s_ign_last = -1;
 /* Cleared once a packet carrying fw= has actually left the device, so a
@@ -171,6 +172,20 @@ static float battery_sample_with_engine_check(void)
     battery_v = battery_read_voltage();
     engine_running = engine_is_running();
     return battery_v;
+}
+
+/* Off for BATTERY_WARN_SETTLE_S as far as anything has seen: since the first
+ * record that carried it off, and since the line last read on anywhere.  The
+ * records alone miss a key-on from sleep.  The wake reads the line on, the
+ * crank drops it out a second later, and a record built then follows the
+ * ignition-off record from before the sleep.  On 2026-10-03 that one was
+ * eleven minutes old, and the crank's 9.82 V went out as "low battery". */
+static bool ign_off_settled(void)
+{
+    int64_t since = MAX(s_ign_off_ms, ignition_last_on_ms());
+
+    return s_ign_off_ms >= 0 &&
+           k_uptime_get() - since >= (int64_t)BATTERY_WARN_SETTLE_S * 1000;
 }
 
 /* -- data collection ------------------------------------------------------ */
@@ -540,10 +555,7 @@ int collect_data(int ignitionState)
     if (ignitionState != 0 && battery_on_backup(v)) {
         /* The settle wait exists for a crank sag, and the module's wake
          * pulse cannot be one: sleep is only entered with the ignition off. */
-        bool settled = backup_woke ||
-                       (s_ign_off_ms >= 0 &&
-                        k_uptime_get() - s_ign_off_ms >=
-                            (int64_t)BATTERY_WARN_SETTLE_S * 1000);
+        bool settled = backup_woke || ign_off_settled();
         backup_woke = false;
         if (!s_on_backup && settled && ignition_read() != 0) {
             char msg[28];
@@ -560,12 +572,10 @@ int collect_data(int ignitionState)
 
     if (ignitionState != 0 && v >= IMPLAUSIBLE_VOLTAGE && !battery_on_backup(v)) {
         if (v < BATTERY_WARNING_LEVEL) {
-            /* Not within the settle time of the ignition going off, and not
+            /* Not within the settle time of the ignition being on, and not
              * if the line already reads on again: both are what a crank
              * looks like from here — see BATTERY_WARN_SETTLE_S. */
-            bool settled = s_ign_off_ms >= 0 &&
-                           k_uptime_get() - s_ign_off_ms >=
-                               (int64_t)BATTERY_WARN_SETTLE_S * 1000;
+            bool settled = ign_off_settled();
             if (s_battery_warning_status == 0 && settled &&
                 ignition_read() != 0) {
                 char msg[24];
@@ -573,8 +583,8 @@ int collect_data(int ignitionState)
                 alert_enqueue(msg, 0);
                 s_battery_warning_status = 1;
             } else if (!settled) {
-                LOG_INF("battery %.2fV within %ds of ignition off — not alerting",
-                        (double)v, BATTERY_WARN_SETTLE_S);
+                LOG_INF("battery %.2fV within %ds of the ignition being on — "
+                        "not alerting", (double)v, BATTERY_WARN_SETTLE_S);
             }
         } else {
             s_battery_warning_status = 0;
