@@ -322,7 +322,15 @@ int accel_enable_wake_int(void)
 	k_msleep(100);
 
 	/* Keep the FIFO ring running in sleep, accel-only (gyro is off), so a
-	 * parked impact's true waveform is captured for drain on wake. */
+	 * parked impact's true waveform is captured for drain on wake.
+	 *
+	 * Emptied first (bypass): the drain converts every sample at the
+	 * full-scale in force when it runs, and the re-arm after confirmed
+	 * movement comes straight from ±8 g with the ring still batching.
+	 * Left in, those samples read at a quarter of their size, so a still
+	 * unit's ~250 mg made a 744 mg "impact" on the bench, until the ring
+	 * cycled them out.  The settling samples go too. */
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x00);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, 0x02);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x06);
 
@@ -513,6 +521,12 @@ static int16_t s_fifo_gy[FIFO_MAX_SAMPLES][3];
 int accel_fifo_enable(void)
 {
 	if (!s_ok) return -1;
+	/* Bypass first, which empties it.  On a wake from sleep the ring still
+	 * holds ±2 g samples that the drain would convert at ±8 g — a still
+	 * unit read as 4.1 g on the bench — and the IMU keeps its FIFO, still
+	 * batching, through an MCU reset as well. */
+	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x00))
+		return -EIO;
 	/* BDR 26 Hz for both sensors (gyro[7:4]=0010, xl[3:0]=0010) */
 	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, 0x22))
 		return -EIO;

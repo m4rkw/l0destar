@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.65
+
+### No more phantom impacts from FIFO samples read at the wrong full-scale
+The IMU's FIFO ring was never emptied when the accelerometer changed range,
+and the drain converts every sample at the range in force when it runs.  So
+after a confirmed-movement wake in sleep, which goes to ±8 g and re-arms at
+±2 g, the next drain read the ±8 g samples at a quarter of their size: a still
+unit came out at ~250 mg, a deviation from 1 g of 744 mg, which the
+parked-impact path takes for a hit.  The reverse happened on a wake from
+sleep, where the awake ring started out holding ±2 g samples that it read at
+±8 g, so a still unit read 4.1 g.  The IMU also keeps its FIFO, still
+batching, through an MCU reset.  `accel_enable_wake_int()` and
+`accel_fifo_enable()` now go through bypass, which empties the ring, before
+starting it again.  On the bench, the two switches read 744 mg over 3154 ms
+and 4.1 g over 3914 ms before the change, and 31 mg and 26 mg with nothing
+over threshold after it.
+
 ## 0.4.64
 
 ### A power cut is reported, with or without the module's wake pulse
