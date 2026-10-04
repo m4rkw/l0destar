@@ -1,0 +1,335 @@
+(footprint "SQD50P06-15L_GE3_tight"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "SQD50P06-15L_GE3-1")
+	(tags "MOSFET (P-Channel)")
+	(property "Reference" "S1Q1"
+		(at 0 0 0)
+		(layer "F.SilkS")
+		(uuid "51ec5cee-e084-4e4c-9ec1-6b6431ac092f")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(property "Value" "SQD50P06-15L_GE3_tight"
+		(at 0 0 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "b701487b-749c-4b80-920b-42c7be994ddb")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.digikey.com/en/products/detail/vishay-siliconix/SQD50P06-15L-GE3/2622987"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "99f1e309-d4e3-444e-b2ff-a8f3ad9e1df8")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Description" "VISHAY - SQD50P06-15L_GE3 - MOSFET, AUTO, P-CH, -60V, -50A, TO252"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "fb1846ec-ae4e-47d6-8b35-dacb8aafaf32")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Height" "2.507"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "d042f809-b17c-4b08-b1d4-0a8b6688a297")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Farnell Part Number" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "eebd7549-d632-487f-be99-be71c54c78d6")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Farnell Price/Stock" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "8997660e-a101-4fda-95a4-c2d658712eb7")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Manufacturer_Name" "Vishay"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "bed96642-b593-4e48-ac81-e810f981d46d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Manufacturer_Part_Number" "SQD50P06-15L_GE3"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "3e679f3e-9e48-4bb1-9d9f-b5416cd354c0")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(sheetname "/Gated power pass-through/")
+	(sheetfile "power_passthrough.kicad_sch")
+	(attr smd)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_line
+		(start -3.3 -3.491)
+		(end -3.27 2.604)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "5b07c8bb-d9cc-4bfb-afea-5cab9bef1723")
+	)
+	(fp_line
+		(start -3.27 2.604)
+		(end 3.27 2.6)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "ec007808-7065-45cc-be88-a4eab9b898e0")
+	)
+	(fp_line
+		(start -3.1 -3.491)
+		(end -3.3 -3.491)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "065cfa00-1eca-48aa-ac03-bd414ba1710e")
+	)
+	(fp_line
+		(start -2.3 5.7)
+		(end -2.3 5.7)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "9c21f36d-b82d-40a1-b4f9-e5406506dfed")
+	)
+	(fp_line
+		(start -2.3 5.8)
+		(end -2.3 5.8)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "8b231923-3344-422a-9805-730f49e83de2")
+	)
+	(fp_line
+		(start 3.27 -3.491)
+		(end 3.1 -3.491)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "39382dde-1068-4d48-89f5-d28808cc48a3")
+	)
+	(fp_line
+		(start 3.27 2.6)
+		(end 3.27 -3.491)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "26a21c04-1541-4039-8f9b-4a4ed6472ea1")
+	)
+	(fp_arc
+		(start -2.3 5.7)
+		(mid -2.25 5.75)
+		(end -2.3 5.8)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "b73c3f9b-0ca6-4dd5-99b5-a30fbe28e1de")
+	)
+	(fp_arc
+		(start -2.3 5.8)
+		(mid -2.35 5.75)
+		(end -2.3 5.7)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "66ab3179-2701-45b5-9696-22ff0958a8d3")
+	)
+	(fp_line
+		(start -3.49 -5.6)
+		(end 3.47 -5.6)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "eb6df254-ec7a-4b7d-a1f3-15d743360e4c")
+	)
+	(fp_line
+		(start -3.49 5.5)
+		(end -3.49 -5.6)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "099435ea-74b2-440a-b17a-a7f60f7f67fb")
+	)
+	(fp_line
+		(start 3.47 -5.6)
+		(end 3.47 5.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "951d2ca3-c98c-4dd7-8228-29573772758b")
+	)
+	(fp_line
+		(start 3.47 5.5)
+		(end -3.49 5.5)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "d05d27ac-a8e6-43f6-a856-9df1dde79344")
+	)
+	(fp_line
+		(start -3.27 -3.491)
+		(end 3.27 -3.491)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "8b705caf-0937-4896-af3d-75bc5d51c3bc")
+	)
+	(fp_line
+		(start -3.27 2.604)
+		(end -3.27 -3.491)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "3b6c4832-7bd4-4850-8852-c765c3eab395")
+	)
+	(fp_line
+		(start 3.27 -3.491)
+		(end 3.27 2.604)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "d4a7c113-1b72-4f59-9ed1-353c84149df6")
+	)
+	(fp_line
+		(start 3.27 2.604)
+		(end -3.27 2.604)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "ea7300c5-b29a-4afb-9964-9973beef4948")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "41dd9d12-4ed6-4745-a809-329c80b15201")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(pad "1" smd rect
+		(at -2.286 4.191)
+		(size 1.397 2.286)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "a047d63b-0895-4b18-97d7-5c0279342bda")
+	)
+	(pad "2" smd rect
+		(at 0 -2.244)
+		(size 5.69 6.18)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "836047ed-107f-405c-bd15-17f2c3890afb")
+	)
+	(pad "3" smd rect
+		(at 2.286 4.191)
+		(size 1.397 2.286)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "3d282fec-b53f-4d2b-8e89-a6ab9b3053b1")
+	)
+	(embedded_fonts no)
+	(model "SQD50P06-15L_GE3.stp"
+		(offset
+			(xyz 0 0.8299999708 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)
