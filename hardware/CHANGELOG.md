@@ -3,6 +3,10 @@
 Changes to the PCB designs over time, newest first. Boards no longer in the
 tree are noted where they were removed.
 
+## 04/10/2026
+
+- Added battery backup v1.1 to address the problems found in v1.0
+
 ## 26/09/2026
 
 - Swap INA228 for INA238, cheaper part with identical functionality for this
