@@ -315,3 +315,10 @@ butt joint, M2 heat-set inserts in the top, screws in from underneath). The
 cell is accessible with the top removed. Print in PETG or ABS - PLA softens
 around 60 °C, which a parked car reaches. Unprinted and unvalidated; see its
 [README](enclosure/README.md).
+
+## Images
+
+![l0destar board](images/pcb0.png)
+![l0destar board](images/pcb1.png)
+![l0destar board](images/pcb2.png)
+![l0destar board](images/pcb3.png)

@@ -68,6 +68,36 @@ uint32_t data_last_rec_id(void)
     return s_last_rec_id;
 }
 
+/* The last record built on a live fix with the key on: where the next one's
+ * gap begins, both for the motion that fills it (mv=, motion.c) and for the
+ * warning that explains a long one, whose figures are differences from the
+ * totals noted here.  Only a live fix with the key on ends a gap or starts
+ * the next; any other record breaks the run (see gap_end()). */
+static struct {
+    bool     valid;
+    int64_t  epoch_ms;          /* the fix's moment, uptime */
+    float    speed_kmh;         /* GNSS */
+    uint32_t cid;
+    uint32_t blocked_ms;        /* gnss_blocked_ms() */
+    uint32_t starved;           /* gnss_starved_epochs() */
+    uint32_t rrc_ms;            /* modem_rrc_connected_ms() */
+    uint32_t reg_losses;        /* modem_reg_losses() */
+} s_gap;
+static int64_t s_gap_warned_ms;         /* when the warning last went out */
+static int     s_gap_held;              /* warnings held back since */
+/* Bytes of mv= fields in data_current: see data_motion_bytes(). */
+static int     s_motion_bytes;
+
+int data_motion_bytes(void)
+{
+    return s_motion_bytes;
+}
+
+void data_gap_reset(void)
+{
+    s_gap.valid = false;
+}
+
 static uint32_t next_rec_id(void)
 {
     if (s_rec_id == 0) {
@@ -86,6 +116,7 @@ void data_reset(void)
 {
     memset(data_current, 0, sizeof(data_current));
     data_index = 0;
+    s_motion_bytes = 0;
 }
 
 /* Is anything driving the vehicle's electrics?  GNSS only: the fallback below
@@ -281,6 +312,115 @@ static void append_sync_fields(void)
     }
 }
 
+/* Fixes FIX_GAP_WARN_MS or more apart on the move: say where the time went.
+ * Most such gaps are one of two things, and the figures tell them apart.
+ * The radio: GNSS blocked and an RRC connection held for most of the gap,
+ * often with a registration lost or a change of cell (a rejected
+ * tracking-area update, 2026-10-03 22:37).  Or the loop: the fix was waited
+ * for only briefly, and the rest of the gap went somewhere else.  Until now
+ * neither left a trace, which is why a 31 s gap on 2026-10-03 at 20:28 has
+ * no explanation. */
+static void gap_warn(int64_t gap_ms, uint32_t blocked_ms, uint32_t starved,
+                     uint32_t rrc_ms, bool lost)
+{
+    int64_t now = k_uptime_get();
+
+    if (s_gap_warned_ms != 0 &&
+        now - s_gap_warned_ms < FIX_GAP_WARN_SPACING_MS) {
+        s_gap_held++;
+        return;
+    }
+    s_gap_warned_ms = now;
+
+    char cell[32];
+    char held[32] = "";
+
+    if (g_cell.cid != s_gap.cid) {
+        snprintf(cell, sizeof(cell), "cell %u->%u", (unsigned)s_gap.cid,
+                 (unsigned)g_cell.cid);
+    } else {
+        snprintf(cell, sizeof(cell), "cell %u", (unsigned)g_cell.cid);
+    }
+    if (s_gap_held > 0) {
+        snprintf(held, sizeof(held), " (+%d held back)", s_gap_held);
+        s_gap_held = 0;
+    }
+
+    LOG_WRN("%lld s between fixes on the move: waited %d s for this one, "
+            "GNSS blocked %u s, RRC connected %u s, %u epochs starved, %s%s%s",
+            (gap_ms + 500) / 1000, (int)((gnss_last_wait_ms() + 500) / 1000),
+            (unsigned)((blocked_ms + 500) / 1000),
+            (unsigned)((rrc_ms + 500) / 1000), (unsigned)starved, cell,
+            lost ? ", registration lost" : "", held);
+}
+
+/* The record just built ends the gap since the last live fix with the key
+ * on, if there was one, and starts the next.  A gap long enough gets the
+ * warning above; one the dead reckoning can fill gets the motion through it
+ * on the end of this record, within what the backlog's slots take
+ * (APP_DATABUF_REC_MAX), since a record that goes there whole has to fit
+ * one.  Anything other than a live fix with the key on breaks the run: a
+ * record from the stored position, or the key off, says nothing the next
+ * fix's gap could be measured from.
+ *
+ * `fix` is the record's own, as gnss_collect() returned it, not g_gnss: the
+ * receiver's event handler rewrites that with every new fix, and by the end
+ * of a record — after an OBD poll, say — it can be the next one. */
+static void gap_end(int rec_start, int ignitionState, bool live,
+                    const struct gnss_fix *fix)
+{
+    if (ignitionState != 0 || !live) {
+        s_gap.valid = false;
+        return;
+    }
+
+    int64_t to_ms = fix->epoch_ms;
+    uint32_t blocked = gnss_blocked_ms();
+    uint32_t starved = gnss_starved_epochs();
+    uint32_t rrc = modem_rrc_connected_ms();
+    uint32_t losses = modem_reg_losses();
+
+    if (s_gap.valid && to_ms > s_gap.epoch_ms) {
+        int64_t gap = to_ms - s_gap.epoch_ms;
+
+        if (FIX_GAP_WARN_MS > 0 && gap >= FIX_GAP_WARN_MS &&
+            (fix->speed_kmh >= FIX_GAP_MOVING_KMH ||
+             s_gap.speed_kmh >= FIX_GAP_MOVING_KMH)) {
+            gap_warn(gap, blocked - s_gap.blocked_ms, starved - s_gap.starved,
+                     rrc - s_gap.rrc_ms, losses != s_gap.reg_losses);
+        }
+
+        if (IS_ENABLED(CONFIG_APP_DEAD_RECKONING) &&
+            gap >= DR_MIN_GAP_MS && gap <= DR_MAX_GAP_MS) {
+            /* The heading log up to the fix's moment and a little past. */
+            dr_fifo_service();
+
+            int room = CONFIG_APP_DATABUF_REC_MAX - 1 - (data_index - rec_start);
+
+            if (room > DATA_LIMIT - 1 - data_index) {
+                room = DATA_LIMIT - 1 - data_index;
+            }
+
+            int n = motion_field(&data_current[data_index], room,
+                                 s_gap.epoch_ms, to_ms,
+                                 fix->speed_kmh >= DR_MOVING_KMH ||
+                                 s_gap.speed_kmh >= DR_MOVING_KMH);
+
+            data_index += n;
+            s_motion_bytes += n;
+        }
+    }
+
+    s_gap.valid = true;
+    s_gap.epoch_ms = to_ms;
+    s_gap.speed_kmh = fix->speed_kmh;
+    s_gap.cid = g_cell.cid;
+    s_gap.blocked_ms = blocked;
+    s_gap.starved = starved;
+    s_gap.rrc_ms = rrc;
+    s_gap.reg_losses = losses;
+}
+
 /* Wall-clock timestamp in the record's format, from the modem clock, or the
  * last fix's time, or the epoch placeholder when neither exists yet. */
 static const char *clock_timestamp(char *buf, size_t len)
@@ -305,11 +445,12 @@ int collect_data(int ignitionState)
 {
     int have_fix = 0;
     bool stale = false;
+    /* This record's own fix, kept apart from g_gnss: see gap_end(). */
+    struct gnss_fix fix = {0};
 
     if (use_cached_gps) {
         have_fix = g_gnss.valid;
     } else {
-        struct gnss_fix fix = {0};
         if (gnss_collect(GPS_FIX_TIMEOUT_MS, &fix) == 0 && fix.valid) {
             g_gnss = fix;
             have_fix = 1;
@@ -351,6 +492,7 @@ int collect_data(int ignitionState)
         data_current[data_index++] = '\n';
     }
 
+    const int rec_start = data_index;
     int remaining = DATA_LIMIT - data_index - 1;
     int n;
     char now_iso[40] = "";
@@ -533,6 +675,7 @@ int collect_data(int ignitionState)
     if (n > 0) data_index += n;
 
     append_sync_fields();
+    gap_end(rec_start, ignitionState, !use_cached_gps && !stale, &fix);
     data_current[data_index] = '\0';
 
     /* Battery warning - only meaningful with the engine off. While the engine
@@ -612,6 +755,10 @@ int collect_track_data(void)
     float v = battery_sample_with_engine_check();
     char now_iso[40];
     int n;
+
+    /* Built from the last fix, not a new one: the run of live fixes, and
+     * any gap it was measuring, ends here. */
+    data_gap_reset();
 
     if (data_index > 0 && data_index < DATA_LIMIT - 1) {
         data_current[data_index++] = '\n';
@@ -895,6 +1042,21 @@ int send_data(void)
      * has gone. */
     int rec_len = databuf_stamp(data_current, (size_t)data_index,
                                 s_tx, sizeof(s_tx) - 1);
+
+    /* The motion through a gap rides outside the batch's byte budget (see
+     * data_motion_bytes()), so a full batch can come out longer than the
+     * transport takes.  Then the motion goes, never a record. */
+    if (s_motion_bytes > 0 &&
+        (rec_len < 0 || rec_len > UDP_PACKET_SIZE - 64)) {
+        int was = data_index;
+
+        data_index = motion_strip(data_current, data_index);
+        data_current[data_index] = '\0';
+        s_motion_bytes = 0;
+        LOG_INF("motion left off a full batch (%d bytes)", was - data_index);
+        rec_len = databuf_stamp(data_current, (size_t)data_index,
+                                s_tx, sizeof(s_tx) - 1);
+    }
 
     if (rec_len < 0) {
         if (data_index >= (int)sizeof(s_tx)) {

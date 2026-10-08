@@ -93,6 +93,36 @@ int modem_attach_ms(void)
     return s_attach_ms;
 }
 
+/* For the gap diagnosis in data.c: how long the network has held an RRC
+ * connection, in total, and how many registrations have been lost.  32-bit
+ * milliseconds and counts, taken as differences by the reader. */
+static atomic_t s_rrc_since;            /* uptime ms | 1 while connected */
+static atomic_t s_rrc_total;
+static atomic_t s_reg_losses;
+
+static void rrc_end(void)
+{
+    atomic_val_t since = atomic_set(&s_rrc_since, 0);
+
+    if (since) {
+        atomic_add(&s_rrc_total,
+                   (atomic_val_t)((uint32_t)k_uptime_get() - (uint32_t)since));
+    }
+}
+
+uint32_t modem_rrc_connected_ms(void)
+{
+    uint32_t since = (uint32_t)atomic_get(&s_rrc_since);
+    uint32_t total = (uint32_t)atomic_get(&s_rrc_total);
+
+    return since ? total + ((uint32_t)k_uptime_get() - since) : total;
+}
+
+uint32_t modem_reg_losses(void)
+{
+    return (uint32_t)atomic_get(&s_reg_losses);
+}
+
 #if IS_ENABLED(CONFIG_APP_PSM_SLEEP)
 /* Uptime of the radio's last sign of life: a registration, an RRC change
  * either way, or a wake from PSM.  The sleep loop's PSM check measures its
@@ -235,6 +265,7 @@ static void lte_handler(const struct lte_lc_evt *evt)
         } else if (!registered && s_connected) {
             s_lost_ms = k_uptime_get();
             s_search_ms = s_lost_ms;
+            atomic_inc(&s_reg_losses);
             LOG_WRN("registration lost (status %d) — waiting for the modem",
                     evt->nw_reg_status);
         } else {
@@ -258,6 +289,12 @@ static void lte_handler(const struct lte_lc_evt *evt)
         /* Either way: going idle is where the active timer starts, and PSM
          * is due that long after it. */
         radio_active();
+        if (evt->rrc_mode == LTE_LC_RRC_MODE_CONNECTED) {
+            (void)atomic_cas(&s_rrc_since, 0,
+                             (atomic_val_t)((uint32_t)k_uptime_get() | 1U));
+        } else {
+            rrc_end();
+        }
         LOG_DBG("RRC mode: %s",
                 evt->rrc_mode == LTE_LC_RRC_MODE_CONNECTED
                     ? "Connected" : "Idle");
@@ -646,6 +683,9 @@ void modem_power_off(void)
     s_lost_ms = 0;
     s_search_ms = 0;
     network_ready = false;
+    /* A powered-off modem holds no connection, whether or not the idle
+     * notification made it out first. */
+    rrc_end();
 #if IS_ENABLED(CONFIG_APP_PSM_PROBE)
     /* So the PSM deactivation this causes is read as our own doing. */
     s_psm_offline = true;

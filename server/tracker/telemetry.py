@@ -39,6 +39,12 @@ that rarely change (serving cell, firmware version) are sent only when they do
 change or on the first record after a wake, and the server carries the last
 known value forward so every row is still self-describing.
 
+``mv=<gap>:<v0>:<steps>:<end>`` is on the first record after a gap between
+fixes: the motion GNSS could not see, the ECU's speed and the gyro's heading
+change for each second of it.  It is stored as sent, in ``motion``, and the
+journey replay turns it into a path fitted between the two fixes; see
+:mod:`tracker.deadreckon`.
+
 A line beginning ``A,`` is an alert rather than a position record:
 ``A,<priority>,<message>``, with ``,aid=<n>`` on the end from firmware that
 holds alerts until answered; a copy of one already relayed is dropped the same
@@ -54,7 +60,7 @@ import re
 import threading
 import time
 
-from . import config, db, logs, notify
+from . import config, db, deadreckon, logs, notify
 
 # Fixed fields, in wire order, named for the columns they are stored in.  The
 # eleventh is seconds since boot on current firmware; its column kept the
@@ -96,6 +102,7 @@ EXTRA_KEYS = {
     'dr':  'dead_reckoning',
     'tm':  'track_mode',         # 1 = built in track mode (GNSS off, fast poll)
     'acc': 'imu_burst',          # IMU samples since the previous record
+    'mv':  'motion',             # the motion through the gap before this fix
     'rid': 'rec_id',             # the device's own id for this record
     'rsrp': 'rsrp',              # serving cell, dBm (AT%XMONITOR)
     'snr': 'snr',                # serving cell, dB
@@ -201,7 +208,7 @@ LOG_COLUMNS = [
 ] + [column for column, _, _ in OBD_FIELDS.values()] + [
     'combined_speed', 'track_mode', 'imu_burst', 'rec_id', 'wake_ms',
     'attach_ms', 'rsrp', 'snr', 'band',
-    'pathloss', 'rsrq', 'ce_level', 'tx_rep',
+    'pathloss', 'rsrq', 'ce_level', 'tx_rep', 'motion',
 ]
 
 _TIMESTAMP_RE = re.compile(
@@ -363,6 +370,14 @@ def _build_entry(data, device, ip, previous):
     burst = data.get('imu_burst')
     if burst and len(burst) <= IMU_BURST_MAX and IMU_BURST_RE.match(burst):
         entry['imu_burst'] = burst
+
+    # mv=: the ECU's speed and the gyro's heading change through the gap
+    # since the previous record, stored as sent and turned into a path when
+    # a journey is drawn (deadreckon.py).  Checked for shape first, so only
+    # the field's own alphabet ever reaches the row.
+    motion = data.get('motion')
+    if motion and deadreckon.valid(motion):
+        entry['motion'] = motion
 
     # OBD-II data read over the K wire.  Only present when the vehicle has a
     # K interface and the firmware is configured to poll it, and only for the

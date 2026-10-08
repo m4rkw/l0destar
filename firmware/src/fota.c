@@ -233,6 +233,12 @@ static int version_parse(const char *s, uint32_t *out)
     return 0;
 }
 
+/* The request holds the main loop for its whole timeout with no kick inside,
+ * so the timeout has to leave room in the watchdog window: see
+ * APP_FOTA_MANIFEST_TIMEOUT_S. */
+BUILD_ASSERT(CONFIG_APP_FOTA_MANIFEST_TIMEOUT_S + 7 <= WATCHDOG_TIMEOUT_S,
+             "APP_FOTA_MANIFEST_TIMEOUT_S must leave 7 s of the watchdog window");
+
 static int manifest_fetch(void)
 {
     struct rest_client_req_context req = {0};
@@ -256,6 +262,13 @@ static int manifest_fetch(void)
     req.resp_buff_len = sizeof(s_manifest);
 
     int err = rest_client_request(&req, &resp);
+
+    /* A fresh window for whatever follows.  The caller kicked just before
+     * the request, which on a dead link takes its whole timeout, and on
+     * 2026-10-04 at 13:05 the failure handling after it was enough to run
+     * the window out (the task watchdog fired, with the hardware reset two
+     * seconds behind). */
+    watchdog_kick();
     if (err) {
         LOG_WRN("manifest request failed: %d", err);
         return err;

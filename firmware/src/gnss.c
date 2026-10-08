@@ -24,6 +24,10 @@ struct gnss_fix g_gnss;
 
 static K_SEM_DEFINE(s_fix_sem, 0, 1);
 static struct nrf_modem_gnss_pvt_data_frame s_pvt;
+/* Uptime the receiver delivered s_pvt at: the fix's epoch for anything that
+ * has to line it up with something else measured on the uptime clock (the
+ * dead reckoning). */
+static int64_t s_pvt_ms;
 static struct nrf_modem_gnss_agnss_data_frame s_agnss_req;
 static bool s_have_fix;
 static bool s_agnss_needed;
@@ -36,11 +40,50 @@ static bool s_blocked;
  * priority request itself; gnss_collect() acts on it from the thread. */
 static atomic_t s_starved_epochs;
 
+/* For the gap diagnosis in data.c: time the receiver has spent blocked by
+ * LTE, epochs it has flagged as short of radio time, and how long the last
+ * gnss_collect() waited.  The first two are updated from the event handler,
+ * hence atomics, and are 32-bit milliseconds and counts that the reader
+ * takes differences of, which survive the wrap. */
+static atomic_t s_blocked_since;        /* uptime ms | 1 while blocked, else 0 */
+static atomic_t s_blocked_total;
+static atomic_t s_starved_total;
+static int32_t  s_last_wait_ms;
+
+static void blocked_end(void)
+{
+    atomic_val_t since = atomic_set(&s_blocked_since, 0);
+
+    if (since) {
+        atomic_add(&s_blocked_total,
+                   (atomic_val_t)((uint32_t)k_uptime_get() - (uint32_t)since));
+    }
+}
+
+uint32_t gnss_blocked_ms(void)
+{
+    uint32_t since = (uint32_t)atomic_get(&s_blocked_since);
+    uint32_t total = (uint32_t)atomic_get(&s_blocked_total);
+
+    return since ? total + ((uint32_t)k_uptime_get() - since) : total;
+}
+
+uint32_t gnss_starved_epochs(void)
+{
+    return (uint32_t)atomic_get(&s_starved_total);
+}
+
+int32_t gnss_last_wait_ms(void)
+{
+    return s_last_wait_ms;
+}
+
 static void pvt_to_fix(const struct nrf_modem_gnss_pvt_data_frame *pvt,
                        struct gnss_fix *out)
 {
     out->valid         = true;
     out->fix_uptime_ms = k_uptime_get();
+    out->epoch_ms      = out->fix_uptime_ms;
     snprintf(out->lat_str, sizeof(out->lat_str), "%.6f", pvt->latitude);
     snprintf(out->lon_str, sizeof(out->lon_str), "%.6f", pvt->longitude);
     out->speed_kmh   = pvt->speed * 3.6f;
@@ -138,6 +181,7 @@ static void on_gnss_event(int event)
 
         if ((pvt.flags & NRF_MODEM_GNSS_PVT_FLAG_FIX_VALID) && in_fix > 0) {
             s_pvt = pvt;
+            s_pvt_ms = k_uptime_get();
             s_have_fix = true;
             atomic_set(&s_starved_epochs, 0);
             pvt_to_fix(&pvt, &g_gnss);
@@ -145,6 +189,7 @@ static void on_gnss_event(int event)
         } else {
             if (pvt.flags & NRF_MODEM_GNSS_PVT_FLAG_NOT_ENOUGH_WINDOW_TIME) {
                 atomic_inc(&s_starved_epochs);
+                atomic_inc(&s_starved_total);
             } else {
                 atomic_set(&s_starved_epochs, 0);
             }
@@ -159,10 +204,13 @@ static void on_gnss_event(int event)
         /* Routine: the radio is LTE's for the length of every send. */
         LOG_INF("GNSS blocked by LTE");
         s_blocked = true;
+        (void)atomic_cas(&s_blocked_since, 0,
+                         (atomic_val_t)((uint32_t)k_uptime_get() | 1U));
         break;
     case NRF_MODEM_GNSS_EVT_UNBLOCKED:
         LOG_INF("GNSS unblocked");
         s_blocked = false;
+        blocked_end();
         break;
     case NRF_MODEM_GNSS_EVT_AGNSS_REQ:
         if (nrf_modem_gnss_read(&s_agnss_req, sizeof(s_agnss_req),
@@ -197,6 +245,7 @@ int gnss_start(void)
 {
     s_have_fix = false;
     s_blocked = false;
+    blocked_end();
     atomic_set(&s_starved_epochs, 0);
     k_sem_reset(&s_fix_sem);
     int err = nrf_modem_gnss_start();
@@ -206,11 +255,14 @@ int gnss_start(void)
 
 int gnss_stop(void)
 {
+    /* No UNBLOCKED comes for a receiver that is off. */
+    blocked_end();
     return nrf_modem_gnss_stop();
 }
 
 int gnss_resume(void)
 {
+    blocked_end();
     atomic_set(&s_starved_epochs, 0);
     k_sem_reset(&s_fix_sem);
     int err = nrf_modem_gnss_start();
@@ -233,6 +285,7 @@ void gnss_set_tick(void (*cb)(void))
 
 int gnss_collect(int timeout_ms, struct gnss_fix *out)
 {
+    const int64_t entered_ms = k_uptime_get();
     bool cold = !s_have_fix;
 
     if (cold && timeout_ms >= GPS_FIX_TIMEOUT_MS) {
@@ -385,6 +438,7 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     }
 
     nrf_modem_gnss_prio_mode_disable();
+    s_last_wait_ms = (int32_t)(k_uptime_get() - entered_ms);
 
     if (err) {
         LOG_WRN("%s fix timeout — restarting GNSS (%d SVs%s, %d starved)",
@@ -401,5 +455,6 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     }
 
     pvt_to_fix(&s_pvt, out);
+    out->epoch_ms = s_pvt_ms;
     return 0;
 }

@@ -6,6 +6,8 @@ destructive — they truncate every table they touch.
 
 import re
 
+import pytest
+
 from conftest import needs_db, record
 
 from tracker import db, logs, telemetry
@@ -600,6 +602,46 @@ def test_browser_endpoints(client, device, database, logged_in):
 
     status = client.get('/api/1.0/status?imei=%s' % device['imei']).get_json()
     assert status['firmware'] == '0.4.12'
+
+
+def test_gap_is_filled_from_the_motion_through_it(client, device, database, logged_in):
+    # Two fixes 12.4 s apart either side of a right turn, the second carrying
+    # the motion between them: the replay gets the turn, dashed, between
+    # them, rather than a straight line across the corner.
+    from test_deadreckon import drive, encode, latlon, right_turn
+
+    gap = 12.4
+    _, truth = drive(gap, lambda t: 30.0, right_turn)
+    raw = encode(gap, [30.0] * 13 + [30.0], [h - truth[0][2] for _, _, h, _ in truth])
+    (ax, ay, ah, _), (bx, by, bh, _) = truth[0], truth[-1]
+
+    def line(stamp, x, y, heading, ign, extras):
+        lat, lon = latlon(x, y)
+        return ('03/10/26,%s+00,%.6f,%.6f,30.00,40.00,%.2f,9,9,13.90,%d,500,0%s'
+                % (stamp, lat, lon, heading % 360, ign, extras))
+
+    send(device, line('21:30:00.000000', ax, ay, ah, 0, ',rid=10,mcc=234;mnc=10'))
+    send(device, line('21:30:04.000000', ax, ay, ah, 1, ',rid=11,ospd=0'))
+    send(device, line('21:30:05.000000', ax, ay, ah, 1, ',rid=12,ospd=30'))
+    send(device, line('21:30:17.400000', bx, by, bh, 1, ',rid=13,ospd=30,mv=' + raw))
+    send(device, line('21:30:30.000000', bx, by, bh, 0, ',rid=14'))
+
+    assert last_log(database)['ignition_state'] == 0
+    stored = database.one('SELECT `motion` FROM `log` WHERE `rec_id` = 13')
+    assert stored['motion'] == raw
+
+    journeys = client.get('/api/1.0/journeys').get_json()['journeys']
+    points = client.get('/api/1.0/journey/%d/points' % journeys[0]['id']).get_json()['points']
+    filled = [p for p in points if p.get('dr')]
+    assert len(filled) == 12
+    # Between the two fixes, in order, and through the corner rather than
+    # along the chord: the turn is 90 degrees, so its middle is well off it.
+    first = next(i for i, p in enumerate(points) if p.get('dr'))
+    assert points[first - 1]['latitude'] == round(latlon(ax, ay)[0], 6)
+    assert not points[first + 12].get('dr')
+    headings = [p['heading'] for p in filled]
+    assert headings[0] == pytest.approx(ah % 360, abs=3)
+    assert headings[-1] == pytest.approx(bh % 360, abs=3)
 
 
 def test_map_page_renders(client, device, database, logged_in):

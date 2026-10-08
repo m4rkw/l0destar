@@ -58,6 +58,11 @@ static float s_mg_per_lsb = 0.244f;
 
 static uint8_t s_d6d_zone;   /* orientation zone captured when 6D was armed */
 
+/* The FIFO is batching the gyro beside the accel at the awake full-scale:
+ * accel_fifo_enable()'s configuration, which feeds the dead reckoning.  The
+ * sleep one (accel_enable_wake_int()) batches the accel alone, at ±2 g. */
+static bool s_fifo_awake;
+
 int hw_accel_init(void)
 {
 	bb_init(&acc_bus);
@@ -326,7 +331,8 @@ int accel_enable_wake_int(void)
 	k_msleep(100);
 
 	/* Keep the FIFO ring running in sleep, accel-only (gyro is off), so a
-	 * parked impact's true waveform is captured for drain on wake.
+	 * parked impact's true waveform is captured for drain on wake.  Not
+	 * the awake configuration any more, so the dead reckoning stops here.
 	 *
 	 * Emptied first (bypass): the drain converts every sample at the
 	 * full-scale in force when it runs, and the re-arm after confirmed
@@ -334,6 +340,7 @@ int accel_enable_wake_int(void)
 	 * Left in, those samples read at a quarter of their size, so a still
 	 * unit's ~250 mg made a 744 mg "impact" on the bench, until the ring
 	 * cycled them out.  The settling samples go too. */
+	s_fifo_awake = false;
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x00);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, 0x02);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x06);
@@ -512,15 +519,80 @@ int accel_tilt_from_ref_tenths(void)
 }
 
 /* -- FIFO ring buffer: pre-impact forensics --------------------------------- */
-/* Accel+gyro batched at 26 Hz into the 3 KB FIFO in continuous (ring) mode
- * ≈ 9 s of history.  On an impact interrupt the ring is drained and the
- * profile around the peak summarised for the alert. */
+/* Accel+gyro batched at 26 Hz into the 3 KB FIFO in continuous (ring) mode:
+ * about 7.4 s of both before it overruns (measured on the bench).  On an
+ * impact interrupt the ring is drained and the profile around the peak
+ * summarised for the alert.  While awake the dead reckoning drains it about
+ * once a second as well (accel_fifo_service), except while an impact waits
+ * for that drain, so an impact's profile reaches back to the last drain. */
 
 #define FIFO_MAX_SAMPLES 512
 #define FIFO_SAMPLE_MS   38              /* 26 Hz */
 
 static int16_t s_fifo_xl[FIFO_MAX_SAMPLES][3];   /* raw LSB */
 static int16_t s_fifo_gy[FIFO_MAX_SAMPLES][3];
+
+/* Every word batched since the last read, into s_fifo_xl/s_fifo_gy (the
+ * oldest FIFO_MAX_SAMPLES of each).  Whoever drains it, the gyro goes on to
+ * the dead reckoning (motion.c) while the awake configuration batches it:
+ * the FIFO only gives each sample once.  Returns the accel words read and
+ * the gyro words through *n_gy, or -EIO. */
+static int fifo_read(int *n_gy)
+{
+	uint8_t s1 = 0, s2 = 0;
+
+	*n_gy = 0;
+	if (!bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_STATUS1, &s1, 1) ||
+	    !bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_STATUS2, &s2, 1)) {
+		return -EIO;
+	}
+
+	int64_t now = k_uptime_get();
+	int words = (((int)(s2 & 0x03)) << 8) | s1;
+	/* FIFO_OVR_IA or FIFO_OVR_LATCHED: the ring has overwritten samples
+	 * since the last read, so what it holds no longer reaches back to it. */
+	bool lost = (s2 & 0x48) != 0;
+
+	int nxl = 0, ngy = 0;
+	for (int i = 0; i < words; i++) {
+		uint8_t w[7];
+		if (!bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_DATA_TAG, w, 7))
+			break;
+		uint8_t tag = w[0] >> 3;
+		int16_t x = (int16_t)((w[2] << 8) | w[1]);
+		int16_t y = (int16_t)((w[4] << 8) | w[3]);
+		int16_t z = (int16_t)((w[6] << 8) | w[5]);
+		if (tag == 0x02) {                              /* accel NC */
+			if (nxl < FIFO_MAX_SAMPLES) {
+				s_fifo_xl[nxl][0] = x;
+				s_fifo_xl[nxl][1] = y;
+				s_fifo_xl[nxl][2] = z;
+				nxl++;
+			} else {
+				lost = true;
+			}
+		} else if (tag == 0x01) {                       /* gyro NC */
+			if (ngy < FIFO_MAX_SAMPLES) {
+				s_fifo_gy[ngy][0] = x;
+				s_fifo_gy[ngy][1] = y;
+				s_fifo_gy[ngy][2] = z;
+				ngy++;
+			} else {
+				lost = true;
+			}
+		}
+		if ((i & 0x3F) == 0) watchdog_kick();   /* a full ring takes ~0.5 s */
+	}
+
+	if (s_fifo_awake) {
+		const int bias[3] = { s_gyro_bias_x, s_gyro_bias_y, s_gyro_bias_z };
+
+		motion_feed((const int16_t (*)[3])s_fifo_xl, nxl,
+			    (const int16_t (*)[3])s_fifo_gy, ngy, bias, now, lost);
+	}
+	*n_gy = ngy;
+	return nxl;
+}
 
 int accel_fifo_enable(void)
 {
@@ -537,16 +609,29 @@ int accel_fifo_enable(void)
 	/* Continuous (ring) mode */
 	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x06))
 		return -EIO;
+	/* A ring started afresh: the heading log starts again with it. */
+	motion_reset();
+	s_fifo_awake = true;
 	return 0;
 }
 
 int accel_fifo_disable(void)
 {
 	if (!s_ok) return -1;
+	s_fifo_awake = false;
 	/* Bypass mode stops batching and clears the FIFO */
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x00);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, 0x00);
 	return 0;
+}
+
+int accel_fifo_service(void)
+{
+	if (!s_ok || !s_fifo_awake) return 0;
+
+	int ngy = 0;
+
+	return fifo_read(&ngy) < 0 ? -EIO : ngy;
 }
 
 /* Track mode: hand the ring's contents over as samples rather than as
@@ -564,34 +649,11 @@ int accel_fifo_drain_samples(struct accel_sample *out, int max)
 {
 	if (!s_ok || !out || max <= 0) return -1;
 
-	uint8_t s1 = 0, s2 = 0;
-	if (!bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_STATUS1, &s1, 1) ||
-	    !bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_STATUS2, &s2, 1)) {
-		return -EIO;
-	}
-	int words = (((int)(s2 & 0x03)) << 8) | s1;
+	int ngy = 0;
+	int nxl = fifo_read(&ngy);
 
-	int nxl = 0, ngy = 0;
-	for (int i = 0; i < words; i++) {
-		uint8_t w[7];
-		if (!bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_DATA_TAG, w, 7))
-			break;
-		uint8_t tag = w[0] >> 3;
-		int16_t x = (int16_t)((w[2] << 8) | w[1]);
-		int16_t y = (int16_t)((w[4] << 8) | w[3]);
-		int16_t z = (int16_t)((w[6] << 8) | w[5]);
-		if (tag == 0x02 && nxl < FIFO_MAX_SAMPLES) {
-			s_fifo_xl[nxl][0] = x;
-			s_fifo_xl[nxl][1] = y;
-			s_fifo_xl[nxl][2] = z;
-			nxl++;
-		} else if (tag == 0x01 && ngy < FIFO_MAX_SAMPLES) {
-			s_fifo_gy[ngy][0] = x;
-			s_fifo_gy[ngy][1] = y;
-			s_fifo_gy[ngy][2] = z;
-			ngy++;
-		}
-		if ((i & 0x3F) == 0) watchdog_kick();
+	if (nxl < 0) {
+		return -EIO;
 	}
 	if (nxl == 0) {
 		return 0;
@@ -622,34 +684,11 @@ int accel_fifo_drain_impact(struct accel_impact *out)
 {
 	if (!s_ok || !out) return -1;
 
-	uint8_t s1 = 0, s2 = 0;
-	if (!bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_STATUS1, &s1, 1) ||
-	    !bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_STATUS2, &s2, 1)) {
-		return -EIO;
-	}
-	int words = (((int)(s2 & 0x03)) << 8) | s1;
+	int ngy = 0;
+	int nxl = fifo_read(&ngy);
 
-	int nxl = 0, ngy = 0;
-	for (int i = 0; i < words; i++) {
-		uint8_t w[7];
-		if (!bb_read_regs(&acc_bus, ACC_ADDR, ACC_FIFO_DATA_TAG, w, 7))
-			break;
-		uint8_t tag = w[0] >> 3;
-		int16_t x = (int16_t)((w[2] << 8) | w[1]);
-		int16_t y = (int16_t)((w[4] << 8) | w[3]);
-		int16_t z = (int16_t)((w[6] << 8) | w[5]);
-		if (tag == 0x02 && nxl < FIFO_MAX_SAMPLES) {        /* accel NC */
-			s_fifo_xl[nxl][0] = x;
-			s_fifo_xl[nxl][1] = y;
-			s_fifo_xl[nxl][2] = z;
-			nxl++;
-		} else if (tag == 0x01 && ngy < FIFO_MAX_SAMPLES) { /* gyro NC */
-			s_fifo_gy[ngy][0] = x;
-			s_fifo_gy[ngy][1] = y;
-			s_fifo_gy[ngy][2] = z;
-			ngy++;
-		}
-		if ((i & 0x3F) == 0) watchdog_kick();   /* drain takes ~0.5 s */
+	if (nxl < 0) {
+		return -EIO;
 	}
 
 	memset(out, 0, sizeof(*out));
