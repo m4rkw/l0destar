@@ -88,6 +88,13 @@ CUT_Y0 = (MOLEX_Y0 + MOLEX_Y1 - CUT_W) / 2              # 20.33 .. 33.33
 CUT_Y1 = CUT_Y0 + CUT_W
 CUT_Z0, CUT_Z1 = PCB_TOP - 1.1, PCB_TOP + 10.0          # 4.5 .. 15.6
 
+# embossed labels on the top shell, centred over each connector cutout (between the
+# cutout top and the roof fillet)
+LABEL_FONT  = '/System/Library/Fonts/Supplemental/Arial Bold.ttf'
+LABEL_CAP_H = 4.5      # cap height
+LABEL_DEPTH = 0.6      # proud of the wall
+LABELS = (('CAR', 'left'), ('OUT', 'right'))   # J1 car harness, J2 tracker harness
+
 EPS = 0.01
 BIG = 500
 
@@ -114,6 +121,25 @@ def sector(x, y, a0, a1, z0, z1, r=6.0):
     angs = [math.radians(a0 + (a1 - a0) * i / (n - 1)) for i in range(n)]
     pts = [V(x, y, z0)] + [V(x + r * math.cos(a), y + r * math.sin(a), z0) for a in angs]
     return Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(V(0, 0, z1 - z0))
+
+def wall_label(text, side, wall_x, cy, cz):
+    """Raised text on an x-facing outer wall, reading upright from outside, centred on (cy, cz)."""
+    faces = []
+    for ch in Part.makeWireString(text, LABEL_FONT, 10, 0):
+        faces.extend(Part.makeFace(ch, 'Part::FaceMakerBullseye').Faces)
+    s = Part.makeCompound(faces)
+    s.scale(LABEL_CAP_H / s.BoundBox.YLength)
+    bb = s.BoundBox
+    s.translate(V(-(bb.XMin + bb.XMax) / 2, -(bb.YMin + bb.YMax) / 2, 0))
+    s = Part.makeCompound([f.extrude(V(0, 0, LABEL_DEPTH + 0.2)) for f in s.Faces])
+    out = -1 if side == 'left' else 1
+    m = FreeCAD.Matrix()          # text x -> -y (left) / +y (right), text y -> z, extrusion -> outward
+    m.A11, m.A12, m.A13 = 0, 0, out
+    m.A21, m.A22, m.A23 = out, 0, 0
+    m.A31, m.A32, m.A33 = 0, 1, 0
+    s = s.transformGeometry(m)
+    s.translate(V(wall_x - out * 0.2, cy, cz))   # 0.2 mm buried in the wall
+    return s
 
 # ----------------------------------------------------------------- shell ----
 IX0, IY0 = -CLEAR, -CLEAR                    # cavity
@@ -177,6 +203,9 @@ for name, (hx, hy) in HOLES.items():
     holes.append(cyl(INSERT_R, ins_z0, ins_z0 + INSERT_D, hx, hy))                 # heat-set insert
     holes.append(cyl(THRU_R, ins_z0 + INSERT_D - EPS, ins_z0 + INSERT_D + RELIEF_D, hx, hy))
 top = top.fuse(bosses).cut(holes)
+LABEL_CZ = (CUT_Z1 + Z_TOP - FIL_TOP) / 2              # midway between cutout top and roof fillet
+top = top.fuse([wall_label(t, side, OX0 if side == 'left' else OX1, (CUT_Y0 + CUT_Y1) / 2, LABEL_CZ)
+                for t, side in LABELS])
 top = top.removeSplitter()
 
 # ----------------------------------------------------------- mock board ----
