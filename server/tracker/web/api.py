@@ -19,7 +19,7 @@ import re
 
 from flask import Blueprint, redirect, request
 
-from .. import config, db, notify, telemetry
+from .. import config, db, deadreckon, notify, telemetry
 from . import audit, devices, error, ok, unauthorised
 from .auth import login_required
 
@@ -216,29 +216,39 @@ def journey_points(journey_id):
 
     # Bound by log id rather than by time: the ids were recorded when the
     # journey opened and closed, so this cannot drift on clock skew or on a
-    # record whose device timestamp lands outside the window.
+    # record whose device timestamp lands outside the window.  In time order,
+    # as the journey's miles are summed: a record sent again after its first
+    # datagram went unanswered, or flushed from the backlog after an outage,
+    # arrives behind later ones and is filed at the time it was built.
     rows = db.web.all(
         'SELECT `latitude`, `longitude`, `speed`, `combined_speed`, `altitude`, '
-        '`heading`, `timestamp`, `ignition_state`, `battery_level`, `mcc`, '
-        '`mnc`, `rat`, `cell_location`, `track_mode`, '
+        '`heading`, `timestamp`, `gsm_timestamp`, `ignition_state`, '
+        '`battery_level`, `mcc`, `mnc`, `rat`, `cell_location`, `track_mode`, '
+        '`rec_id`, `satellites`, `hdop`, `obd_speed`, `motion`, '
         + ', '.join('`%s`' % c for c in
                     devices.OBD_LIVE_COLUMNS + devices.IMU_LIVE_COLUMNS)
         + ' FROM `log` '
         'WHERE `device_id` = %s AND `id` >= %s '
-        'AND `id` <= %s ORDER BY `id`',
+        'AND `id` <= %s ORDER BY `timestamp`, `id`',
         (journey['device_id'], journey['start_log_id'], journey['end_log_id']),
     )
+
+    # The paths through the gaps between fixes, from the motion the device
+    # measured across them (mv=): dashed on the map, between the fixes.
+    fills = deadreckon.journey_fill(rows)
 
     # One operator lookup per distinct cell, not per point.
     cache = {}
     points = []
-    for row in rows:
+    for i, row in enumerate(rows):
         key = (row.get('mcc'), row.get('mnc'))
         if key not in cache:
             cache[key] = db.lookup_operator(*key) or ''
         point = devices.position(row)
         point['operator'] = cache[key]
         points.append(point)
+        for p in fills.get(i, ()):
+            points.append(deadreckon.point(point, p, row.get('timestamp')))
 
     return ok({'points': points})
 

@@ -1,5 +1,90 @@
 # Changelog
 
+## 0.4.69
+
+### An update check on a dead link no longer runs the watchdog out
+At 13:05 on 2026-10-04 the car's hourly wake found 0.4.68 on offer and asked
+for the manifest.  The link was dead, so the request ran its full 30 s
+timeout and failed (-116), and the failure handling after it took the time
+since the last kick past 32 s.  The task watchdog fired ("no kick for 32s —
+resetting"), and the main loop kicked again inside the two seconds before the
+hardware fallback would have reset the SoC.  Nothing reset, and the update
+went in at the next key-off, but that was two seconds from a reboot.
+- **A kick straight after the request,** whichever way it ends, so what
+follows starts a fresh window.  `fota_check()` already kicked just before it.
+- **`APP_FOTA_MANIFEST_TIMEOUT_S` is 25 s, at most 25.**  The request holds
+the loop for its whole timeout, DNS included, with no kick inside, so 30 s
+left two seconds of a 32 s window.  A `BUILD_ASSERT` keeps 7 s.  Not lower:
+a check over a working link took 15.6 s on the bench.
+
+### The track through a gap is measured, not guessed
+GNSS gets nothing while LTE holds the radio, and every send holds it.  Most
+cells here let go about 2.5 s after the reply; the TAC 12296 cells keep it for
+about 10 s, and no cell here honours release assistance (every `%RAI` report
+the bench has logged reads `as_rai=0, cp_rai=0`, so `SO_RAI` changes nothing).
+On those cells a drive is three one-second fixes every 14 s joined by straight
+lines 100-180 m long: all of the 22:49 drive on 2026-10-03, at half the record
+rate of a drive on TAC 4096.  A rejected tracking-area update blinds the
+receiver for longer still: at 22:37 the same evening it was 24 s, then 15 s
+more for the re-attach's own connection, and the replay drew 214 m in one
+straight line across it.  The firmware cannot shorten either.
+
+So it now measures what it cannot see.  The record that ends a gap of 2.5-60 s
+on the move carries `mv=<gap>:<v0>:<steps>:<end>`: the ECU's road speed and
+the gyro's heading change for each second of the gap.  The server fits that
+path between the two fixes and the replay draws it dashed.  See `src/motion.c`.
+- **Heading change from the gyro.**  The IMU's FIFO already batches the gyro
+at 26 Hz whenever the unit is awake.  Every drain now feeds the samples,
+projected onto gravity (the accel words averaged over ~20 s), into a running
+heading noted at each whole second.  The fix wait's tick and the top of every
+main-loop pass drain it, so the ring (about 7.4 s at 26 Hz, measured on the
+bench) does not overrun in an ordinary cycle.  One that does — the loop held
+up for longer than that, as by the key-on fault-code read — or a restarted
+FIFO starts the log again, and a gap across the hole gets no field.  Checked against the car's records before it was written:
+over 2,084 one-second pairs the GNSS heading change was -1.0 times the
+projected gyro, the sign a right-handed gyro gives with gravity pointing up.
+The car's unit sits 19 degrees off level with Y up, so Z alone would not do.
+- **Speed from the ECU.**  Every K-line speed reading is kept with its time,
+and each second's is interpolated between the readings either side, which
+bridges the poll's pause for a send.  Without an ECU the field carries
+headings alone and the server takes speeds from the fixes.
+- **The fix's real moment.**  `gnss_fix.epoch_ms` is the uptime the receiver
+delivered the fix at.  `fix_uptime_ms` is when the loop picked it up, which a
+K-line reopen can make 4 s later.
+- **Two bytes a second, never at a record's expense.**  A 3-4 s gap between
+batches costs 15-17 bytes, a 12 s one 33, about 1.5 KB per ten minutes of
+driving.  The batch's flush threshold leaves the field out
+(`data_motion_bytes()`), so it never makes a batch go early and cost fixes.
+The field is built to fit a backlog slot (`APP_DATABUF_REC_MAX`) with the
+record, and `send_data()` drops it from a batch that would not fit a datagram.
+- **An impact's profile stays in the FIFO.**  The FIFO gives each sample once,
+so nothing drains it for the dead reckoning while an impact is waiting for
+`crash_check()`; the impact's own drain feeds the dead reckoning instead.
+The pre-impact history is now whatever has come in since the last drain, a
+second or so in a cycle, rather than the whole ring; the peak and everything
+after it are there as before.
+
+`APP_DEAD_RECKONING` (default y) turns it off.  A host harness ran the real
+`motion.c` through simulated drives with the car's mounting, gyro noise and
+bias, a 1.5% IMU clock error, irregular drains and holes in the ECU readings,
+and decoded the fields with the server's `deadreckon.py`: the fitted path was
+within 0.3-4.5 m of the truth where the straight lines it replaces were
+21-38 m off.
+
+### A long gap between fixes says why
+At 20:28 on 2026-10-03 the car went 31 s between fixes at 24 mph and left no
+trace of why: no registration loss, no starved-receiver warning.  A warm fix
+wait that LTE blocks outright never logged anything.  Now fixes 20 s or more
+apart (`APP_FIX_GAP_WARN_S`), with the key on and a fix at either end moving
+at 10 km/h or more, get one WRN line: how long the loop waited for the fix,
+how long GNSS was blocked by LTE and an RRC connection held, how many epochs
+the receiver flagged as short of radio time, the cell before and after, and
+whether registration was lost.  That separates a radio-blocked gap from one
+the loop spent elsewhere.  At most one a minute, the next saying how many were
+held back.  Run over the car's records from 2026-09-25 it would have fired 14
+times in eight driving days, never more than five in a day.  Drive starts are
+not counted: the record at key-on is the stored position, not a fix.
+
 ## 0.4.67
 
 ### An unfitted interface's rail senses are left disconnected

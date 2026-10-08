@@ -327,6 +327,9 @@ static void obd_note_state(int32_t rpm, int32_t speed)
 	if (speed != OBD_NA) {
 		s_state_speed = speed;
 		got = true;
+		/* Every reading, with its time, for filling the gaps between
+		 * fixes (motion.c). */
+		motion_note_speed((int)speed);
 	}
 	if (got) {
 		s_state_ms = k_uptime_get();

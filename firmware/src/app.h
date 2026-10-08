@@ -34,6 +34,10 @@ extern struct app_settings g_settings;
 struct gnss_fix {
     bool    valid;
     int64_t fix_uptime_ms;
+    /* Uptime when the receiver delivered the fix, which is when it was taken
+     * give or take the receiver's latency.  fix_uptime_ms is when the caller
+     * picked it up, which a busy loop can make seconds later. */
+    int64_t epoch_ms;
     char    lat_str[16];     /* preformatted "%.6f" — matches the legacy CSV */
     char    lon_str[16];
     float   speed_kmh;
@@ -211,6 +215,11 @@ int  modem_read_signal(void);
 /* How long the last attach took, in ms, or -1 if none has completed since the
  * search began.  Measured from the registration event, not the 1 Hz poll. */
 int  modem_attach_ms(void);
+/* For explaining a gap between fixes (data.c), as running totals that wrap:
+ * take differences.  RRC connected time is time the network held the radio,
+ * which GNSS cannot then have; losses counts registrations lost. */
+uint32_t modem_rrc_connected_ms(void);
+uint32_t modem_reg_losses(void);
 const char *modem_rat(void);           /* "CATM1" / "NBIOT" / "UNKNOWN" */
 bool modem_is_nbiot(void);
 int  modem_rescan_plmn(int timeout_s); /* force cell/PLMN reselection */
@@ -224,6 +233,13 @@ int  gnss_collect(int timeout_ms, struct gnss_fix *out);  /* blocking with timeo
  * against code that runs outside the wait. */
 void gnss_set_tick(void (*cb)(void));
 int  gnss_resume(void);   /* restart without resetting fix state (warm) */
+/* For explaining a gap between fixes (data.c).  Running totals in 32-bit
+ * milliseconds and counts, which wrap: take differences.  Blocked is time
+ * the receiver ran but LTE had the radio; starved is epochs it flagged as
+ * short of radio time.  The last wait is the last gnss_collect()'s. */
+uint32_t gnss_blocked_ms(void);
+uint32_t gnss_starved_epochs(void);
+int32_t  gnss_last_wait_ms(void);
 
 #ifdef CONFIG_APP_DEMO_MODE
 /* Placeholder printed in place of a latitude or longitude in demo mode. */
@@ -629,6 +645,52 @@ struct accel_sample {
  * the count written, or negative.  Samples arrive at 26 Hz (FIFO_SAMPLE_MS). */
 int  accel_fifo_drain_samples(struct accel_sample *out, int max);
 #define ACCEL_FIFO_SAMPLE_MS 38
+/* Drain the FIFO for the dead reckoning alone (every drain feeds it): a
+ * no-op unless the awake configuration is batching the gyro.  Returns the
+ * gyro samples read.  Not while an impact is waiting for crash_check(),
+ * whose profile is in the FIFO — dr_fifo_service() in main.c minds that. */
+int  accel_fifo_service(void);
+
+/* -- dead reckoning across GNSS gaps (src/motion.c) -------------------------
+ * The record that ends a gap between fixes carries the motion through it,
+ * mv=<gap>:<v0>:<steps>:<end>, and the server fits the path between the
+ * two fixes.  See motion.c for the field and why. */
+#if IS_ENABLED(CONFIG_APP_DEAD_RECKONING)
+void motion_reset(void);
+/* A FIFO drain's words, raw: accel at the awake full-scale, gyro at
+ * +/-250 dps less `bias`.  `lost` when the FIFO overran since the last. */
+void motion_feed(const int16_t (*xl)[3], int nxl,
+		 const int16_t (*gy)[3], int ngy,
+		 const int bias[3], int64_t now_ms, bool lost);
+void motion_note_speed(int kmh);          /* every ECU speed reading */
+/* ",mv=..." for the gap from_ms..to_ms (fix epochs, uptime) into out, at
+ * most max bytes and not NUL-terminated; 0 when there is no gap worth it,
+ * nothing measured across it, it does not fit, or nothing moved (`moving`
+ * says the fixes at either end did). */
+int  motion_field(char *out, int max, int64_t from_ms, int64_t to_ms,
+		  bool moving);
+/* Remove every mv= field from the records in buf; returns the new length. */
+int  motion_strip(char *buf, int len);
+/* main.c: accel_fifo_service() unless an impact is pending or the key is
+ * off.  The fix wait ticks it, and collect_data() runs it before a field. */
+void dr_fifo_service(void);
+#else
+static inline void motion_reset(void) { }
+static inline void motion_feed(const int16_t (*xl)[3], int nxl,
+			       const int16_t (*gy)[3], int ngy,
+			       const int bias[3], int64_t now_ms, bool lost) { }
+static inline void motion_note_speed(int kmh) { }
+static inline int  motion_field(char *out, int max, int64_t from_ms,
+				int64_t to_ms, bool moving) { return 0; }
+static inline int  motion_strip(char *buf, int len) { return len; }
+static inline void dr_fifo_service(void) { }
+#endif
+/* Bytes of mv= fields in data_current, which the batch's flush threshold
+ * leaves out: the motion must never make a batch go early. */
+int  data_motion_bytes(void);
+/* The drive's run of live fixes is over (sleep, track mode): the next fix
+ * starts a new one rather than ending a gap from before. */
+void data_gap_reset(void);
 
 int  accel_read_baseline(void);
 int  accel_confirm_movement(bool (*stop)(void));

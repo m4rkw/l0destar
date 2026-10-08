@@ -753,7 +753,17 @@ config APP_FOTA_RETRY_HOLDOFF_S
 
 config APP_FOTA_MANIFEST_TIMEOUT_S
 	int "Manifest request timeout (seconds)"
-	default 30
+	default 25
+	range 5 25
+	help
+	  The request holds the main loop for up to this long, DNS lookup
+	  included (unless the lookup alone outlasts it), with no watchdog
+	  kick inside, and the watchdog window is 32 s.  At 30 s a check on
+	  a dead link on 2026-10-04 at 13:05 ran its full timeout and then
+	  the 2 s of failure handling after it, and the task watchdog fired
+	  with the hardware reset two seconds behind.  A working link took
+	  15.6 s on the bench (DNS, TLS handshake and the reply over LTE-M),
+	  so much shorter would fail slow checks that would have finished.
 
 config APP_FOTA_DOWNLOAD_TIMEOUT_S
 	int "Image download timeout (seconds)"
@@ -1053,6 +1063,37 @@ config APP_GPS_COLD_FIX_TIMEOUT_MS
 	  Timeout for the first GNSS fix after a cold boot (no cached
 	  almanac/ephemeris).  Without A-GPS, a cold TTFF can take 2-5
 	  minutes depending on signal and antenna-sharing with LTE.
+
+config APP_DEAD_RECKONING
+	bool "Carry the motion through gaps between fixes (mv=)"
+	default y
+	help
+	  GNSS gets nothing while LTE holds the radio, which every send
+	  does: about 2.5 s after the reply on most cells here and 10 s on
+	  the TAC 12296 ones, which ignore release assistance, and 25 s or
+	  more through a rejected tracking-area update.  The record that
+	  ends such a gap carries the ECU's speed and the gyro's heading
+	  change for each second of it, about two bytes a second, and the
+	  server fits that path between the fixes at either end.  Gaps of
+	  2.5-60 s, on the move.  Without an ECU speed only the headings
+	  go.  See src/motion.c.
+
+config APP_FIX_GAP_WARN_S
+	int "Warn when fixes are this far apart on the move (s)"
+	default 20
+	range 0 600
+	help
+	  A WRN line, so the server gets it, saying where the time went:
+	  how much of it was spent waiting for the fix, how long LTE kept
+	  the receiver blocked and held an RRC connection, how many epochs
+	  the receiver flagged as short of radio time, whether registration
+	  was lost and whether the cell changed.  Between two records built
+	  on live fixes with the key on and one end moving at 10 km/h or
+	  more, at most once a minute.  On TAC 12296 cells fixes are 12-16 s
+	  apart routinely, so the default only catches the unusual ones:
+	  applied to the car's records it would have fired 14 times in the
+	  eight driving days from 2026-09-25, never more than five in a day.
+	  0 turns it off.
 
 # --- voltage thresholds (millivolts to avoid Kconfig float limitation) ------
 

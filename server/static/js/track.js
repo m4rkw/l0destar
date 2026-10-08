@@ -458,7 +458,7 @@ function updateImu(data) {
 
 // -- History popup & journey replay --
 // replayIndex is the index of the currently shown frame (not "next to show").
-var replayPath = null;
+var replayPaths = [];
 var replayTimer = null;
 var replayIndex = 0;
 var replayPoints = [];
@@ -554,14 +554,7 @@ function startReplay(journeyId) {
       for (var i = 0; i < data.length; i++) {
         pathCoords.push({lat: data[i].latitude, lng: data[i].longitude});
       }
-      replayPath = new google.maps.Polyline({
-        path: pathCoords,
-        geodesic: true,
-        strokeColor: '#4285F4',
-        strokeOpacity: 0.8,
-        strokeWeight: 3,
-        map: map
-      });
+      replayPaths = drawReplayPath(data);
 
       // fit map to journey bounds
       var bounds = new google.maps.LatLngBounds();
@@ -577,6 +570,53 @@ function startReplay(journeyId) {
       replayTimer = setTimeout(replayStep, 100);
     }
   });
+}
+
+// The journey's line: solid through the fixes, dashed through the stretches
+// the server filled in from the motion the device measured between two of
+// them (points with dr=1), so a fill is never taken for a fix.  Each run
+// shares its end points with its neighbours, so the line stays unbroken.
+function drawReplayPath(points) {
+  var lines = [], run = [], runDr = false;
+
+  function flush() {
+    if (run.length < 2) return;
+    lines.push(new google.maps.Polyline(runDr ? {
+      path: run,
+      geodesic: true,
+      strokeOpacity: 0,
+      icons: [{
+        icon: {path: 'M 0,-1 0,1', strokeColor: '#4285F4', strokeOpacity: 0.8, scale: 3},
+        offset: '0',
+        repeat: '10px'
+      }],
+      map: map
+    } : {
+      path: run,
+      geodesic: true,
+      strokeColor: '#4285F4',
+      strokeOpacity: 0.8,
+      strokeWeight: 3,
+      map: map
+    }));
+  }
+
+  for (var i = 0; i < points.length; i++) {
+    var p = {lat: points[i].latitude, lng: points[i].longitude};
+    var dr = points[i].dr ? true : false;
+    if (run.length && dr !== runDr) {
+      // The fix the two runs share: the one before a fill, the one after it.
+      var join = dr ? run[run.length - 1] : p;
+      if (!dr) run.push(p);
+      flush();
+      run = [join];
+      runDr = dr;
+      if (!dr) continue;
+    }
+    run.push(p);
+  }
+  flush();
+  return lines;
 }
 
 function fetchLivePosition() {
@@ -613,7 +653,8 @@ function showReplayPoint(idx) {
   var pt = replayPoints[idx];
   applyPosition(pt);
   $('#replay-status').text((idx + 1) + '/' + replayPoints.length +
-    ' — ' + speedOf(pt).toFixed(0) + ' mph — ' + pt.timestamp);
+    ' — ' + speedOf(pt).toFixed(0) + ' mph — ' + pt.timestamp +
+    (pt.dr ? ' — estimated' : ''));
   $('#replay-progress').val(idx);
 }
 
@@ -673,10 +714,10 @@ function stopReplay() {
     clearTimeout(replayTimer);
     replayTimer = null;
   }
-  if (replayPath) {
-    replayPath.setMap(null);
-    replayPath = null;
+  for (var i = 0; i < replayPaths.length; i++) {
+    replayPaths[i].setMap(null);
   }
+  replayPaths = [];
   replayPoints = [];
   replayIndex = 0;
   accelBaseline = null;

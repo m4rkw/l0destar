@@ -50,6 +50,9 @@ target_sources(app PRIVATE src/databuf.c)
 # Warnings/errors captured for the server (see src/dbglog.c).
 target_sources_ifdef(CONFIG_APP_DEBUG_LOG app PRIVATE src/dbglog.c)
 
+# The motion through gaps between GNSS fixes (see src/motion.c).
+target_sources_ifdef(CONFIG_APP_DEAD_RECKONING app PRIVATE src/motion.c)
+
 # OBD-II telemetry / fault codes over the K wire.
 target_sources_ifdef(CONFIG_APP_KLINE_OBD app PRIVATE src/kline_obd.c)
 # Threshold alerts on that telemetry (CONFIG_APP_OBD_ALERTS).

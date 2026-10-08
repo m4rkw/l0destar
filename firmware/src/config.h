@@ -318,6 +318,24 @@
                                           /* rotation, so skip the update    */
 #define GYRO_AUTOZERO_EMA_SHIFT     2     /* drift tracking: new += (m-b)>>n */
 
+/* -- dead reckoning across GNSS gaps (motion.c) ---------------------------- */
+/* Fixes closer than this are a batch's own one-second records, with nothing
+ * between them to fill; further apart than this is past the minute of
+ * heading the log keeps, and past where a fill would be worth trusting. */
+#define DR_MIN_GAP_MS               2500
+#define DR_MAX_GAP_MS               60000
+/* An ECU speed at or above this anywhere in the gap, or a fix at either end
+ * moving at least this fast, is a vehicle worth filling in behind. */
+#define DR_MOVING_KMH               3
+/* Fixes this far apart on the move get a warning that says where the time
+ * went (APP_FIX_GAP_WARN_S, 0 = never), and the GNSS speed at one end or
+ * the other has to be this high for it to count as on the move: a car
+ * waiting in traffic with no fix leaves no hole in its track. */
+#define FIX_GAP_WARN_MS             ((int64_t)CONFIG_APP_FIX_GAP_WARN_S * 1000)
+#define FIX_GAP_MOVING_KMH          10.0f
+/* At most one such warning a minute; the next says how many it held back. */
+#define FIX_GAP_WARN_SPACING_MS     60000
+
 /* -- movement confirmation ------------------------------------------------- */
 #define MOVEMENT_CONFIRM_MS         CONFIG_APP_MOVEMENT_CONFIRM_MS
 #define MOVEMENT_CONFIRM_HITS       CONFIG_APP_MOVEMENT_CONFIRM_HITS

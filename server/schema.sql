@@ -164,6 +164,11 @@ CREATE TABLE `log` (
   `ce_level`      TINYINT      DEFAULT NULL COMMENT 'LTE-M coverage enhancement level; >0 means repetitions',
   `tx_rep`        SMALLINT     DEFAULT NULL COMMENT 'estimated transmit repetitions',
   `dead_reckoning` TINYINT(1)  DEFAULT NULL,
+  -- The motion through the gap since the device's previous record (mv=): the
+  -- ECU's speed and the gyro's heading change for each second GNSS could not
+  -- see.  Stored as sent and turned into a path only when a journey is drawn
+  -- (tracker/deadreckon.py), so a better fit applies to every journey.
+  `motion`        VARCHAR(255) DEFAULT NULL COMMENT 'mv=: <gap ds>:<v0 km/h>:<steps>:<end>, see deadreckon.py',
 
   `fw`            VARCHAR(16)  DEFAULT NULL COMMENT 'running firmware version, carried forward',
   `dbg`           VARCHAR(255) DEFAULT NULL COMMENT 'debug counters, only after a fault',

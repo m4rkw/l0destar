@@ -319,8 +319,10 @@ static int accel_alert_priority(void)
     return ACCEL_ALERT_PRIORITY;
 }
 
-/* Called from the awake loops.  The FIFO ring holds ~9 s of accel+gyro
- * history, so the impact profile is intact even with loop-cadence latency. */
+/* Called from the awake loops.  The FIFO ring holds ~7 s of accel+gyro,
+ * and nothing else drains it while the interrupt flag is up (see
+ * dr_fifo_service()), so the impact profile is intact even with loop-cadence
+ * latency. */
 static void crash_check(void)
 {
     if (!atomic_clear(&s_accel_int_flag)) return;
@@ -349,6 +351,30 @@ static void crash_check(void)
     alert_enqueue(msg, accel_alert_priority());
     alert_send();
 }
+
+#if IS_ENABLED(CONFIG_APP_DEAD_RECKONING)
+/* The FIFO into the dead reckoning.  Not with an impact waiting for
+ * crash_check(): its profile is in the FIFO, and the FIFO gives each sample
+ * once.  The impact drain feeds the dead reckoning as well, so waiting for
+ * it loses nothing.  Not with the key off either: no drive to fill in. */
+void dr_fifo_service(void)
+{
+    if (ignition == 0 && !atomic_get(&s_accel_int_flag)) {
+        (void)accel_fifo_service();
+    }
+}
+#endif
+
+#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY) || IS_ENABLED(CONFIG_APP_DEAD_RECKONING)
+/* gnss_collect()'s tick: about once a second while it waits for a fix. */
+static void fix_wait_tick(void)
+{
+#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
+    obd_sample_tick();
+#endif
+    dr_fifo_service();
+}
+#endif
 
 /* -- coast-to-stop --------------------------------------------------------- */
 static bool s_coasting;
@@ -747,6 +773,7 @@ static bool backup_cut_confirm(float *v)
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
+    data_gap_reset();
     /* Track mode ends with the drive.  The server drops its switch on the
      * ignition-off record, so this only keeps the two in step: without it
      * the next key-on would start in the mode and stay there until the
@@ -1666,6 +1693,7 @@ static void do_sleep(void)
 static void do_ignition_sleep(void)
 {
     LOG_INF("ignition sleep (ign=ON, engine=OFF)");
+    data_gap_reset();
     led_all_off();
     int64_t last_voltage_ms = k_uptime_get();
     int64_t last_send_ms    = k_uptime_get();
@@ -1786,6 +1814,7 @@ static void do_track(void)
     int sent = 0;
 
     LOG_INF("track mode: GNSS off, one record per %lld ms", period_ms);
+    data_gap_reset();
     gnss_stop();
     transport_set_streaming(true);
     led_idle();
@@ -2189,12 +2218,16 @@ int main(void)
         gnss_start();
     }
 
-#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
+#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY) || IS_ENABLED(CONFIG_APP_DEAD_RECKONING)
     /* Poll the ECU about once a second while waiting for a fix, which is
      * where most of a cycle goes: the record built after the fix then
      * costs no bus time, and engine RPM is sampled across the cycle rather
-     * than once per record. */
-    gnss_set_tick(obd_sample_tick);
+     * than once per record.  And drain the IMU FIFO into the dead
+     * reckoning, which a wait as long as LTE can make it would otherwise
+     * overrun. */
+    gnss_set_tick(fix_wait_tick);
+#endif
+#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
     obd_alert_init();
 #endif
 
@@ -2221,6 +2254,10 @@ int main(void)
         watchdog_kick();
         crash_check();
         handle_ignition_state();
+        /* The fix wait drains the IMU FIFO into the dead reckoning; this is
+         * the rest of a cycle — the send, which can take seconds — so the
+         * ring never holds more than a few. */
+        dr_fifo_service();
 
         /* A failed-update report waiting for a link.  No-op with nothing
          * pending, which is every iteration but the ones after a revert. */
@@ -2556,12 +2593,16 @@ int main(void)
                 break;
             }
             s_buffered_records++;
+            /* Not counting the motion through gaps (mv=): it is for the
+             * fixes the radio cost, and must not cost more of them by
+             * making the batch go early.  send_data() leaves it off a batch
+             * that would not fit the datagram. */
             if (s_buffered_records >= BATCH_SIZE
                 || ignition != 0
                 || previous_ignition == -1
                 || send_int_to_server
                 || !last_send_ok
-                || data_index >= BATCH_FLUSH_BYTES) {
+                || data_index - data_motion_bytes() >= BATCH_FLUSH_BYTES) {
                 s_state = STATE_SEND;
             } else {
                 s_state = STATE_IDLE;

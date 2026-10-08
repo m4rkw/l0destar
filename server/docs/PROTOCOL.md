@@ -73,6 +73,7 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `snr` | serving cell SNR, dB (−24…+24) | per-packet |
 | `band` | LTE band in use | per-packet |
 | `wt` | `<rid>:<ms>[:<attach_ms>]` — how long the device was awake for the send of record `<rid>`, and how much of that was the LTE attach | retrospective |
+| `mv` | `<gap>:<v0>:<steps>:<end>` — the motion through the gap between the previous record's fix and this one's (0.4.68): ECU speed and gyro heading change for each second of it | per-packet, stored as sent |
 
 "Carried forward" means the device sends the field only when it changes or on
 the first record after a wake, and the server copies the previous row's value
@@ -158,6 +159,49 @@ record, the first after a boot, a wake that built no record to attribute it
 to, and any row whose figure was lost. Note that the eleventh fixed field is
 stored in a column called `waketime` for historical reasons; that one is
 seconds of uptime and unrelated.
+
+`mv` fills the gaps GNSS leaves. The receiver gets nothing while LTE holds the
+radio, which every send does — about 2.5 s after the reply on most cells, 10 s
+on cells that ignore release assistance, 25 s or more through a rejected
+tracking-area update — so a track is runs of one-second fixes with gaps
+between them. The device measures the motion it cannot see: the ECU's road
+speed, polled about once a second, and the gyro's heading change, integrated
+from the IMU's 26 Hz FIFO after projecting it onto gravity so the mounting does
+not matter. It goes on the first record after a gap of 2.5–60 s on the move,
+whose predecessor (`rid` one less) is the fix the gap starts from:
+
+| Part | Meaning |
+|---|---|
+| `gap` | tenths of a second between the two fixes, by the device's clock |
+| `v0` | km/h at the first fix; empty when the device has no ECU speed, and the steps then carry headings alone |
+| `steps` | one entry per whole second after the first fix and before the second: a speed change then a heading change, or the heading change alone |
+| `end` | the heading change from the last whole second to the second fix |
+
+Each change is one character of the base64url alphabet (`A–Z a–z 0–9 - _`),
+the value plus 32: `g` is 0, `_` is +31. `A` (−32) in a speed slot means not
+measured. Speeds are whole km/h and headings whole degrees, clockwise; each
+step is the change in the rounded running value, so rounding does not add up,
+and a change beyond ±31 in one second carries into the next. Two bytes a
+second: a 12 s gap is 33 bytes. The device leaves it off a batch that would
+not fit a datagram, and off a record that would not fit a backlog slot,
+rather than lose either.
+
+The server stores it as sent, in `motion`, and fits the path when a journey is
+drawn (`tracker/deadreckon.py`): the shape is integrated from the first fix,
+the gyro's drift taken out against the two fixes' headings, then turned and
+stretched about the first fix to end on the second. A fill whose turn or
+stretch is implausible — the motion disagreeing with the fixes — is dropped,
+and the replay draws the straight line it always did. Filled points carry
+`dr: 1` and are drawn dashed.
+
+When the gyro and the fixes' headings disagree by more than 45°, the headings
+are usually what is wrong: a receiver's heading lags a tight turn at low speed
+(40° behind the car after one on 2026-10-04). With both fixes good (HDOP 3 or
+better) the headings are set aside and the positions fit the path alone, as
+long as it still leaves along one fix's heading or arrives along the other's.
+With either fix poor the fix itself may be wrong, and the gap is left
+unfilled. The rows the fit reads need `hdop` as the HDOP itself; a server that
+stores tenths divides in its query.
 
 `dbg` is compound — its own body uses semicolons — so it is parsed whole rather
 than split like the others, and a trailing `;rst=` is separated off.
