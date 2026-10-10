@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.73
 
 ### The ignition-off record no longer waits for GPS underground
 At 17:28 on 2026-10-10 the car drove into the same underground car park as
