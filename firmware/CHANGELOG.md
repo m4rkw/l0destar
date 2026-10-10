@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+### The ignition-off record no longer waits for GPS underground
+At 17:28 on 2026-10-10 the car drove into the same underground car park as
+that morning and went dark for the whole 18-minute stay.  The records came
+in as it drove out, none of them lost, but the ignition-off record was 18
+minutes late.  A bench replay of the stay showed why:
+- **A fix wait ran on past the key-off.**  The ignition is only looked at
+between collections, so a key-off during a cold search waited out its
+300 s.  Then the ignition-off record waited out another 300 s cold search
+before falling back to the last known position.  The bench sent it 10
+minutes after the key went off.  Now a fix wait ends when the ignition
+changes, once the change has held past the crank dropout (5 s) or the
+backup module's wake pulse (1.5 s).  A record that has to go out gives the
+fix 15 s (`TRANSITION_FIX_WAIT_MS`).
+- **A six-minute-old GPS speed started coast-to-stop.**  The car's last fix
+before going underground said 5.3 km/h.  At key-off the ECU had no power,
+so that speed was taken as the current one, and coast-to-stop began.  The
+coast only ends after a send, which a collection with no fix never
+reaches, so the unit stayed awake with GNSS running, never reaching the
+sleep path that resends.  The ignition-off record, lost with the
+registration, was held until the key came back on, though the modem had
+registered again within a minute.  The GPS speed now only counts while the
+fix is under `SPEED_FIX_MAX_AGE_MS` old, and a collection with no fix ends
+the coast.
+- **A key-off whose record cannot be sent no longer keeps the unit awake.**
+With the modem registered but sends failing locally (a dead socket, a data
+connection gone under a live registration, a failed lookup), the
+ignition-off record was collected and sent again and again until modem
+recovery restarted the radio, 10 minutes on.  Each pass added another copy
+of it to the backlog.  The record is in the backlog after the first
+failure, so the unit now sleeps, and `do_sleep()`'s delivery and the timed
+wakes carry it from there.
+
 ## 0.4.72
 
 ### The server's address is looked up again when the server goes quiet

@@ -86,6 +86,9 @@
 #define RESEND_POLL_S               30
 #define GPS_FIX_TIMEOUT_MS          CONFIG_APP_GPS_FIX_TIMEOUT_MS
 #define GPS_COLD_FIX_TIMEOUT_MS     CONFIG_APP_GPS_COLD_FIX_TIMEOUT_MS
+/* The fix wait for a record that must go out regardless (force_record):
+ * long enough for a receiver that was tracking, short of a cold search. */
+#define TRANSITION_FIX_WAIT_MS      15000
 
 /* -- cold-start GNSS: A-GNSS retries, priority mode ------------------------ */
 /* A failed A-GNSS fetch used to leave the whole cold search unassisted:

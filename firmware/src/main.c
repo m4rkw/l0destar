@@ -574,7 +574,16 @@ static bool should_send_data(void)
  *
  * The ECU figure is not better in every respect — vehicle speed sensors
  * typically over-read by a couple of percent and are affected by tyre size —
- * but for "are we moving or not" the zero is what matters. */
+ * but for "are we moving or not" the zero is what matters.
+ *
+ * Only a recent fix's speed counts.  g_gnss keeps the last fix for as long
+ * as no other comes, and on 2026-10-10 at 17:28 the car drove into an
+ * underground car park at 5.3 km/h by GNSS.  Switched off six minutes later,
+ * the ECU unpowered and so silent, that speed started coast-to-stop: a
+ * collection that never got a fix, so never a send to end the coast, and
+ * the unit stayed awake with GNSS running, its ignition-off record held,
+ * until the key came back on.  SPEED_FIX_MAX_AGE_MS is the same limit the
+ * records' own speed field keeps to. */
 static float vehicle_speed_kmh(void)
 {
 #if IS_ENABLED(CONFIG_APP_KLINE_OBD)
@@ -584,6 +593,10 @@ static float vehicle_speed_kmh(void)
         return (float)obd;
     }
 #endif
+    if (!g_gnss.valid ||
+        k_uptime_get() - g_gnss.fix_uptime_ms > SPEED_FIX_MAX_AGE_MS) {
+        return 0.0f;
+    }
     return g_gnss.speed_kmh;
 }
 
@@ -2627,6 +2640,14 @@ int main(void)
                 led_idle();
                 data_reset();
                 s_last_send_ms = k_uptime_get();
+                /* Coast-to-stop only ends in STATE_SEND, which a collection
+                 * with no fix never reaches, and while it lasts nothing lets
+                 * the unit sleep.  Without a fix there is no motion to
+                 * follow anyway. */
+                if (s_coasting) {
+                    LOG_INF("coast-to-stop ended: no fix");
+                    s_coasting = false;
+                }
                 /* With a transition pending, force_record gets a record
                  * built from the last known position, so this branch is
                  * normally a routine no-fix collection and the assignment is
@@ -2763,7 +2784,22 @@ int main(void)
             ignition = (char)ignition_read();
 
             /* state transition */
-            if (previous_ignition != ignition && ignition != 0 &&
+            if (ignition != 0 && s_record_ignition != 0 && !s_coasting &&
+                !last_send_ok && modem_is_registered()) {
+                /* Key off, and the record that says so failed to send with
+                 * the network up: a dead socket, a data connection gone
+                 * under a live registration, a lookup that failed.  Going
+                 * round again would only fail the same way, and each pass
+                 * pushed another copy of the record into the backlog, with
+                 * nothing to stop it short of the modem recovery's restart.
+                 * The record is in the backlog already, so the server is as
+                 * told as it can be for now: sleep, and let do_sleep()'s
+                 * delivery and the timed wakes after it carry the backlog. */
+                LOG_WRN("ignition-off record failed to send with the "
+                        "network up — held for the next delivery, sleeping");
+                previous_ignition = s_record_ignition;
+                s_state = STATE_SLEEP;
+            } else if (previous_ignition != ignition && ignition != 0 &&
                 !s_coasting && !last_send_ok && !modem_is_registered()) {
                 /* Key off, and no network to take the record that says so.
                  * The collect-and-send round below is right for a drive

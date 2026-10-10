@@ -451,7 +451,15 @@ int collect_data(int ignitionState)
     if (use_cached_gps) {
         have_fix = g_gnss.valid;
     } else {
-        if (gnss_collect(GPS_FIX_TIMEOUT_MS, &fix) == 0 && fix.valid) {
+        /* A record that has to go out (an ignition change) is about the
+         * change, not the position, so it gives the fix TRANSITION_FIX_WAIT_MS
+         * and then falls back to the last known position below.  A receiver
+         * that has been tracking fixes within a second or two; underground,
+         * the full wait is a cold start's 300 s, and that is how long the
+         * car's ignition-off record waited in a car park on 2026-10-10. */
+        int wait_ms = force_record ? TRANSITION_FIX_WAIT_MS : GPS_FIX_TIMEOUT_MS;
+
+        if (gnss_collect(wait_ms, &fix) == 0 && fix.valid) {
             g_gnss = fix;
             have_fix = 1;
         }
