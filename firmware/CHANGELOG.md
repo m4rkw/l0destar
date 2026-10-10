@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.72
+
+### The server's address is looked up again when the server goes quiet
+The address of `APP_SERVER_HOST` is still looked up once per boot and kept,
+so a send costs no lookup.  Kept for good, though, a moved server would be
+sent to until the next reboot, and the update notice that could have forced
+one rides on the replies that no longer come.  Now three sends in a row with
+no reply, all made with the modem registered and the first over 5 minutes
+ago, close the socket and look the name up again.  Sends made without a
+registration don't count, so a dead zone or a TAU reject never triggers it,
+and 5 minutes is well past the 38 s stall seen on a registered link.  If the
+lookup fails or finds the same address, the address in hand is kept and the
+number of sends before the next try doubles, up to 48.  Any reply resets it.
+
 ## 0.4.71
 
 ### A parked unit falls back to NB-IoT where LTE-M does not reach

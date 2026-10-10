@@ -50,9 +50,30 @@ LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
  * that turns up a cycle late — or several, behind a stall — still counts. */
 #define SENT_TRACK   8
 
+/* The server's address is looked up once per boot and kept: a lookup is a
+ * round trip of its own through the modem, and on a marginal link it can take
+ * tens of seconds.  But a unit can run for weeks between boots, and kept for
+ * good, the address of a server that has moved would be sent to until the
+ * next one — and the update notice that could have rebooted it rides on the
+ * replies that no longer come.  So it is looked up again when the server
+ * itself has gone quiet: RECHECK_SENDS sends in a row unanswered, each made
+ * with the modem registered, the first of them RECHECK_AGE_MS ago.  That is
+ * well past the longest stall seen on a registered link (38 s on a weak cell,
+ * 2026-09-27), so a slow link mid-drive is not held up by a lookup, and sends
+ * made with the registration gone do not count at all.  A lookup that finds
+ * the same address, or fails, keeps the one in hand and doubles the count
+ * before the next, to RECHECK_MAX. */
+#define RECHECK_SENDS    3
+#define RECHECK_MAX      48
+#define RECHECK_AGE_MS   (5 * 60 * 1000)
+
 static int s_sock = -1;
 static struct sockaddr_in s_server;
 static bool s_resolved;
+static bool s_recheck;
+static int  s_recheck_after = RECHECK_SENDS;
+static int  s_silent_sends;      /* registered sends since the last reply */
+static int64_t s_silent_since_ms;
 /* Track mode: hold the RRC connection between sends. */
 static bool s_streaming;
 
@@ -123,6 +144,8 @@ static uint32_t match_reply(int n)
                            &pt_len) == 0) {
             s_reply[pt_len] = '\0';
             s_sent[slot].id = 0;        /* a second copy would be a replay */
+            s_silent_sends = 0;
+            s_recheck_after = RECHECK_SENDS;
             return id;
         }
     }
@@ -170,6 +193,7 @@ static int transport_resolve(void)
         .ai_socktype = SOCK_DGRAM,
     };
     struct zsock_addrinfo *res = NULL;
+    struct sockaddr_in found;
     char port_str[8];
     snprintf(port_str, sizeof(port_str), "%u", SERVER_PORT);
 
@@ -179,12 +203,38 @@ static int transport_resolve(void)
     watchdog_kick();
     int err = zsock_getaddrinfo(SERVER_HOST, port_str, &hints, &res);
     watchdog_kick();
+
+    bool recheck = s_resolved;
+
+    s_recheck = false;
     if (err) {
+        if (recheck) {
+            s_recheck_after = MIN(2 * s_recheck_after, RECHECK_MAX);
+            LOG_WRN("getaddrinfo(%s): %d — keeping the address in hand",
+                    SERVER_HOST, err);
+            return 0;
+        }
         LOG_ERR("getaddrinfo(%s): %d", SERVER_HOST, err);
         return -EIO;
     }
-    memcpy(&s_server, res->ai_addr, sizeof(s_server));
+    memcpy(&found, res->ai_addr, sizeof(found));
     zsock_freeaddrinfo(res);
+
+    if (recheck) {
+        char was[NET_IPV4_ADDR_LEN], now[NET_IPV4_ADDR_LEN];
+
+        zsock_inet_ntop(AF_INET, &s_server.sin_addr, was, sizeof(was));
+        zsock_inet_ntop(AF_INET, &found.sin_addr, now, sizeof(now));
+        if (found.sin_addr.s_addr == s_server.sin_addr.s_addr) {
+            s_recheck_after = MIN(2 * s_recheck_after, RECHECK_MAX);
+            LOG_WRN("%s is still %s — next look after %d unanswered sends",
+                    SERVER_HOST, now, s_recheck_after);
+        } else {
+            s_recheck_after = RECHECK_SENDS;
+            LOG_WRN("%s has moved: %s, was %s", SERVER_HOST, now, was);
+        }
+    }
+    memcpy(&s_server, &found, sizeof(s_server));
     s_resolved = true;
     return 0;
 }
@@ -193,7 +243,7 @@ int transport_open(void)
 {
     if (s_sock >= 0) return 0;
 
-    if (!s_resolved) {
+    if (!s_resolved || s_recheck) {
         int err = transport_resolve();
         if (err) return err;
     }
@@ -243,6 +293,16 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
     /* Replies that came in since the last send: each is a datagram that
      * arrived.  It can also drop a socket that has gone bad. */
     (void)transport_poll();
+
+    if (s_silent_sends >= s_recheck_after && modem_is_registered() &&
+        k_uptime_get() - s_silent_since_ms >= RECHECK_AGE_MS) {
+        LOG_WRN("%d sends unanswered over %lld s with the network up — "
+                "looking %s up again", s_silent_sends,
+                (k_uptime_get() - s_silent_since_ms) / 1000, SERVER_HOST);
+        s_silent_sends = 0;
+        s_recheck = true;
+        transport_teardown();     /* the new socket connects to the answer */
+    }
 
     if (s_sock < 0) {
         int err = transport_open();
@@ -326,6 +386,10 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
 
     s_sent[slot].id = s_last_id;
     memcpy(s_sent[slot].nonce, nonce, NONCE_LEN);
+
+    if (modem_is_registered() && s_silent_sends++ == 0) {
+        s_silent_since_ms = k_uptime_get();
+    }
 
     LOG_INF("sent %u bytes (#%u)", (unsigned)total, s_last_id);
 
