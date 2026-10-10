@@ -195,6 +195,10 @@ void hw_power_wake(void)
  * Every caller is on the main thread. */
 static int64_t s_ign_on_ms = -1;
 
+#if IS_ENABLED(CONFIG_APP_DEBUG_NBIOT_TEST)
+int64_t g_debug_key_on_ms;
+#endif
+
 int ignition_read(void)
 {
 	int v;
@@ -205,6 +209,11 @@ int ignition_read(void)
 #else
 	/* Active-low sense (pulled up): pin low = ignition present = 0 (ON) */
 	v = gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
+#endif
+#if IS_ENABLED(CONFIG_APP_DEBUG_NBIOT_TEST)
+	if (g_debug_key_on_ms && k_uptime_get() >= g_debug_key_on_ms) {
+		v = 0;
+	}
 #endif
 	if (v == 0) {
 		s_ign_on_ms = k_uptime_get();

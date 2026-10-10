@@ -1,5 +1,65 @@
 # Changelog
 
+## 0.4.71
+
+### A parked unit falls back to NB-IoT where LTE-M does not reach
+At 09:44 on 2026-10-10 the car drove into an underground car park at 7 km/h
+and went silent: no ignition-off record, and nothing could reach it until it
+was driven out.  LTE-M only is still the rule.  But when a parked search on
+LTE-M runs out its `APP_NETWORK_SEARCH_TIMEOUT`, the modem now switches to
+LTE-M plus NB-IoT, LTE-M preferred, and gets a fresh window with the report
+still owed.  This happens on a timed wake, or at sleep entry when the search
+had already run out on the way in.  The fallback stays on through later timed
+wakes and goes off at key-on, so a drive never runs on NB-IoT.
+`APP_NBIOT_PARKED_FALLBACK` (default y).
+
+At home the bench attaches on EE NB-IoT (B3) and Vodafone NB-IoT (B20).
+NB-IoT copes with about 8 dB more loss than LTE-M; whether that is enough
+for that car park is for the car to show.
+- **Key-on cost only after a dead-zone stay.**  `%XSYSTEMMODE` needs the
+radio offline, so going back to LTE-M with the modem up is CFUN=4, the mode,
+then a full bring-up.  Measured at 3.3-5.3 s with AT commands, and 4.1 s
+from key-on to GNSS start in the firmware.  Otherwise a key-on still resumes
+from PSM at no cost.  With the radio off the mode only applies at the next
+bring-up, for nothing.
+- **The CFUN=4 is waited for in watchdog-fed slices** (`nrf_modem_at_cmd_async`),
+capped by `APP_NBIOT_OFFLINE_CAP_S` (90 s).  The detach took about 60 s once
+on the bench.
+- **Bench test** with `APP_DEBUG_NBIOT_TEST` (LTE-M held to an empty band
+until the fallback is used, NB-IoT preferred, a simulated key-on 90 s after
+the report): after 301 s on LTE-M the fallback came on.  It took 24 ms to go
+offline, then 6 s to register on EE NB-IoT.  The owed report reached the
+server with `rat=NBIOT`, and the modem stayed in PSM on NB-IoT.  At the
+simulated key-on it went offline in 1.2 s, registered on LTE-M 2.7 s later
+and started GNSS 4.1 s after the key, with the first ignition-on record at
+the server 8 s after the key.
+
+## 0.4.70
+
+### Band 3 is back, on trial
+EE's LTE-M is on B3 only here, and B3 had been locked out since EE kept
+winning operator selection over O2 and Vodafone on B20.  On 2026-10-10 the
+bench, unlocked at home, scanned all three.  O2's home cell 135829634 (B20) is
+the strongest at -102 dBm, but with an SNR of -4 dB the modem needs every
+downlink four times and rates it poor (`%CONEVAL` energy estimate 6).  EE's
+cell 3167234 (B3) reads -110 dBm, but at +3 dB SNR, with no repetitions and a
+normal estimate (7).  `CONFIG_LTE_LOCK_BAND_LIST` is now `"3,8,20"`, so the
+modem can choose EE.  Every move between EE and O2 costs a full reattach after
+an EMM cause 9 reject (the bench saw one switching O2 -> EE), so this is a
+trial: if rejects or gaps on the road go up, set it back to `"8,20"`.
+
+### A record lost with the registration is resent when the network is back
+At 23:14 on 2026-10-09 the parked car's hourly report went out, and 6 s later
+the registration was lost: the modem had moved to TAC 12296 cell 289044, where
+the network rejected it (cause 9) and discarded the queued datagram.  The
+record went back into the backlog after 8 s unanswered.  The wake had already
+checked for a registration before waiting for replies, found one and owed
+nothing, so it powered the modem down.  The record reached the server with the
+00:15 report, an hour late.  Now, if records are still in the backlog once
+the replies have been waited for and the network has gone, the report is owed
+like an unsent alert.  The loop keeps the modem searching through
+`APP_NETWORK_SEARCH_TIMEOUT` and sends as soon as it registers.
+
 ## 0.4.69
 
 ### An update check on a dead link no longer runs the watchdog out

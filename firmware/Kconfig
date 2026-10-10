@@ -835,6 +835,45 @@ config APP_NETWORK_SEARCH_TIMEOUT
 	  With the ignition on the search is not limited: the car is running,
 	  and the drive should be reported as soon as coverage returns.
 
+config APP_NBIOT_PARKED_FALLBACK
+	bool "Let a parked unit fall back to NB-IoT where LTE-M does not reach"
+	default y
+	help
+	  When a parked search on LTE-M alone runs out its
+	  APP_NETWORK_SEARCH_TIMEOUT, the modem is switched to LTE-M plus NB-IoT,
+	  LTE-M still preferred, and given a fresh window.  It stays that way for
+	  the rest of the stay, so later timed wakes search both, and goes back
+	  to LTE-M only at key-on: a drive never runs on NB-IoT, which has no
+	  handover.  NB-IoT copes with about 8 dB more loss than LTE-M, so an
+	  underground car park on the edge of coverage can still get its
+	  reports and alerts out.
+
+	  Costs a key-on 3-5 s to change modes, measured on the bench, but only
+	  the key-on after a stay where LTE-M failed.  Any other key-on still
+	  resumes from PSM at no cost.
+
+config APP_DEBUG_NBIOT_TEST
+	bool "Bench: fake an LTE-M dead zone to exercise the NB-IoT fallback"
+	depends on APP_NBIOT_PARKED_FALLBACK
+	help
+	  Never in a deployed image.  Holds LTE-M to band 8 (nothing transmits
+	  there at the bench) until the fallback has been used once, and makes
+	  the fallback prefer NB-IoT, so a parked bench unit takes the whole
+	  path: LTE-M search runs out, NB-IoT attaches, the owed report goes,
+	  and 90 s after that report the ignition reads on, so the key-on
+	  switch back runs too.
+
+config APP_NBIOT_OFFLINE_CAP_S
+	int "Seconds to wait for CFUN=4 when switching to or from NB-IoT"
+	default 90
+	range 5 600
+	help
+	  The detach normally takes about a second, but it took about 60 s once
+	  on the bench.  The wait feeds the watchdog.  Past this cap the switch
+	  is abandoned, and since the modem still owes the CFUN=4 answer, the
+	  next AT command blocks until the watchdog resets the unit, which
+	  comes back on LTE-M only.
+
 config APP_SIGNAL_SAMPLE_S
 	int "Seconds between serving-cell signal readings (0 = only at wakes)"
 	default 60

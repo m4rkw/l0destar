@@ -223,6 +223,11 @@ uint32_t modem_reg_losses(void);
 const char *modem_rat(void);           /* "CATM1" / "NBIOT" / "UNKNOWN" */
 bool modem_is_nbiot(void);
 int  modem_rescan_plmn(int timeout_s); /* force cell/PLMN reselection */
+/* Allow NB-IoT (LTE-M preferred) or go back to LTE-M only.  With the radio
+ * up this is CFUN=4, the mode, then a full bring-up; with it down it only
+ * takes effect at the next one. */
+int  modem_nbiot_fallback(bool on);
+bool modem_nbiot_fallback_on(void);
 
 int  gnss_init(void);
 int  gnss_start(void);
@@ -606,6 +611,10 @@ int   accel_read_temp(float *temp_c);
 int   modem_read_temp(float *temp_c);
 int   modem_read_vbat(int *mv);        /* nRF9151 VDD (= VSYS), millivolts */
 int   ignition_read(void);
+#if IS_ENABLED(CONFIG_APP_DEBUG_NBIOT_TEST)
+/* Bench: the ignition reads on from this uptime (0 = never). */
+extern int64_t g_debug_key_on_ms;
+#endif
 int64_t ignition_last_on_ms(void);      /* uptime of the last read that found it on, -1 if none */
 float battery_read_voltage(void);
 float battery_poll_voltage(void);       /* one conversion from a shut-down INA, left shut down */

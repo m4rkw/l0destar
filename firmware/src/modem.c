@@ -419,12 +419,71 @@ static int provision_fota_tag(void)
     return 0;
 }
 
+/* NB-IoT as a fallback for a parked unit.  LTE-M only is the rule (see
+ * prj.conf): a drive that drops onto NB-IoT gets no handover and stays stuck
+ * there.  But a car parked where LTE-M does not reach, an underground car
+ * park, sends nothing at all until it is driven out, alerts included.
+ * NB-IoT copes with about 8 dB more loss.  At home on 2026-10-10 the bench
+ * attached on EE NB-IoT (B3) and Vodafone NB-IoT (B20), and EE's read about
+ * 8 dB stronger than its LTE-M from the same mast.  So main.c allows it, LTE-M
+ * still preferred, once a parked search on LTE-M alone has run out, and turns
+ * it off again at key-on.  Measured on the bench, the way back cost 4.1-5.3 s
+ * from NB-IoT and 3.3-3.5 s from LTE-M, against about 0 for a key-on from PSM
+ * today.  Only key-ons after a dead-zone stay pay it. */
+static bool s_nbiot_fallback;
+
+/* %XSYSTEMMODE is refused at CFUN=1, so this is only ever applied with the
+ * radio down, before the CFUN=1 that follows.  Single-RAT LTE-M keeps
+ * preference 0 (auto), as prj.conf explains. */
+static void apply_system_mode(void)
+{
+    enum lte_lc_system_mode want = s_nbiot_fallback
+        ? LTE_LC_SYSTEM_MODE_LTEM_NBIOT_GPS : LTE_LC_SYSTEM_MODE_LTEM_GPS;
+    enum lte_lc_system_mode_preference want_pref = s_nbiot_fallback
+        ? LTE_LC_SYSTEM_MODE_PREFER_LTEM : LTE_LC_SYSTEM_MODE_PREFER_AUTO;
+    enum lte_lc_system_mode mode;
+    enum lte_lc_system_mode_preference pref;
+
+#if IS_ENABLED(CONFIG_APP_DEBUG_NBIOT_TEST)
+    /* Bench only: a dead zone at home.  Until the fallback has been used
+     * once, LTE-M is held to B8, where nothing here transmits; the fallback
+     * then prefers NB-IoT so it really lands there, and everything after
+     * runs on the normal band list. */
+    static bool used;
+
+    if (s_nbiot_fallback) {
+        used = true;
+        want_pref = LTE_LC_SYSTEM_MODE_PREFER_NBIOT;
+    }
+    if (used) {
+        nrf_modem_at_printf("AT%%XBANDLOCK=2,\"\",\"%s\"",
+                            CONFIG_LTE_LOCK_BAND_LIST);
+    } else {
+        nrf_modem_at_printf("AT%%XBANDLOCK=2,\"\",\"8\"");
+    }
+    LOG_WRN("NB-IoT test: bands %s", used ? CONFIG_LTE_LOCK_BAND_LIST : "8");
+#endif
+
+    if (lte_lc_system_mode_get(&mode, &pref) == 0 &&
+        mode == want && pref == want_pref) {
+        return;
+    }
+    int err = lte_lc_system_mode_set(want, want_pref);
+
+    if (err) {
+        LOG_WRN("system mode %s: %d",
+                s_nbiot_fallback ? "LTE-M+NB-IoT" : "LTE-M", err);
+    }
+}
+
 /* Everything that has to be in place before CFUN=1.  Factored out because
  * modem_rescan_plmn() drops to CFUN=4 and back, which loses the session these
  * set up — a re-scan that skipped them would come back registered but without
  * RAI, quietly costing the GNSS duty cycle the whole design depends on. */
 static void apply_link_settings(void)
 {
+    apply_system_mode();
+
     /* +COPS selection mode persists in modem NVM across power cycles; force
      * automatic PLMN selection in case a manual selection was ever stored. */
     nrf_modem_at_printf("AT+COPS=0");
@@ -697,6 +756,95 @@ void modem_power_off(void)
     if (err) {
         LOG_WRN("lte_lc_power_off: %d", err);
     }
+}
+
+/* CFUN=4 without blocking the watchdog's window.  Leaving the network means
+ * a detach, normally about a second.  But once on the bench it took about
+ * 60 s, straight after a move onto Vodafone NB-IoT, and lte_lc_offline() would
+ * hold the main loop for all of it with nothing kicking.  So the command is
+ * sent asynchronously and waited for here in slices. */
+static K_SEM_DEFINE(s_offline_sem, 0, 1);
+static bool s_offline_ok;
+
+static void offline_resp(const char *resp)
+{
+    s_offline_ok = strncmp(resp, "OK", 2) == 0;
+    k_sem_give(&s_offline_sem);
+}
+
+static int offline_kicked(int cap_s)
+{
+    k_sem_reset(&s_offline_sem);
+
+    int err = nrf_modem_at_cmd_async(offline_resp, "AT+CFUN=4");
+
+    if (err) {
+        return err;
+    }
+    for (int waited = 0; waited < cap_s; waited++) {
+        if (k_sem_take(&s_offline_sem, K_SECONDS(1)) == 0) {
+            return s_offline_ok ? 0 : -EIO;
+        }
+        watchdog_kick();
+    }
+    return -ETIMEDOUT;
+}
+
+int modem_nbiot_fallback(bool on)
+{
+    if (on == s_nbiot_fallback) {
+        return 0;
+    }
+    s_nbiot_fallback = on;
+
+    /* Off or offline: the next bring-up applies it, for nothing. */
+    enum lte_lc_func_mode mode;
+
+    if (lte_lc_func_mode_get(&mode) != 0 ||
+        mode != LTE_LC_FUNC_MODE_NORMAL) {
+        LOG_WRN("%s (radio down: applied at the next bring-up)",
+                on ? "NB-IoT fallback on" : "back to LTE-M only");
+        return 0;
+    }
+
+    /* Our own doing, like modem_power_off(): the not-registered URC that
+     * CFUN=4 brings is not an outage, and the search that follows is new. */
+    int64_t t0 = k_uptime_get();
+
+    s_connected = false;
+    s_lost_ms = 0;
+    s_search_ms = 0;
+    network_ready = false;
+    rrc_end();
+#if IS_ENABLED(CONFIG_APP_PSM_PROBE)
+    s_psm_offline = true;
+    s_psm_asleep = false;
+#endif
+    transport_teardown();
+
+    int err = offline_kicked(CONFIG_APP_NBIOT_OFFLINE_CAP_S);
+
+    if (err) {
+        /* With CFUN=4 still outstanding, every AT command after this waits
+         * on it with no timeout, and the watchdog ends the wait: the reboot
+         * starts on LTE-M only, from Kconfig. */
+        LOG_ERR("%s: going offline failed (%d) after %lld ms",
+                on ? "NB-IoT fallback" : "back to LTE-M",
+                err, k_uptime_get() - t0);
+        return err;
+    }
+    int64_t off_ms = k_uptime_get() - t0;
+
+    err = modem_radio_up();
+    LOG_WRN("%s: offline in %lld ms, radio up again %lld ms after the start",
+            on ? "NB-IoT fallback on" : "back to LTE-M only",
+            off_ms, k_uptime_get() - t0);
+    return err;
+}
+
+bool modem_nbiot_fallback_on(void)
+{
+    return s_nbiot_fallback;
 }
 
 int modem_connect(void)

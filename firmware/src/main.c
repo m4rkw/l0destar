@@ -411,6 +411,30 @@ static bool network_search_expired(void)
            modem_unregistered_s() >= NETWORK_SEARCH_TIMEOUT;
 }
 
+/* A parked search on LTE-M alone has run its course: try again with NB-IoT
+ * allowed (APP_NBIOT_PARKED_FALLBACK), on a fresh search window.  True if
+ * the radio is searching again, so the caller still owes its report; false
+ * if the fallback is off, already in use, or could not be switched on. */
+static bool nbiot_fallback_start(void)
+{
+    if (!IS_ENABLED(CONFIG_APP_NBIOT_PARKED_FALLBACK) ||
+        modem_nbiot_fallback_on()) {
+        return false;
+    }
+    LOG_WRN("no LTE-M registration %d s after bringing the radio up — "
+            "searching with NB-IoT as well", modem_unregistered_s());
+    return modem_nbiot_fallback(true) == 0;
+}
+
+/* Key-on: back to LTE-M only before the drive's connect, so a drive never
+ * runs on NB-IoT.  Costs 3-5 s if the modem is up, nothing if it is off. */
+static void nbiot_fallback_end(void)
+{
+    if (modem_nbiot_fallback_on()) {
+        (void)modem_nbiot_fallback(false);
+    }
+}
+
 /* Bring the radio up again every retry interval while there is no
  * registration.  The only thing that brings it back after a modem fault:
  * the reset thread reinitialises the library but leaves the modem offline
@@ -825,6 +849,12 @@ static void do_sleep(void)
         resend_owed_ms = k_uptime_get();
         LOG_INF("sleep: modem left searching (%d s so far, report owed)",
                 modem_unregistered_s());
+    } else if (modem_unregistered_s() >= 0 && nbiot_fallback_start()) {
+        /* Parked after a search that had already run out on LTE-M: the
+         * car went in somewhere it does not reach, an underground car park
+         * typically, and the ignition-off record is in the backlog. */
+        report_owed_set(&resend_owed, true);
+        resend_owed_ms = k_uptime_get();
     } else {
         LOG_INF("sleep: modem down");
         modem_sleep();
@@ -1064,6 +1094,7 @@ static void do_sleep(void)
             LOG_INF("wake: aux power on");
             hw_aux_power_on();
             led_on();
+            nbiot_fallback_end();
             LOG_INF("wake: modem connect");
             modem_connect();
             LOG_INF("wake: GNSS start");
@@ -1374,6 +1405,12 @@ static void do_sleep(void)
                 LOG_WRN("registered — sending the timed report owed for "
                         "%lld s",
                         (k_uptime_get() - resend_owed_ms) / 1000);
+#if IS_ENABLED(CONFIG_APP_DEBUG_NBIOT_TEST)
+                if (modem_nbiot_fallback_on() && !g_debug_key_on_ms) {
+                    g_debug_key_on_ms = k_uptime_get() + 90000;
+                    LOG_WRN("NB-IoT test: key-on in 90 s");
+                }
+#endif
                 telemetry_remaining = 0;
             } else if (alert_count > 0) {
                 /* Timed reports are off, so no report would carry them. */
@@ -1381,11 +1418,17 @@ static void do_sleep(void)
                         alert_count, alert_count == 1 ? "" : "s");
                 alert_send_standalone();
             }
+        } else if (resend_owed && network_search_expired() &&
+                   nbiot_fallback_start()) {
+            /* Still owed: the same report, over NB-IoT if it gets through
+             * before this second window runs out. */
         } else if (resend_owed && network_search_expired()) {
             /* The modem has had its APP_NETWORK_SEARCH_TIMEOUT and is still
              * not registered.  Whatever record there was is in the backlog
              * for the next report that gets through; nothing else keeps
-             * the radio up, so it goes off until the next timed wake. */
+             * the radio up, so it goes off until the next timed wake.  With
+             * the NB-IoT fallback this is the second window running out,
+             * and the fallback stays on for the timed wakes to come. */
             report_owed_set(&resend_owed, false);
             LOG_WRN("no registration %d s after bringing the radio up — "
                     "modem off until the next timed report",
@@ -1554,11 +1597,24 @@ static void do_sleep(void)
              * 19:55:19 into exactly that and was never seen again.  One
              * unanswered with the network still up (a reply that never
              * came) waits for the next send, so a server that is not
-             * answering is not asked again every RESEND_POLL_S. */
-            if (alert_count > 0 && !resend_owed && !modem_is_registered()) {
-                LOG_WRN("%d alert%s unsent with the network gone — owed "
-                        "until it is back", alert_count,
-                        alert_count == 1 ? "" : "s");
+             * answering is not asked again every RESEND_POLL_S.
+             *
+             * The same goes for records.  The check above runs before the
+             * replies are waited for, so a registration lost while waiting
+             * left the requeued record for the next timed wake: on
+             * 2026-10-09 the parked car's 23:14 report went into a cause-9
+             * reject 6 s after the send and reached the server at 00:15. */
+            if ((alert_count > 0 || databuf_count() > 0) &&
+                !resend_owed && !modem_is_registered()) {
+                if (alert_count > 0) {
+                    LOG_WRN("%d alert%s unsent with the network gone — owed "
+                            "until it is back", alert_count,
+                            alert_count == 1 ? "" : "s");
+                } else {
+                    LOG_WRN("%d record%s unanswered with the network gone — "
+                            "owed until it is back", databuf_count(),
+                            databuf_count() == 1 ? "" : "s");
+                }
                 report_owed_set(&resend_owed, true);
                 resend_owed_ms = k_uptime_get();
             }
@@ -1676,6 +1732,7 @@ static void do_sleep(void)
             LOG_INF("wake: aux power on");
             hw_aux_power_on();
             led_on();
+            nbiot_fallback_end();
             LOG_INF("wake: modem connect");
             modem_connect();
             LOG_INF("wake: GNSS start");
