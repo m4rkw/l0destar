@@ -964,6 +964,35 @@ static bool xmon_field(const char *line, int want, char *out, size_t out_sz)
     return true;
 }
 
+/* mcc/mnc from a PLMN string, "23410" or "310260", as +COPS (numeric) and
+ * %XMONITOR both give it.  Tags them with the serving cell they were read on,
+ * which is what modem_refresh_plmn() compares against. */
+static bool set_plmn(const char *plmn)
+{
+    size_t len = strlen(plmn);
+
+    if (len < 5 || len > 6) {
+        return false;
+    }
+    for (size_t i = 0; i < len; i++) {
+        if (plmn[i] < '0' || plmn[i] > '9') {
+            return false;
+        }
+    }
+
+    int mcc = (plmn[0] - '0') * 100 + (plmn[1] - '0') * 10 + (plmn[2] - '0');
+    int mnc = atoi(plmn + 3);
+
+    if (g_cell.mcc != 0 && (mcc != g_cell.mcc || mnc != g_cell.mnc)) {
+        LOG_INF("PLMN: %d-%d -> %d-%d on cell %u", g_cell.mcc, g_cell.mnc,
+                mcc, mnc, g_cell.cid);
+    }
+    g_cell.mcc = mcc;
+    g_cell.mnc = mnc;
+    g_cell.plmn_cid = g_cell.cid;
+    return true;
+}
+
 #if IS_ENABLED(CONFIG_APP_CONN_EVAL)
 /* The RSRQ index has half-dB steps, so it is carried in tenths rather than
  * rounded to a whole dB — the same trick the OBD fields use to keep a
@@ -1154,6 +1183,12 @@ int modem_read_signal(void)
         return -ENOTCONN;
     }
 
+    /* The PLMN rides along for free; a cell change since the last reading
+     * would otherwise leave the operator stale (see plmn_cid). */
+    if (xmon_field(resp, 3, field, sizeof(field))) {
+        (void)set_plmn(field);
+    }
+
     int band = 0, rsrp_idx = 255, snr_idx = 127;
 
     if (xmon_field(resp, 6, field, sizeof(field)) && field[0]) {
@@ -1218,14 +1253,37 @@ int modem_update_cell_info(void)
         char plmn[8];
         memcpy(plmn, q1 + 1, len);
         plmn[len] = '\0';
-        g_cell.mcc = (plmn[0] - '0') * 100 +
-                     (plmn[1] - '0') * 10 +
-                     (plmn[2] - '0');
-        g_cell.mnc = atoi(plmn + 3);
+        set_plmn(plmn);
         LOG_INF("PLMN: mcc=%d mnc=%d", g_cell.mcc, g_cell.mnc);
     }
 
     return 0;
+}
+
+int modem_refresh_plmn(void)
+{
+    char resp[320];
+    char field[24];
+
+    if (g_cell.plmn_cid == g_cell.cid) {
+        return 0;
+    }
+    if (nrf_modem_at_cmd(resp, sizeof(resp), "AT%%XMONITOR") != 0) {
+        return -EIO;
+    }
+    if (!xmon_field(resp, 0, field, sizeof(field))) {
+        return -EINVAL;
+    }
+
+    int reg = atoi(field);
+
+    if (reg != 1 && reg != 5) {
+        return -ENOTCONN;
+    }
+    if (!xmon_field(resp, 3, field, sizeof(field))) {
+        return -EINVAL;
+    }
+    return set_plmn(field) ? 0 : -EINVAL;
 }
 
 int modem_read_temp(float *temp_c)

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.74
+
+### Records name the operator they were actually sent on
+The operator (mcc/mnc) was read only when the unit woke or booted, while
+the cell and tracking area came from the modem's cell events as they
+happened.  A drive that moved from one operator to another kept the first
+one's code on every record after.  At 17:48 on 2026-10-10 the car came out
+of the underground car park on EE B3, and its 125 records there went to the
+server as O2.  The DB shows the same for most of the car's history.
+Records on the Vodafone cells around Morden (TAC 12296 and its
+neighbours, some 2,300 of them) were stored as O2.  Records on O2's TAC
+4096 after a Vodafone stint (about 1,100) were stored as Vodafone.
+The PLMN is now tagged with the cell it was read on (`plmn_cid`).  When a
+record's cell group goes out on a different cell, one `%XMONITOR` reads it
+again first.  That is one AT command per cell change; it does not use the
+radio, so GNSS loses nothing.  The periodic signal reading picks up the PLMN
+from the same `%XMONITOR` line, and an operator change is logged.  Track mode
+runs no AT commands and is unchanged.
+
 ## 0.4.73
 
 ### The ignition-off record no longer waits for GPS underground

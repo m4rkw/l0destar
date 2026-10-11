@@ -609,6 +609,9 @@ int collect_data(int ignitionState)
      * flag; until now it was hardcoded to 0, so the fallback the protocol
      * already allowed for could never actually happen. */
     if (g_cell.valid && (g_cell.dirty || stale)) {
+        if (network_ready) {
+            (void)modem_refresh_plmn();
+        }
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
                      ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=%d;rat=%s",

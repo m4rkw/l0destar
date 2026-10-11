@@ -55,6 +55,12 @@ struct cell_info {
     int mcc;
     int mnc;
     uint32_t cid;
+    /* The cell mcc/mnc were last read on.  The cell event carries no PLMN,
+     * so a drive that crosses from one operator to another (O2 B20 to EE B3,
+     * say) kept the boot's operator on every record after.  A cell that is
+     * not this one means the PLMN wants reading again; see
+     * modem_refresh_plmn().  Not the TAC: O2 and Vodafone both use 4096. */
+    uint32_t plmn_cid;
     uint32_t tac;
     /* Serving-cell signal quality from AT%XMONITOR, converted to the units
      * the 3GPP indices mean (see modem_read_signal).  signal_valid is false
@@ -212,6 +218,10 @@ int  modem_update_cell_info(void);
 /* Serving-cell RSRP/SNR/band into g_cell; folded into modem_update_cell_info,
  * so callers refreshing cell context get it without asking. */
 int  modem_read_signal(void);
+/* mcc/mnc from one %XMONITOR, when the serving cell has changed since they
+ * were read.  No signal reading and no connection evaluation, so it is cheap
+ * enough to run on every cell change, GNSS running or not. */
+int  modem_refresh_plmn(void);
 /* How long the last attach took, in ms, or -1 if none has completed since the
  * search began.  Measured from the registration event, not the 1 Hz poll. */
 int  modem_attach_ms(void);
