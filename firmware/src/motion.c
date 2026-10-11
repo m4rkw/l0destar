@@ -63,8 +63,10 @@
  * (a hard stop, a tight corner) carries into the next.  Two bytes a second:
  * the 3-4 s gap between batches on most cells costs 15-17 bytes and a 12 s
  * one 33, about 1.5 KB per ten minutes of driving either way.  The batch's
- * byte budget leaves them out (data_motion_bytes), so they never make a
+ * byte budget leaves those out (data_motion_bytes), so they never make a
  * batch go early, and send_data() drops them before it would drop a record.
+ * A gap of a minute or more, 128 bytes or more, is counted instead: up to
+ * two minutes' worth, 249 bytes, would not fit beside a full batch.
  */
 
 #include <math.h>
@@ -90,16 +92,28 @@ LOG_MODULE_REGISTER(motion, CONFIG_APP_LOG_LEVEL);
  * this many, an exponential one after (about 20 s at 26 Hz).  A sustained
  * 0.2 g of braking tilts it by a degree or two, which costs nothing. */
 #define GRAVITY_N        512
-/* Heading change at each whole second of uptime, newest last.  A minute
- * covers the longest gap a field is built for. */
-#define HEAD_SLOTS       64
+/* Heading change at each whole second of uptime, newest last: the longest
+ * gap a field is built for, and some seconds over for the drain that brings
+ * the log up to the second fix. */
+#define HEAD_SLOTS       128
 /* ECU speed readings: the poll takes about one a second, the keep-alive one
  * every three. */
-#define SPEED_SLOTS      96
+#define SPEED_SLOTS      192
+
 /* How far a speed reading may be stretched to a moment it was not taken at:
  * between two readings, and past the last one or before the first. */
 #define SPEED_SPAN_MS    6000
 #define SPEED_HOLD_MS    2500
+
+BUILD_ASSERT(HEAD_SLOTS * 1000 >= DR_MAX_GAP_MS + 5000,
+	     "the heading log must outlast the longest gap filled");
+BUILD_ASSERT(SPEED_SLOTS * 1000 >= DR_MAX_GAP_MS + SPEED_SPAN_MS,
+	     "the speed log must outlast the longest gap filled");
+/* The server stores the field in 255 bytes (deadreckon.MOTION_MAX): the gap
+ * in tenths, a speed of up to three digits, two characters a step and the
+ * end. */
+BUILD_ASSERT(4 + 1 + 3 + 1 + 2 * ((DR_MAX_GAP_MS - 1) / 1000) + 2 <= 255,
+	     "a field for the longest gap must fit the server's column");
 
 static float   s_grav[3];        /* accel LSB */
 static int     s_grav_n;
@@ -630,31 +644,58 @@ int motion_field(char *out, int max, int64_t from_ms, int64_t to_ms,
 
 	/* The whole seconds after the first fix and before the second. */
 	int n = (int)((gap - 1) / 1000);
-	float p0, p, vf;
+	float p0, p, vf = 0.0f;
 
 	if (!heading_at(from_ms, &p0)) {
 		return 0;
 	}
 
-	char steps[2 * (DR_MAX_GAP_MS / 1000)];
+	/* Static: 238 bytes is too much for the main thread's stack, and only
+	 * the main thread builds records. */
+	static char steps[2 * (DR_MAX_GAP_MS / 1000)];
 	int len = 0;
 	bool speeds = speed_at(from_ms, &vf);
 	int v0 = speeds ? (int)lroundf(vf) : 0;
 	int ev = v0;            /* the speed as the field has it so far */
 	int eh = 0;             /* and the heading change */
+	/* The gyro's drift, taken out as dr_advance() does: the whole of a
+	 * small turn in a second the ECU reads standing still, the learned
+	 * rate in the rest.  The server takes out what drift is left in a
+	 * straight line, but only up to 45 degrees, and over a minute or two
+	 * an uncorrected 0.5 dps gets past that. */
+	float drift = 0.0f;
+	float pp = p0;          /* the heading change a second ago */
+	float vp = vf;          /* and the ECU speed */
+	bool vp_ok = speeds;
 
 	if (speeds && v0 >= DR_MOVING_KMH) {
 		moving = true;
 	}
 
-	for (int k = 1; k <= n; k++) {
-		int64_t t = from_ms + (int64_t)k * 1000;
+	for (int k = 1; k <= n + 1; k++) {
+		int64_t t = k <= n ? from_ms + (int64_t)k * 1000 : to_ms;
+		int64_t t_prev = from_ms + (int64_t)(k - 1) * 1000;
+		float secs = (float)(t - t_prev) / 1000.0f;
+		bool v_ok = speeds && speed_at(t, &vf);
 
 		if (!heading_at(t, &p)) {
 			return 0;
 		}
+		if (vp_ok && v_ok && vp < DR_STILL_KMH && vf < DR_STILL_KMH &&
+		    fabsf(p - pp) < DR_DRIFT_DPS * secs) {
+			drift += p - pp;
+		} else {
+			drift += s_drift_dps * secs;
+		}
+		pp = p;
+		vp = vf;
+		vp_ok = v_ok;
+		if (k > n) {
+			break;          /* the end: the heading alone, below */
+		}
+
 		if (speeds) {
-			if (speed_at(t, &vf)) {
+			if (v_ok) {
 				int v = (int)lroundf(vf);
 				int d = clamp31(v - ev);
 
@@ -668,14 +709,12 @@ int motion_field(char *out, int max, int64_t from_ms, int64_t to_ms,
 			}
 		}
 
-		int d = clamp31((int)lroundf(p - p0) - eh);
+		int d = clamp31((int)lroundf(p - p0 - drift) - eh);
 
 		eh += d;
 		steps[len++] = enc(d);
 	}
-	if (!heading_at(to_ms, &p)) {
-		return 0;
-	}
+	p -= drift;
 	if (!moving) {
 		/* Standing still: the two fixes are the whole story. */
 		return 0;

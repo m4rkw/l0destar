@@ -90,7 +90,7 @@ static int     s_motion_bytes;
 
 int data_motion_bytes(void)
 {
-    return s_motion_bytes;
+    return s_motion_bytes <= DR_FREE_MOTION_BYTES ? s_motion_bytes : 0;
 }
 
 void data_gap_reset(void)

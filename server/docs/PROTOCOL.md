@@ -167,7 +167,7 @@ tracking-area update — so a track is runs of one-second fixes with gaps
 between them. The device measures the motion it cannot see: the ECU's road
 speed, polled about once a second, and the gyro's heading change, integrated
 from the IMU's 26 Hz FIFO after projecting it onto gravity so the mounting does
-not matter. It goes on the first record after a gap of 2.5–60 s on the move,
+not matter. It goes on the first record after a gap of 2.5–120 s on the move,
 whose predecessor (`rid` one less) is the fix the gap starts from:
 
 | Part | Meaning |

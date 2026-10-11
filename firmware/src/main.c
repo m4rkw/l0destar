@@ -2671,10 +2671,12 @@ int main(void)
                 break;
             }
             s_buffered_records++;
-            /* Not counting the motion through gaps (mv=): it is for the
-             * fixes the radio cost, and must not cost more of them by
-             * making the batch go early.  send_data() leaves it off a batch
-             * that would not fit the datagram. */
+            /* Not counting the motion through gaps (mv=) up to about a
+             * minute's worth: it is for the fixes the radio cost, and must
+             * not cost more of them by making the batch go early.  A longer
+             * one is counted (data_motion_bytes()), since it would not fit
+             * beside a full batch, and send_data() leaves motion off a
+             * batch that would not fit the datagram. */
             if (s_buffered_records >= BATCH_SIZE
                 || ignition != 0
                 || previous_ignition == -1

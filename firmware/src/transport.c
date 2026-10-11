@@ -385,16 +385,6 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
     watchdog_kick();
     int64_t send_ms = k_uptime_get();
 
-    /* BENCH TEST ONLY — REMOVE: hang the 3rd send once per stall note. */
-    {
-        static int s_bench_n;
-
-        if (++s_bench_n == 3 && watchdog_last_stall() == NULL) {
-            LOG_WRN("BENCH: hanging in transport_send for 45 s");
-            k_sleep(K_SECONDS(45));
-        }
-    }
-
     if (!dropped && zsock_send(s_sock, buf, total, 0) < 0) {
         LOG_WRN("send failed (%d) after %lld ms, reconnecting", errno,
                 k_uptime_get() - send_ms);

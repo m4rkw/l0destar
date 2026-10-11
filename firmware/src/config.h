@@ -323,10 +323,19 @@
 
 /* -- dead reckoning across GNSS gaps (motion.c) ---------------------------- */
 /* Fixes closer than this are a batch's own one-second records, with nothing
- * between them to fill; further apart than this is past the minute of
- * heading the log keeps, and past where a fill would be worth trusting. */
+ * between them to fill; further apart than this is past the two minutes of
+ * heading the log keeps.  It was a minute until the car's 2026-10-11 drive
+ * on Vodafone, where the network held the radio for 67-88 s after a send
+ * three times in ten minutes and each gap was drawn as a straight line.
+ * Two minutes is also as long as the server's 255-byte field takes: 119
+ * steps of two characters, 249 bytes in all. */
 #define DR_MIN_GAP_MS               2500
-#define DR_MAX_GAP_MS               60000
+#define DR_MAX_GAP_MS               120000
+/* A fill up to about a minute long rides outside the batch's byte budget
+ * (data_motion_bytes()), so it never sends a batch early.  A longer one is
+ * counted in full: it ends its batch a record early, where riding free it
+ * would overflow the datagram and be left off. */
+#define DR_FREE_MOTION_BYTES        128
 /* An ECU speed at or above this anywhere in the gap, or a fix at either end
  * moving at least this fast, is a vehicle worth filling in behind. */
 #define DR_MOVING_KMH               3

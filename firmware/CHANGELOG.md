@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.4.77
+
+### Gaps of up to two minutes are filled
+The motion through a gap between fixes (`mv=`) went on gaps of up to 60 s.
+On 2026-10-11, after the car moved from O2 to Vodafone at 18:45, the network
+held the radio for 67, 84 and about 88 s after a send, three times in ten
+minutes.  GNSS saw no satellites for the whole of each, and the first two
+were drawn as straight lines 250 and 420 m long.  Since 0.4.68 the car has
+had 8 gaps of 60-120 s on the move, none of them filled.
+
+- **`DR_MAX_GAP_MS` is 120 s.**  The heading log keeps 128 s and the ECU
+speed log 192 readings.  A two-minute field is 249 bytes, which fits the
+server's 255-byte column (`deadreckon.MOTION_MAX`), so the server needs no
+change.  A `BUILD_ASSERT` holds the field to that.
+- **The gyro's drift comes out on the device.**  The server removes drift in
+a straight line only while it comes to 45 degrees or less.  Over two minutes
+an uncorrected 0.5 dps is past that, and the fill was no better than the
+straight line.  The field now takes drift out as the run past the last fix
+does: the whole of a small turn in a second the ECU reads standing still,
+and the learned rate in the rest.  In a host simulation of 65-119 s gaps,
+with turns and a stop, the fill came within 15 m of the true path at 0.2
+and 0.6 dps of residual drift, against 140-220 m for a straight line.  At 1
+dps with little standing time beforehand to learn the drift from, it was
+105-130 m.  Gaps of 4-50 s were as before.
+- **A long field ends its batch a record early.**  Fields up to 128 bytes
+still ride outside the batch's byte budget.  A longer one is counted,
+because next to three records it would overflow the datagram and be left
+off.
+- **`APP_DATABUF_REC_MAX` is 768** (was 512): a record has to fit a backlog
+slot with its field, or the field is left off.  That is 8 KB more BSS at 32
+slots; the app is at 80% of RAM.
+
+## 0.4.76
+
+### The bench's deliberate send hang is out
+0.4.75 was committed and published with a bench-only test still in
+`transport_send()`.  It hung the third send after a boot for 45 s, so that
+the watchdog would fire and test the stall note.  On the car that is one
+watchdog reset about a minute after each boot that is not itself a stall
+reset: once after the 0.4.75 install, then quiet until the next reboot.
+Removed; nothing else changed.  The test did its job: the bench reported
+`rst=wdt+stall:4b116/551ac/350b0/3da04`, which the map puts in `k_sleep()`
+called from `transport_send()`, so noinit RAM survives a watchdog reset.
+
 ## 0.4.75
 
 ### An ignition change with no fix is stamped when it happened
