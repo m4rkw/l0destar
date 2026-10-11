@@ -542,7 +542,7 @@ void dbglog_ack(bool sent)
  * some parts). */
 const char *dbglog_reset_cause(void)
 {
-    static char s_cause[40];
+    static char s_cause[64];
     static bool s_read;
 
     if (!s_read) {
@@ -585,8 +585,16 @@ const char *dbglog_reset_cause(void)
         const char *crash = fatal_last_crash();
 
         if (crash) {
+            pos += snprintf(s_cause + pos, sizeof(s_cause) - pos, "%s%s",
+                            pos ? "+" : "", crash);
+        }
+
+        /* And a watchdog reset says where the loop was stuck. */
+        const char *stall = watchdog_last_stall();
+
+        if (stall && pos < sizeof(s_cause)) {
             snprintf(s_cause + pos, sizeof(s_cause) - pos, "%s%s",
-                     pos ? "+" : "", crash);
+                     pos ? "+" : "", stall);
         }
     }
     return s_cause[0] ? s_cause : NULL;

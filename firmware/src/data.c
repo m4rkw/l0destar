@@ -462,6 +462,10 @@ int collect_data(int ignitionState)
         if (gnss_collect(wait_ms, &fix) == 0 && fix.valid) {
             g_gnss = fix;
             have_fix = 1;
+            /* The heading log up to the fix's moment, for the heading
+             * the run past it starts from. */
+            dr_fifo_service();
+            motion_note_fix(&fix);
         }
     }
 
@@ -494,6 +498,27 @@ int collect_data(int ignitionState)
     }
     last_record_stale = stale;
 
+    /* No fix of its own, so it goes from the last known position, which
+     * driving into a car park is the entrance.  Where the ECU's speed and
+     * the gyro say the vehicle has gone since (motion.c) is better, and
+     * goes into g_gnss too, so the timed wakes while parked carry it as
+     * well.  With the key off nothing more is coming, so it runs to now. */
+    bool dr_pos = false;
+
+    if (use_cached_gps || stale) {
+        double lat, lon;
+        float dist;
+
+        if (motion_position(g_gnss.epoch_ms, ignitionState != 0,
+                            &lat, &lon, &dist)) {
+            snprintf(g_gnss.lat_str, sizeof(g_gnss.lat_str), "%.6f", lat);
+            snprintf(g_gnss.lon_str, sizeof(g_gnss.lon_str), "%.6f", lon);
+            dr_pos = true;
+            LOG_INF("position dead reckoned %.0f m past the last fix",
+                    (double)dist);
+        }
+    }
+
     float v = battery_sample_with_engine_check();
 
     if (data_index > 0 && data_index < DATA_LIMIT - 1) {
@@ -506,7 +531,11 @@ int collect_data(int ignitionState)
     char now_iso[40] = "";
     const char *ts;
 
-    if (!use_cached_gps && g_gnss.time_iso[0]) {
+    /* A stale record is stamped now, not with its old fix's time: the
+     * server orders by that time, so an ignition-off at 15:20 stamped with
+     * a 15:17 fix filed itself before the 15:19 ignition-on, and the map
+     * kept showing "engine on" (car park, 2026-10-11). */
+    if (!use_cached_gps && !stale && g_gnss.time_iso[0]) {
         ts = g_gnss.time_iso;
     } else {
         ts = clock_timestamp(now_iso, sizeof(now_iso));
@@ -621,6 +650,13 @@ int collect_data(int ignitionState)
         if (n > 0) data_index += n;
 
         g_cell.dirty = false;
+    }
+
+    /* The position was dead reckoned past the last fix, above. */
+    if (dr_pos) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1, ",dr=1");
+        if (n > 0) data_index += n;
     }
 
     /* Serving-cell signal quality, on its own cadence rather than the cell

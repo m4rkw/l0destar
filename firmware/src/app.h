@@ -429,6 +429,8 @@ void led_accel_impact(void);
 
 void watchdog_init(void);
 void watchdog_kick(void);
+/* "stall:<addr>/..." once after a watchdog reset, else NULL (watchdog.c) */
+const char *watchdog_last_stall(void);
 
 void reboot_now(void);
 void status_delay(long ms);   /* watchdog-aware sleep */
@@ -690,6 +692,14 @@ int  motion_field(char *out, int max, int64_t from_ms, int64_t to_ms,
 		  bool moving);
 /* Remove every mv= field from the records in buf; returns the new length. */
 int  motion_strip(char *buf, int len);
+/* A fresh fix: the position past it is run forward from here. */
+void motion_note_fix(const struct gnss_fix *fix);
+/* Where the vehicle has got to since the fix at fix_ms (or a newer one),
+ * by ECU speed and gyro heading; false with nothing to go on or no further
+ * than DR_REPORT_MIN_M.  `final` once the key is off: no more ECU readings
+ * are coming, so the run goes to now. */
+bool motion_position(int64_t fix_ms, bool final, double *lat, double *lon,
+		     float *dist_m);
 /* main.c: accel_fifo_service() unless an impact is pending or the key is
  * off.  The fix wait ticks it, and collect_data() runs it before a field. */
 void dr_fifo_service(void);
@@ -702,6 +712,9 @@ static inline void motion_note_speed(int kmh) { }
 static inline int  motion_field(char *out, int max, int64_t from_ms,
 				int64_t to_ms, bool moving) { return 0; }
 static inline int  motion_strip(char *buf, int len) { return len; }
+static inline void motion_note_fix(const struct gnss_fix *fix) { }
+static inline bool motion_position(int64_t fix_ms, bool final, double *lat,
+				   double *lon, float *dist_m) { return false; }
 static inline void dr_fifo_service(void) { }
 #endif
 /* Bytes of mv= fields in data_current, which the batch's flush threshold

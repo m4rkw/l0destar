@@ -67,6 +67,15 @@ LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
 #define RECHECK_MAX      48
 #define RECHECK_AGE_MS   (5 * 60 * 1000)
 
+/* How long a send may wait for the modem to take the datagram.  The modem's
+ * default is no limit at all, and a send normally returns at once, but one
+ * made while the modem is changing operator can sit there: the car's
+ * watchdog reset at 14:56 on 2026-10-11 came in the middle of a Vodafone to
+ * O2 change, with nothing else in the cycle able to block that long.  Two
+ * sends (the retry below) and the reply wait stay inside the watchdog's
+ * window, with a kick before each send. */
+#define SEND_TIMEOUT_MS  10000
+
 static int s_sock = -1;
 static struct sockaddr_in s_server;
 static bool s_resolved;
@@ -263,6 +272,14 @@ int transport_open(void)
         return -errno;
     }
 
+    struct zsock_timeval tv = {
+        .tv_sec  = SEND_TIMEOUT_MS / 1000,
+        .tv_usec = (SEND_TIMEOUT_MS % 1000) * 1000,
+    };
+    if (zsock_setsockopt(s_sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv))) {
+        LOG_WRN("SO_SNDTIMEO: %d — sends can block", errno);
+    }
+
     return 0;
 }
 
@@ -365,12 +382,27 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
     }
 #endif
 
+    watchdog_kick();
+    int64_t send_ms = k_uptime_get();
+
+    /* BENCH TEST ONLY — REMOVE: hang the 3rd send once per stall note. */
+    {
+        static int s_bench_n;
+
+        if (++s_bench_n == 3 && watchdog_last_stall() == NULL) {
+            LOG_WRN("BENCH: hanging in transport_send for 45 s");
+            k_sleep(K_SECONDS(45));
+        }
+    }
+
     if (!dropped && zsock_send(s_sock, buf, total, 0) < 0) {
-        LOG_WRN("send failed (%d), reconnecting", errno);
+        LOG_WRN("send failed (%d) after %lld ms, reconnecting", errno,
+                k_uptime_get() - send_ms);
         transport_teardown();
         err = transport_open();
         if (err) return err;
         zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+        watchdog_kick();
         if (zsock_send(s_sock, buf, total, 0) < 0) {
             LOG_ERR("send retry failed: %d", errno);
             transport_teardown();
@@ -391,6 +423,12 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
         s_silent_since_ms = k_uptime_get();
     }
 
+    /* Normally a few ms.  A slow one is the modem holding on to it. */
+    int64_t took = k_uptime_get() - send_ms;
+
+    if (took >= 2000) {
+        LOG_WRN("send #%u took %lld ms", s_last_id, took);
+    }
     LOG_INF("sent %u bytes (#%u)", (unsigned)total, s_last_id);
 
     return 0;

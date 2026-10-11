@@ -1,5 +1,79 @@
 # Changelog
 
+## 0.4.75
+
+### An ignition change with no fix is stamped when it happened
+An ignition-change record that cannot get a fix is sent from the last known
+position, and it was also stamped with that fix's time.  The server orders
+records by that time.  In a car park on 2026-10-11 the last fix was at
+15:17:42.  The ignition went off at 15:18, back on at 15:19 and off again at
+15:20.  Both ignition-off records carried 15:17:42, but the ignition-on came
+through the cached-position path, which stamps the modem clock, so it carried
+15:19:29.  It sorted last, and the map said "engine on" for a parked car.  A
+record without a fresh fix is now stamped from the modem clock, like the
+cached-position records.  The position is still flagged as not fresh (`cl=1`).
+
+### A send can no longer hold the loop past the watchdog
+At about 14:56 on 2026-10-11 the car reset mid-drive with `rst=wdt`, its
+first watchdog reset since 0.4.47.  It was in the middle of an operator
+change.  At 14:53:59 a cause 9 on Vodafone (TAC 6191) re-registered in
+9 s, and the last records reached the server at 14:54:43.  The unit came
+back on O2 B20 at -112 dBm with a new public IP.  Nothing in between reached
+the server, so the warnings that would say what blocked went down with the
+RAM.  What the cycle can block in without a kick: the modem's AT commands,
+and the UDP send.  The modem library's `SO_SNDTIMEO` defaults to no limit,
+and the socket never set one, so a send the modem would not take while it
+changed networks could wait until the watchdog fired.
+- **Sends time out after 10 s** (`SEND_TIMEOUT_MS`).  A timed-out send fails
+like any other: the records go to the backlog.  A send normally returns in
+milliseconds.
+- **A kick before each send,** the retry included, so two sends at their
+limit and the 4 s reply wait still fit the 32 s window.
+- **A send that takes 2 s or more logs a WRN** with its time, so a stall
+that stops short of the watchdog shows on the server.
+- **A watchdog reset now says where it was stuck.**  The timeout callback
+scans the main thread's stack for return addresses and keeps the first
+four in noinit RAM, as the fatal handler does.  The next boot reports them
+in `rst=` as `wdt+stall:<addr>/<addr>/...`, to look up in the map file.
+It is a scan, not an unwind, so an old address left on the stack can show
+up.  It fits the server's `varchar(48)`.  Whether noinit RAM survives a
+watchdog reset (and not only a soft one) is not yet checked on the bench.
+
+### A car park's key-off is sent from the bay, not the entrance
+The dead reckoning (0.4.68) filled gaps between two fixes, and a car park
+has only one: GNSS goes at the entrance, and the key-off record was sent
+from there.  On 2026-10-11 the map put the car at the entrance at 15:17:42,
+and nothing showed where it went after.  The ECU's speed and the gyro's
+heading now also run the position on past the last fix, second by second
+(`motion_position()`, `src/motion.c`).  A record with no fix of its own is
+sent from there, flagged `dr=1`, which the server already stores in
+`dead_reckoning`.  The position goes into the stored one too, so the timed
+wakes while parked carry it as well.
+- **The heading is the last fix's at 10 km/h or more,** carried on by the
+gyro.  Slower than that the GNSS heading is mostly noise, and the last fix
+at a car park entrance is usually at a crawl.
+- **Standing still, the gyro's drift comes out.**  While the ECU reads 0, a
+heading change under 1.5°/s is drift.  It is taken out of the heading and
+learned for the seconds on the move, so a queue at a barrier does not bend
+the rest.
+- **The speedometer's error is learned** from fixes at 20 km/h or more.
+- **It gives up rather than guess** until the next fix if: the ECU goes quiet
+on the move, a hole in the heading log falls while moving, or there have
+been 5 min of driving without a fix.  The record is then sent from the last
+fix, as before.  A hole while stood still (the key off, the FIFO undrained)
+keeps the heading, so a second key-on and re-park carries on from the bay.
+- **With the key off, the run goes to now.**  A last ECU reading of 3 km/h or
+less winds down to 0.  A faster one means the ECU went quiet on the move.
+- **Limits:** it is 2D only, so a ramp counts its full length and nothing says
+which level.  Reversing reads as forward, because the ECU speed has no sign.
+It needs the ECU speed, so it does nothing on a unit without one.
+- Checked on the host with the real `motion.c` in a simulated entry: a 75 m
+crawl with a hairpin and a turn into a bay, gyro bias up to 1.2°/s, ECU
+reading 3% high, and a 90 s queue.  The bay came out 1.4-9 m from the truth,
+where the entrance fix was 19-23 m away.  A key-on, re-park and key-off came
+out 2-9 m off, where the entrance was 30-34 m away.  An ECU going quiet on
+the move gave no position.  Not yet checked on the car.
+
 ## 0.4.74
 
 ### Records name the operator they were actually sent on

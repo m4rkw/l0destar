@@ -55,7 +55,7 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `mt`, `it` | MCU and IMU temperature, °C | per-packet |
 | `up` | seconds since boot | per-packet |
 | `vs` | SiP supply rail, volts | per-packet |
-| `dr` | dead-reckoning flag | per-packet |
+| `dr` | `1`: no fix of its own, so the position is the last fix run forward by ECU speed and gyro heading (firmware 0.4.75+) | per-packet |
 | `dbg` | debug counters — only after a fault | per-packet |
 | `rst` | reset cause — only after a reset | per-packet |
 | `orpm`, `ormin`, `ormax`, `oravg` | engine RPM, and its min/max/mean over the cycle | per-packet |

@@ -330,6 +330,28 @@
 /* An ECU speed at or above this anywhere in the gap, or a fix at either end
  * moving at least this fast, is a vehicle worth filling in behind. */
 #define DR_MOVING_KMH               3
+/* Running on past the last fix (motion_position(), motion.c).  The absolute
+ * heading comes from a fix at least this fast, the gyro carrying it on from
+ * there: slower, the GNSS heading is mostly noise. */
+#define DR_REF_KMH                  10
+/* The speedometer's error is learned from fixes at least this fast. */
+#define DR_SCALE_KMH                20
+/* ECU readings further apart than this are not bridged on the move. */
+#define DR_OPEN_SPAN_MS             15000
+/* With the key off, a last ECU reading at or below this winds down to 0
+ * over DR_STOP_MS: the vehicle had all but stopped before the key turned.
+ * One faster says the ECU went quiet on the move. */
+#define DR_STOP_FROM_KMH            3
+#define DR_STOP_MS                  3000
+/* Below this the vehicle is standing still for the run, and a gyro reading
+ * slower than DR_DRIFT_DPS is taken for its drift: a creep too slow for the
+ * ECU to read turns faster than that on full lock. */
+#define DR_STILL_KMH                0.5f
+#define DR_DRIFT_DPS                1.5f
+/* Past this much driving without a fix the run is not worth reporting. */
+#define DR_OPEN_MAX_MOVING_S        300
+/* Moved less than this since the fix, and the fix itself is reported. */
+#define DR_REPORT_MIN_M             3.0f
 /* Fixes this far apart on the move get a warning that says where the time
  * went (APP_FIX_GAP_WARN_S, 0 = never), and the GNSS speed at one end or
  * the other has to be this high for it to count as on the move: a car

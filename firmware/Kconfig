@@ -1115,7 +1115,10 @@ config APP_DEAD_RECKONING
 	  change for each second of it, about two bytes a second, and the
 	  server fits that path between the fixes at either end.  Gaps of
 	  2.5-60 s, on the move.  Without an ECU speed only the headings
-	  go.  See src/motion.c.
+	  go.  The same measurements also run the position on past the
+	  last fix, so a record with no fix of its own (the key-off in a
+	  car park) is sent from where the vehicle got to, flagged dr=1.
+	  That needs the ECU speed.  See src/motion.c.
 
 config APP_FIX_GAP_WARN_S
 	int "Warn when fixes are this far apart on the move (s)"
