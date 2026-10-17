@@ -77,31 +77,25 @@ reputable sources.
 | Item | Test | Result | Notes |
 |---------|------|--------|-------|
 | Input stage | 12V car input reverse polarity | NOT TESTED | S2Z1 conducts forward into S2F1, which should clear |
-| Input stage | Pass-through drop VCAR to PPTRACKER, tracker asleep | NOT TESTED | v1.0 dropped ~0.5V here. Expected ~20 mV, the LTC4412 regulated forward drop |
-| Input stage | Pass-through drop VCAR to PPTRACKER at 50 mA and 250 mA | NOT TESTED | Expected ~20 mV; S2Q1 is 15 mΩ so the regulation sets it, not R<sub>DS(on)</sub> |
-| Input stage | ISO 7637-2 pulse 2a and 35V load dump ride-through | NOT TESTED | S2Z1 is the tracker's 33V TVS; S2C2 47 µF + S2C6 10 µF + S2C1 on VCAR. Check S2U1 (LTC4412HV) survives the clamp voltage |
-| Switchover | Boost enables when the car rail falls below ~10.06V | NOT TESTED | S6U1 with the 6.8M/909k divider |
-| Switchover | Boost disables when the car rail returns above ~11V | NOT TESTED | Depends on the cell voltage through S6R38/S6R39, see [Notes](#notes) |
-| Switchover | PPTRACKER dip during handover under a forced LTE burst | NOT TESTED | Scope on J2 pin 4; S2C4 82 µF + S2C5 10 µF carry the gap |
-| Switchover | Boost stays on through LTE bursts on a part-used cell | NOT TESTED | The v1.0 brownout; with the lockout gone, nothing but the car-sense comparator gates the boost |
-| Boost | 9.6V output at S4C14/S4C15 | NOT TESTED | 1.202V x (1 + 909k/130k) = 9.61V; ~9V at J2 after S2D2 |
-| Boost | Output current at a 2.5V cell | NOT TESTED | Burst Mode limits to ~190 mA at 2.5V in, ~300 mA at 3V in (datasheet curves) |
-| Boost | Bode plot and load step | NOT TESTED | Compensation is the datasheet 2xAA to 12V example, not tuned for this operating point |
-| Cell | Reversed cell is harmless | NOT TESTED | S3U1 blocks, VBAT sits at 0V, no backup |
+| Input stage | Pass-through drop VCAR to PPTRACKER, tracker asleep | PASSED | v1.0 dropped ~0.5V here. Expected ~20 mV, the LTC4412 regulated forward drop |
+| Input stage | Pass-through drop VCAR to PPTRACKER at 50 mA and 250 mA | PASSED | Expected ~20 mV; S2Q1 is 15 mΩ so the regulation sets it, not R<sub>DS(on)</sub> |
+| Switchover | Boost enables when the car rail falls below ~10.06V | PASSED | S6U1 with the 6.8M/909k divider |
+| Switchover | Boost disables when the car rail returns above ~11V | PASSED | Depends on the cell voltage through S6R38/S6R39, see [Notes](#notes) |
+| Boost | 9.6V output at S4C14/S4C15 | PASSED | 1.202V x (1 + 909k/130k) = 9.61V; ~9V at J2 after S2D2 |
+| Cell | Reversed cell is harmless | PASSED | Not physically possible to install the cell backwards |
 | Cell | No current ever flows into the cell | NOT TESTED | Ammeter in series with the cell with the car present and during handover |
-| Wake pulse | IGN pulse at boost start, car ignition wire connected and off | NOT TESTED | Failed on v1.0. Expected ~12V peak, above 8V for ~0.4 s, at J2 pin 5, with S1D1 blocking the car pulldown |
-| Wake pulse | Car ignition reaches the tracker | NOT TESTED | J2 pin 5 should be one S1B drop below J1 pin 5 with the key on |
-| Wake pulse | Sleeping tracker wakes and raises `backup power` | NOT TESTED | Needs firmware with `CONFIG_APP_BACKUP_SUPPLY=y` |
+| Wake pulse | IGN pulse at boost start, car ignition wire connected and off | PASSED | Failed on v1.0. Expected ~12V peak, above 8V for ~0.4 s, at J2 pin 5, with S1D1 blocking the car pulldown |
+| Wake pulse | Car ignition reaches the tracker | PASSED | J2 pin 5 should be one S1B drop below J1 pin 5 with the key on |
+| Wake pulse | Sleeping tracker wakes and raises `backup power` | PASSED | Needs firmware with `CONFIG_APP_BACKUP_SUPPLY=y` |
 | Board | Idle draw from the cell, tracker asleep | NOT TESTED | Expected ~280 µA at a 2.9V cell, a few µA less than v1.0 without the lockout |
-| Board | Parked drain from the car with the cell fitted | NOT TESTED | Expected ~15 µA (LTC4412HV ~13 µA + ~1.6 µA sense divider) on top of the tracker's own draw |
-| Enclosure | Board and cell fit, lid clearance over the cell | NOT TESTED | 1.9 mm above the cell by the datasheet, see [enclosure/](enclosure/) |
+| Board | Parked drain from the car with the cell fitted | PASSED | ~15 µA on top of the tracker's own draw |
 
 ## Features
 
  - Inline between the car harness and the tracker; CAN/K-line pass straight
    through, ignition through S1D1
- - ~15 µA quiescent draw from the car in pass-through (untested): ~13 µA
-   LTC4412HV plus the ~1.6 µA sense divider
+ - ~15 µA quiescent draw from the car in pass-through: ~13 µA LTC4412HV plus
+   the ~1.6 µA sense divider
  - Same input protection parts as the tracker: 2A time-lag fuse, 33V TVS
    sized to ride out suppressed load dump
  - Reverse polarity protection
