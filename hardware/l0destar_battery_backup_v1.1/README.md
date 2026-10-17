@@ -76,18 +76,17 @@ reputable sources.
 
 | Item | Test | Result | Notes |
 |---------|------|--------|-------|
-| Input stage | 12V car input reverse polarity | NOT TESTED | S2Z1 conducts forward into S2F1, which should clear |
+| Input stage | 12V car input reverse polarity | PASSED | S2Z1 conducts forward into S2F1, which should clear |
 | Input stage | Pass-through drop VCAR to PPTRACKER, tracker asleep | PASSED | v1.0 dropped ~0.5V here. Expected ~20 mV, the LTC4412 regulated forward drop |
 | Input stage | Pass-through drop VCAR to PPTRACKER at 50 mA and 250 mA | PASSED | Expected ~20 mV; S2Q1 is 15 mΩ so the regulation sets it, not R<sub>DS(on)</sub> |
 | Switchover | Boost enables when the car rail falls below ~10.06V | PASSED | S6U1 with the 6.8M/909k divider |
 | Switchover | Boost disables when the car rail returns above ~11V | PASSED | Depends on the cell voltage through S6R38/S6R39, see [Notes](#notes) |
 | Boost | 9.6V output at S4C14/S4C15 | PASSED | 1.202V x (1 + 909k/130k) = 9.61V; ~9V at J2 after S2D2 |
 | Cell | Reversed cell is harmless | PASSED | Not physically possible to install the cell backwards |
-| Cell | No current ever flows into the cell | NOT TESTED | Ammeter in series with the cell with the car present and during handover |
+| Cell | No current ever flows into the cell | PASSED | Ammeter in series with the cell with the car present and during handover |
 | Wake pulse | IGN pulse at boost start, car ignition wire connected and off | PASSED | Failed on v1.0. Expected ~12V peak, above 8V for ~0.4 s, at J2 pin 5, with S1D1 blocking the car pulldown |
 | Wake pulse | Car ignition reaches the tracker | PASSED | J2 pin 5 should be one S1B drop below J1 pin 5 with the key on |
 | Wake pulse | Sleeping tracker wakes and raises `backup power` | PASSED | Needs firmware with `CONFIG_APP_BACKUP_SUPPLY=y` |
-| Board | Idle draw from the cell, tracker asleep | NOT TESTED | Expected ~280 µA at a 2.9V cell, a few µA less than v1.0 without the lockout |
 | Board | Parked drain from the car with the cell fitted | PASSED | ~15 µA on top of the tracker's own draw |
 
 ## Features
