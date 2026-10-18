@@ -143,11 +143,13 @@ void cmd_run(char *cmd)
     if (strstr(cmd, "config")) {
         char msg[160];
         snprintf(msg, sizeof(msg),
-                 "fw=%s int=%d ma=%d tm=%d bat=%.1fV ign=%s up=%llus",
+                 "fw=%s int=%d ma=%d tm=%d backup=%d bat=%.1fV ign=%s "
+                 "up=%llus",
                  fota_version(),
                  g_settings.loop_interval,
                  (int)g_settings.movement_alarm,
                  (int)g_settings.track_mode,
+                 g_settings.backup_interval,
                  (double)battery_v,
                  (ignition == 0) ? "on" : "off",
                  k_uptime_get() / 1000);

@@ -973,6 +973,45 @@ static void pending_cmd_add(const char *cmd)
     memcpy(pending_server_cmd, merged, used + 1);
 }
 
+/* A "<key>=<n>" field out of the commands part of a reply, with its comma,
+ * taken out of the string so that it is neither merged into the pending
+ * commands nor run: the settings that ride every reply are applied here, the
+ * way the interval and movement alarm are.  False, and the string untouched,
+ * when the reply carries none or the number is not one. */
+static bool reply_take_int(char *cmd, const char *key, int *val)
+{
+    size_t klen = strlen(key);
+    char *p = cmd;
+
+    while (*p) {
+        char *comma = strchr(p, ',');
+        size_t len = comma ? (size_t)(comma - p) : strlen(p);
+
+        if (len > klen + 1 && strncmp(p, key, klen) == 0 && p[klen] == '=') {
+            char *end;
+            long n = strtol(&p[klen + 1], &end, 10);
+
+            if (end == &p[klen + 1] || end != p + len) {
+                return false;
+            }
+            *val = n < 0 ? 0 : (n > INT32_MAX ? INT32_MAX : (int)n);
+            if (comma) {
+                memmove(p, comma + 1, strlen(comma + 1) + 1);
+            } else if (p > cmd) {
+                p[-1] = '\0';
+            } else {
+                *p = '\0';
+            }
+            return true;
+        }
+        if (!comma) {
+            break;
+        }
+        p = comma + 1;
+    }
+    return false;
+}
+
 /* What a reply says, "1,<interval>,<movement_alarm>[,cmd]", applied. */
 static void reply_apply(const char *resp)
 {
@@ -993,6 +1032,23 @@ static void reply_apply(const char *resp)
         if (!send_int_to_server) {
             if (interval >= 0) g_settings.loop_interval = interval;
             if (ma >= 0)       g_settings.movement_alarm = (int8_t)ma;
+        }
+        /* The backup interval rides every reply like track=, but is applied
+         * as it lands, like the two above.  Nothing on the device sets it,
+         * so there is no change of its own for a reply to overwrite and it
+         * does not wait on send_int_to_server.  1 to 9 become 10, as for
+         * int=: the cell behind it is finite. */
+        int backup;
+
+        if (matched == 3 && reply_take_int(cmd, "backup", &backup)) {
+            if (backup != 0 && backup < 10) {
+                backup = 10;
+            }
+            if (backup != g_settings.backup_interval) {
+                LOG_INF("backup interval %d -> %d s",
+                        g_settings.backup_interval, backup);
+                g_settings.backup_interval = backup;
+            }
         }
         if (matched == 3 && cmd[0]) {
             pending_cmd_add(cmd);

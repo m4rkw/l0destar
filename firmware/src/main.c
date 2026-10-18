@@ -466,6 +466,20 @@ static void network_retry_tick(void)
  * unit with no coverage should not keep waking on its usual cadence. */
 static int s_nosignal_wakes;
 
+/* The timed-report interval in force: while the inline backup module is
+ * carrying the rail it is the backup interval, if the server has set one,
+ * and otherwise the engine-off interval.  s_backup_seen is the sleep loop's
+ * own verdict on the module (see do_sleep) and is never true without
+ * CONFIG_APP_BACKUP_SUPPLY, so a unit without the module only ever has the
+ * engine-off interval.  0 = no timed reports. */
+static int report_interval(void)
+{
+    if (s_backup_seen && g_settings.backup_interval > 0) {
+        return g_settings.backup_interval;
+    }
+    return g_settings.loop_interval;
+}
+
 /* Back to the configured cadence.  Called wherever the unit learns there is
  * signal again, and on movement: the likeliest reason coverage returns is
  * that the vehicle has been moved into it. */
@@ -474,18 +488,19 @@ static void network_backoff_reset(void)
     if (s_nosignal_wakes > 0) {
         LOG_INF("network back after %d wake%s without it — timed reports "
                 "every %ds again", s_nosignal_wakes,
-                s_nosignal_wakes == 1 ? "" : "s", g_settings.loop_interval);
+                s_nosignal_wakes == 1 ? "" : "s", report_interval());
         s_nosignal_wakes = 0;
     }
 }
 
-/* The engine-off wake interval with that backoff applied.  g_settings is left
- * alone on purpose: the backoff is local, and by the time a record reaches
- * the server there is signal and the count is already cleared, so the int=
- * the device reports back stays the interval it was given. */
+/* The interval in force (report_interval) with that backoff applied.
+ * g_settings is left alone on purpose: the backoff is local, and by the time
+ * a record reaches the server there is signal and the count is already
+ * cleared, so the int= the device reports back stays the interval it was
+ * given. */
 static int telemetry_interval(void)
 {
-    int iv = g_settings.loop_interval;
+    int iv = report_interval();
 
     if (iv <= 0 || NO_SIGNAL_MAX_INTERVAL <= 0) {
         return iv;
@@ -1006,7 +1021,7 @@ static void do_sleep(void)
                      !atomic_get(&s_ign_int_flag) &&
                      !atomic_get(&s_accel_int_flag) &&
                      !resend_owed && !backup_wake && !restore_wake &&
-                     !(g_settings.loop_interval > 0 &&
+                     !(report_interval() > 0 &&
                        telemetry_remaining - elapsed <= 0);
         if (!quiet) {
             console_resume();
@@ -1388,9 +1403,20 @@ static void do_sleep(void)
                     s_move_cooldowns[s_move_alert_level];
                 if (s_move_alert_level < 3) s_move_alert_level++;
 
-                if (g_settings.loop_interval == 0 ||
-                    g_settings.loop_interval >
+                if (s_backup_seen && g_settings.backup_interval > 0) {
+                    /* On the module the countdown is the backup interval's,
+                     * and a car moved with its power cut is the case the
+                     * four-hour ceiling below is for.  The setting is not
+                     * lowered, so there is nothing to put back; only this
+                     * countdown is cut, and never lengthened. */
+                    if (telemetry_remaining >
                         MOVEMENT_TEMPORARY_ENGINE_OFF_INTERVAL) {
+                        telemetry_remaining =
+                            MOVEMENT_TEMPORARY_ENGINE_OFF_INTERVAL;
+                    }
+                } else if (g_settings.loop_interval == 0 ||
+                           g_settings.loop_interval >
+                               MOVEMENT_TEMPORARY_ENGINE_OFF_INTERVAL) {
                     if (s_saved_loop_interval < 0)
                         s_saved_loop_interval = g_settings.loop_interval;
                     g_settings.loop_interval =
@@ -1414,7 +1440,7 @@ static void do_sleep(void)
         /* --- owed timed report --- */
         if (resend_owed && modem_is_registered()) {
             report_owed_set(&resend_owed, false);
-            if (g_settings.loop_interval > 0) {
+            if (report_interval() > 0) {
                 LOG_WRN("registered — sending the timed report owed for "
                         "%lld s",
                         (k_uptime_get() - resend_owed_ms) / 1000);
@@ -1451,7 +1477,7 @@ static void do_sleep(void)
         }
 
         /* --- timer telemetry (and the report a backup or restore owes) --- */
-        if ((telemetry_remaining <= 0 && g_settings.loop_interval > 0) ||
+        if ((telemetry_remaining <= 0 && report_interval() > 0) ||
             backup_wake || restore_wake) {
             /* The restore report goes out whatever the rail reads: it is one
              * record, and the only way the server hears the car supply is
@@ -1650,6 +1676,10 @@ static void do_sleep(void)
                 LOG_WRN("no network on %d consecutive wake%s — next timed "
                         "report in %ds", s_nosignal_wakes,
                         s_nosignal_wakes == 1 ? "" : "s", telemetry_remaining);
+            }
+            if (s_backup_seen && g_settings.backup_interval > 0) {
+                LOG_INF("on backup power: next timed report in %ds",
+                        telemetry_remaining);
             }
         }
 

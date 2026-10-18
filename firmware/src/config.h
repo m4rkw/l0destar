@@ -149,6 +149,14 @@
 #define BACKUP_SUPPLY_MIN           0.0f
 #define BACKUP_SUPPLY_MAX           0.0f
 #endif
+/* Timed-report interval while the module carries the rail, until the server
+ * has said what it wants: like the engine-off interval, settings live in RAM
+ * and only a reply sets it.  0 = the engine-off interval applies. */
+#ifdef CONFIG_APP_BACKUP_SUPPLY
+#define BACKUP_LOOP_INTERVAL        CONFIG_APP_BACKUP_LOOP_INTERVAL
+#else
+#define BACKUP_LOOP_INTERVAL        0
+#endif
 
 /* -- ignition wake from sleep ---------------------------------------------- */
 /* A wake on the ignition line is a key-on when the line is still on this long

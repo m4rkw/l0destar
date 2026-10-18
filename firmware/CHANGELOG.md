@@ -1,5 +1,63 @@
 # Changelog
 
+## 0.4.79
+
+### A tracker on the backup module reports at its own interval
+`int` was written for a parked car on its own battery.  On the inline backup
+module the tracker is spending a cell that does not recover, and the cadence
+wanted there is not necessarily the same: a longer one spares the cell, a
+shorter one follows a car whose power has been cut more closely.  Until now
+the only interval on backup power was `int`.
+
+- **The server holds a second interval, `device.backup_int`, and every reply
+carries it as `backup=<seconds>`.**  It rides every reply as `track=` does, so
+a unit that restarted or missed one converges on it, and the firmware applies
+it as it reads the reply and takes it out of the commands, so it never reaches
+`cmd_run()`.  1 to 9 become 10, as for `int=`.  Unlike `int` the unit never
+reports it back: nothing on the unit changes it.  0, which is what every
+device has, means `int` applies on backup power too, so nothing changes until
+it is set.  The name is `backup_interval` as a server command and not
+`backup_int`, because the firmware finds `int=` anywhere in a command string:
+a command ending in it, queued by a server that did not know it, would have
+set the engine-off interval.
+- **The sleep loop uses it while the module is carrying the rail.**
+`report_interval()` is the backup interval while the loop has seen the module
+take over (`s_backup_seen`) and `int` otherwise; the countdown, the no-signal
+backoff, the owed-report test and the quiet-pass test all go through it.  The
+report that announces the cut still goes out at once; the next is one backup
+interval later, and the report that announces car power back puts `int` back.
+It works with `int` 0 as well: a unit that makes no timed reports on car power
+reports on a schedule while it is on the cell.  `on backup power: next timed
+report in 90s` is logged after each.
+- **Movement keeps its ceiling.**  A confirmed movement already cuts the next
+report to four hours when `int` is 0 or longer.  On the module the interval in
+force is the backup one, so a backup interval over four hours is cut the same
+way, for that countdown only and without lowering the setting.  A backup
+interval of four hours or less is left alone, and the old rule no longer
+applies on the module when a backup interval is set, because it would have
+lengthened a shorter one to four hours.
+- **`APP_BACKUP_LOOP_INTERVAL`** (default 0) is the value from boot until the
+first reply, as `APP_ENGINE_OFF_LOOP_INTERVAL` is for `int`; it is also all a
+Traccar build has.  `config` shows `backup=<n>` and the boot log prints it.
+- **The server** gets the column (`schema.sql`,
+`migrations/2026-10-18_device_backup_int.sql`), `backup` in
+`GET`/`POST /api/1.0/config`, `backup_interval=<seconds>` as a command
+(written to the column, not queued, since every reply carries it),
+`tools/device.py show`, and the reply field in `docs/PROTOCOL.md`.  Older
+firmware passes over `backup=`, and a server without it sends none, so either
+can be updated first.
+- On the bench, with a build whose default was 90 s against a server that
+sent no `backup=` and an `int` of 300: cutting the 12 V supply at 15:11:05
+was reported at 15:11:16 (the module's pulse, then the rail in the band 7.8 s
+after it), and the next timed report came at 15:12:48, 90 s later, with the
+battery gates bypassed, and set the one after it at 90 s again.  With the
+supply back, car power restored was reported at 15:13:21 and the next timed
+wake was 5 min later, the `int`.  The reply
+parsing is tested on the host (`reply_take_int`, 22 cases under the
+sanitizers) and the server side by its own tests; a reply that carries
+`backup=` has not been through a real server and unit yet.  The car has not
+been updated.
+
 ## 0.4.77
 
 ### Gaps of up to two minutes are filled

@@ -21,6 +21,11 @@ struct app_settings {
     char    pwd[20];
     char    imei[20];
     int     loop_interval;
+    /* Timed-report interval while the inline backup module is carrying the
+     * rail, from the server's reply (backup=<s>); 0 = same as loop_interval.
+     * Only the server sets it, so unlike loop_interval it is not reported
+     * back.  See report_interval() in main.c. */
+    int     backup_interval;
     int8_t  movement_alarm;
     /* Set from the server's response (track=<0|1>); never persisted.  See
      * do_track() in main.c and APP_TRACK_MODE. */
