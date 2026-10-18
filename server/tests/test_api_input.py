@@ -15,6 +15,8 @@ IMEI = '350000000000000'
 @pytest.mark.parametrize('body, message', [
     ({'int': 3.7}, 'int must be a whole number from 0 to 4294967295'),
     ({'int': -1}, 'int must be a whole number from 0 to 4294967295'),
+    ({'backup': -1}, 'backup must be a whole number from 0 to 4294967295'),
+    ({'backup': 'soon'}, 'backup must be a whole number from 0 to 4294967295'),
     ({'al': True}, 'al must be a whole number from 0 to 1'),
     ({'oaf': 24}, 'oaf must be a whole number from 0 to 23'),
 ])
@@ -38,6 +40,18 @@ def test_server_side_settings_in_a_command_are_checked(client, bearer, device):
                            json={'imei': IMEI, 'command': 'garage=2'})
     assert response.status_code == 400
     assert response.get_json()['message'] == 'garage must be a whole number from 0 to 1'
+
+
+@pytest.mark.parametrize('value', ['-5', '1.5', 'soon', ''])
+def test_backup_interval_in_a_command_is_checked(client, bearer, device, database, value):
+    response = client.post('/api/1.0/command', headers=bearer,
+                           json={'imei': IMEI, 'command': 'backup_interval=' + value})
+    assert response.status_code == 400
+    assert response.get_json()['message'] == \
+        'backup_interval must be a whole number from 0 to 4294967295'
+    assert database.one('SELECT `backup_int` FROM `device` WHERE `imei` = %s',
+                        (IMEI,))['backup_int'] == 0
+    assert database.one('SELECT COUNT(*) c FROM `command`')['c'] == 0
 
 
 @pytest.mark.parametrize('query', ['page=x', 'per_page=0', 'page=-1'])

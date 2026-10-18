@@ -280,7 +280,7 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>,<movement_alarm>[,<commands>][,fota=<version>][,track=<0|1>]
+1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>]
 ```
 
 Every datagram is answered, and the reply is the receipt: it is bound to the
@@ -289,6 +289,14 @@ it answers, and only then lets go of the records that datagram carried. The
 firmware reads every reply — not only those it waits for — and applies the
 settings and commands in each. It applies the settings only when a reply
 carries both the interval and movement_alarm.
+
+`backup=` is the reporting interval for a tracker running on the inline battery
+backup module (`device`.`backup_int`; 0 means the interval above applies then
+too). It is sent on every reply, as `track=` is, so a device that rebooted or
+missed a reply converges on it. The firmware applies it as it reads the reply
+and takes it out of the commands, and uses it only while the module is carrying
+the tracker; firmware from before 0.4.79 passes over it. Unlike the interval it
+is never reported back, since nothing on the device changes it.
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is

@@ -114,7 +114,7 @@ A token is not limited to particular devices or actions: anything holding one ca
 | Endpoint | What it does |
 |---|---|
 | `GET /api/1.0/track` | Redirects to a map at the device's last position: an Apple Maps link by default, Google Maps with `google=1`. With `return=1` it returns `{"url": ...}` instead of redirecting. |
-| `GET /api/1.0/config` | The device's settings: `int`, `ma`, `al` (alarm), `ga` (garage), `oa` (overnight alarm), `oaf` and `oat` (overnight window hours). |
+| `GET /api/1.0/config` | The device's settings: `int`, `backup` (interval on backup power), `ma`, `al` (alarm), `ga` (garage), `oa` (overnight alarm), `oaf` and `oat` (overnight window hours). |
 | `POST /api/1.0/config` | Sets any of those fields. Values must be whole numbers: 0 or 1 for the switches, 0-23 for the hours. |
 | `POST /api/1.0/command` | Queues a command for the device, or applies a server-side setting. |
 | `POST /api/1.0/home` | The home check (below). |
@@ -143,7 +143,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 
 ### Commands
 
-A command waits on the server until the device next reads a reply, and is handed over once: if that reply is lost, queue it again. Queuing a command replaces a pending one it supersedes (`locate` and `locatenow`, for instance), and several can be sent at once separated by commas. Server-side settings in the same request - `alarm=`, `garage=`, `overnightalarm=` and the overnight hours - take effect immediately and never go to the device. The full list is in [device settings and commands](../reference/device-settings.md#commands); from the server's shell, `tools/command.py` does the same job:
+A command waits on the server until the device next reads a reply, and is handed over once: if that reply is lost, queue it again. Queuing a command replaces a pending one it supersedes (`locate` and `locatenow`, for instance), and several can be sent at once separated by commas. Server-side settings in the same request - `alarm=`, `garage=`, `overnightalarm=` and the overnight hours - take effect immediately and never go to the device, and so does `backup_interval=`, which the device gets from every reply instead. The full list is in [device settings and commands](../reference/device-settings.md#commands); from the server's shell, `tools/command.py` does the same job:
 
 ```sh
 sudo docker exec l0destar python tools/command.py 350000000000000 locate

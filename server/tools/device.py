@@ -101,6 +101,9 @@ def show(args):
         ('pre-shared key', 'set' if device['psk'] else 'not set'),
         ('engine-off interval',
          '%ds' % device['int'] if device['int'] else '0 (no timed wakes)'),
+        ('backup interval',
+         '%ds' % device['backup_int'] if device.get('backup_int')
+         else '0 (same as the engine-off interval)'),
         ('movement alarm', device['movement_alarm']),
         ('track mode', device['track_mode']),
         ('ignition alarm', device['alarm']),

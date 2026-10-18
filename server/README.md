@@ -174,6 +174,7 @@ mysql -u root -p tracker < migrations/2026-09-06_track_mode.sql
 .venv/bin/python tools/device.py list                        # every vehicle, last seen
 .venv/bin/python tools/device.py show 350000000000000        # settings, updates, queue
 .venv/bin/python tools/command.py 350000000000000 int=3600   # engine-off interval
+.venv/bin/python tools/command.py 350000000000000 backup_interval=1800  # on backup power
 .venv/bin/python tools/command.py 350000000000000 locate     # position as an alert
 .venv/bin/python tools/command.py 350000000000000 alarm=1    # notify on ignition
 .venv/bin/python tools/gentoken.py home-automation           # bearer token for the API

@@ -33,6 +33,15 @@ Settings the server acts on, applied immediately and never sent to the device:
     overnight_alarm_hour_from=0-23
     overnight_alarm_hour_to=0-23
 
+Also applied immediately rather than queued, because every response carries it
+to the device (as track mode does) and a queued copy would be undone by the
+next one:
+
+    backup_interval=<seconds>
+                           reporting interval while the inline backup module is
+                           carrying the tracker; 0 = the engine-off interval
+                           applies then too
+
 Track mode is switched from the map page or POST /api/1.0/trackmode rather than
 queued here: every reply already carries the server's switch, so a queued
 track= would be undone by the next one.

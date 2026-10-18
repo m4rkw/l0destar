@@ -210,13 +210,20 @@ def test_device_config_defaults():
     # should still raise the alarm rather than silently not.
     assert telemetry.device_config(
         {'int': None, 'movement_alarm': None}
-    ) == {'int': 0, 'ma': 1}
+    ) == {'int': 0, 'ma': 1, 'backup': 0}
 
 
 def test_device_config_preserves_explicit_zero():
     assert telemetry.device_config(
         {'int': 900, 'movement_alarm': 0}
-    ) == {'int': 900, 'ma': 0}
+    ) == {'int': 900, 'ma': 0, 'backup': 0}
+
+
+def test_device_config_carries_the_backup_interval():
+    # A row from before the column existed has no such key at all.
+    assert telemetry.device_config({'int': 900})['backup'] == 0
+    assert telemetry.device_config({'int': 900, 'backup_int': 0})['backup'] == 0
+    assert telemetry.device_config({'int': 900, 'backup_int': 1800})['backup'] == 1800
 
 
 # -- firmware log lines -------------------------------------------------------
@@ -356,6 +363,59 @@ def test_response_carries_track_switch():
                                   firmware_version='0.4.22')
     assert off.endswith(',track=0')
     assert on.endswith(',fota=0.4.22,track=1')
+
+
+class _Commands:
+    """A queue holding one command, which the response deletes."""
+    def __init__(self, command):
+        self.command = command
+        self.deleted = False
+
+    def all(self, *args):
+        return [{'id': 7, 'command': self.command}]
+
+    def query(self, sql, params):
+        assert sql.startswith('DELETE FROM `command`') and params == [7]
+        self.deleted = True
+
+
+def test_response_carries_the_backup_interval_on_every_reply():
+    device = {'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1, 'backup_int': 1800}
+
+    assert telemetry.build_response(device, _NoCommands(), _Quiet()) == \
+        '1,60,1,backup=1800,track=0'
+    # After the commands, ahead of the advert and the track switch, which stay last.
+    assert telemetry.build_response(dict(device, track_mode=1), _NoCommands(), _Quiet(),
+                                    firmware_version='0.4.79') == \
+        '1,60,1,backup=1800,fota=0.4.79,track=1'
+
+    queue = _Commands('locate')
+    assert telemetry.build_response(device, queue, _Quiet()) == \
+        '1,60,1,locate,backup=1800,track=0'
+    assert queue.deleted
+
+
+def test_response_says_so_when_there_is_no_backup_interval():
+    # 0 has to be sent, not left out: a device holding 1800 from an earlier
+    # reply would otherwise keep it after the operator cleared it.
+    unset = {'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1}
+
+    assert telemetry.build_response(unset, _NoCommands(), _Quiet()) == \
+        '1,60,1,backup=0,track=0'
+    assert telemetry.build_response(dict(unset, backup_int=None), _NoCommands(),
+                                    _Quiet()) == '1,60,1,backup=0,track=0'
+
+
+def test_backup_interval_cannot_be_mistaken_for_a_command_by_the_firmware():
+    # cmd_run() finds each command with strstr() anywhere in the string, so
+    # the field must not contain the text of one.
+    names = ('int=', 'movealarm=', 'track=', 'movereset', 'locate', 'tomtom',
+             'fota', 'config', 'reboot')
+    field = 'backup=1800'
+    assert not any(name in field for name in names)
+    # Likewise the command that sets it, which must never be queued for the
+    # device by a server that does not know it.
+    assert not any(name in 'backup_interval=1800' for name in names)
 
 
 class _SwitchDB:

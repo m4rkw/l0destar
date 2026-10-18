@@ -62,6 +62,16 @@ def test_show_prints_settings_but_never_the_key(tool, capsys, device, database):
     assert device['psk'] not in out
 
 
+def test_show_says_what_the_backup_interval_is(tool, capsys, device, database):
+    out = run(tool, capsys, 'show', device['imei'])[1]
+    assert 'backup interval' in out and 'same as the engine-off interval' in out
+
+    database.query('UPDATE `device` SET `backup_int` = 900 WHERE `id` = %s',
+                   (device['id'],))
+    out = run(tool, capsys, 'show', device['imei'])[1]
+    assert 'backup interval' in out and '900s' in out
+
+
 def test_rename_keeps_the_registration_unless_given(tool, capsys, device):
     assert run(tool, capsys, 'rename', device['imei'], 'Estate')[0] == 0
     row = db.lookup_device(imei=device['imei'])

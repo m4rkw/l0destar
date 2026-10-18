@@ -299,7 +299,7 @@ Set `APP_TRACCAR` to report to a [Traccar](https://www.traccar.org) server with 
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_TRACCAR` | bool | `n` | Report to Traccar. Traccar cannot set the engine-off interval, the movement alarm or track mode, advertise updates, or keep the device log; its *custom* command reaches the tracker's command parser |
+| `APP_TRACCAR` | bool | `n` | Report to Traccar. Traccar cannot set the engine-off interval, the backup-power interval, the movement alarm or track mode, advertise updates, or keep the device log; its *custom* command reaches the tracker's command parser |
 | `APP_TRACCAR_HOST` | string | `""` | The Traccar server. Required when `APP_TRACCAR` is set: the build fails with it empty |
 | `APP_TRACCAR_PORT` | int, 1-65535 | `5055` | The port of Traccar's OsmAnd listener (`osmand.port` in `traccar.xml`), not the web interface's 8082 |
 | `APP_TRACCAR_ID` | string | `""` | The identifier the device reports under; empty is the IMEI |
@@ -352,6 +352,7 @@ Set `APP_TRACCAR` to report to a [Traccar](https://www.traccar.org) server with 
 | `APP_BACKUP_SUPPLY` | bool | `n` | The inline battery backup module is fitted. A supply between `APP_BACKUP_MIN_MV` and `APP_BACKUP_MAX_MV` with the ignition off is then backup power rather than a flat car battery: timed reports keep going, the power-off and sleep-safety gates are bypassed, a `backup power` alert (priority 1) goes out once the ignition has been off for 60 seconds, and `car power restored` when the rail comes back. The module's ~0.4 s ignition pulse at takeover wakes a sleeping unit, which watches the rail fall into the band and reports the cut instead of treating it as a key-on. A key-on from sleep then needs the line on for 1.5 s (`BACKUP_PULSE_MAX_MS`) rather than 200 ms. The sleeping unit also reads the rail every 30 s (`BACKUP_RAIL_POLL_S`) and reports the cut, and later the return of car power, from that alone, so the pulse is not required |
 | `APP_BACKUP_MIN_MV` | int | `8500` | Lower edge of the backup band; below it the reading is a flat supply again (the pack's own undervoltage lockout has tripped) |
 | `APP_BACKUP_MAX_MV` | int | `9700` | Upper edge of the backup band. The module delivers 9.6V less a diode drop, 8.8-9.3V with load; keep this below anything a resting car battery can show |
+| `APP_BACKUP_LOOP_INTERVAL` | int | `0` | Seconds between timed reports while the backup module is carrying the tracker, from boot until the first server reply sets the server's own (`backup_int`, sent as `backup=`). 0 means the engine-off interval applies on backup power too. See [Reporting interval on backup power](../deployment/configuration.md#reporting-interval-on-backup-power) |
 
 ### Movement, impact and tow detection
 
