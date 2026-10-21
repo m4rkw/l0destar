@@ -19,7 +19,7 @@ are on [Device settings and commands](device-settings.md).
 | `Kconfig`, `Kconfig.boards` | yes | Every `APP_*` symbol and its default; `Kconfig.boards` holds the per-board pin maps and hardware flags |
 | `boards/makerdiary/nrf9151_connectkit/` | no | The Connect Kit board target, gitignored; `build.sh` copies it in from makerdiary/nrf9151-connectkit on the first build |
 | `boards/nrf9151dk_nrf9151_ns.conf`, `.overlay` | yes | Applied only to nRF9151 DK builds; the overlay frees the DK's I2C2 and SPI3 pins for the application |
-| `boards/nrf9151_connectkit_nrf9151_ns.conf` | yes | Applied only to Connect Kit builds: turns on the modem antenna library and sends `AT%XCOEX0`, which powers the Connect Kit's GNSS amplifier. Without it GNSS sees no satellites |
+| `boards/nrf9151_connectkit_nrf9151_ns.conf` | yes | Applied only to Connect Kit builds: turns on the modem antenna library and sends `AT%XCOEX0`, which powers the Connect Kit's GNSS amplifier. Without it GNSS sees no satellites. v4.0 does not use the Connect Kit's GNSS, so it is harmless there |
 | `makerdiary.conf` | no | Optional, layered onto Connect Kit builds when it exists, for settings of your own such as a band lock |
 | `local.conf` | no | Your bench build; `build.sh` stops if it is missing unless `LOCAL_CONF` is set empty |
 | `local.overlay` | no | Optional devicetree overlay, applied last |
@@ -182,10 +182,11 @@ same decision see [Hardware](hardware.md#interface-selection-pads).
 | `APP_BOARD_L0DESTAR_V3_2` | v3.2 (adds MCU over-voltage protection) | `v3.2` |
 | `APP_BOARD_L0DESTAR_V3_3` | v3.3 (fixes the L-line pull-down and adds L_SENSE) | `v3.3` |
 | `APP_BOARD_L0DESTAR_V3_4` (default) | v3.4 (same pin map as v3.3) | `v3.4` |
+| `APP_BOARD_L0DESTAR_V4_0` | v4.0 (v3.4 with an external u-blox MAX-M10S GNSS receiver) | `v4.0` |
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_OBD_MODE` | int | `0` | The OBD interface populated on a v3.1, v3.2, v3.3 or v3.4 board: `0` none, `1` CAN, `2` K-wire. It sets the `APP_BOARD_HAS_CAN` and `APP_BOARD_HAS_KLINE` defaults, and which rails the boot self-test and the board test exercise. Ignored on other boards |
+| `APP_OBD_MODE` | int | `0` | The OBD interface populated on a v3.1, v3.2, v3.3, v3.4 or v4.0 board: `0` none, `1` CAN, `2` K-wire. It sets the `APP_BOARD_HAS_CAN` and `APP_BOARD_HAS_KLINE` defaults, and which rails the boot self-test and the board test exercise. Ignored on other boards |
 | `APP_BOARD_ID` | string, hidden | per board, as above | Board identity for update manifests. The full identity appends the fitted interfaces - `v3.4+kline`, `v3.4+can` or plain `v3.4` - and a device refuses an image built for a different one |
 | `APP_BOARD_IS_L0DESTAR` | bool, hidden | `y` for every board but the bench | Switches the pin and flag defaults from bench values to PCB values |
 
@@ -193,26 +194,35 @@ same decision see [Hardware](hardware.md#interface-selection-pads).
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_BOARD_HAS_CAN` | bool | `y` on v2.1, v2.5C, v2.6C and v3.0; on v3.1-v3.4 when `APP_OBD_MODE=1`; otherwise `n` | MCP2518FD CAN controller fitted. On v3.0, which lays out both interfaces, set the one you did not populate to `n` |
-| `APP_BOARD_HAS_KLINE` | bool | `y` on the bench, v2.1, v2.5K, v2.6K and v3.0; on v3.1-v3.4 when `APP_OBD_MODE=2`; otherwise `n` | K-wire transceiver fitted |
-| `APP_L_SEND_ENABLED` | bool | `y` on v3.3, v3.4 and the bench, `n` on every other board | Allows the firmware to drive the L line. Boards before v3.3 switch the L pull-down straight onto the wire, and an L wire shorted to battery destroys the transistor and can take the nRF9151 with it, so leave it off on those unless you know the wire is safe |
+| `APP_BOARD_HAS_CAN` | bool | `y` on v2.1, v2.5C, v2.6C and v3.0; on v3.1-v4.0 when `APP_OBD_MODE=1`; otherwise `n` | MCP2518FD CAN controller fitted. On v3.0, which lays out both interfaces, set the one you did not populate to `n` |
+| `APP_BOARD_HAS_KLINE` | bool | `y` on the bench, v2.1, v2.5K, v2.6K and v3.0; on v3.1-v4.0 when `APP_OBD_MODE=2`; otherwise `n` | K-wire transceiver fitted |
+| `APP_L_SEND_ENABLED` | bool | `y` on v3.3, v3.4, v4.0 and the bench, `n` on every other board | Allows the firmware to drive the L line. Boards before v3.3 switch the L pull-down straight onto the wire, and an L wire shorted to battery destroys the transistor and can take the nRF9151 with it, so leave it off on those unless you know the wire is safe |
 | `APP_BOARD_HAS_AIO` | bool | `y` on v2.1 | 0-30V AIO inputs fitted; adds `+aio` to the board identity |
-| `APP_BOARD_HAS_L_SENSE` | bool | `y` on v3.3 and v3.4 | L-line sense input fitted, read through the ADC to detect an L wire shorted to battery |
+| `APP_BOARD_HAS_L_SENSE` | bool | `y` on v3.3, v3.4 and v4.0 | L-line sense input fitted, read through the ADC to detect an L wire shorted to battery. On v4.0 as drawn the pin has no ADC channel and the sense is unavailable (see `APP_PIN_L_SENSE`) |
 | `APP_L_SENSE_LOW_MV` | int | `2800` | Depends on `APP_BOARD_HAS_L_SENSE`. Below this the L line counts as pulled low; a line that is high, open or shorted to battery reads at the 3.6V full scale |
-| `APP_BOARD_HAS_RAIL_SENSE` | bool | `y` on v3.1-v3.4 | Switched-rail status inputs fitted, so the boot self-test and the `RAIL:` alerts can tell a rail that did not come up |
+| `APP_BOARD_HAS_RAIL_SENSE` | bool | `y` on v3.1-v4.0 | Switched-rail status inputs fitted, so the boot self-test and the `RAIL:` alerts can tell a rail that did not come up |
 | `APP_BOARD_CAN_ON_AUX` | bool, hidden | `y` on v2.1, v2.5C and v2.6C | The CAN circuit is powered from the AUX domain |
 | `APP_BOARD_KLINE_ON_AUX` | bool, hidden | `y` on v2.1 | The whole K-line circuit is powered from the AUX domain |
 | `APP_BOARD_KLINE_SHIFT_ON_AUX` | bool, hidden | `y` on v2.5K and v2.6K | The level shifter is on AUX and the transceiver rails on `K_EN`; the K-line pins are released only while both are up |
 | `APP_BOARD_OBD_DOMAIN` | bool, hidden | `y` on v3.0 | CAN and K-line share one switched OBD domain |
-| `APP_BOARD_SPLIT_OBD_DOMAIN` | bool, hidden | `y` on v3.1-v3.4 | CAN and K-line rails are switched independently |
-| `APP_BOARD_CAN_XSTBY` | bool, hidden | `y` on v2.5C, v2.6C and v3.0-v3.4 | The CAN transceiver's standby pin is driven by the MCP2518FD, so putting the controller to sleep puts the transceiver in standby |
+| `APP_BOARD_SPLIT_OBD_DOMAIN` | bool, hidden | `y` on v3.1-v4.0 | CAN and K-line rails are switched independently |
+| `APP_BOARD_CAN_XSTBY` | bool, hidden | `y` on v2.5C, v2.6C and v3.0-v4.0 | The CAN transceiver's standby pin is driven by the MCP2518FD, so putting the controller to sleep puts the transceiver in standby |
 | `APP_BOARD_IGN_EXT_PULLUP` | bool, hidden | `y` on every l0destar board | The ignition sense line has an external pull-up, so the nRF9151's internal one stays off |
-| `APP_BOARD_RAIL_ST_12V_ACTIVE_LOW` | bool, hidden | `y` on v3.1-v3.4 | The 12V K rail sense reads low while the rail is up |
+| `APP_BOARD_RAIL_ST_12V_ACTIVE_LOW` | bool, hidden | `y` on v3.1-v4.0 | The 12V K rail sense reads low while the rail is up |
 | `APP_LED_ACTIVE_LOW` | bool | `y` for a bench build on the DK, otherwise `n` | Status LED polarity |
+| `APP_BOARD_HAS_EXT_GNSS` | bool | `y` on v4.0, otherwise `n` | A u-blox MAX-M10S on UARTE2 does the GNSS, in place of the nRF9151's built-in receiver (`src/gnss_ext.c`). The modem then has no GNSS in its system mode, nothing fetches A-GNSS assistance, and a send does not interrupt the receiver. It selects `NRFX_UARTE` |
+| `APP_GNSS_EXT_BAUD` | int | `115200` | Depends on `APP_BOARD_HAS_EXT_GNSS`. The rate the receiver is moved to once found; it starts at 9600 after every power-up |
+| `APP_GNSS_BACKUP_SUPPLY` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_GNSS`. Holds the receiver's backup supply (V_BCKP) on from boot, through sleep, so it keeps its ephemeris and time between fixes: a parked wake then gets a 1 s hot start rather than a cold start of 23 to 28 s or more. It costs the data sheet's 28µA typical at 3.3V, against a sleep current of about 35 to 45µA at 12V; unmeasured on a v4.0 board. Consider turning it off for a unit that reports less often than every couple of hours |
 
 The domain flags tell the firmware which pins end inside a switched rail. Those pins are parked
 as inputs with pull-downs whenever their rail is off, so a powered nRF9151 never back-feeds a
 dead rail through a chip's protection diodes.
+
+On v4.0 the AUX domain is the external receiver's rail, `PP3V3_GNSS`, and its UART and 1PPS pins
+are parked with it. The UART is a peripheral rather than a GPIO, and a pin still connected to one
+overrides the parking, so the receiver driver closes it just before the domain's last user lets
+go (`hw_domain_notify_set()`). The receiver's backup supply is switched separately and is not a
+domain: it is set once at boot.
 
 ### Pin assignments
 
@@ -221,35 +231,39 @@ defaults follow the board selection; override one only for a reworked board. The
 the current boards and the bench; the v2.x maps are in `Kconfig.boards`. No l0destar board uses
 P0.11 or P0.12, which carry the Connect Kit's console.
 
-| Symbol | Signal | v3.3, v3.4 | v3.1, v3.2 | v3.0 | Bench, Connect Kit | Bench, DK |
-|---|---|---|---|---|---|---|
-| `APP_PIN_AUX_SW` | GPS rail enable | 13 | 13 | 26 | 13 | 10 |
-| `APP_PIN_CAN_EN` | CAN rail enable | 23 | 23 | -1 | -1 | -1 |
-| `APP_PIN_K_EN` | K-line rails enable | 10 | 10 | -1 | -1 | -1 |
-| `APP_PIN_OBD_EN` | Shared OBD domain enable | -1 | -1 | 24 | -1 | -1 |
-| `APP_PIN_TWI_SDA` | I2C data (INA228 and IMU) | 20 | 20 | 19 | 16 | 5 |
-| `APP_PIN_TWI_SCL` | I2C clock | 21 | 21 | 18 | 17 | 4 |
-| `APP_PIN_INA_ALRT` | INA228 alert | -1 | -1 | 20 | 21 | 11 |
-| `APP_PIN_ACC_INT1` | IMU wake and impact interrupt | 30 | 30 | 29 | 19 | 2 |
-| `APP_PIN_ACC_INT2` | IMU second interrupt, not used by the firmware | 29 | 29 | 27 | 18 | 3 |
-| `APP_PIN_IGN_SENSE` | Ignition sense, low when on | 24 | 24 | 10 | 10 | 31 |
-| `APP_PIN_K1_TX` | K-line transmit | 1 | 1 | 2 | 22 | 22 |
-| `APP_PIN_K1_RX` | K-line receive | 3 | 3 | 4 | 25 | 21 |
-| `APP_PIN_K_SLEEP` | TJA1027T sleep control | 2 | 2 | 3 | -1 | -1 |
-| `APP_PIN_L_SEND` | L-line pull-down | 4 | 4 | 5 | -1 | -1 |
-| `APP_PIN_L_SENSE` | L-line sense, must be P0.13-P0.20 | 14 | -1 | -1 | -1 | -1 |
-| `APP_PIN_CAN_SCK` | MCP2518FD SPI clock | 17 | 17 | 13 | -1 | -1 |
-| `APP_PIN_CAN_SDI` | MCP2518FD SPI data in | 16 | 16 | 14 | -1 | -1 |
-| `APP_PIN_CAN_SDO` | MCP2518FD SPI data out | 18 | 18 | 15 | -1 | -1 |
-| `APP_PIN_CAN_CS` | MCP2518FD chip select | 15 | 15 | 16 | -1 | -1 |
-| `APP_PIN_CAN_INT` | MCP2518FD interrupt | 19 | 19 | 17 | -1 | -1 |
-| `APP_PIN_GPS_RAIL_ST` | GPS rail sense | 5 | 14 | -1 | -1 | -1 |
-| `APP_PIN_CAN_RAIL_ST` | CAN rail sense | 22 | 22 | -1 | -1 | -1 |
-| `APP_PIN_K3V3_RAIL_ST` | K 3.3V rail sense | 0 | 0 | -1 | -1 | -1 |
-| `APP_PIN_K12V_RAIL_ST` | K 12V rail sense | 31 | 31 | -1 | -1 | -1 |
-| `APP_PIN_LED1` | Status LED 1 | 28 | 26 | 28 | 9 | -1, the devicetree `led0` |
-| `APP_PIN_LED2` | Status LED 2 | 27 | 27 | 30 | 8 | -1 |
-| `APP_PIN_LED3` | Status LED 3 | 26 | 28 | 31 | 7 | -1 |
+| Symbol | Signal | v3.3, v3.4 | v4.0 | v3.1, v3.2 | v3.0 | Bench, Connect Kit | Bench, DK |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `APP_PIN_AUX_SW` | GPS rail enable; `GNSS_ENABLE` on v4.0, the receiver's rail | 13 | 6 | 13 | 26 | 13 | 10 |
+| `APP_PIN_CAN_EN` | CAN rail enable | 23 | 23 | 23 | -1 | -1 | -1 |
+| `APP_PIN_K_EN` | K-line rails enable | 10 | 10 | 10 | -1 | -1 | -1 |
+| `APP_PIN_OBD_EN` | Shared OBD domain enable | -1 | -1 | -1 | 24 | -1 | -1 |
+| `APP_PIN_TWI_SDA` | I2C data (INA228 and IMU) | 20 | 20 | 20 | 19 | 16 | 5 |
+| `APP_PIN_TWI_SCL` | I2C clock | 21 | 21 | 21 | 18 | 17 | 4 |
+| `APP_PIN_INA_ALRT` | INA228 alert | -1 | -1 | -1 | 20 | 21 | 11 |
+| `APP_PIN_ACC_INT1` | IMU wake and impact interrupt | 30 | 30 | 30 | 29 | 19 | 2 |
+| `APP_PIN_ACC_INT2` | IMU second interrupt, not used by the firmware | 29 | 29 | 29 | 27 | 18 | 3 |
+| `APP_PIN_IGN_SENSE` | Ignition sense, low when on | 24 | 24 | 24 | 10 | 10 | 31 |
+| `APP_PIN_K1_TX` | K-line transmit | 1 | 1 | 1 | 2 | 22 | 22 |
+| `APP_PIN_K1_RX` | K-line receive | 3 | 3 | 3 | 4 | 25 | 21 |
+| `APP_PIN_K_SLEEP` | TJA1027T sleep control | 2 | 2 | 2 | 3 | -1 | -1 |
+| `APP_PIN_L_SEND` | L-line pull-down | 4 | 4 | 4 | 5 | -1 | -1 |
+| `APP_PIN_L_SENSE` | L-line sense, must be P0.13-P0.20 (v4.0 as drawn: P0.5, which cannot be read) | 14 | 5 | -1 | -1 | -1 | -1 |
+| `APP_PIN_CAN_SCK` | MCP2518FD SPI clock | 17 | 17 | 17 | 13 | -1 | -1 |
+| `APP_PIN_CAN_SDI` | MCP2518FD SPI data in | 16 | 16 | 16 | 14 | -1 | -1 |
+| `APP_PIN_CAN_SDO` | MCP2518FD SPI data out | 18 | 18 | 18 | 15 | -1 | -1 |
+| `APP_PIN_CAN_CS` | MCP2518FD chip select | 15 | 15 | 15 | 16 | -1 | -1 |
+| `APP_PIN_CAN_INT` | MCP2518FD interrupt | 19 | 19 | 19 | 17 | -1 | -1 |
+| `APP_PIN_GPS_RAIL_ST` | GPS rail sense; `PP3V3_GNSS_ST` on v4.0 | 5 | 14 | 14 | -1 | -1 | -1 |
+| `APP_PIN_CAN_RAIL_ST` | CAN rail sense | 22 | 22 | 22 | -1 | -1 | -1 |
+| `APP_PIN_K3V3_RAIL_ST` | K 3.3V rail sense | 0 | 0 | 0 | -1 | -1 | -1 |
+| `APP_PIN_K12V_RAIL_ST` | K 12V rail sense | 31 | 31 | 31 | -1 | -1 | -1 |
+| `APP_PIN_LED1` | Status LED 1 | 28 | 28 | 26 | 28 | 9 | -1, the devicetree `led0` |
+| `APP_PIN_LED2` | Status LED 2 | 27 | 27 | 27 | 30 | 8 | -1 |
+| `APP_PIN_LED3` | Status LED 3 | 26 | 26 | 28 | 31 | 7 | -1 |
+| `APP_PIN_GNSS_TX` | External GNSS UART transmit, to the receiver's RXD | -1 | 9 | -1 | -1 | -1 | -1 |
+| `APP_PIN_GNSS_RX` | External GNSS UART receive, from the receiver's TXD | -1 | 8 | -1 | -1 | -1 | -1 |
+| `APP_PIN_GNSS_TIMEPULSE` | External GNSS 1PPS input, not read yet | -1 | 7 | -1 | -1 | -1 | -1 |
+| `APP_PIN_GNSS_BCKP_EN` | External GNSS backup supply switch | -1 | 13 | -1 | -1 | -1 | -1 |
 
 The remaining pin symbols only apply to older or bench hardware: `APP_PIN_K2_TX` and
 `APP_PIN_K2_RX`, a second K-line transceiver on the bench (24 and 23, `-1` on every PCB);
@@ -464,7 +478,7 @@ Discovery, run once per vehicle with the ignition on (see
 
 | Setting | Value | Why it matters |
 |---|---|---|
-| `CONFIG_LTE_NETWORK_MODE_LTE_M_GPS` | `y` | LTE-M plus GNSS. NB-IoT is off, so the SIM and network must support LTE-M. Do not add a `CONFIG_LTE_MODE_PREFERENCE_*` line: those depend on a dual-mode choice and are dropped with a warning |
+| `CONFIG_LTE_NETWORK_MODE_LTE_M_GPS` | `y` | LTE-M plus GNSS (v4.0 sets the mode without GNSS at run time, since its receiver is external). NB-IoT is off, so the SIM and network must support LTE-M. Do not add a `CONFIG_LTE_MODE_PREFERENCE_*` line: those depend on a dual-mode choice and are dropped with a warning |
 | `CONFIG_LTE_LC_RAI_MODULE`, `CONFIG_LTE_RAI_REQ` | `y` | Release Assistance Indication lets the radio drop straight after a send, handing the antenna back to GNSS |
 | `CONFIG_NRF_MODEM_LIB_ON_FAULT_RESET_MODEM` | `y` | A modem crash reinitialises the modem library within a second instead of leaving the unit awake and mute |
 | `CONFIG_TASK_WDT_MIN_TIMEOUT` | `10000` | The hardware watchdog fallback is fed every 10 seconds, which is also how often the CPU wakes during an engine-off sleep; `CONFIG_TASK_WDT_HW_FALLBACK_DELAY=2000` |
@@ -474,7 +488,7 @@ Discovery, run once per vehicle with the ignition on (see
 | `CONFIG_MODEM_KEY_MGMT` | `y` | Writing the CA certificate into the modem |
 | `CONFIG_BOOTLOADER_MCUBOOT` | `y` | The application side of MCUboot, including confirming an updated image |
 | `CONFIG_DATE_TIME_NTP` | `y` | Time from NTP when the network does not supply it |
-| `CONFIG_NRF_CLOUD_REST`, `CONFIG_NRF_CLOUD_AGNSS`, `CONFIG_MODEM_JWT` | `y` | A-GNSS from nRF Cloud, authenticated with a token signed by the key at `CONFIG_NRF_CLOUD_SEC_TAG` (16842753) |
+| `CONFIG_NRF_CLOUD_REST`, `CONFIG_NRF_CLOUD_AGNSS`, `CONFIG_MODEM_JWT` | `y` | A-GNSS from nRF Cloud, authenticated with a token signed by the key at `CONFIG_NRF_CLOUD_SEC_TAG` (16842753). Not used on v4.0, whose receiver takes no assistance; the code is dropped from the image |
 | `CONFIG_APP_APN` | `"sensor.net"` | Override it with your SIM's APN |
 
 `prov.conf` sets `CONFIG_APP_PROVISION_MODE=y`, `CONFIG_AT_HOST_LIBRARY=y`,
@@ -552,8 +566,8 @@ These are compiled in and have no Kconfig symbol; change them in the source and 
 | `ENGINE_STOPPED_HOLD_S` | `300` | Seconds of low voltage and standstill before the voltage fallback calls the engine stopped |
 | `ENGINE_MOVING_KMH` | `3.0` | GNSS speed above which the vehicle counts as moving, restarting that hold |
 | `ENGINE_FIX_MAX_AGE_S` | `180` | Oldest fix still counted as evidence of movement |
-| `AGNSS_RETRIES`, `AGNSS_RETRY_INTERVAL_MS` | `2`, `15000` | Further A-GNSS fetches during a cold search when the first fails, and the gap between them; GNSS keeps searching between attempts |
-| `GNSS_PRIO_STARVED_EPOCHS`, `GNSS_PRIO_WINDOW_MS` | `5`, `40000` | GNSS priority mode, which takes the radio from LTE, is requested only after this many consecutive epochs the receiver reports as starved of radio time, and not again while a window this long may still be running |
+| `AGNSS_RETRIES`, `AGNSS_RETRY_INTERVAL_MS` | `2`, `15000` | Built-in receiver only. Further A-GNSS fetches during a cold search when the first fails, and the gap between them; GNSS keeps searching between attempts |
+| `GNSS_PRIO_STARVED_EPOCHS`, `GNSS_PRIO_WINDOW_MS` | `5`, `40000` | Built-in receiver only. GNSS priority mode, which takes the radio from LTE, is requested only after this many consecutive epochs the receiver reports as starved of radio time, and not again while a window this long may still be running |
 | `BATTERY_WARN_SETTLE_S` | `60` | Seconds the ignition must have been off before a low reading can raise `low battery`, since cranking sags the rail |
 | `IMPLAUSIBLE_VOLTAGE` | `5.0` | Readings below this mean no INA228 rather than a flat battery |
 | `BATTERY_SAMPLES`, `BATTERY_SAMPLE_GAP_MS` | `8`, `3` | INA228 conversions averaged per battery reading, and the milliseconds between them |

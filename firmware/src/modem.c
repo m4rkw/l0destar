@@ -432,13 +432,24 @@ static int provision_fota_tag(void)
  * today.  Only key-ons after a dead-zone stay pay it. */
 static bool s_nbiot_fallback;
 
+/* With the external receiver (v4.0) the modem has no GNSS in its system mode:
+ * nothing is wired to its GNSS input, and a mode that includes it would only
+ * ask the network stack for radio windows nobody uses. */
+#if IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_GNSS)
+#define SYSMODE_LTEM         LTE_LC_SYSTEM_MODE_LTEM
+#define SYSMODE_LTEM_NBIOT   LTE_LC_SYSTEM_MODE_LTEM_NBIOT
+#else
+#define SYSMODE_LTEM         LTE_LC_SYSTEM_MODE_LTEM_GPS
+#define SYSMODE_LTEM_NBIOT   LTE_LC_SYSTEM_MODE_LTEM_NBIOT_GPS
+#endif
+
 /* %XSYSTEMMODE is refused at CFUN=1, so this is only ever applied with the
  * radio down, before the CFUN=1 that follows.  Single-RAT LTE-M keeps
  * preference 0 (auto), as prj.conf explains. */
 static void apply_system_mode(void)
 {
     enum lte_lc_system_mode want = s_nbiot_fallback
-        ? LTE_LC_SYSTEM_MODE_LTEM_NBIOT_GPS : LTE_LC_SYSTEM_MODE_LTEM_GPS;
+        ? SYSMODE_LTEM_NBIOT : SYSMODE_LTEM;
     enum lte_lc_system_mode_preference want_pref = s_nbiot_fallback
         ? LTE_LC_SYSTEM_MODE_PREFER_LTEM : LTE_LC_SYSTEM_MODE_PREFER_AUTO;
     enum lte_lc_system_mode mode;

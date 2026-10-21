@@ -2,10 +2,11 @@
 
 Everything that can be configured on the hardware side of a l0destar board - which firmware board
 definition to build, the interface pads, the optional parts, the connectors and the antenna -
-together with the board's key figures. It describes v3.4, with notes for earlier boards.
+together with the board's key figures. It describes v3.4, with notes for earlier boards and for
+[v4.0](#v40-external-gnss-receiver).
 
 Measured figures are the author's unverified bench observations. v3.4 itself has not been built
-yet.
+yet, and nor has v4.0.
 
 ## Board revisions and firmware selection
 
@@ -15,6 +16,7 @@ different Connect Kit pins and switches its power rails differently. Select the 
 
 | Board | Status | Board selection | Interface setting | FOTA board id |
 |---|---|---|---|---|
+| v4.0 | Designed, not yet built or tested | `CONFIG_APP_BOARD_L0DESTAR_V4_0=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v4.0`, `v4.0+can`, `v4.0+kline` |
 | v3.4 | Designed, not yet built or tested | `CONFIG_APP_BOARD_L0DESTAR_V3_4=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.4`, `v3.4+can`, `v3.4+kline` |
 | v3.3 | Built and bench tested | `CONFIG_APP_BOARD_L0DESTAR_V3_3=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.3`, `v3.3+can`, `v3.3+kline` |
 
@@ -34,9 +36,73 @@ which rails to switch and which drivers to start:
 | `1` | CAN | S5R1 and S5R3 | 3.3V CAN rail |
 | `2` | K-wire | S5R2 and S5R4 | 3.3V K and 12V K rails |
 
+## v4.0: external GNSS receiver
+
+v4.0 is v3.4 with a u-blox MAX-M10S on the board doing the GNSS, in place of the receiver built
+into the nRF9151. This section is taken from the KiCad design files of 2026-10-18. The board has
+not been built or tested, and none of the figures here are measured on it.
+
+- **Receiver and rail.** The MAX-M10S (S16U2) takes VCC and VCC_IO from `PP3V3_GNSS`, a switched
+  3.3V rail like the others: `GNSS_ENABLE` drives a SiP32431 load switch (S16U1) and
+  `PP3V3_GNSS_ST` reads the rail back. The antenna bias tee is on the same rail, through the same
+  15 ohm resistor, so the antenna and the receiver are powered together. VIO_SEL is left open,
+  which makes the I/O 3.3V. The firmware treats this rail as the AUX domain, which on v3.1 to v3.4
+  was only the bias tee.
+- **Backup supply.** V_BCKP has a switched rail of its own, `PP3V3_GNSS_BCKP`, enabled by
+  `GNSS_BCKP_EN` (load switch S7U1, a 100K pulldown, no sense line, test point S12TP4). Held on
+  while the main rail is off, it keeps the receiver's ephemeris and time, so a parked wake gets the
+  data sheet's 1 s hot start and not a cold start of 23 to 28 s. The data sheet gives 28µA typical
+  for the receiver in this state at 3.3V, which is a large addition to the sleep current expected of
+  v3.4, so the firmware can leave it off (`CONFIG_APP_GNSS_BACKUP_SUPPLY`). Not measured on a v4.0
+  board.
+- **Antenna.** The GNSS SMA feeds the receiver's RF input through the same 47pF DC block. The U.FL
+  that fed the Connect Kit's own GNSS input (S15J1) and the two unfitted ESD diodes are gone, so the
+  Connect Kit's GNSS input is unused, and the firmware leaves GNSS out of the modem's system mode.
+  The antenna requirements below are unchanged.
+- **Vehicle connector and interface pads.** S1J1 is an 8-way Molex Micro-Fit 3.0 and the interface
+  selection pads are gone: CAN and K-wire each have their own connector pins, so fitting an
+  interface is just fitting its parts. `CONFIG_APP_OBD_MODE` still says which one the firmware
+  should test and start.
+
+| Pin | Function |
+|---|---|
+| 1 | Not connected |
+| 2 | Ground |
+| 3 | K-wire K line |
+| 4 | CAN high |
+| 5 | 12V permanent live |
+| 6 | 12V ignition |
+| 7 | K-wire L line |
+| 8 | CAN low |
+
+The receiver's signals, and the pins that moved to make room for them:
+
+| Net | Connect Kit pin | nRF9151 pin | Use |
+|---|---|---|---|
+| `GNSS_TX` | 5 | P0.9 | UART out of the nRF9151, to the receiver's RXD through 1K |
+| `GNSS_RX` | 6 | P0.8 | UART into the nRF9151, from the receiver's TXD through 1K |
+| `GNSS_TIMEPULSE` | 7 | P0.7 | The receiver's 1PPS output; the firmware does not read it yet |
+| `GNSS_ENABLE` | 8 | P0.6 | Enables `PP3V3_GNSS` |
+| `GNSS_BCKP_EN` | 21 | P0.13 | Enables `PP3V3_GNSS_BCKP` (was `GPS_ENABLE`) |
+| `PP3V3_GNSS_ST` | 22 | P0.14 | Reads `PP3V3_GNSS` back, high when up |
+| `L_SENSE` | 9 | P0.5 | The L-line sense; see the warning below |
+
+The receiver's EXTINT, LNA_EN, RESET_N, VCC_RF and I2C pins are unconnected; RESET_N has an
+internal pull-up. SAFEBOOT_N goes to a test point, S16TP2, as does TIMEPULSE (S16TP3) and the
+switched rail (S16TP1). After every power-up the receiver speaks UART at 9600 baud, NMEA out, which
+the firmware finds, moves to 115200 and switches to UBX.
+
+!!! warning "L_SENSE is on a pin the ADC cannot read"
+    v3.3 and v3.4 put L_SENSE on P0.14 (an analog input) and the GPS rail sense on P0.5, which only
+    needs a digital read. The v4.0 design has them the other way round: `L_SENSE` is on Connect Kit
+    pin 9 (P0.5) and `PP3V3_GNSS_ST` on pin 22 (P0.14). Only P0.13 to P0.20 can be sampled, so
+    the L-line short-to-battery check is unavailable on a board built as drawn, and a 5-baud init
+    drives the L line without it, relying on the AL5809's 90mA limit. Swapping the two nets restores
+    it; then set `CONFIG_APP_PIN_L_SENSE=14` and `CONFIG_APP_PIN_GPS_RAIL_ST=5`.
+
 ## Interface selection pads
 
-The four configuration pads in the top left corner route the two vehicle bus lines on the Molex
+On v3.0 to v3.4 the four configuration pads in the top left corner route the two vehicle bus lines on the Molex
 connector (pins 3 and 6) to either the CAN block or the K-wire block. Bridge them with solder or a
 0402 0R resistor.
 

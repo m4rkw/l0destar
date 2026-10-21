@@ -71,6 +71,28 @@
 #              MAX33041 is swapped for the pin-compatible TCAN3414 (STB still
 #              driven by MCP2518FD GPIO0/XSTBY).  Firmware-transparent; it is
 #              a separate profile so FOTA images stay tied to the revision.
+#   v4.0       The v3.4 board with a dedicated u-blox MAX-M10S GNSS receiver
+#              in place of the nRF9151's built-in one (src/gnss_ext.c); the
+#              rest of the circuit is v3.4's, and the antenna feeds the
+#              receiver now, not the module.  GNSS_ENABLE (P0.6) switches
+#              PP3V3_GNSS, which supplies the receiver's VCC and VCC_IO and
+#              the antenna bias tee, through the same SiP32431 load switch as
+#              the other rails; PP3V3_GNSS_ST (P0.14) senses it like the
+#              others.  The receiver's backup supply is a separate switched
+#              rail, GNSS_BCKP_EN (P0.13), with a 100K pulldown and no sense
+#              line: it keeps the ephemeris and time across the VCC cycles.
+#              The receiver's UART (GNSS_TX P0.9, GNSS_RX P0.8) and 1PPS
+#              output (GNSS_TIMEPULSE P0.7) end in PP3V3_GNSS and are parked
+#              with it like the CAN and K-line pins.  So the AUX domain, which
+#              was only ever the GPS bias tee, is the receiver's rail now, and
+#              the callers that held it around a fix did not need to change.
+#              Taken from the KiCad netlist in ~/Documents/l0destar_v4.0 as of
+#              2026-10-18.  Two pins swapped places to make room: P0.5 was
+#              PP3V3_GPS_ST and P0.14 was L_SENSE, and now P0.14 is
+#              PP3V3_GNSS_ST and L_SENSE is on P0.5 — which has no analog
+#              input, so the L-line sense cannot be read (see
+#              APP_PIN_L_SENSE).  CAN and K-wire have their own connector pins
+#              (no interface-select pads), but APP_OBD_MODE is used as on v3.4.
 
 choice APP_BOARD
 	prompt "Carrier board"
@@ -126,6 +148,9 @@ config APP_BOARD_L0DESTAR_V3_3
 config APP_BOARD_L0DESTAR_V3_4
 	bool "l0destar v3.4 (v3.3 map, accelerometer NC pads fixed)"
 
+config APP_BOARD_L0DESTAR_V4_0
+	bool "l0destar v4.0 (v3.4 + external u-blox MAX-M10S GNSS)"
+
 endchoice
 
 # Stable identifier for the selected carrier board, published in the FOTA
@@ -153,6 +178,7 @@ config APP_BOARD_ID
 	default "v3.2"   if APP_BOARD_L0DESTAR_V3_2
 	default "v3.3"   if APP_BOARD_L0DESTAR_V3_3
 	default "v3.4"   if APP_BOARD_L0DESTAR_V3_4
+	default "v4.0"   if APP_BOARD_L0DESTAR_V4_0
 	default "unknown"
 
 config APP_BOARD_IS_L0DESTAR
@@ -165,16 +191,16 @@ config APP_BOARD_IS_L0DESTAR
 
 config APP_BOARD_HAS_CAN
 	bool "CAN interface fitted (MCP2518FD)"
-	default y if (APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4) && \
-		     APP_OBD_MODE = 1
+	default y if (APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || \
+		      APP_BOARD_L0DESTAR_V4_0) && APP_OBD_MODE = 1
 	default y if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_5_CAN || \
 		     APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V3_0
 	default n
 
 config APP_BOARD_HAS_KLINE
 	bool "K-wire (ISO 14230-1 K-line) interface fitted"
-	default y if (APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4) && \
-		     APP_OBD_MODE = 2
+	default y if (APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || \
+		      APP_BOARD_L0DESTAR_V4_0) && APP_OBD_MODE = 2
 	default y if APP_BOARD_BENCH || APP_BOARD_L0DESTAR_V2_1 || \
 		     APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE || \
 		     APP_BOARD_L0DESTAR_V3_0
@@ -182,7 +208,8 @@ config APP_BOARD_HAS_KLINE
 
 config APP_L_SEND_ENABLED
 	bool "Allow driving the K-wire L line (L_SEND)"
-	default y if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_BENCH
+	default y if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0 || \
+		     APP_BOARD_BENCH
 	default n
 	help
 	  Every l0destar board before v3.3 switches the L pulldown FET
@@ -244,7 +271,8 @@ config APP_BOARD_OBD_DOMAIN
 
 config APP_BOARD_SPLIT_OBD_DOMAIN
 	bool
-	default y if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default y if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || \
+		     APP_BOARD_L0DESTAR_V4_0
 	help
 	  CAN and K-line have independent enables (v3.1+): CAN_EN gates
 	  PP3V3_CAN, K_EN gates PP3V3_K + PP12V_K.  Both are switched
@@ -255,7 +283,7 @@ config APP_BOARD_CAN_XSTBY
 	bool
 	default y if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_6_CAN || \
 		     APP_BOARD_L0DESTAR_V3_0 || APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || \
-		     APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+		     APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	help
 	  The CAN transceiver's standby pin is driven by MCP2518FD GPIO0
 	  (XSTBY).  Firmware must configure IOCON at boot: on v2.5/v2.6 the
@@ -285,7 +313,7 @@ config APP_PIN_K1_TX
 	default 5  if APP_BOARD_L0DESTAR_V2_1
 	default 0  if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 2  if APP_BOARD_L0DESTAR_V3_0
-	default 1  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 1  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 1  if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1 if APP_BOARD_IS_L0DESTAR
 	default 22
@@ -295,7 +323,7 @@ config APP_PIN_K1_RX
 	default 4  if APP_BOARD_L0DESTAR_V2_1
 	default 1  if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 4  if APP_BOARD_L0DESTAR_V3_0
-	default 3  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 3  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 3  if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1 if APP_BOARD_IS_L0DESTAR
 	default 25 if BOARD_NRF9151_CONNECTKIT
@@ -317,13 +345,14 @@ config APP_PIN_L_SEND
 	default 19 if APP_BOARD_L0DESTAR_V2_5_KLINE
 	default 17 if APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 5  if APP_BOARD_L0DESTAR_V3_0
-	default 4  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 4  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 4  if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
 config APP_PIN_L_SENSE
 	int "K-wire L-line sense pin (v3.3+; must be an AIN pin, P0.13-P0.20)"
 	default 14 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 5  if APP_BOARD_L0DESTAR_V4_0
 	default -1
 	help
 	  The L wire read back through a 1N4148 (cathode to L) and a 47K.  The
@@ -340,6 +369,13 @@ config APP_PIN_L_SENSE
 	  AIN pin if a board is reworked; anything outside that range leaves
 	  the sense reporting unavailable.
 
+	  v4.0 as drawn has L_SENSE on P0.5 and PP3V3_GNSS_ST on P0.14 — the
+	  two swapped back from v3.3 — so L_SENSE has no SAADC channel there:
+	  the L-line short check is unavailable (kline_can_use_l() then drives
+	  L without it, relying on the AL5809's 90 mA limit).  Swapping the two
+	  nets on the PCB restores it: set this to 14 and APP_PIN_GPS_RAIL_ST
+	  to 5.
+
 config APP_PIN_L_RECV
 	int "K-wire L-line receive pin"
 	default 6  if APP_BOARD_L0DESTAR_V2_1
@@ -349,14 +385,14 @@ config APP_PIN_L_RECV
 config APP_PIN_K_EN
 	int "K-line rail enable pin (v2.5K/v2.6K: 5V/12V; v3.1: PP3V3_K + PP12V_K)"
 	default 23 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
-	default 10 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 10 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 10 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
 config APP_PIN_K_SLEEP
 	int "TJA1027T SLP_N pin (v3.0+; high = awake)"
 	default 3  if APP_BOARD_L0DESTAR_V3_0
-	default 2  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 2  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 2  if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
@@ -366,7 +402,7 @@ config APP_PIN_CAN_SCK
 	default 14 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 29 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 13 if APP_BOARD_L0DESTAR_V3_0
-	default 17 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 17 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 17 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
@@ -376,7 +412,7 @@ config APP_PIN_CAN_SDI
 	default 15 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 30 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 14 if APP_BOARD_L0DESTAR_V3_0
-	default 16 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 16 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 16 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
@@ -386,7 +422,7 @@ config APP_PIN_CAN_SDO
 	default 16 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 31 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 15 if APP_BOARD_L0DESTAR_V3_0
-	default 18 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 18 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 18 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
@@ -396,7 +432,7 @@ config APP_PIN_CAN_CS
 	default 17 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 0  if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 16 if APP_BOARD_L0DESTAR_V3_0
-	default 15 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 15 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 15 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
@@ -406,12 +442,12 @@ config APP_PIN_CAN_INT
 	default 18 if APP_BOARD_L0DESTAR_V2_5_CAN
 	default 1  if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 17 if APP_BOARD_L0DESTAR_V3_0
-	default 19 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 19 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 19 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
 config APP_PIN_AUX_SW
-	int "Auxiliary power switch pin (v3.0: GPS_ENABLE)"
+	int "Auxiliary power switch pin (v3.0: GPS_ENABLE; v4.0: GNSS_ENABLE)"
 	default 13 if APP_BOARD_L0DESTAR_V2_1 || APP_BOARD_L0DESTAR_V2_1_MINI
 	default 24 if APP_BOARD_L0DESTAR_V2_5_CAN || APP_BOARD_L0DESTAR_V2_5_KLINE || \
 		      APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_CAN || \
@@ -419,6 +455,7 @@ config APP_PIN_AUX_SW
 	default 26 if APP_BOARD_L0DESTAR_V3_0
 	default 13 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
 	default 13 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
+	default 6  if APP_BOARD_L0DESTAR_V4_0
 	default 13 if BOARD_NRF9151_CONNECTKIT
 	default 10
 
@@ -429,7 +466,7 @@ config APP_PIN_OBD_EN
 
 config APP_PIN_CAN_EN
 	int "CAN rail enable pin (v3.1: PP3V3_CAN)"
-	default 23 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 23 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 23 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
@@ -441,7 +478,7 @@ config APP_PIN_TWI_SDA
 	default 21 if APP_BOARD_L0DESTAR_V2_5_KLINE
 	default 19 if APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V2_6_KLINE || \
 		      APP_BOARD_L0DESTAR_V3_0
-	default 20 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 20 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 20 if APP_BOARD_L0DESTAR_V2_6_MICRO || APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default 16 if BOARD_NRF9151_CONNECTKIT
 	default 5
@@ -453,7 +490,7 @@ config APP_PIN_TWI_SCL
 	default 20 if APP_BOARD_L0DESTAR_V2_5_KLINE
 	default 18 if APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V2_6_KLINE || \
 		      APP_BOARD_L0DESTAR_V3_0
-	default 21 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 21 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 21 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default 19 if APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 17 if BOARD_NRF9151_CONNECTKIT
@@ -467,7 +504,7 @@ config APP_PIN_INA_ALRT
 	default 22 if APP_BOARD_L0DESTAR_V2_5_KLINE
 	default 21 if APP_BOARD_L0DESTAR_V2_6_CAN || APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 20 if APP_BOARD_L0DESTAR_V2_6_KLINE || APP_BOARD_L0DESTAR_V3_0
-	default -1 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default -1 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default -1 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default 21 if BOARD_NRF9151_CONNECTKIT
 	default 11
@@ -481,7 +518,7 @@ config APP_PIN_ACC_INT1
 		      APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 20 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 29 if APP_BOARD_L0DESTAR_V3_0
-	default 30 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 30 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 30 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default 19 if BOARD_NRF9151_CONNECTKIT
 	default 2
@@ -494,7 +531,7 @@ config APP_PIN_ACC_INT2
 	default 26 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 17 if APP_BOARD_L0DESTAR_V2_6_CAN
 	default 27 if APP_BOARD_L0DESTAR_V3_0
-	default 29 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 29 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 29 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default 18 if BOARD_NRF9151_CONNECTKIT
 	default 3
@@ -502,7 +539,7 @@ config APP_PIN_ACC_INT2
 config APP_PIN_IGN_SENSE
 	int "Ignition sense pin (active low: low = ignition on)"
 	default 16 if APP_BOARD_L0DESTAR_V2_1
-	default 24 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 24 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 24 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default 10 if APP_BOARD_IS_L0DESTAR
 	default 10 if BOARD_NRF9151_CONNECTKIT
@@ -519,7 +556,7 @@ config APP_PIN_LED1
 	default 27 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 26 if APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 28 if APP_BOARD_L0DESTAR_V3_0
-	default 28 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 28 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 26 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default 9  if BOARD_NRF9151_CONNECTKIT
 	default -1
@@ -531,7 +568,7 @@ config APP_PIN_LED2
 	default 29 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 27 if APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 30 if APP_BOARD_L0DESTAR_V3_0
-	default 27 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 27 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 27 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default 8  if BOARD_NRF9151_CONNECTKIT
 	default -1
@@ -543,7 +580,7 @@ config APP_PIN_LED3
 	default 30 if APP_BOARD_L0DESTAR_V2_5_KLINE || APP_BOARD_L0DESTAR_V2_6_KLINE
 	default 28 if APP_BOARD_L0DESTAR_V2_5_MICRO || APP_BOARD_L0DESTAR_V2_6_MICRO
 	default 31 if APP_BOARD_L0DESTAR_V3_0
-	default 26 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 26 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 28 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default 7  if BOARD_NRF9151_CONNECTKIT
 	default -1
@@ -602,7 +639,7 @@ config APP_PIN_AIO6
 
 config APP_BOARD_HAS_L_SENSE
 	bool "K-wire L-line sense input fitted"
-	default y if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default y if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default n
 	select NRFX_SAADC
 	help
@@ -634,37 +671,89 @@ config APP_L_SENSE_LOW_MV
 
 config APP_BOARD_HAS_RAIL_SENSE
 	bool "Switched-rail sense/fault detection inputs fitted"
-	default y if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default y if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default n
 
 config APP_PIN_GPS_RAIL_ST
-	int "PP3V3_GPS rail status pin (-1 = not fitted)"
+	int "PP3V3_GPS rail status pin (v4.0: PP3V3_GNSS; -1 = not fitted)"
 	default 5  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
 	default 14 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
+	default 14 if APP_BOARD_L0DESTAR_V4_0
 	default -1
 
 config APP_PIN_CAN_RAIL_ST
 	int "PP3V3_CAN rail status pin (-1 = not fitted)"
-	default 22 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 22 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 22 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
 config APP_PIN_K3V3_RAIL_ST
 	int "PP3V3_K rail status pin (-1 = not fitted)"
-	default 0  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 0  if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 0  if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
 config APP_PIN_K12V_RAIL_ST
 	int "PP12V_K rail status pin (-1 = not fitted)"
-	default 31 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default 31 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	default 31 if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2
 	default -1
 
 config APP_BOARD_RAIL_ST_12V_ACTIVE_LOW
 	bool
-	default y if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
+	default y if APP_BOARD_L0DESTAR_V3_1 || APP_BOARD_L0DESTAR_V3_2 || APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4 || APP_BOARD_L0DESTAR_V4_0
 	help
 	  The 12V rail sense is inverted by a 2N7002 (v3.1): the pin reads low
 	  while the rail is up.  The 3.3V senses are plain dividers and read
 	  high while their rail is up.
+
+# --- external GNSS receiver (v4.0) ---------------------------------------------
+# A u-blox MAX-M10S on its own UART, in place of the nRF9151's built-in
+# receiver.  Its VCC and VCC_IO come from PP3V3_GNSS, which is the AUX domain
+# (APP_PIN_AUX_SW is GNSS_ENABLE there, APP_PIN_GPS_RAIL_ST its sense), and
+# the UART, 1PPS and enable pins below end in that rail: hw_domain parks them
+# whenever it is off.  See src/gnss_ext.c.
+
+config APP_BOARD_HAS_EXT_GNSS
+	bool "External u-blox GNSS receiver fitted (MAX-M10S)"
+	default y if APP_BOARD_L0DESTAR_V4_0
+	default n
+	select NRFX_UARTE
+	select NRFX_GPPI
+	select RING_BUFFER
+	help
+	  Use a u-blox MAX-M10S on UARTE2 for position, in place of the
+	  nRF9151's built-in GNSS.  The modem then has no GNSS in its system
+	  mode, nothing fetches A-GNSS assistance, and the receiver runs
+	  independently of LTE: a send does not interrupt it.  TIMER2 counts the
+	  bytes the UARTE receives (through a DPPI channel), so that the tail of
+	  each burst can be read out without stopping the receiver.
+
+	  On by default on v4.0.  Elsewhere it can be turned on for a bench
+	  with a receiver wired to the pins below.
+
+config APP_PIN_GNSS_TX
+	int "External GNSS UART TX pin (nRF TXD to the receiver's RXD)"
+	default 9 if APP_BOARD_L0DESTAR_V4_0
+	default -1
+
+config APP_PIN_GNSS_RX
+	int "External GNSS UART RX pin (nRF RXD from the receiver's TXD)"
+	default 8 if APP_BOARD_L0DESTAR_V4_0
+	default -1
+
+config APP_PIN_GNSS_TIMEPULSE
+	int "External GNSS TIMEPULSE (1PPS) pin (input; -1 = not wired)"
+	default 7 if APP_BOARD_L0DESTAR_V4_0
+	default -1
+	help
+	  Parked and released with the rail like the UART pins.  Nothing reads
+	  it yet: fixes are stamped with the uptime they arrive at.
+
+config APP_PIN_GNSS_BCKP_EN
+	int "External GNSS backup supply (V_BCKP) switch pin (-1 = not fitted)"
+	default 13 if APP_BOARD_L0DESTAR_V4_0
+	default -1
+	help
+	  Enables PP3V3_GNSS_BCKP through its own load switch.  It has a 100K
+	  pulldown and no sense line.  See APP_GNSS_BACKUP_SUPPLY.

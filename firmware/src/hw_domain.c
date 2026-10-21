@@ -40,6 +40,13 @@
  * left asserted and the domain counted as on.  Dropping it would only
  * guarantee no GPS for the session, whereas a late-rising rail or a bad
  * sense divider still gets a working bias tee this way.
+ *
+ * v4.0's AUX is that rail and more: PP3V3_GNSS also supplies the receiver, so
+ * its UART and 1PPS pins end in it, and it is treated like the CAN and K
+ * rails above.  The UART is a peripheral and not a GPIO, which a pin
+ * still connected to it would keep driving whatever dom_park() says, so a
+ * driver that owns one registers hw_domain_notify_set() and is told to let go
+ * before the pins are parked.
  */
 
 #include <stdio.h>
@@ -108,6 +115,7 @@ struct domain {
 };
 
 static struct domain s_dom[HW_DOMAIN_COUNT];
+static hw_domain_notify_t s_notify[HW_DOMAIN_COUNT];
 
 static const char *dom_name(enum hw_domain d);
 
@@ -280,6 +288,16 @@ int hw_domain_init(void)
 			dom_add_kline_pins(obd);
 		}
 	}
+	/* v4.0: the external GNSS receiver's UART and 1PPS end in the AUX rail.
+	 * TX is released as an input like the others: the receiver's RXD has an
+	 * internal pull-up, and the UARTE drives the pin once the driver opens
+	 * it, which is after the rail is up. */
+	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_GNSS)) {
+		dom_add(aux, PIN_GNSS_TX,        ROLE_IN);
+		dom_add(aux, PIN_GNSS_RX,        ROLE_IN);
+		dom_add(aux, PIN_GNSS_TIMEPULSE, ROLE_IN);
+	}
+
 	/* Everything starts parked with the enables low. */
 	for (int i = 0; i < HW_DOMAIN_COUNT; i++) {
 		struct domain *d = &s_dom[i];
@@ -289,6 +307,16 @@ int hw_domain_init(void)
 			gpio_pin_configure(hw_gpio0, d->enable_pin,
 					   GPIO_OUTPUT_LOW);
 		}
+	}
+
+	/* v4.0: the receiver's backup supply is a switched rail of its own, with
+	 * a pulldown on its enable and no signal pins or sense line, so it is not
+	 * a domain.  It is meant to stay up through everything but a reset: it
+	 * is what lets the receiver hot-start (APP_GNSS_BACKUP_SUPPLY). */
+	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_GNSS) && PIN_GNSS_BCKP_EN >= 0) {
+		gpio_pin_configure(hw_gpio0, PIN_GNSS_BCKP_EN,
+				   IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY) ?
+				   GPIO_OUTPUT_HIGH : GPIO_OUTPUT_LOW);
 	}
 
 	/* Rail-sense inputs (v3.1+): always-on status from the load switches.
@@ -301,7 +329,7 @@ int hw_domain_init(void)
 		const bool has_can = IS_ENABLED(CONFIG_APP_BOARD_HAS_CAN);
 		const bool has_k = IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE);
 
-		dom_rail_sense(aux, PIN_GPS_RAIL_ST,  false,   "PP3V3_GPS",
+		dom_rail_sense(aux, PIN_GPS_RAIL_ST,  false,   GPS_RAIL_NAME,
 			       true);
 		dom_rail_sense(can, PIN_CAN_RAIL_ST,  false,   "PP3V3_CAN",
 			       has_can);
@@ -337,6 +365,7 @@ static const char *dom_name(enum hw_domain d)
 int hw_domain_request(enum hw_domain dom, uint8_t user)
 {
 	struct domain *d = &s_dom[dom];
+	const bool first = (d->users == 0);
 
 	if (d->enable_pin < 0) {
 		return 0;
@@ -385,6 +414,9 @@ int hw_domain_request(enum hw_domain dom, uint8_t user)
 		}
 	}
 	d->users |= user;
+	if (first && s_notify[dom]) {
+		s_notify[dom](true);
+	}
 	return 0;
 }
 
@@ -400,6 +432,9 @@ void hw_domain_release(enum hw_domain dom, uint8_t user)
 		return;
 	}
 
+	if (s_notify[dom]) {
+		s_notify[dom](false);
+	}
 	dom_park(d);
 	/* v2.5K/v2.6K: the K-line pins' A-side rail is AUX — make sure they
 	 * are parked whenever AUX drops, even if the K domain bookkeeping
@@ -420,4 +455,12 @@ bool hw_domain_is_on(enum hw_domain dom)
 bool hw_domain_faulted(enum hw_domain dom)
 {
 	return s_dom[dom].enable_pin >= 0 && s_dom[dom].faulted;
+}
+
+void hw_domain_notify_set(enum hw_domain dom, hw_domain_notify_t cb)
+{
+	s_notify[dom] = cb;
+	if (cb && s_dom[dom].enable_pin >= 0 && s_dom[dom].users != 0) {
+		cb(true);
+	}
 }

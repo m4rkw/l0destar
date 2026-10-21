@@ -44,7 +44,7 @@ CONFIG_APP_BOARD_L0DESTAR_V3_0=y
 
 Available: `APP_BOARD_BENCH`, `..._L0DESTAR_V2_1`, `..._V2_1_MINI`,
 `..._V2_5_CAN/_KLINE/_MICRO`, `..._V2_6_CAN/_KLINE/_MICRO`, `..._V3_0`,
-`..._V3_1`, `..._V3_2`, `..._V3_3`, `..._V3_4` (default).
+`..._V3_1`, `..._V3_2`, `..._V3_3`, `..._V3_4` (default), `..._V4_0`.
 Individual pins/flags can still be overridden after the board defaults apply
 (on v3.0, set `CONFIG_APP_BOARD_HAS_CAN=n` or `..._HAS_KLINE=n` to match the
 jumper configuration of the physical board).
@@ -61,6 +61,16 @@ with transceiver standby control (v2.5C/v2.6C, and v3.0 onwards),
 automatically drops the transceiver into standby - required on v2.5/v2.6
 where the CAN rail shares the GPS AUX domain and stays powered during
 engine-off telemetry wakes.
+
+**v4.0 has its own GNSS receiver.** A u-blox MAX-M10S on the board does the
+positioning instead of the nRF9151's built-in one (`APP_BOARD_HAS_EXT_GNSS`).
+`src/gnss_ext.c` implements the same `gnss_*` interface as `src/gnss.c` on
+UARTE2, with the UBX framing and message decoding in `src/gnss_ubx.c`; the
+receiver's rail is the AUX domain, so the code that held it for the old GPS
+antenna bias holds it for the receiver too. The modem is left without GNSS,
+nothing is fetched from nRF Cloud, and a send no longer interrupts the
+position. See [the hardware reference](../docs/reference/hardware.md#v40-external-gnss-receiver)
+for the pins and the backup supply, and `APP_GNSS_BACKUP_SUPPLY` for its cost.
 
 ---
 

@@ -88,12 +88,15 @@ config APP_OBD_MODE
 	int "OBD interface mode (0=none, 1=CAN, 2=K-line)"
 	default 0
 	help
-	  Which OBD interface is populated on a v3.1/v3.2/v3.3/v3.4 board.  The
-	  jumper pads select the electrical path; this tells firmware which
+	  Which OBD interface is populated on a v3.1/v3.2/v3.3/v3.4/v4.0 board.
+	  The jumper pads select the electrical path; this tells firmware which
 	  rails to test and which protocol driver to start.
 	    0 = no OBD interface (S5R1-S5R4 all open)
 	    1 = CAN bus (S5R1 + S5R3; PP3V3_CAN via CAN_EN)
 	    2 = K-wire / ISO 14230 (S5R2 + S5R4; PP3V3_K + PP12V_K via K_EN)
+	  v4.0 has no select pads: CAN and K-wire each have their own connector
+	  pins, and fitting one is just fitting its parts.  The setting means
+	  the same there, and only one interface is tested at boot.
 	  Ignored on boards other than v3.1+.
 
 config APP_CAN_TEST
@@ -1102,6 +1105,39 @@ config APP_GPS_COLD_FIX_TIMEOUT_MS
 	  Timeout for the first GNSS fix after a cold boot (no cached
 	  almanac/ephemeris).  Without A-GPS, a cold TTFF can take 2-5
 	  minutes depending on signal and antenna-sharing with LTE.
+
+config APP_GNSS_EXT_BAUD
+	int "External GNSS receiver UART baud rate"
+	depends on APP_BOARD_HAS_EXT_GNSS
+	default 115200
+	help
+	  The rate the MAX-M10S is moved to once it has been found.  It starts
+	  at 9600 after every power-up; at that rate the satellite list alone
+	  (about 500 bytes) takes half a second to send and would delay the
+	  position behind it, which is why this is not left at the default.
+	  9600, 19200, 38400, 57600, 115200, 230400, 460800 and 921600 are
+	  accepted.
+
+config APP_GNSS_BACKUP_SUPPLY
+	bool "Keep the external GNSS receiver's backup supply (V_BCKP) on"
+	depends on APP_BOARD_HAS_EXT_GNSS
+	default y
+	help
+	  Holds GNSS_BCKP_EN high from boot, through sleep, so the receiver
+	  keeps its ephemeris, almanac and time while its main rail is off
+	  between fixes.  With it a parked wake gets the data sheet's hot start
+	  (1 s); without, every wake is a cold start (23 to 28 s at best, much
+	  longer with a poor view of the sky), which costs far more in the
+	  receiver and the radio than the backup supply does.
+
+	  The price is the MAX-M10S's hardware-backup current, 28 uA typical
+	  at 3.3 V (UBX-20035208, table 17), against a tracker sleep current
+	  of about 35 to 45 uA at 12 V.  Ephemerides are only good for a few
+	  hours, so where the unit is not woken at least that often to report,
+	  the data it holds is stale by the next wake and the supply buys
+	  little but the time and almanac: consider turning this off for a
+	  unit that reports less often than every couple of hours.  The
+	  board's actual draw has not been measured against the data sheet.
 
 config APP_DEAD_RECKONING
 	bool "Carry the motion through gaps between fixes (mv=)"

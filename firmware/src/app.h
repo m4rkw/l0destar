@@ -261,6 +261,14 @@ uint32_t gnss_blocked_ms(void);
 uint32_t gnss_starved_epochs(void);
 int32_t  gnss_last_wait_ms(void);
 
+#ifdef CONFIG_APP_BOARD_HAS_EXT_GNSS
+/* What the external receiver (src/gnss_ext.c) said it is, e.g. "MAX-M10S SPG
+ * 5.10", or "" before it has answered.  The built-in receiver has no such
+ * thing.  With the external one gnss_blocked_ms() and gnss_starved_epochs()
+ * are always 0: nothing takes its radio. */
+const char *gnss_module_version(void);
+#endif
+
 #ifdef CONFIG_APP_DEMO_MODE
 /* Placeholder printed in place of a latitude or longitude in demo mode. */
 #define DEMO_COORD_MASK "xxxx.xx"
@@ -271,6 +279,9 @@ const char *demo_mask_coords(const char *in, size_t len,
                              char *out, size_t out_sz);
 #endif
 
+/* A-GNSS assistance for the built-in receiver, from nRF Cloud.  Not built
+ * with the external one (CONFIG_APP_BOARD_HAS_EXT_GNSS), which has none; main.c
+ * does not call these there. */
 int  agnss_init(void);
 int  agnss_fetch(void *agnss_request);  /* NULL = request all; else nrf_modem_gnss_agnss_data_frame* */
 

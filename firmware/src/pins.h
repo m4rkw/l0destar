@@ -47,6 +47,21 @@
 #define PIN_K3V3_RAIL_ST   CONFIG_APP_PIN_K3V3_RAIL_ST
 #define PIN_K12V_RAIL_ST   CONFIG_APP_PIN_K12V_RAIL_ST
 
+/* The AUX domain's rail, as the schematic names it: the GPS antenna bias on
+ * boards with the built-in receiver, the whole external receiver on v4.0. */
+#ifdef CONFIG_APP_BOARD_HAS_EXT_GNSS
+#define GPS_RAIL_NAME  "PP3V3_GNSS"
+#else
+#define GPS_RAIL_NAME  "PP3V3_GPS"
+#endif
+
+/* External GNSS receiver (v4.0): the UART to the MAX-M10S, its 1PPS output
+ * and the switch for its backup supply.  -1 where there is none. */
+#define PIN_GNSS_TX        CONFIG_APP_PIN_GNSS_TX
+#define PIN_GNSS_RX        CONFIG_APP_PIN_GNSS_RX
+#define PIN_GNSS_TIMEPULSE CONFIG_APP_PIN_GNSS_TIMEPULSE
+#define PIN_GNSS_BCKP_EN   CONFIG_APP_PIN_GNSS_BCKP_EN
+
 /* 0-30V AIO inputs (v2.1 only) */
 #define PIN_AIO1       CONFIG_APP_PIN_AIO1
 #define PIN_AIO2       CONFIG_APP_PIN_AIO2

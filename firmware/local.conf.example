@@ -7,6 +7,7 @@
 # Kconfig.boards).  Default is v3.4; a DK or Connect Kit on a breadboard is
 # the bench profile.
 # CONFIG_APP_BOARD_BENCH=y
+# CONFIG_APP_BOARD_L0DESTAR_V4_0=y      (v3.4 + external u-blox MAX-M10S GNSS)
 # CONFIG_APP_BOARD_L0DESTAR_V3_4=y      (default)
 # CONFIG_APP_BOARD_L0DESTAR_V3_3=y
 # CONFIG_APP_BOARD_L0DESTAR_V3_2=y
@@ -21,14 +22,21 @@
 # CONFIG_APP_BOARD_L0DESTAR_V2_1=y
 # CONFIG_APP_BOARD_L0DESTAR_V2_1_MINI=y
 #
-# v3.1 and later: the OBD interface fitted, as bridged on the selection pads -
-# 0 none, 1 CAN, 2 K-wire:
+# v3.1 and later (v4.0 included): the OBD interface fitted, as bridged on the
+# selection pads - 0 none, 1 CAN, 2 K-wire:
 # CONFIG_APP_OBD_MODE=2
 #
 # v3.0 only: the PCB carries both OBD circuits; match the jumper/population
 # of the actual board by disabling the one that isn't in use:
 # CONFIG_APP_BOARD_HAS_CAN=n
 # CONFIG_APP_BOARD_HAS_KLINE=n
+#
+# v4.0 only: a u-blox MAX-M10S does the GNSS, so the modem has none and
+# nothing is fetched from nRF Cloud.  Its backup supply keeps the ephemeris
+# across the gaps between fixes, which makes a parked wake a 1 s hot start and
+# not a ~25 s cold one, for 28 uA typical (data sheet) against a ~40 uA sleep:
+# CONFIG_APP_GNSS_BACKUP_SUPPLY=y       (default)
+# CONFIG_APP_GNSS_EXT_BAUD=115200       (default)
 
 # --- secrets (required) ----------------------------------------------------
 # This unit's key, from `openssl rand -hex 32`.  Enrol the unit on the server

@@ -21,7 +21,8 @@
  * it would only guarantee no GPS.
  */
 enum hw_domain {
-	HW_DOMAIN_AUX,   /* AUX_SW: v2.x aux rail(s), v3.0/v3.1 GPS bias rail */
+	HW_DOMAIN_AUX,   /* AUX_SW: v2.x aux rail(s), v3.0/v3.1 GPS bias rail,
+			  *         v4.0 PP3V3_GNSS (receiver and bias tee) */
 	HW_DOMAIN_OBD,   /* OBD_EN: v3.0 PP3V3_OBD + PP12V_OBD (CAN + K-line) */
 	HW_DOMAIN_CAN,   /* CAN_EN: v3.1 PP3V3_CAN */
 	HW_DOMAIN_K,     /* K_EN:   v2.5K/v2.6K 5V/12V K rails,
@@ -48,5 +49,15 @@ int  hw_domain_request(enum hw_domain d, uint8_t user);
 void hw_domain_release(enum hw_domain d, uint8_t user);
 bool hw_domain_is_on(enum hw_domain d);
 bool hw_domain_faulted(enum hw_domain d);
+
+/* For a driver that owns a peripheral on pins inside a domain (v4.0's GNSS
+ * UART).  The callback runs with true once the domain's first user has it up
+ * (pins released, enable high, rail sensed), and with false just before the
+ * last user lets go, ahead of the pins being parked and the enable dropped:
+ * a peripheral still connected to a pin overrides the parking, so it has to
+ * be let go of first.  Both run on the caller's thread.  Setting one for a
+ * domain that is already on calls it with true at once.  One per domain. */
+typedef void (*hw_domain_notify_t)(bool up);
+void hw_domain_notify_set(enum hw_domain d, hw_domain_notify_t cb);
 
 #endif

@@ -2266,7 +2266,8 @@ int main(void)
         LOG_ERR("gnss init failed");
         return 0;
     }
-    if (agnss_init()) {
+    /* The external receiver (v4.0) has no assistance to fetch. */
+    if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_GNSS) && agnss_init()) {
         LOG_WRN("A-GNSS init failed — will run without assistance");
     }
 
@@ -2286,7 +2287,7 @@ int main(void)
      * request, because the receiver has not started yet and so has not asked
      * for anything specific. */
     if (modem_is_registered()) {
-        if (agnss_fetch(NULL)) {
+        if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_GNSS) && agnss_fetch(NULL)) {
             LOG_WRN("A-GNSS fetch failed — first fix will take longer");
         }
         /* And the cell context, in the same window and for the same reason.

@@ -261,17 +261,17 @@ static bool test_gps_rail(void)
 	printk("\n=== TEST 1: GPS rail switching ===\n");
 
 	/* Booted with AUX up; prove the sense agrees, then a full off/on. */
-	ok &= wait_sense(PIN_GPS_RAIL_ST, 1, "PP3V3_GPS on (boot)") == 0;
+	ok &= wait_sense(PIN_GPS_RAIL_ST, 1, GPS_RAIL_NAME " on (boot)") == 0;
 
 	hw_domain_release(HW_DOMAIN_AUX, HW_DOMAIN_USER_MAIN);
-	ok &= wait_sense(PIN_GPS_RAIL_ST, 0, "PP3V3_GPS off") == 0;
+	ok &= wait_sense(PIN_GPS_RAIL_ST, 0, GPS_RAIL_NAME " off") == 0;
 
 	hw_aux_power_on();
 	if (!hw_domain_is_on(HW_DOMAIN_AUX)) {
 		printk("        AUX domain refused to come back up\n");
 		ok = false;
 	}
-	ok &= wait_sense(PIN_GPS_RAIL_ST, 1, "PP3V3_GPS back on") == 0;
+	ok &= wait_sense(PIN_GPS_RAIL_ST, 1, GPS_RAIL_NAME " back on") == 0;
 
 	printk("        rail left ON\n");
 	record(0, ok ? R_PASS : R_FAIL);
@@ -650,6 +650,14 @@ static void test_gps_fix(bool rail_ok, bool modem_ok)
 		record(7, R_SKIP);
 		return;
 	}
+#ifdef CONFIG_APP_BOARD_HAS_EXT_GNSS
+	/* The external receiver is its own: nothing here needs the modem, only
+	 * the rail test 1 left on.  Whatever it has retained on V_BCKP counts,
+	 * so this is a hot start if the board has been up. */
+	ARG_UNUSED(modem_ok);
+	printk("        external u-blox receiver on UARTE2 (TX P0.%d, RX P0.%d)\n",
+	       PIN_GNSS_TX, PIN_GNSS_RX);
+#else
 	if (!modem_ok) {
 		printk("        modem library init failed -- GNSS unavailable\n");
 		record(7, R_SKIP);
@@ -674,6 +682,7 @@ static void test_gps_fix(bool rail_ok, bool modem_ok)
 		record(7, R_FAIL);
 		return;
 	}
+#endif
 	if (gnss_init() || gnss_start()) {
 		printk("        GNSS start failed\n");
 		record(7, R_FAIL);
@@ -696,6 +705,13 @@ static void test_gps_fix(bool rail_ok, bool modem_ok)
 		k_msleep(1000);
 	}
 	gnss_stop();
+
+#ifdef CONFIG_APP_BOARD_HAS_EXT_GNSS
+	/* Fix or not, whether it answered at all is what separates a wiring or
+	 * rail fault from a bad view of the sky. */
+	printk("        receiver: %s\n", gnss_module_version()[0] ?
+	       gnss_module_version() : "did not identify itself");
+#endif
 
 	if (!g_gnss.valid) {
 		printk("        TIMEOUT -- no fix after %d s\n", timeout_s);

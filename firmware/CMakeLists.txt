@@ -4,6 +4,14 @@ cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(l0destar)
 
+# The receiver: the nRF9151's own (gnss.c, and the nRF Cloud A-GNSS that feeds
+# it) or, on a board that has one, the external u-blox on its own UART.
+if(CONFIG_APP_BOARD_HAS_EXT_GNSS)
+    set(GNSS_SOURCES src/gnss_ext.c src/gnss_ubx.c)
+else()
+    set(GNSS_SOURCES src/gnss.c src/agnss.c)
+endif()
+
 target_sources(app PRIVATE
     src/main.c
     src/crypto.c
@@ -15,8 +23,7 @@ target_sources(app PRIVATE
     src/hw_can.c
     src/hw_accel.c
     src/hw_kline.c
-    src/gnss.c
-    src/agnss.c
+    ${GNSS_SOURCES}
     src/modem.c
     src/data.c
     src/alert.c
@@ -49,6 +56,9 @@ target_sources_ifdef(CONFIG_APP_LTE_POWER_TEST app PRIVATE src/lte_power_test.c)
 target_sources(app PRIVATE src/databuf.c)
 # Warnings/errors captured for the server (see src/dbglog.c).
 target_sources_ifdef(CONFIG_APP_DEBUG_LOG app PRIVATE src/dbglog.c)
+
+# Demo mode's coordinate masker for the console (either receiver).
+target_sources_ifdef(CONFIG_APP_DEMO_MODE app PRIVATE src/demo_mask.c)
 
 # The motion through gaps between GNSS fixes (see src/motion.c).
 target_sources_ifdef(CONFIG_APP_DEAD_RECKONING app PRIVATE src/motion.c)
