@@ -132,11 +132,12 @@ Set them with `-e` on `docker run`.
 
 ## Per-device settings
 
-Each device's settings live in its `device` row. The first three are sent to the tracker in every reply; the rest are acted on by the server and never reach the tracker.
+Each device's settings live in its `device` row. The first four are sent to the tracker in every reply; the rest are acted on by the server and never reach the tracker.
 
 | Column | Default | Set with | Meaning |
 |---|---|---|---|
 | `int` | `0` | `int=<seconds>` command, or `int` in `POST /api/1.0/config` | Engine-off timed wake interval in seconds; 0 means no timed wakes. |
+| `backup_int` | `0` | `backup_interval=<seconds>` command, or `backup` in `POST /api/1.0/config` | Timed-report interval in seconds while the inline battery backup module is carrying the tracker, sent as `backup=`; 0 means the engine-off interval applies then too. |
 | `movement_alarm` | `1` | `movealarm=0` or `movealarm=1` command, or `ma` | Movement alarm flag, reported back by the tracker. Current firmware does not act on it. |
 | `track_mode` | `0` | the web interface, or `POST /api/1.0/trackmode` | Track mode switch. Cleared at ignition off, or when the device is next heard from after more than an hour of silence. |
 | `alarm` | `0` | `alarm=0` or `alarm=1`, or `al` | Notify when the ignition comes on. |
@@ -145,7 +146,7 @@ Each device's settings live in its `device` row. The first three are sent to the
 | `overnight_alarm_hour_from` | `23` | `overnight_alarm_hour_from=<hour>`, or `oaf` | Start of the window, as an hour in the server's local time. |
 | `overnight_alarm_hour_to` | `6` | `overnight_alarm_hour_to=<hour>`, or `oat` | End of the window. |
 
-An `int=` or `movealarm=` command is queued for the tracker, which applies it and reports the new value; `POST /api/1.0/config` changes the column directly and the next reply carries it. Either way the `int` and `movement_alarm` columns follow what the tracker reports. The server-side settings take effect immediately. What each setting does on the tracker, and every command, is in [Device settings and commands](device-settings.md#commands).
+An `int=` or `movealarm=` command is queued for the tracker, which applies it and reports the new value; `POST /api/1.0/config` changes the column directly and the next reply carries it. Either way the `int` and `movement_alarm` columns follow what the tracker reports. The server-side settings take effect immediately, and so does `backup_interval=`: it is written to the column rather than queued, because every reply carries it and a queued copy would be undone by the next one. The tracker never reports it back. What each setting does on the tracker, and every command, is in [Device settings and commands](device-settings.md#commands).
 
 The other columns identify the device (`imei`, `name`, `registration`), hold its key (`psk`), and track firmware updates (`fw_staged`, `fw_staged_at`, `fw_blocked`, `fw_fail_count`); `command.py <imei> fota-retry` clears the update state.
 
@@ -190,7 +191,7 @@ command.py <imei> <command> [command ...]
 command.py <imei> fota-retry
 ```
 
-Queues a command for the tracker's next reply, through the HTTP API at `api_base`, using the first token in `api_token` (create one with `gentoken.py` first). Several commands given together are sent together. The server-side settings - `alarm=`, `garage=`, `overnightalarm=`, `overnight_alarm_hour_from=` and `overnight_alarm_hour_to=` - are applied straight away instead of being queued. `fota-retry` clears a firmware version withheld from the device after a failed update and queues `fota`. The commands the firmware understands are listed in [Device settings and commands](device-settings.md#commands).
+Queues a command for the tracker's next reply, through the HTTP API at `api_base`, using the first token in `api_token` (create one with `gentoken.py` first). Several commands given together are sent together. The server-side settings - `alarm=`, `garage=`, `overnightalarm=`, `overnight_alarm_hour_from=` and `overnight_alarm_hour_to=` - and `backup_interval=` are applied straight away instead of being queued. `fota-retry` clears a firmware version withheld from the device after a failed update and queues `fota`. The commands the firmware understands are listed in [Device settings and commands](device-settings.md#commands).
 
 ### `gentoken.py`
 
@@ -295,7 +296,7 @@ Takes `Authorization: Bearer <token>` with a token from `gentoken.py`.
 | Method and path | Purpose |
 |---|---|
 | `GET /api/1.0/track` | Redirects to a map at a device's last position (`google=1` for Google Maps, `return=1` for JSON instead of a redirect). |
-| `GET /api/1.0/config` | A device's settings as `int`, `ma`, `al`, `ga`, `oa`, `oaf` and `oat`. |
+| `GET /api/1.0/config` | A device's settings as `int`, `backup`, `ma`, `al`, `ga`, `oa`, `oaf` and `oat`. |
 | `POST /api/1.0/config` | Change any of those settings. |
 | `POST /api/1.0/command` | Queue a command, for example `{"imei": "350000000000000", "command": "locate"}`. |
 | `POST /api/1.0/home` | Run the home check. |

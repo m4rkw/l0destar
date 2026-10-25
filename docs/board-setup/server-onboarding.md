@@ -63,19 +63,20 @@ The address in `udp.log` is your mobile operator's, not the SIM's own.
 | Setting | Default | Meaning |
 |---|---|---|
 | `int` | `0` | Engine-off timed wake interval, in seconds. `0` means no timed wakes: the device still wakes on ignition, movement, knocks and tilt. |
+| `backup_int` | `0` | Timed-report interval in seconds while the inline battery backup module is carrying the tracker. `0` means the engine-off interval applies then too. |
 | `ma` | `1` | The movement alarm flag. Firmware 0.4.x reports it but does not act on it: movement, impact and tilt alerts are raised either way. |
 | `track_mode` | `0` | Track mode, switched on per session from the web page. |
 | `alarm` | `0` | Server alert whenever the ignition comes on. |
 | `garage` | `0` | Marks a vehicle expected to be moved, downgrading urgent alerts. |
 | `overnight_alarm` | `0` | Server alert when the ignition comes on overnight (23:00 to 06:00 unless changed). |
 
-`int`, `ma` and `track_mode` travel to the device in every reply; the other three only change what the server does. To change them use `command.py` or the API - every setting and command is in [device settings and commands](../reference/device-settings.md), and what `int` costs in battery is worked out in [deployment configuration](../deployment/configuration.md). For example, to have a parked vehicle report every hour:
+`int`, `backup_int`, `ma` and `track_mode` travel to the device in every reply; the other three only change what the server does. To change them use `command.py` or the API - every setting and command is in [device settings and commands](../reference/device-settings.md), and what `int` costs in battery is worked out in [deployment configuration](../deployment/configuration.md). For example, to have a parked vehicle report every hour:
 
 ```sh
 sudo docker exec l0destar python tools/command.py 350000000000000 int=3600
 ```
 
-`command.py` uses the API token created during [server installation](../server/installation.md). A setting like `int=` waits in the queue until the device next reads a reply; server-only settings such as `alarm=1` take effect immediately.
+`command.py` uses the API token created during [server installation](../server/installation.md). A setting like `int=` waits in the queue until the device next reads a reply; server-only settings such as `alarm=1`, and `backup_interval=`, which every reply carries, take effect immediately.
 
 ## More than one device
 

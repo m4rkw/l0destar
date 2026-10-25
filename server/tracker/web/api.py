@@ -38,16 +38,24 @@ COMMAND_CONFLICTS = {
 # Settings the server acts on itself.  These never reach the device — alerting
 # on ignition is the server's job, so putting them in the device's queue would
 # spend radio time to no purpose.
+#
+# backup_interval is the odd one out: the device does act on it, but it gets it
+# from the backup= field every response carries (like track mode), so setting
+# it is writing the column, and a queued command would only be undone by the
+# next response.  Its name keeps clear of "int=", which the firmware finds
+# anywhere in a command string.
 SERVER_SIDE_SETTINGS = {
     'alarm': 'alarm',
     'garage': 'garage',
     'overnightalarm': 'overnight_alarm',
     'overnight_alarm_hour_from': 'overnight_alarm_hour_from',
     'overnight_alarm_hour_to': 'overnight_alarm_hour_to',
+    'backup_interval': 'backup_int',
 }
 
 CONFIG_FIELDS = {
     'int': 'int',
+    'backup': 'backup_int',
     'ma': 'movement_alarm',
     'al': 'alarm',
     'ga': 'garage',
@@ -59,6 +67,7 @@ CONFIG_FIELDS = {
 # The values each setting's column can hold.
 SETTING_RANGES = {
     'int': (0, 4294967295),
+    'backup_int': (0, 4294967295),
     'movement_alarm': (0, 1),
     'alarm': (0, 1),
     'garage': (0, 1),

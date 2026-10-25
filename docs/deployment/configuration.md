@@ -143,6 +143,7 @@ The server holds a few settings per device. Change them with `tools/command.py` 
 | Setting | New device | Set with | Effect |
 |---|---|---|---|
 | Engine-off interval | 0 | `int=<seconds>` | Timed reports while parked - see below |
+| Backup interval | 0 | `backup_interval=<seconds>` | Timed reports while the inline backup module is carrying the tracker; 0 keeps the engine-off interval - see [Battery backup](#battery-backup) |
 | Movement alarm flag | 1 | `movealarm=0` or `movealarm=1` | Not acted on by firmware 0.4.x |
 | Ignition alarm | off | `alarm=1` | Notify when the ignition comes on |
 | Garage mode | off | `garage=1` | Demote urgent alerts while the vehicle is expected to be moved |
@@ -201,6 +202,22 @@ A cut does not wake a sleeping tracker by itself (its wake sources are the timer
 A car battery only rests in that band when it is dead, which is why the option is off by default: on a tracker without the module a reading there is a flat battery and the gates should apply. The module's own undervoltage lockout drops the rail to nothing once the pack is spent, so a reading below the band is never mistaken for backup power.
 
 The module carries a **non-rechargeable** lithium cell, so a `backup power` alert that runs for a long time means the cell needs replacing - it does not recover when car power returns. A brief disconnection (servicing, for example) costs almost nothing.
+
+### Reporting interval on backup power
+
+Every timed report is drawn from that cell, and the engine-off interval was chosen for a parked car on its own battery, so the server can hold a separate interval for the time the module is carrying the tracker. A longer one makes the cell last; a shorter one follows a car whose power has been cut more closely. Set it with `backup_interval=<seconds>` (or `backup` in `POST /api/1.0/config`):
+
+```sh
+# on the server: report every 15 minutes while on backup power
+sudo docker exec l0destar python tools/command.py 350000000000000 backup_interval=900
+```
+
+- **0, the default, means no separate interval**: the engine-off interval applies on backup power too, as it did before the setting existed. Values from 1 to 9 are raised to 10 by the tracker.
+- **It applies only while the module is carrying the tracker.** The report that announces the cut goes out as soon as the cut is seen, whatever the interval is, and the next is due one backup interval after it. When car power returns, `car power restored` goes out as soon as the tracker sees the rail back (within about 30 seconds) and the engine-off interval takes over again.
+- **It also works with `int` 0.** A vehicle that makes no timed reports on its own battery can still report on a schedule while the module carries it.
+- **A confirmed movement on backup power** cuts the countdown to four hours if the backup interval is longer, so the next report is no more than four hours away. The setting itself is not lowered, so the interval after that is the backup interval again.
+- **It reaches the tracker in every reply**, like track mode, and is never reported back. After a restart the tracker has no backup interval (`CONFIG_APP_BACKUP_LOOP_INTERVAL`, default 0) until the first reply brings it. A tracker whose firmware or server predates the setting ignores it and keeps the engine-off interval.
+- **The usual limits apply.** A tracker with no network on a timed report backs off as usual, doubling the wait on backup power as on car power. Both are held to `CONFIG_APP_NO_SIGNAL_MAX_INTERVAL`, a day by default, so a longer backup interval, like a longer `int`, is a day.
 
 ## Track mode
 

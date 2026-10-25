@@ -63,12 +63,15 @@
  * (a hard stop, a tight corner) carries into the next.  Two bytes a second:
  * the 3-4 s gap between batches on most cells costs 15-17 bytes and a 12 s
  * one 33, about 1.5 KB per ten minutes of driving either way.  The batch's
- * byte budget leaves them out (data_motion_bytes), so they never make a
+ * byte budget leaves those out (data_motion_bytes), so they never make a
  * batch go early, and send_data() drops them before it would drop a record.
+ * A gap of a minute or more, 128 bytes or more, is counted instead: up to
+ * two minutes' worth, 249 bytes, would not fit beside a full batch.
  */
 
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -89,16 +92,28 @@ LOG_MODULE_REGISTER(motion, CONFIG_APP_LOG_LEVEL);
  * this many, an exponential one after (about 20 s at 26 Hz).  A sustained
  * 0.2 g of braking tilts it by a degree or two, which costs nothing. */
 #define GRAVITY_N        512
-/* Heading change at each whole second of uptime, newest last.  A minute
- * covers the longest gap a field is built for. */
-#define HEAD_SLOTS       64
+/* Heading change at each whole second of uptime, newest last: the longest
+ * gap a field is built for, and some seconds over for the drain that brings
+ * the log up to the second fix. */
+#define HEAD_SLOTS       128
 /* ECU speed readings: the poll takes about one a second, the keep-alive one
  * every three. */
-#define SPEED_SLOTS      96
+#define SPEED_SLOTS      192
+
 /* How far a speed reading may be stretched to a moment it was not taken at:
  * between two readings, and past the last one or before the first. */
 #define SPEED_SPAN_MS    6000
 #define SPEED_HOLD_MS    2500
+
+BUILD_ASSERT(HEAD_SLOTS * 1000 >= DR_MAX_GAP_MS + 5000,
+	     "the heading log must outlast the longest gap filled");
+BUILD_ASSERT(SPEED_SLOTS * 1000 >= DR_MAX_GAP_MS + SPEED_SPAN_MS,
+	     "the speed log must outlast the longest gap filled");
+/* The server stores the field in 255 bytes (deadreckon.MOTION_MAX): the gap
+ * in tenths, a speed of up to three digits, two characters a step and the
+ * end. */
+BUILD_ASSERT(4 + 1 + 3 + 1 + 2 * ((DR_MAX_GAP_MS - 1) / 1000) + 2 <= 255,
+	     "a field for the longest gap must fit the server's column");
 
 static float   s_grav[3];        /* accel LSB */
 static int     s_grav_n;
@@ -122,6 +137,9 @@ static int s_spd_next;
 /* base64url, value + 32; s_alpha[0] (-32) is a speed not measured. */
 static const char s_alpha[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+static void dr_hole(void);
+static void dr_advance(bool final, int64_t now);
 
 static char enc(int v)
 {
@@ -213,6 +231,7 @@ void motion_feed(const int16_t (*xl)[3], int nxl,
 		s_from_ms = s_last_ms;
 		s_from_psi = s_psi;
 		s_head_n = 0;
+		dr_hole();
 	}
 
 	/* When each word was batched, for placing the whole seconds: spread
@@ -244,6 +263,7 @@ void motion_feed(const int16_t (*xl)[3], int nxl,
 		}
 		s_psi += dpsi;
 	}
+	dr_advance(false, now_ms);
 }
 
 void motion_note_speed(int kmh)
@@ -254,6 +274,7 @@ void motion_note_speed(int kmh)
 	if (s_spd_n < SPEED_SLOTS) {
 		s_spd_n++;
 	}
+	dr_advance(false, k_uptime_get());
 }
 
 /* Heading change since the log began at uptime t. */
@@ -335,6 +356,283 @@ static bool speed_at(int64_t t, float *kmh)
 	return true;
 }
 
+/* -- the position past the last fix ----------------------------------------
+ *
+ * The field above fills a gap between two fixes.  Driving into a car park,
+ * there is no second fix: GNSS goes at the entrance and the key-off record
+ * is sent from the last known position, which is the entrance.  So the same
+ * two measurements are also run forward from the last fix, second by second,
+ * into a position: the ECU's speed for the distance, and the gyro's heading
+ * change on top of an absolute heading taken from the last fix at
+ * DR_REF_KMH or faster (slower, the GNSS heading is mostly noise).  A record
+ * that has no fix of its own is sent from here (data.c), flagged dr=1.
+ *
+ * Nothing pins the far end, so the error grows with the distance: ECU speed
+ * is scaled to GNSS speed (s_scale, learned on the move), and while the ECU
+ * reads standing still the gyro's drift is taken out of the heading, which
+ * covers a queue at a barrier.  Flat only: a ramp's length counts in full,
+ * and nothing says which level.  It gives up (until the next fix) on a hole
+ * in the heading log while moving, the ECU going quiet on the move, or
+ * DR_OPEN_MAX_MOVING_S of driving. */
+static struct {
+	bool    have;           /* there is a fix to run from */
+	bool    ok;             /* and nothing since has broken the run */
+	double  lat, lon;       /* degrees, at t_ms */
+	int64_t t_ms;           /* run forward to here, uptime */
+	int64_t fix_ms;         /* the fix it runs from */
+	float   dist_m;         /* along the way since */
+	int64_t moving_ms;
+} s_dr;
+
+/* The absolute heading at heading change `psi` (on s_psi's scale). */
+static struct {
+	bool  ok;
+	float hdg;
+	float psi;
+} s_ref;
+
+/* GNSS speed over ECU speed: speedometers read a few percent high. */
+static float s_scale = 1.0f;
+/* What the gyro turns by, standing still, after its own bias is taken out
+ * (hw_accel.c learns that only from a fix at rest): degrees a second. */
+static float s_drift_dps;
+
+#define EARTH_R_M  6371000.0
+#define DEG_RAD    (3.14159265358979323846 / 180.0)
+
+/* The ECU's newest speed reading, or -1 with none. */
+static int newest_speed(void)
+{
+	if (s_spd_n == 0) {
+		return -1;
+	}
+	return s_spd[(s_spd_next - 1 + SPEED_SLOTS) % SPEED_SLOTS].kmh;
+}
+
+/* A hole in the heading log loses whatever rotation fell in it.  With the
+ * ECU's last word standing still — the key off, the unit asleep — there
+ * was none and the heading carries over; otherwise it is gone. */
+static void dr_hole(void)
+{
+	if (s_ref.ok && newest_speed() != 0) {
+		LOG_DBG("heading reference lost to a hole in the log");
+		s_ref.ok = false;
+	}
+}
+
+/* Speed for the run at uptime t: 1 with it in *kmh, 0 when the reading
+ * after t has not come yet, -1 when there will be none worth having.  A
+ * span the ECU said nothing in, after it last said standing still, is
+ * stood through in one step: *jump says to where. */
+static int dr_speed(int64_t t, int64_t now, bool final, float *kmh,
+		    int64_t *jump)
+{
+	bool before = false, after = false;
+	int64_t t0 = 0, t1 = 0;
+	int v0 = 0, v1 = 0;
+
+	*jump = 0;
+	for (int i = 0; i < s_spd_n; i++) {
+		int k = (s_spd_next - 1 - i + SPEED_SLOTS) % SPEED_SLOTS;
+
+		if (s_spd[k].ms > t) {
+			t1 = s_spd[k].ms;
+			v1 = s_spd[k].kmh;
+			after = true;
+		} else {
+			t0 = s_spd[k].ms;
+			v0 = s_spd[k].kmh;
+			before = true;
+			break;
+		}
+	}
+
+	if (before && after) {
+		if (t1 - t0 <= DR_OPEN_SPAN_MS) {
+			*kmh = (float)v0 + (float)(v1 - v0) * (float)(t - t0) /
+			       (float)(t1 - t0);
+			return 1;
+		}
+		if (v0 == 0) {
+			*kmh = 0.0f;
+			*jump = t1;
+			return 1;
+		}
+		return -1;
+	}
+	if (before) {
+		/* Quiet for longer than a poll's pause, last heard moving:
+		 * where the vehicle went after is unknown. */
+		if (!final) {
+			return v0 > DR_STOP_FROM_KMH &&
+			       now - t0 > DR_OPEN_SPAN_MS ? -1 : 0;
+		}
+		/* No more readings to come: the key is off, so the vehicle
+		 * has stopped.  A last reading at a crawl winds down to 0
+		 * over a few seconds; one faster than that says the ECU went
+		 * quiet on the move, and where it went after is unknown. */
+		if (v0 > DR_STOP_FROM_KMH) {
+			if (t - t0 > SPEED_HOLD_MS) {
+				return -1;
+			}
+			*kmh = (float)v0;
+			return 1;
+		}
+		float left = 1.0f - (float)(t - t0) / (float)DR_STOP_MS;
+
+		if (left > 0.0f) {
+			*kmh = (float)v0 * left;
+		} else {
+			*kmh = 0.0f;
+			*jump = now;    /* stopped from here on */
+		}
+		return 1;
+	}
+	return -1;
+}
+
+static void dr_step(double dist, float hdg)
+{
+	double h = (double)hdg * DEG_RAD;
+
+	s_dr.lat += dist * cos(h) / EARTH_R_M / DEG_RAD;
+	s_dr.lon += dist * sin(h) / (EARTH_R_M * cos(s_dr.lat * DEG_RAD)) /
+		    DEG_RAD;
+	s_dr.dist_m += (float)dist;
+}
+
+/* Run forward as far as the readings go: up to the newest second both the
+ * heading log and the ECU have covered, or with `final`, to `now` — the
+ * key is off and nothing more is coming. */
+static void dr_advance(bool final, int64_t now)
+{
+	while (s_dr.have && s_dr.ok && s_dr.t_ms < now) {
+		int64_t t = s_dr.t_ms;
+		int64_t dt = MIN((int64_t)1000, now - t);
+		int64_t jump;
+		float v, p0, p1;
+		int got = dr_speed(t + dt / 2, now, final, &v, &jump);
+
+		if (got == 0) {
+			return;
+		}
+		if (got < 0) {
+			LOG_INF("dead reckoning stopped: no ECU speed %lld s "
+				"after the fix", (t - s_dr.fix_ms) / 1000);
+			s_dr.ok = false;
+			return;
+		}
+		if (jump > t) {
+			/* Standing still until the ECU spoke again. */
+			s_dr.t_ms = MIN(jump, now);
+			continue;
+		}
+
+		bool have0 = heading_at(t, &p0);
+		bool have1 = heading_at(t + dt, &p1);
+
+		if (!have1 && s_last_ms != 0 && t + dt > s_last_ms) {
+			if (!final) {
+				return;     /* the next drain brings it */
+			}
+			p1 = s_psi;     /* the key is off: the last word */
+			have1 = true;
+		}
+
+		if (v < DR_STILL_KMH) {
+			/* Stood still for this second.  Any heading change
+			 * the gyro reports small enough to be its drift
+			 * comes out of the reference, and is learned for the
+			 * seconds on the move; a turn at a creep too slow
+			 * for the ECU to read stays in. */
+			float secs = (float)dt / 1000.0f;
+
+			if (have0 && have1 && dt >= 500 &&
+			    fabsf(p1 - p0) < DR_DRIFT_DPS * secs) {
+				s_ref.psi += p1 - p0;
+				s_drift_dps += ((p1 - p0) / secs - s_drift_dps) *
+					       0.05f;
+			}
+			s_dr.t_ms = t + dt;
+			continue;
+		}
+		if (!s_ref.ok) {
+			/* Pulling away before a fix fast enough for one:
+			 * ordinary, and the next fix starts again. */
+			LOG_DBG("dead reckoning stopped: no heading reference");
+			s_dr.ok = false;
+			return;
+		}
+		if (!have1) {
+			LOG_INF("dead reckoning stopped: no heading %lld s after "
+				"the fix", (t - s_dr.fix_ms) / 1000);
+			s_dr.ok = false;
+			return;
+		}
+		s_ref.psi += s_drift_dps * (float)dt / 1000.0f;
+
+		/* Along the heading at the middle of the second. */
+		float pm = have0 ? (p0 + p1) / 2.0f : p1;
+
+		dr_step((double)(v * s_scale / 3.6f) * (double)dt / 1000.0,
+			s_ref.hdg + (pm - s_ref.psi));
+		s_dr.t_ms = t + dt;
+		s_dr.moving_ms += dt;
+		if (s_dr.moving_ms > DR_OPEN_MAX_MOVING_S * 1000) {
+			LOG_INF("dead reckoning stopped: %d s on the move "
+				"without a fix", DR_OPEN_MAX_MOVING_S);
+			s_dr.ok = false;
+			return;
+		}
+	}
+}
+
+void motion_note_fix(const struct gnss_fix *fix)
+{
+	float p, v;
+
+	s_dr.have = true;
+	s_dr.ok = true;
+	s_dr.lat = strtod(fix->lat_str, NULL);
+	s_dr.lon = strtod(fix->lon_str, NULL);
+	s_dr.t_ms = fix->epoch_ms;
+	s_dr.fix_ms = fix->epoch_ms;
+	s_dr.dist_m = 0.0f;
+	s_dr.moving_ms = 0;
+
+	if (fix->speed_kmh >= DR_REF_KMH && fix->sats >= SPEED_MIN_SATS &&
+	    heading_at(fix->epoch_ms, &p)) {
+		s_ref.ok = true;
+		s_ref.hdg = fix->heading_deg;
+		s_ref.psi = p;
+	}
+	if (fix->speed_kmh >= DR_SCALE_KMH && fix->sats >= SPEED_MIN_SATS &&
+	    speed_at(fix->epoch_ms, &v) && v >= DR_SCALE_KMH) {
+		float r = fix->speed_kmh / v;
+
+		if (r > 0.85f && r < 1.15f) {
+			s_scale += (r - s_scale) * 0.02f;
+		}
+	}
+}
+
+bool motion_position(int64_t fix_ms, bool final, double *lat, double *lon,
+		     float *dist_m)
+{
+	dr_advance(final, k_uptime_get());
+
+	/* Run from the fix the stored position is (or newer), never one the
+	 * stored position has since moved on from. */
+	if (!s_dr.have || !s_dr.ok || s_dr.fix_ms < fix_ms ||
+	    s_dr.dist_m < DR_REPORT_MIN_M) {
+		return false;
+	}
+	*lat = s_dr.lat;
+	*lon = s_dr.lon;
+	*dist_m = s_dr.dist_m;
+	return true;
+}
+
 int motion_field(char *out, int max, int64_t from_ms, int64_t to_ms,
 		 bool moving)
 {
@@ -346,31 +644,58 @@ int motion_field(char *out, int max, int64_t from_ms, int64_t to_ms,
 
 	/* The whole seconds after the first fix and before the second. */
 	int n = (int)((gap - 1) / 1000);
-	float p0, p, vf;
+	float p0, p, vf = 0.0f;
 
 	if (!heading_at(from_ms, &p0)) {
 		return 0;
 	}
 
-	char steps[2 * (DR_MAX_GAP_MS / 1000)];
+	/* Static: 238 bytes is too much for the main thread's stack, and only
+	 * the main thread builds records. */
+	static char steps[2 * (DR_MAX_GAP_MS / 1000)];
 	int len = 0;
 	bool speeds = speed_at(from_ms, &vf);
 	int v0 = speeds ? (int)lroundf(vf) : 0;
 	int ev = v0;            /* the speed as the field has it so far */
 	int eh = 0;             /* and the heading change */
+	/* The gyro's drift, taken out as dr_advance() does: the whole of a
+	 * small turn in a second the ECU reads standing still, the learned
+	 * rate in the rest.  The server takes out what drift is left in a
+	 * straight line, but only up to 45 degrees, and over a minute or two
+	 * an uncorrected 0.5 dps gets past that. */
+	float drift = 0.0f;
+	float pp = p0;          /* the heading change a second ago */
+	float vp = vf;          /* and the ECU speed */
+	bool vp_ok = speeds;
 
 	if (speeds && v0 >= DR_MOVING_KMH) {
 		moving = true;
 	}
 
-	for (int k = 1; k <= n; k++) {
-		int64_t t = from_ms + (int64_t)k * 1000;
+	for (int k = 1; k <= n + 1; k++) {
+		int64_t t = k <= n ? from_ms + (int64_t)k * 1000 : to_ms;
+		int64_t t_prev = from_ms + (int64_t)(k - 1) * 1000;
+		float secs = (float)(t - t_prev) / 1000.0f;
+		bool v_ok = speeds && speed_at(t, &vf);
 
 		if (!heading_at(t, &p)) {
 			return 0;
 		}
+		if (vp_ok && v_ok && vp < DR_STILL_KMH && vf < DR_STILL_KMH &&
+		    fabsf(p - pp) < DR_DRIFT_DPS * secs) {
+			drift += p - pp;
+		} else {
+			drift += s_drift_dps * secs;
+		}
+		pp = p;
+		vp = vf;
+		vp_ok = v_ok;
+		if (k > n) {
+			break;          /* the end: the heading alone, below */
+		}
+
 		if (speeds) {
-			if (speed_at(t, &vf)) {
+			if (v_ok) {
 				int v = (int)lroundf(vf);
 				int d = clamp31(v - ev);
 
@@ -384,14 +709,12 @@ int motion_field(char *out, int max, int64_t from_ms, int64_t to_ms,
 			}
 		}
 
-		int d = clamp31((int)lroundf(p - p0) - eh);
+		int d = clamp31((int)lroundf(p - p0 - drift) - eh);
 
 		eh += d;
 		steps[len++] = enc(d);
 	}
-	if (!heading_at(to_ms, &p)) {
-		return 0;
-	}
+	p -= drift;
 	if (!moving) {
 		/* Standing still: the two fixes are the whole story. */
 		return 0;

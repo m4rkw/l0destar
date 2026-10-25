@@ -7,7 +7,7 @@ The tracker takes its settings from the server on every reply it reads, runs the
 The server answers every datagram it accepts with a single line:
 
 ```text
-1,<int>,<ma>[,<commands>][,fota=<version>][,track=<0|1>]
+1,<int>,<ma>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>]
 ```
 
 | Part | Meaning |
@@ -16,19 +16,22 @@ The server answers every datagram it accepts with a single line:
 | `<int>` | The device's engine-off interval, from the server |
 | `<ma>` | The device's movement alarm flag, from the server |
 | `<commands>` | Every command queued for the device, comma-separated; they leave the queue as they are sent |
+| `backup=<seconds>` | The device's backup interval, on every reply: the timed-report interval while the inline battery backup module is carrying the tracker, `0` for "the same as `<int>`" |
 | `fota=<version>` | The newest build published for this device, when there is one that has not been withheld after a failed update |
 | `track=0` or `track=1` | The track mode switch, on every reply |
 
 When the tracker reads a reply it:
 
 1. applies `<int>` and `<ma>` - unless it has changed them itself since its last record, in which case it sends its own values (`int=<n>;ma=<n>`) with its next record and the server adopts them;
-2. acts on everything after `<ma>`: the queued commands, the update advert (`fota=`) and the track mode switch (`track=`).
+2. applies `backup=` as it reads it, and takes it out of what follows: it is a setting, not a command, and unlike `<int>` the tracker never reports it back, because nothing on the tracker changes it;
+3. acts on everything else after `<ma>`: the queued commands, the update advert (`fota=`) and the track mode switch (`track=`).
 
 It reads at most 127 characters after `<ma>`, so do not queue more than a few commands at once.
 
 Settings live in the tracker's RAM. After a restart, until the first reply arrives, it uses:
 
 - an engine-off interval of 900 seconds, so that one lost reply cannot leave a parked unit silent;
+- no backup interval (`CONFIG_APP_BACKUP_LOOP_INTERVAL`, 0 by default), so the engine-off interval applies on backup power too;
 - the movement alarm flag from `CONFIG_APP_MOVEMENT_ALARM` (off by default);
 - track mode off.
 
@@ -37,6 +40,7 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 | Setting | Reply field | Server column | New device | Meaning |
 |---|---|---|---|---|
 | Engine-off interval | `<int>` | `device.int` | `0` | Seconds between timed reports while parked; `0` means none |
+| Backup interval | `backup=` | `device.backup_int` | `0` | Seconds between timed reports while the inline backup module is carrying the tracker; `0` means the engine-off interval applies then too. Set with `backup_interval=<seconds>` or `backup` in `POST /api/1.0/config`; see [Reporting interval on backup power](../deployment/configuration.md#reporting-interval-on-backup-power) |
 | Movement alarm | `<ma>` | `device.movement_alarm` | `1` | Stored, synced and reported, but not acted on by firmware 0.4.x |
 | Track mode | `track=` | `device.track_mode` | `0` | GNSS off, engine and IMU data streamed quickly |
 | Update advert | `fota=` | per-device manifest | - | See [OTA updates](../board-setup/ota-updates.md) |
@@ -57,7 +61,9 @@ A queued command waits until the tracker next reads a reply.
 | Parked, interval above 0 | On every timed report | the interval |
 | Parked, interval 0 | Not until the ignition comes on, or a timed report scheduled after movement | the next drive |
 
-After a movement alert on a unit whose interval is 0 or longer than four hours, the tracker schedules a single timed report four hours later, with GNSS; the reply to that report puts the server's interval back.
+After a movement alert on a unit whose interval is 0 or longer than four hours, the tracker schedules a single timed report four hours later, with GNSS; the reply to that report puts the server's interval back. On backup power the interval that counts is the backup interval, when there is one: if it is longer than four hours the countdown is cut to four hours, once, and the setting is left alone.
+
+While the backup module is carrying the tracker, "the interval" in the table above is the backup interval when one is set, and a parked unit with an engine-off interval of 0 still reads a reply at each of those timed reports.
 
 ## Commands
 
@@ -87,7 +93,7 @@ A request to queue a command must name the device, with `imei`, `device_id` or a
 | `locate` | Reports the last known position; no new fix is taken. | `google: <lat>,<lon>` |
 | `locatenow` | Builds and sends a record first, then reports the position. While driving that is a fresh fix; on a parked unit's timed report it is the last known position. | `google: <lat>,<lon>` |
 | `tomtom`, `tomtomnow` | As `locate` and `locatenow`, with a TomTom link. | `tomtom: <lat>,<lon>` |
-| `config` | Reports its firmware version, settings, battery, ignition and uptime. | `fw=<version> int=<n> ma=<n> tm=<n> bat=<volts>V ign=<on or off> up=<seconds>s` |
+| `config` | Reports its firmware version, settings, battery, ignition and uptime. | `fw=<version> int=<n> ma=<n> tm=<n> backup=<n> bat=<volts>V ign=<on or off> up=<seconds>s` |
 | `fota` | Checks for an update at once, or once the engine stops if it is running, ignoring the retry holdoff and clearing any version it had given up on. | `fota: check queued`, or `fota: updates inhibited` on a unit built with `CONFIG_APP_FOTA_INHIBIT` |
 | `reboot` | Restarts the next time its main loop runs: straight away while driving, at engine start or key-off when the ignition is on with the engine off, and at the next ignition-on for a parked unit. | `rebooting` |
 | `track=0`, `track=1` | Sent by the server on every reply. Acted on only when it changes the mode; `track=1` is ignored while the ignition is off. | `track mode OFF`, `track mode ON` |
@@ -127,6 +133,7 @@ Values must be whole numbers. The alerts themselves are described in [Configure 
 | Field | Column |
 |---|---|
 | `int` | `int` |
+| `backup` | `backup_int` |
 | `ma` | `movement_alarm` |
 | `al` | `alarm` |
 | `ga` | `garage` |

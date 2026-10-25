@@ -28,6 +28,7 @@ CREATE TABLE `device` (
 
   -- Settings the device syncs and applies.
   `int`           INT UNSIGNED NOT NULL DEFAULT 0  COMMENT 'reporting interval, seconds',
+  `backup_int`    INT UNSIGNED NOT NULL DEFAULT 0  COMMENT 'reporting interval while the backup module carries the supply, seconds; 0 = the same as int; sent as backup=<n> on every response',
   `movement_alarm` TINYINT(1)  NOT NULL DEFAULT 1  COMMENT 'wake and report on accelerometer trigger',
   `track_mode`    TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'GNSS off, ECU+IMU streamed fast; sent as track=<0|1> on every response',
 

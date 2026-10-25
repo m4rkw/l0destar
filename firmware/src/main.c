@@ -466,6 +466,20 @@ static void network_retry_tick(void)
  * unit with no coverage should not keep waking on its usual cadence. */
 static int s_nosignal_wakes;
 
+/* The timed-report interval in force: while the inline backup module is
+ * carrying the rail it is the backup interval, if the server has set one,
+ * and otherwise the engine-off interval.  s_backup_seen is the sleep loop's
+ * own verdict on the module (see do_sleep) and is never true without
+ * CONFIG_APP_BACKUP_SUPPLY, so a unit without the module only ever has the
+ * engine-off interval.  0 = no timed reports. */
+static int report_interval(void)
+{
+    if (s_backup_seen && g_settings.backup_interval > 0) {
+        return g_settings.backup_interval;
+    }
+    return g_settings.loop_interval;
+}
+
 /* Back to the configured cadence.  Called wherever the unit learns there is
  * signal again, and on movement: the likeliest reason coverage returns is
  * that the vehicle has been moved into it. */
@@ -474,18 +488,19 @@ static void network_backoff_reset(void)
     if (s_nosignal_wakes > 0) {
         LOG_INF("network back after %d wake%s without it — timed reports "
                 "every %ds again", s_nosignal_wakes,
-                s_nosignal_wakes == 1 ? "" : "s", g_settings.loop_interval);
+                s_nosignal_wakes == 1 ? "" : "s", report_interval());
         s_nosignal_wakes = 0;
     }
 }
 
-/* The engine-off wake interval with that backoff applied.  g_settings is left
- * alone on purpose: the backoff is local, and by the time a record reaches
- * the server there is signal and the count is already cleared, so the int=
- * the device reports back stays the interval it was given. */
+/* The interval in force (report_interval) with that backoff applied.
+ * g_settings is left alone on purpose: the backoff is local, and by the time
+ * a record reaches the server there is signal and the count is already
+ * cleared, so the int= the device reports back stays the interval it was
+ * given. */
 static int telemetry_interval(void)
 {
-    int iv = g_settings.loop_interval;
+    int iv = report_interval();
 
     if (iv <= 0 || NO_SIGNAL_MAX_INTERVAL <= 0) {
         return iv;
@@ -574,7 +589,16 @@ static bool should_send_data(void)
  *
  * The ECU figure is not better in every respect — vehicle speed sensors
  * typically over-read by a couple of percent and are affected by tyre size —
- * but for "are we moving or not" the zero is what matters. */
+ * but for "are we moving or not" the zero is what matters.
+ *
+ * Only a recent fix's speed counts.  g_gnss keeps the last fix for as long
+ * as no other comes, and on 2026-10-10 at 17:28 the car drove into an
+ * underground car park at 5.3 km/h by GNSS.  Switched off six minutes later,
+ * the ECU unpowered and so silent, that speed started coast-to-stop: a
+ * collection that never got a fix, so never a send to end the coast, and
+ * the unit stayed awake with GNSS running, its ignition-off record held,
+ * until the key came back on.  SPEED_FIX_MAX_AGE_MS is the same limit the
+ * records' own speed field keeps to. */
 static float vehicle_speed_kmh(void)
 {
 #if IS_ENABLED(CONFIG_APP_KLINE_OBD)
@@ -584,6 +608,10 @@ static float vehicle_speed_kmh(void)
         return (float)obd;
     }
 #endif
+    if (!g_gnss.valid ||
+        k_uptime_get() - g_gnss.fix_uptime_ms > SPEED_FIX_MAX_AGE_MS) {
+        return 0.0f;
+    }
     return g_gnss.speed_kmh;
 }
 
@@ -993,7 +1021,7 @@ static void do_sleep(void)
                      !atomic_get(&s_ign_int_flag) &&
                      !atomic_get(&s_accel_int_flag) &&
                      !resend_owed && !backup_wake && !restore_wake &&
-                     !(g_settings.loop_interval > 0 &&
+                     !(report_interval() > 0 &&
                        telemetry_remaining - elapsed <= 0);
         if (!quiet) {
             console_resume();
@@ -1375,9 +1403,20 @@ static void do_sleep(void)
                     s_move_cooldowns[s_move_alert_level];
                 if (s_move_alert_level < 3) s_move_alert_level++;
 
-                if (g_settings.loop_interval == 0 ||
-                    g_settings.loop_interval >
+                if (s_backup_seen && g_settings.backup_interval > 0) {
+                    /* On the module the countdown is the backup interval's,
+                     * and a car moved with its power cut is the case the
+                     * four-hour ceiling below is for.  The setting is not
+                     * lowered, so there is nothing to put back; only this
+                     * countdown is cut, and never lengthened. */
+                    if (telemetry_remaining >
                         MOVEMENT_TEMPORARY_ENGINE_OFF_INTERVAL) {
+                        telemetry_remaining =
+                            MOVEMENT_TEMPORARY_ENGINE_OFF_INTERVAL;
+                    }
+                } else if (g_settings.loop_interval == 0 ||
+                           g_settings.loop_interval >
+                               MOVEMENT_TEMPORARY_ENGINE_OFF_INTERVAL) {
                     if (s_saved_loop_interval < 0)
                         s_saved_loop_interval = g_settings.loop_interval;
                     g_settings.loop_interval =
@@ -1401,7 +1440,7 @@ static void do_sleep(void)
         /* --- owed timed report --- */
         if (resend_owed && modem_is_registered()) {
             report_owed_set(&resend_owed, false);
-            if (g_settings.loop_interval > 0) {
+            if (report_interval() > 0) {
                 LOG_WRN("registered — sending the timed report owed for "
                         "%lld s",
                         (k_uptime_get() - resend_owed_ms) / 1000);
@@ -1438,7 +1477,7 @@ static void do_sleep(void)
         }
 
         /* --- timer telemetry (and the report a backup or restore owes) --- */
-        if ((telemetry_remaining <= 0 && g_settings.loop_interval > 0) ||
+        if ((telemetry_remaining <= 0 && report_interval() > 0) ||
             backup_wake || restore_wake) {
             /* The restore report goes out whatever the rail reads: it is one
              * record, and the only way the server hears the car supply is
@@ -1637,6 +1676,10 @@ static void do_sleep(void)
                 LOG_WRN("no network on %d consecutive wake%s — next timed "
                         "report in %ds", s_nosignal_wakes,
                         s_nosignal_wakes == 1 ? "" : "s", telemetry_remaining);
+            }
+            if (s_backup_seen && g_settings.backup_interval > 0) {
+                LOG_INF("on backup power: next timed report in %ds",
+                        telemetry_remaining);
             }
         }
 
@@ -2627,6 +2670,14 @@ int main(void)
                 led_idle();
                 data_reset();
                 s_last_send_ms = k_uptime_get();
+                /* Coast-to-stop only ends in STATE_SEND, which a collection
+                 * with no fix never reaches, and while it lasts nothing lets
+                 * the unit sleep.  Without a fix there is no motion to
+                 * follow anyway. */
+                if (s_coasting) {
+                    LOG_INF("coast-to-stop ended: no fix");
+                    s_coasting = false;
+                }
                 /* With a transition pending, force_record gets a record
                  * built from the last known position, so this branch is
                  * normally a routine no-fix collection and the assignment is
@@ -2650,10 +2701,12 @@ int main(void)
                 break;
             }
             s_buffered_records++;
-            /* Not counting the motion through gaps (mv=): it is for the
-             * fixes the radio cost, and must not cost more of them by
-             * making the batch go early.  send_data() leaves it off a batch
-             * that would not fit the datagram. */
+            /* Not counting the motion through gaps (mv=) up to about a
+             * minute's worth: it is for the fixes the radio cost, and must
+             * not cost more of them by making the batch go early.  A longer
+             * one is counted (data_motion_bytes()), since it would not fit
+             * beside a full batch, and send_data() leaves motion off a
+             * batch that would not fit the datagram. */
             if (s_buffered_records >= BATCH_SIZE
                 || ignition != 0
                 || previous_ignition == -1
@@ -2763,7 +2816,22 @@ int main(void)
             ignition = (char)ignition_read();
 
             /* state transition */
-            if (previous_ignition != ignition && ignition != 0 &&
+            if (ignition != 0 && s_record_ignition != 0 && !s_coasting &&
+                !last_send_ok && modem_is_registered()) {
+                /* Key off, and the record that says so failed to send with
+                 * the network up: a dead socket, a data connection gone
+                 * under a live registration, a lookup that failed.  Going
+                 * round again would only fail the same way, and each pass
+                 * pushed another copy of the record into the backlog, with
+                 * nothing to stop it short of the modem recovery's restart.
+                 * The record is in the backlog already, so the server is as
+                 * told as it can be for now: sleep, and let do_sleep()'s
+                 * delivery and the timed wakes after it carry the backlog. */
+                LOG_WRN("ignition-off record failed to send with the "
+                        "network up — held for the next delivery, sleeping");
+                previous_ignition = s_record_ignition;
+                s_state = STATE_SLEEP;
+            } else if (previous_ignition != ignition && ignition != 0 &&
                 !s_coasting && !last_send_ok && !modem_is_registered()) {
                 /* Key off, and no network to take the record that says so.
                  * The collect-and-send round below is right for a drive

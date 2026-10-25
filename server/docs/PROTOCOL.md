@@ -55,7 +55,7 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `mt`, `it` | MCU and IMU temperature, °C | per-packet |
 | `up` | seconds since boot | per-packet |
 | `vs` | SiP supply rail, volts | per-packet |
-| `dr` | dead-reckoning flag | per-packet |
+| `dr` | `1`: no fix of its own, so the position is the last fix run forward by ECU speed and gyro heading (firmware 0.4.75+) | per-packet |
 | `dbg` | debug counters — only after a fault | per-packet |
 | `rst` | reset cause — only after a reset | per-packet |
 | `orpm`, `ormin`, `ormax`, `oravg` | engine RPM, and its min/max/mean over the cycle | per-packet |
@@ -167,7 +167,7 @@ tracking-area update — so a track is runs of one-second fixes with gaps
 between them. The device measures the motion it cannot see: the ECU's road
 speed, polled about once a second, and the gyro's heading change, integrated
 from the IMU's 26 Hz FIFO after projecting it onto gravity so the mounting does
-not matter. It goes on the first record after a gap of 2.5–60 s on the move,
+not matter. It goes on the first record after a gap of 2.5–120 s on the move,
 whose predecessor (`rid` one less) is the fix the gap starts from:
 
 | Part | Meaning |
@@ -280,7 +280,7 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>,<movement_alarm>[,<commands>][,fota=<version>][,track=<0|1>]
+1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>]
 ```
 
 Every datagram is answered, and the reply is the receipt: it is bound to the
@@ -289,6 +289,14 @@ it answers, and only then lets go of the records that datagram carried. The
 firmware reads every reply — not only those it waits for — and applies the
 settings and commands in each. It applies the settings only when a reply
 carries both the interval and movement_alarm.
+
+`backup=` is the reporting interval for a tracker running on the inline battery
+backup module (`device`.`backup_int`; 0 means the interval above applies then
+too). It is sent on every reply, as `track=` is, so a device that rebooted or
+missed a reply converges on it. The firmware applies it as it reads the reply
+and takes it out of the commands, and uses it only while the module is carrying
+the tracker; firmware from before 0.4.79 passes over it. Unlike the interval it
+is never reported back, since nothing on the device changes it.
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is

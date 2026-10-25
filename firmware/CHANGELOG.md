@@ -1,5 +1,234 @@
 # Changelog
 
+## 0.4.79
+
+### A tracker on the backup module reports at its own interval
+`int` was written for a parked car on its own battery.  On the inline backup
+module the tracker is spending a cell that does not recover, and the cadence
+wanted there is not necessarily the same: a longer one spares the cell, a
+shorter one follows a car whose power has been cut more closely.  Until now
+the only interval on backup power was `int`.
+
+- **The server holds a second interval, `device.backup_int`, and every reply
+carries it as `backup=<seconds>`.**  It rides every reply as `track=` does, so
+a unit that restarted or missed one converges on it, and the firmware applies
+it as it reads the reply and takes it out of the commands, so it never reaches
+`cmd_run()`.  1 to 9 become 10, as for `int=`.  Unlike `int` the unit never
+reports it back: nothing on the unit changes it.  0, which is what every
+device has, means `int` applies on backup power too, so nothing changes until
+it is set.  The name is `backup_interval` as a server command and not
+`backup_int`, because the firmware finds `int=` anywhere in a command string:
+a command ending in it, queued by a server that did not know it, would have
+set the engine-off interval.
+- **The sleep loop uses it while the module is carrying the rail.**
+`report_interval()` is the backup interval while the loop has seen the module
+take over (`s_backup_seen`) and `int` otherwise; the countdown, the no-signal
+backoff, the owed-report test and the quiet-pass test all go through it.  The
+report that announces the cut still goes out at once; the next is one backup
+interval later, and the report that announces car power back puts `int` back.
+It works with `int` 0 as well: a unit that makes no timed reports on car power
+reports on a schedule while it is on the cell.  `on backup power: next timed
+report in 90s` is logged after each.
+- **Movement keeps its ceiling.**  A confirmed movement already cuts the next
+report to four hours when `int` is 0 or longer.  On the module the interval in
+force is the backup one, so a backup interval over four hours is cut the same
+way, for that countdown only and without lowering the setting.  A backup
+interval of four hours or less is left alone, and the old rule no longer
+applies on the module when a backup interval is set, because it would have
+lengthened a shorter one to four hours.
+- **`APP_BACKUP_LOOP_INTERVAL`** (default 0) is the value from boot until the
+first reply, as `APP_ENGINE_OFF_LOOP_INTERVAL` is for `int`; it is also all a
+Traccar build has.  `config` shows `backup=<n>` and the boot log prints it.
+- **The server** gets the column (`schema.sql`,
+`migrations/2026-10-18_device_backup_int.sql`), `backup` in
+`GET`/`POST /api/1.0/config`, `backup_interval=<seconds>` as a command
+(written to the column, not queued, since every reply carries it),
+`tools/device.py show`, and the reply field in `docs/PROTOCOL.md`.  Older
+firmware passes over `backup=`, and a server without it sends none, so either
+can be updated first.
+- On the bench, with a build whose default was 90 s against a server that
+sent no `backup=` and an `int` of 300: cutting the 12 V supply at 15:11:05
+was reported at 15:11:16 (the module's pulse, then the rail in the band 7.8 s
+after it), and the next timed report came at 15:12:48, 90 s later, with the
+battery gates bypassed, and set the one after it at 90 s again.  With the
+supply back, car power restored was reported at 15:13:21 and the next timed
+wake was 5 min later, the `int`.  The reply
+parsing is tested on the host (`reply_take_int`, 22 cases under the
+sanitizers) and the server side by its own tests; a reply that carries
+`backup=` has not been through a real server and unit yet.  The car has not
+been updated.
+
+## 0.4.77
+
+### Gaps of up to two minutes are filled
+The motion through a gap between fixes (`mv=`) went on gaps of up to 60 s.
+On 2026-10-11, after the car moved from O2 to Vodafone at 18:45, the network
+held the radio for 67, 84 and about 88 s after a send, three times in ten
+minutes.  GNSS saw no satellites for the whole of each, and the first two
+were drawn as straight lines 250 and 420 m long.  Since 0.4.68 the car has
+had 8 gaps of 60-120 s on the move, none of them filled.
+
+- **`DR_MAX_GAP_MS` is 120 s.**  The heading log keeps 128 s and the ECU
+speed log 192 readings.  A two-minute field is 249 bytes, which fits the
+server's 255-byte column (`deadreckon.MOTION_MAX`), so the server needs no
+change.  A `BUILD_ASSERT` holds the field to that.
+- **The gyro's drift comes out on the device.**  The server removes drift in
+a straight line only while it comes to 45 degrees or less.  Over two minutes
+an uncorrected 0.5 dps is past that, and the fill was no better than the
+straight line.  The field now takes drift out as the run past the last fix
+does: the whole of a small turn in a second the ECU reads standing still,
+and the learned rate in the rest.  In a host simulation of 65-119 s gaps,
+with turns and a stop, the fill came within 15 m of the true path at 0.2
+and 0.6 dps of residual drift, against 140-220 m for a straight line.  At 1
+dps with little standing time beforehand to learn the drift from, it was
+105-130 m.  Gaps of 4-50 s were as before.
+- **A long field ends its batch a record early.**  Fields up to 128 bytes
+still ride outside the batch's byte budget.  A longer one is counted,
+because next to three records it would overflow the datagram and be left
+off.
+- **`APP_DATABUF_REC_MAX` is 768** (was 512): a record has to fit a backlog
+slot with its field, or the field is left off.  That is 8 KB more BSS at 32
+slots; the app is at 80% of RAM.
+
+## 0.4.76
+
+### The bench's deliberate send hang is out
+0.4.75 was committed and published with a bench-only test still in
+`transport_send()`.  It hung the third send after a boot for 45 s, so that
+the watchdog would fire and test the stall note.  On the car that is one
+watchdog reset about a minute after each boot that is not itself a stall
+reset: once after the 0.4.75 install, then quiet until the next reboot.
+Removed; nothing else changed.  The test did its job: the bench reported
+`rst=wdt+stall:4b116/551ac/350b0/3da04`, which the map puts in `k_sleep()`
+called from `transport_send()`, so noinit RAM survives a watchdog reset.
+
+## 0.4.75
+
+### An ignition change with no fix is stamped when it happened
+An ignition-change record that cannot get a fix is sent from the last known
+position, and it was also stamped with that fix's time.  The server orders
+records by that time.  In a car park on 2026-10-11 the last fix was at
+15:17:42.  The ignition went off at 15:18, back on at 15:19 and off again at
+15:20.  Both ignition-off records carried 15:17:42, but the ignition-on came
+through the cached-position path, which stamps the modem clock, so it carried
+15:19:29.  It sorted last, and the map said "engine on" for a parked car.  A
+record without a fresh fix is now stamped from the modem clock, like the
+cached-position records.  The position is still flagged as not fresh (`cl=1`).
+
+### A send can no longer hold the loop past the watchdog
+At about 14:56 on 2026-10-11 the car reset mid-drive with `rst=wdt`, its
+first watchdog reset since 0.4.47.  It was in the middle of an operator
+change.  At 14:53:59 a cause 9 on Vodafone (TAC 6191) re-registered in
+9 s, and the last records reached the server at 14:54:43.  The unit came
+back on O2 B20 at -112 dBm with a new public IP.  Nothing in between reached
+the server, so the warnings that would say what blocked went down with the
+RAM.  What the cycle can block in without a kick: the modem's AT commands,
+and the UDP send.  The modem library's `SO_SNDTIMEO` defaults to no limit,
+and the socket never set one, so a send the modem would not take while it
+changed networks could wait until the watchdog fired.
+- **Sends time out after 10 s** (`SEND_TIMEOUT_MS`).  A timed-out send fails
+like any other: the records go to the backlog.  A send normally returns in
+milliseconds.
+- **A kick before each send,** the retry included, so two sends at their
+limit and the 4 s reply wait still fit the 32 s window.
+- **A send that takes 2 s or more logs a WRN** with its time, so a stall
+that stops short of the watchdog shows on the server.
+- **A watchdog reset now says where it was stuck.**  The timeout callback
+scans the main thread's stack for return addresses and keeps the first
+four in noinit RAM, as the fatal handler does.  The next boot reports them
+in `rst=` as `wdt+stall:<addr>/<addr>/...`, to look up in the map file.
+It is a scan, not an unwind, so an old address left on the stack can show
+up.  It fits the server's `varchar(48)`.  Whether noinit RAM survives a
+watchdog reset (and not only a soft one) is not yet checked on the bench.
+
+### A car park's key-off is sent from the bay, not the entrance
+The dead reckoning (0.4.68) filled gaps between two fixes, and a car park
+has only one: GNSS goes at the entrance, and the key-off record was sent
+from there.  On 2026-10-11 the map put the car at the entrance at 15:17:42,
+and nothing showed where it went after.  The ECU's speed and the gyro's
+heading now also run the position on past the last fix, second by second
+(`motion_position()`, `src/motion.c`).  A record with no fix of its own is
+sent from there, flagged `dr=1`, which the server already stores in
+`dead_reckoning`.  The position goes into the stored one too, so the timed
+wakes while parked carry it as well.
+- **The heading is the last fix's at 10 km/h or more,** carried on by the
+gyro.  Slower than that the GNSS heading is mostly noise, and the last fix
+at a car park entrance is usually at a crawl.
+- **Standing still, the gyro's drift comes out.**  While the ECU reads 0, a
+heading change under 1.5°/s is drift.  It is taken out of the heading and
+learned for the seconds on the move, so a queue at a barrier does not bend
+the rest.
+- **The speedometer's error is learned** from fixes at 20 km/h or more.
+- **It gives up rather than guess** until the next fix if: the ECU goes quiet
+on the move, a hole in the heading log falls while moving, or there have
+been 5 min of driving without a fix.  The record is then sent from the last
+fix, as before.  A hole while stood still (the key off, the FIFO undrained)
+keeps the heading, so a second key-on and re-park carries on from the bay.
+- **With the key off, the run goes to now.**  A last ECU reading of 3 km/h or
+less winds down to 0.  A faster one means the ECU went quiet on the move.
+- **Limits:** it is 2D only, so a ramp counts its full length and nothing says
+which level.  Reversing reads as forward, because the ECU speed has no sign.
+It needs the ECU speed, so it does nothing on a unit without one.
+- Checked on the host with the real `motion.c` in a simulated entry: a 75 m
+crawl with a hairpin and a turn into a bay, gyro bias up to 1.2°/s, ECU
+reading 3% high, and a 90 s queue.  The bay came out 1.4-9 m from the truth,
+where the entrance fix was 19-23 m away.  A key-on, re-park and key-off came
+out 2-9 m off, where the entrance was 30-34 m away.  An ECU going quiet on
+the move gave no position.  Not yet checked on the car.
+
+## 0.4.74
+
+### Records name the operator they were actually sent on
+The operator (mcc/mnc) was read only when the unit woke or booted, while
+the cell and tracking area came from the modem's cell events as they
+happened.  A drive that moved from one operator to another kept the first
+one's code on every record after.  At 17:48 on 2026-10-10 the car came out
+of the underground car park on EE B3, and its 125 records there went to the
+server as O2.  The DB shows the same for most of the car's history.
+Records on the Vodafone cells around Morden (TAC 12296 and its
+neighbours, some 2,300 of them) were stored as O2.  Records on O2's TAC
+4096 after a Vodafone stint (about 1,100) were stored as Vodafone.
+The PLMN is now tagged with the cell it was read on (`plmn_cid`).  When a
+record's cell group goes out on a different cell, one `%XMONITOR` reads it
+again first.  That is one AT command per cell change; it does not use the
+radio, so GNSS loses nothing.  The periodic signal reading picks up the PLMN
+from the same `%XMONITOR` line, and an operator change is logged.  Track mode
+runs no AT commands and is unchanged.
+
+## 0.4.73
+
+### The ignition-off record no longer waits for GPS underground
+At 17:28 on 2026-10-10 the car drove into the same underground car park as
+that morning and went dark for the whole 18-minute stay.  The records came
+in as it drove out, none of them lost, but the ignition-off record was 18
+minutes late.  A bench replay of the stay showed why:
+- **A fix wait ran on past the key-off.**  The ignition is only looked at
+between collections, so a key-off during a cold search waited out its
+300 s.  Then the ignition-off record waited out another 300 s cold search
+before falling back to the last known position.  The bench sent it 10
+minutes after the key went off.  Now a fix wait ends when the ignition
+changes, once the change has held past the crank dropout (5 s) or the
+backup module's wake pulse (1.5 s).  A record that has to go out gives the
+fix 15 s (`TRANSITION_FIX_WAIT_MS`).
+- **A six-minute-old GPS speed started coast-to-stop.**  The car's last fix
+before going underground said 5.3 km/h.  At key-off the ECU had no power,
+so that speed was taken as the current one, and coast-to-stop began.  The
+coast only ends after a send, which a collection with no fix never
+reaches, so the unit stayed awake with GNSS running, never reaching the
+sleep path that resends.  The ignition-off record, lost with the
+registration, was held until the key came back on, though the modem had
+registered again within a minute.  The GPS speed now only counts while the
+fix is under `SPEED_FIX_MAX_AGE_MS` old, and a collection with no fix ends
+the coast.
+- **A key-off whose record cannot be sent no longer keeps the unit awake.**
+With the modem registered but sends failing locally (a dead socket, a data
+connection gone under a live registration, a failed lookup), the
+ignition-off record was collected and sent again and again until modem
+recovery restarted the radio, 10 minutes on.  Each pass added another copy
+of it to the backlog.  The record is in the backlog after the first
+failure, so the unit now sleeps, and `do_sleep()`'s delivery and the timed
+wakes carry it from there.
+
 ## 0.4.72
 
 ### The server's address is looked up again when the server goes quiet

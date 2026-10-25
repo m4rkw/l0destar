@@ -520,6 +520,28 @@ def test_device_settings_are_mirrored(device, database):
     assert response.startswith('1,900,0')
 
 
+def keyed(response):
+    """The name=value fields of a reply, after its interval and movement alarm."""
+    return dict(field.split('=', 1) for field in response.split(',')[3:] if '=' in field)
+
+
+def test_backup_interval_rides_every_reply(device, database):
+    # Zero is sent too, so that clearing it reaches a device holding the old one.
+    assert keyed(send(device, record(0, 51.5, -0.1, 0)))['backup'] == '0'
+
+    database.query('UPDATE `device` SET `backup_int` = 1800 WHERE `id` = %s',
+                   (device['id'],))
+    for minute in (1, 2):
+        response = send(device, record(minute, 51.5, -0.1, 0))
+        assert keyed(response)['backup'] == '1800'
+        assert response.endswith(',track=0')       # the switch stays last
+
+    # The device does not report it back, so nothing it sends can change it.
+    send(device, record(3, 51.5, -0.1, 0, extras=',int=900;ma=1;backup=60'))
+    updated = db.lookup_device(imei=device['imei'])
+    assert (updated['int'], updated['backup_int']) == (900, 1800)
+
+
 def test_commands_are_delivered_once(device, database):
     # At-most-once by design: re-queueing is safer than replaying a poweroff.
     for command in ('locate', 'reboot'):
@@ -557,6 +579,37 @@ def test_config_round_trip(client, device, database, bearer):
     client.post('/api/1.0/config',
                 json={'imei': device['imei'], 'int': 1800}, headers=bearer)
     assert db.lookup_device(imei=device['imei'])['int'] == 1800
+
+
+def test_backup_interval_config_round_trip(client, device, database, bearer):
+    response = client.get('/api/1.0/config?imei=%s' % device['imei'], headers=bearer)
+    assert response.get_json()['backup'] == 0
+
+    posted = client.post('/api/1.0/config',
+                         json={'imei': device['imei'], 'backup': 900}, headers=bearer)
+    assert posted.get_json()['status'] == 'ok'
+    row = db.lookup_device(imei=device['imei'])
+    assert (row['backup_int'], row['int']) == (900, 3600)
+
+    response = client.get('/api/1.0/config?imei=%s' % device['imei'], headers=bearer)
+    assert response.get_json()['backup'] == 900
+
+
+def test_backup_interval_command_sets_the_column_and_is_not_queued(
+        client, device, database, bearer):
+    # Every reply carries it, so a queued copy would only be undone by the next.
+    response = client.post('/api/1.0/command', headers=bearer,
+                           json={'imei': device['imei'],
+                                 'command': 'backup_interval=1200,locate'})
+    assert response.get_json()['status'] == 'ok'
+    assert db.lookup_device(imei=device['imei'])['backup_int'] == 1200
+    queued = database.all('SELECT `command` FROM `command`')
+    assert [row['command'] for row in queued] == ['locate']
+
+    client.post('/api/1.0/command', headers=bearer,
+                json={'imei': device['imei'], 'command': 'backup_interval=0'})
+    assert db.lookup_device(imei=device['imei'])['backup_int'] == 0
+    assert database.one('SELECT COUNT(*) c FROM `command`')['c'] == 1
 
 
 def test_conflicting_commands_are_deduped(client, device, database, bearer):

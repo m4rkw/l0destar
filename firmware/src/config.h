@@ -86,6 +86,9 @@
 #define RESEND_POLL_S               30
 #define GPS_FIX_TIMEOUT_MS          CONFIG_APP_GPS_FIX_TIMEOUT_MS
 #define GPS_COLD_FIX_TIMEOUT_MS     CONFIG_APP_GPS_COLD_FIX_TIMEOUT_MS
+/* The fix wait for a record that must go out regardless (force_record):
+ * long enough for a receiver that was tracking, short of a cold search. */
+#define TRANSITION_FIX_WAIT_MS      15000
 
 /* -- cold-start GNSS: A-GNSS retries, priority mode ------------------------ */
 /* A failed A-GNSS fetch used to leave the whole cold search unassisted:
@@ -145,6 +148,14 @@
 #else
 #define BACKUP_SUPPLY_MIN           0.0f
 #define BACKUP_SUPPLY_MAX           0.0f
+#endif
+/* Timed-report interval while the module carries the rail, until the server
+ * has said what it wants: like the engine-off interval, settings live in RAM
+ * and only a reply sets it.  0 = the engine-off interval applies. */
+#ifdef CONFIG_APP_BACKUP_SUPPLY
+#define BACKUP_LOOP_INTERVAL        CONFIG_APP_BACKUP_LOOP_INTERVAL
+#else
+#define BACKUP_LOOP_INTERVAL        0
 #endif
 
 /* -- ignition wake from sleep ---------------------------------------------- */
@@ -320,13 +331,44 @@
 
 /* -- dead reckoning across GNSS gaps (motion.c) ---------------------------- */
 /* Fixes closer than this are a batch's own one-second records, with nothing
- * between them to fill; further apart than this is past the minute of
- * heading the log keeps, and past where a fill would be worth trusting. */
+ * between them to fill; further apart than this is past the two minutes of
+ * heading the log keeps.  It was a minute until the car's 2026-10-11 drive
+ * on Vodafone, where the network held the radio for 67-88 s after a send
+ * three times in ten minutes and each gap was drawn as a straight line.
+ * Two minutes is also as long as the server's 255-byte field takes: 119
+ * steps of two characters, 249 bytes in all. */
 #define DR_MIN_GAP_MS               2500
-#define DR_MAX_GAP_MS               60000
+#define DR_MAX_GAP_MS               120000
+/* A fill up to about a minute long rides outside the batch's byte budget
+ * (data_motion_bytes()), so it never sends a batch early.  A longer one is
+ * counted in full: it ends its batch a record early, where riding free it
+ * would overflow the datagram and be left off. */
+#define DR_FREE_MOTION_BYTES        128
 /* An ECU speed at or above this anywhere in the gap, or a fix at either end
  * moving at least this fast, is a vehicle worth filling in behind. */
 #define DR_MOVING_KMH               3
+/* Running on past the last fix (motion_position(), motion.c).  The absolute
+ * heading comes from a fix at least this fast, the gyro carrying it on from
+ * there: slower, the GNSS heading is mostly noise. */
+#define DR_REF_KMH                  10
+/* The speedometer's error is learned from fixes at least this fast. */
+#define DR_SCALE_KMH                20
+/* ECU readings further apart than this are not bridged on the move. */
+#define DR_OPEN_SPAN_MS             15000
+/* With the key off, a last ECU reading at or below this winds down to 0
+ * over DR_STOP_MS: the vehicle had all but stopped before the key turned.
+ * One faster says the ECU went quiet on the move. */
+#define DR_STOP_FROM_KMH            3
+#define DR_STOP_MS                  3000
+/* Below this the vehicle is standing still for the run, and a gyro reading
+ * slower than DR_DRIFT_DPS is taken for its drift: a creep too slow for the
+ * ECU to read turns faster than that on full lock. */
+#define DR_STILL_KMH                0.5f
+#define DR_DRIFT_DPS                1.5f
+/* Past this much driving without a fix the run is not worth reporting. */
+#define DR_OPEN_MAX_MOVING_S        300
+/* Moved less than this since the fix, and the fix itself is reported. */
+#define DR_REPORT_MIN_M             3.0f
 /* Fixes this far apart on the move get a warning that says where the time
  * went (APP_FIX_GAP_WARN_S, 0 = never), and the GNSS speed at one end or
  * the other has to be this high for it to count as on the move: a car

@@ -21,6 +21,11 @@ struct app_settings {
     char    pwd[20];
     char    imei[20];
     int     loop_interval;
+    /* Timed-report interval while the inline backup module is carrying the
+     * rail, from the server's reply (backup=<s>); 0 = same as loop_interval.
+     * Only the server sets it, so unlike loop_interval it is not reported
+     * back.  See report_interval() in main.c. */
+    int     backup_interval;
     int8_t  movement_alarm;
     /* Set from the server's response (track=<0|1>); never persisted.  See
      * do_track() in main.c and APP_TRACK_MODE. */
@@ -55,6 +60,12 @@ struct cell_info {
     int mcc;
     int mnc;
     uint32_t cid;
+    /* The cell mcc/mnc were last read on.  The cell event carries no PLMN,
+     * so a drive that crosses from one operator to another (O2 B20 to EE B3,
+     * say) kept the boot's operator on every record after.  A cell that is
+     * not this one means the PLMN wants reading again; see
+     * modem_refresh_plmn().  Not the TAC: O2 and Vodafone both use 4096. */
+    uint32_t plmn_cid;
     uint32_t tac;
     /* Serving-cell signal quality from AT%XMONITOR, converted to the units
      * the 3GPP indices mean (see modem_read_signal).  signal_valid is false
@@ -212,6 +223,10 @@ int  modem_update_cell_info(void);
 /* Serving-cell RSRP/SNR/band into g_cell; folded into modem_update_cell_info,
  * so callers refreshing cell context get it without asking. */
 int  modem_read_signal(void);
+/* mcc/mnc from one %XMONITOR, when the serving cell has changed since they
+ * were read.  No signal reading and no connection evaluation, so it is cheap
+ * enough to run on every cell change, GNSS running or not. */
+int  modem_refresh_plmn(void);
 /* How long the last attach took, in ms, or -1 if none has completed since the
  * search began.  Measured from the registration event, not the 1 Hz poll. */
 int  modem_attach_ms(void);
@@ -419,6 +434,8 @@ void led_accel_impact(void);
 
 void watchdog_init(void);
 void watchdog_kick(void);
+/* "stall:<addr>/..." once after a watchdog reset, else NULL (watchdog.c) */
+const char *watchdog_last_stall(void);
 
 void reboot_now(void);
 void status_delay(long ms);   /* watchdog-aware sleep */
@@ -680,6 +697,14 @@ int  motion_field(char *out, int max, int64_t from_ms, int64_t to_ms,
 		  bool moving);
 /* Remove every mv= field from the records in buf; returns the new length. */
 int  motion_strip(char *buf, int len);
+/* A fresh fix: the position past it is run forward from here. */
+void motion_note_fix(const struct gnss_fix *fix);
+/* Where the vehicle has got to since the fix at fix_ms (or a newer one),
+ * by ECU speed and gyro heading; false with nothing to go on or no further
+ * than DR_REPORT_MIN_M.  `final` once the key is off: no more ECU readings
+ * are coming, so the run goes to now. */
+bool motion_position(int64_t fix_ms, bool final, double *lat, double *lon,
+		     float *dist_m);
 /* main.c: accel_fifo_service() unless an impact is pending or the key is
  * off.  The fix wait ticks it, and collect_data() runs it before a field. */
 void dr_fifo_service(void);
@@ -692,6 +717,9 @@ static inline void motion_note_speed(int kmh) { }
 static inline int  motion_field(char *out, int max, int64_t from_ms,
 				int64_t to_ms, bool moving) { return 0; }
 static inline int  motion_strip(char *buf, int len) { return len; }
+static inline void motion_note_fix(const struct gnss_fix *fix) { }
+static inline bool motion_position(int64_t fix_ms, bool final, double *lat,
+				   double *lon, float *dist_m) { return false; }
 static inline void dr_fifo_service(void) { }
 #endif
 /* Bytes of mv= fields in data_current, which the batch's flush threshold

@@ -138,7 +138,9 @@ l0destar server.
   they start at `APP_ENGINE_OFF_LOOP_INTERVAL` (0, meaning the 900 s boot
   default) and `APP_MOVEMENT_ALARM`, and change only by the `int=` and
   `movealarm=` commands above — until the next reboot, since settings live
-  in RAM.
+  in RAM. The interval on backup power (`APP_BACKUP_LOOP_INTERVAL`) is set
+  the same way by the server and has no command, so with Traccar it stays
+  at its build value.
 - **Track mode** is switched on by the l0destar server's response and has no
   Traccar equivalent.
 - **Firmware updates.** The l0destar server advertises new builds on every

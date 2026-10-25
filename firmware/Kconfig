@@ -1114,8 +1114,11 @@ config APP_DEAD_RECKONING
 	  ends such a gap carries the ECU's speed and the gyro's heading
 	  change for each second of it, about two bytes a second, and the
 	  server fits that path between the fixes at either end.  Gaps of
-	  2.5-60 s, on the move.  Without an ECU speed only the headings
-	  go.  See src/motion.c.
+	  2.5-120 s, on the move.  Without an ECU speed only the headings
+	  go.  The same measurements also run the position on past the
+	  last fix, so a record with no fix of its own (the key-off in a
+	  car park) is sent from where the vehicle got to, flagged dr=1.
+	  That needs the ECU speed.  See src/motion.c.
 
 config APP_FIX_GAP_WARN_S
 	int "Warn when fixes are this far apart on the move (s)"
@@ -1181,6 +1184,21 @@ config APP_BACKUP_MAX_MV
 	help
 	  The module delivers 9.6 V less a diode drop, 8.8-9.3 V depending on
 	  load.  Keep this below any voltage a resting car battery can show.
+
+config APP_BACKUP_LOOP_INTERVAL
+	int "Timed-report interval on backup power until the server sets one (s)"
+	depends on APP_BACKUP_SUPPLY
+	default 0
+	help
+	  Seconds between timed reports while the backup module is carrying
+	  the supply, from boot until the first server reply replaces it with
+	  the server's own value (the backup= field of the reply, the
+	  device's backup_int column).  0 means the engine-off interval
+	  applies on backup power too.  The cell is finite, so a longer
+	  interval spares it and a shorter one follows a car whose power has
+	  been cut more closely.  The report that announces the cut goes out
+	  at once whatever this is.  Like the engine-off interval it is held
+	  to APP_NO_SIGNAL_MAX_INTERVAL, a day by default.
 
 # --- accelerometer / movement ----------------------------------------------
 
@@ -1416,8 +1434,7 @@ config APP_DATABUF_SLOTS
 	range 0 512
 	help
 	  Statically allocated, so this is a link-time cost: SLOTS x
-	  APP_DATABUF_REC_MAX bytes of BSS.  At the defaults that is ~15 KB
-	  against ~87 KB free, and a size that does not fit fails the build
+	  APP_DATABUF_REC_MAX bytes of BSS.  At the defaults that is 24 KB, and a size that does not fit fails the build
 	  rather than the device.  0 disables buffering entirely.
 
 	  A full buffer is thinned by half rather than truncated, so this sets
@@ -1427,13 +1444,15 @@ config APP_DATABUF_SLOTS
 
 config APP_DATABUF_REC_MAX
 	int "Longest telemetry record the backlog can hold (bytes)"
-	default 512
+	default 768
 	range 128 1024
 	help
 	  Must exceed the longest record the firmware builds.  A record is
 	  around 300 bytes typically and about 470 with every OBD-II field
 	  present; anything longer is logged as an error and dropped, since
-	  silently truncating a record would corrupt it.
+	  silently truncating a record would corrupt it.  The motion through
+	  a gap (mv=) goes on only if the record still fits with it, and a
+	  two-minute gap's is 249 bytes, hence 768.
 
 config APP_DATABUF_FLUSH_PER_CYCLE
 	int "Backlog datagrams to send per telemetry cycle"

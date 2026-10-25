@@ -362,7 +362,17 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     const int64_t deadline = k_uptime_get() + timeout_ms;
     int64_t last_log_ms = k_uptime_get();
     int err = -EAGAIN;
-    const int tick = s_tick_cb ? 1000 : 10000;
+    const int tick = 1000;
+
+    /* The key turning ends the wait: whatever the caller wanted a fix for,
+     * the ignition change is now the thing to report, and the caller only
+     * looks at the line once this returns.  On 2026-10-10 a key-off in an
+     * underground car park waited out a 300 s cold search, then a second
+     * one for the ignition-off record itself.  A change has to hold before
+     * it counts: the car's line drops out while the starter turns, and the
+     * backup module's wake pulse holds it on for a moment with the key off. */
+    const int ign_at_entry = ignition_read();
+    int64_t ign_changed_ms = 0;
 
     for (;;) {
         int64_t left = deadline - k_uptime_get();
@@ -382,6 +392,22 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
         }
 
         int64_t now = k_uptime_get();
+        int ign = ignition_read();
+
+        if (ign == ign_at_entry) {
+            ign_changed_ms = 0;
+        } else if (ign_changed_ms == 0) {
+            ign_changed_ms = now;
+        }
+        if (ign_changed_ms != 0 &&
+            now - ign_changed_ms >= (ign == 0 ? BACKUP_PULSE_MAX_MS
+                                              : IGN_CRANK_MAX_MS)) {
+            LOG_INF("ignition %s — fix wait ended after %llds",
+                    ign == 0 ? "on" : "off", (now - entered_ms) / 1000);
+            err = -EINTR;
+            break;
+        }
+
         int starved = (int)atomic_get(&s_starved_epochs);
 
         if (!cold) {
@@ -440,6 +466,11 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     nrf_modem_gnss_prio_mode_disable();
     s_last_wait_ms = (int32_t)(k_uptime_get() - entered_ms);
 
+    if (err == -EINTR) {
+        /* Not a failed search: the receiver keeps what it has. */
+        out->valid = false;
+        return err;
+    }
     if (err) {
         LOG_WRN("%s fix timeout — restarting GNSS (%d SVs%s, %d starved)",
                 cold ? "cold" : "warm", s_tracked_sv,

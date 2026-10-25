@@ -90,7 +90,7 @@ static int     s_motion_bytes;
 
 int data_motion_bytes(void)
 {
-    return s_motion_bytes;
+    return s_motion_bytes <= DR_FREE_MOTION_BYTES ? s_motion_bytes : 0;
 }
 
 void data_gap_reset(void)
@@ -451,9 +451,21 @@ int collect_data(int ignitionState)
     if (use_cached_gps) {
         have_fix = g_gnss.valid;
     } else {
-        if (gnss_collect(GPS_FIX_TIMEOUT_MS, &fix) == 0 && fix.valid) {
+        /* A record that has to go out (an ignition change) is about the
+         * change, not the position, so it gives the fix TRANSITION_FIX_WAIT_MS
+         * and then falls back to the last known position below.  A receiver
+         * that has been tracking fixes within a second or two; underground,
+         * the full wait is a cold start's 300 s, and that is how long the
+         * car's ignition-off record waited in a car park on 2026-10-10. */
+        int wait_ms = force_record ? TRANSITION_FIX_WAIT_MS : GPS_FIX_TIMEOUT_MS;
+
+        if (gnss_collect(wait_ms, &fix) == 0 && fix.valid) {
             g_gnss = fix;
             have_fix = 1;
+            /* The heading log up to the fix's moment, for the heading
+             * the run past it starts from. */
+            dr_fifo_service();
+            motion_note_fix(&fix);
         }
     }
 
@@ -486,6 +498,27 @@ int collect_data(int ignitionState)
     }
     last_record_stale = stale;
 
+    /* No fix of its own, so it goes from the last known position, which
+     * driving into a car park is the entrance.  Where the ECU's speed and
+     * the gyro say the vehicle has gone since (motion.c) is better, and
+     * goes into g_gnss too, so the timed wakes while parked carry it as
+     * well.  With the key off nothing more is coming, so it runs to now. */
+    bool dr_pos = false;
+
+    if (use_cached_gps || stale) {
+        double lat, lon;
+        float dist;
+
+        if (motion_position(g_gnss.epoch_ms, ignitionState != 0,
+                            &lat, &lon, &dist)) {
+            snprintf(g_gnss.lat_str, sizeof(g_gnss.lat_str), "%.6f", lat);
+            snprintf(g_gnss.lon_str, sizeof(g_gnss.lon_str), "%.6f", lon);
+            dr_pos = true;
+            LOG_INF("position dead reckoned %.0f m past the last fix",
+                    (double)dist);
+        }
+    }
+
     float v = battery_sample_with_engine_check();
 
     if (data_index > 0 && data_index < DATA_LIMIT - 1) {
@@ -498,7 +531,11 @@ int collect_data(int ignitionState)
     char now_iso[40] = "";
     const char *ts;
 
-    if (!use_cached_gps && g_gnss.time_iso[0]) {
+    /* A stale record is stamped now, not with its old fix's time: the
+     * server orders by that time, so an ignition-off at 15:20 stamped with
+     * a 15:17 fix filed itself before the 15:19 ignition-on, and the map
+     * kept showing "engine on" (car park, 2026-10-11). */
+    if (!use_cached_gps && !stale && g_gnss.time_iso[0]) {
         ts = g_gnss.time_iso;
     } else {
         ts = clock_timestamp(now_iso, sizeof(now_iso));
@@ -601,6 +638,9 @@ int collect_data(int ignitionState)
      * flag; until now it was hardcoded to 0, so the fallback the protocol
      * already allowed for could never actually happen. */
     if (g_cell.valid && (g_cell.dirty || stale)) {
+        if (network_ready) {
+            (void)modem_refresh_plmn();
+        }
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
                      ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=%d;rat=%s",
@@ -610,6 +650,13 @@ int collect_data(int ignitionState)
         if (n > 0) data_index += n;
 
         g_cell.dirty = false;
+    }
+
+    /* The position was dead reckoned past the last fix, above. */
+    if (dr_pos) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1, ",dr=1");
+        if (n > 0) data_index += n;
     }
 
     /* Serving-cell signal quality, on its own cadence rather than the cell
@@ -926,6 +973,45 @@ static void pending_cmd_add(const char *cmd)
     memcpy(pending_server_cmd, merged, used + 1);
 }
 
+/* A "<key>=<n>" field out of the commands part of a reply, with its comma,
+ * taken out of the string so that it is neither merged into the pending
+ * commands nor run: the settings that ride every reply are applied here, the
+ * way the interval and movement alarm are.  False, and the string untouched,
+ * when the reply carries none or the number is not one. */
+static bool reply_take_int(char *cmd, const char *key, int *val)
+{
+    size_t klen = strlen(key);
+    char *p = cmd;
+
+    while (*p) {
+        char *comma = strchr(p, ',');
+        size_t len = comma ? (size_t)(comma - p) : strlen(p);
+
+        if (len > klen + 1 && strncmp(p, key, klen) == 0 && p[klen] == '=') {
+            char *end;
+            long n = strtol(&p[klen + 1], &end, 10);
+
+            if (end == &p[klen + 1] || end != p + len) {
+                return false;
+            }
+            *val = n < 0 ? 0 : (n > INT32_MAX ? INT32_MAX : (int)n);
+            if (comma) {
+                memmove(p, comma + 1, strlen(comma + 1) + 1);
+            } else if (p > cmd) {
+                p[-1] = '\0';
+            } else {
+                *p = '\0';
+            }
+            return true;
+        }
+        if (!comma) {
+            break;
+        }
+        p = comma + 1;
+    }
+    return false;
+}
+
 /* What a reply says, "1,<interval>,<movement_alarm>[,cmd]", applied. */
 static void reply_apply(const char *resp)
 {
@@ -946,6 +1032,23 @@ static void reply_apply(const char *resp)
         if (!send_int_to_server) {
             if (interval >= 0) g_settings.loop_interval = interval;
             if (ma >= 0)       g_settings.movement_alarm = (int8_t)ma;
+        }
+        /* The backup interval rides every reply like track=, but is applied
+         * as it lands, like the two above.  Nothing on the device sets it,
+         * so there is no change of its own for a reply to overwrite and it
+         * does not wait on send_int_to_server.  1 to 9 become 10, as for
+         * int=: the cell behind it is finite. */
+        int backup;
+
+        if (matched == 3 && reply_take_int(cmd, "backup", &backup)) {
+            if (backup != 0 && backup < 10) {
+                backup = 10;
+            }
+            if (backup != g_settings.backup_interval) {
+                LOG_INF("backup interval %d -> %d s",
+                        g_settings.backup_interval, backup);
+                g_settings.backup_interval = backup;
+            }
         }
         if (matched == 3 && cmd[0]) {
             pending_cmd_add(cmd);

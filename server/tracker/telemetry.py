@@ -916,6 +916,7 @@ def device_config(device):
     return {
         'int': device.get('int') or 0,
         'ma': 1 if movement_alarm is None else movement_alarm,
+        'backup': device.get('backup_int') or 0,
     }
 
 
@@ -1078,7 +1079,7 @@ def _handle_alert(line, device, database, log):
 def build_response(device, database, log, firmware_version=None):
     """Build the reply the device reads after a successful send.
 
-    Format: ``1,<interval>[,<movement_alarm>][,<commands>][,fota=<v>][,track=<0|1>]``.
+    Format: ``1,<interval>[,<movement_alarm>][,<commands>][,backup=<n>][,fota=<v>][,track=<0|1>]``.
 
     The leading ``1`` is the ack the firmware checks before clearing its send
     buffer.  Commands are appended as a comma-separated list and deleted as
@@ -1102,6 +1103,14 @@ def build_response(device, database, log, firmware_version=None):
         database.query('DELETE FROM `command` WHERE `id` IN (%s)' % placeholders, ids)
         log.info('delivered %d commands to %s: %s',
                  len(commands), device['imei'], command_string)
+
+    # The interval for a tracker running on the backup module rides the
+    # command field too, on every response, so a device that rebooted or
+    # missed a reply converges on it.  The firmware applies it as it reads
+    # the reply and takes it out of the string, so it is never run as a
+    # command; firmware from before it passes over it.  Ahead of the advert
+    # and the track switch so that those two stay last.
+    response += ',backup=%d' % settings['backup']
 
     # The OTA indication rides the command field.
     if firmware_version:
