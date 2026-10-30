@@ -12,8 +12,10 @@
  */
 
 #include <string.h>
+#include <errno.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/net/socket.h>
 #include <modem/modem_key_mgmt.h>
 #include <modem/modem_info.h>
 #include <modem/modem_jwt.h>
@@ -102,6 +104,84 @@ static int get_serving_cell(struct lte_lc_cell *cell)
 	return 0;
 }
 
+/* The name lookup, asked first and with a deadline.  The modem's resolver can
+ * sit on one query for tens of seconds when the link is marginal — 38 s on
+ * 2026-10-24 at 19:30, on the road with the radio held by the network — and
+ * the REST client only compares its timeout with the clock once
+ * getaddrinfo() has returned, so the 20 s below never applied to it: the
+ * fetch outlasted the 32 s watchdog window ("no kick for 32s", with the
+ * hardware reset ten seconds behind) and returned a few seconds short of it.
+ * Nothing to slice, so the lookup is asked from a thread of its own and
+ * waited for in kicked one-second slices.  On a miss the attempt is dropped
+ * before the receiver has been paused, and the thread finishes its query in
+ * its own time; after a hit the REST call looks the same name up again, a
+ * moment later. */
+#define AGNSS_DNS_STACK_SIZE	1536
+
+static K_SEM_DEFINE(s_dns_go, 0, 1);
+static K_SEM_DEFINE(s_dns_done, 0, 1);
+static atomic_t s_dns_busy;
+static int s_dns_err;
+
+static void dns_thread(void *p1, void *p2, void *p3)
+{
+	struct zsock_addrinfo hints = {
+		.ai_flags = AI_NUMERICSERV,
+		.ai_family = AF_UNSPEC,
+		.ai_socktype = SOCK_STREAM,
+	};
+
+	ARG_UNUSED(p1);
+	ARG_UNUSED(p2);
+	ARG_UNUSED(p3);
+
+	for (;;) {
+		struct zsock_addrinfo *res = NULL;
+
+		k_sem_take(&s_dns_go, K_FOREVER);
+		s_dns_err = zsock_getaddrinfo(CONFIG_NRF_CLOUD_REST_HOST_NAME,
+					      "443", &hints, &res);
+		if (res) {
+			zsock_freeaddrinfo(res);
+		}
+		/* Done is given before busy is cleared, so a request that finds
+		 * the thread idle cannot be handed the last one's answer. */
+		k_sem_give(&s_dns_done);
+		atomic_clear(&s_dns_busy);
+	}
+}
+
+K_THREAD_DEFINE(s_dns_tid, AGNSS_DNS_STACK_SIZE, dns_thread, NULL, NULL, NULL,
+		K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
+
+static int agnss_resolve(void)
+{
+	if (!atomic_cas(&s_dns_busy, 0, 1)) {
+		LOG_WRN("nRF Cloud lookup from an earlier attempt still unanswered");
+		return -EBUSY;
+	}
+
+	k_sem_reset(&s_dns_done);
+	k_sem_give(&s_dns_go);
+
+	for (int waited_ms = 0; waited_ms < AGNSS_DNS_WAIT_MS; waited_ms += 1000) {
+		watchdog_kick();
+		if (k_sem_take(&s_dns_done, K_SECONDS(1)) == 0) {
+			if (s_dns_err) {
+				LOG_WRN("getaddrinfo(%s): %d",
+					CONFIG_NRF_CLOUD_REST_HOST_NAME, s_dns_err);
+				return -EIO;
+			}
+			return 0;
+		}
+	}
+
+	watchdog_kick();
+	LOG_WRN("nRF Cloud lookup unanswered after %d s — A-GNSS dropped",
+		AGNSS_DNS_WAIT_MS / 1000);
+	return -ETIMEDOUT;
+}
+
 int agnss_init(void)
 {
 	int err = modem_info_init();
@@ -115,6 +195,12 @@ int agnss_init(void)
 int agnss_fetch(void *agnss_request)
 {
 	struct nrf_modem_gnss_agnss_data_frame *request = agnss_request;
+
+	/* LTE is off for the hold breaker: nothing would get through, and the
+	 * wait for the clock below would only hold the receiver's thread. */
+	if (modem_lte_is_cut()) {
+		return -ENETDOWN;
+	}
 
 	/* JWT needs a valid modem clock for the expiry field.  The date_time
 	 * library auto-triggers on LTE connect: tries NITZ first, falls back
@@ -136,15 +222,21 @@ int agnss_fetch(void *agnss_request)
 		}
 	}
 
+	err = agnss_resolve();
+	if (err) {
+		return err;
+	}
+
 	struct nrf_cloud_rest_context rest_ctx = {
 		.connect_socket = -1,
 		.keep_alive = false,
 		/* Inside the watchdog window (WATCHDOG_TIMEOUT_S): this is one
 		 * blocking call that cannot be sliced, so it has to fit between
-		 * two kicks rather than outlast them.  Ample for a few KB with
-		 * the radio handed to LTE below, and a miss is not fatal:
-		 * gnss_collect() retries it (AGNSS_RETRIES) while the receiver
-		 * keeps searching. */
+		 * two kicks rather than outlast them.  Its lookup is asked first,
+		 * with a deadline of its own (agnss_resolve()), so this is the
+		 * connect, the handshake and a few KB.  Ample with the radio
+		 * handed to LTE below, and a miss is not fatal: gnss_collect()
+		 * retries it (AGNSS_RETRIES) while the receiver keeps searching. */
 		.timeout_ms = 20000,
 		.auth = jwt_buf,
 		.rx_buf = rx_buf,

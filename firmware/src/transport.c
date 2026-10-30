@@ -307,6 +307,14 @@ void transport_teardown(void)
 
 int transport_send(const uint8_t *plaintext, size_t pt_len)
 {
+    /* LTE is off on purpose (APP_HOLD_BREAK): nothing sent now would reach
+     * the server, and a socket opened on it can sit for the send timeout.
+     * The caller keeps what it had — the backlog, the alert queue — for the
+     * burst that follows LTE coming back. */
+    if (modem_lte_is_cut()) {
+        return -ENETDOWN;
+    }
+
     /* Replies that came in since the last send: each is a datagram that
      * arrived.  It can also drop a socket that has gone bad. */
     (void)transport_poll();
@@ -419,7 +427,11 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
     if (took >= 2000) {
         LOG_WRN("send #%u took %lld ms", s_last_id, took);
     }
-    LOG_INF("sent %u bytes (#%u)", (unsigned)total, s_last_id);
+    /* A stream sends one a second: the record's own line says it went, and a
+     * slow send is warned about above. */
+    if (!s_streaming) {
+        LOG_INF("sent %u bytes (#%u)", (unsigned)total, s_last_id);
+    }
 
     return 0;
 }

@@ -877,6 +877,139 @@ config APP_NBIOT_OFFLINE_CAP_S
 	  next AT command blocks until the watchdog resets the unit, which
 	  comes back on LTE-M only.
 
+config APP_HOLD_BREAK
+	bool "Take LTE away from a network that will not release the radio (AT+CFUN=20/21)"
+	depends on !APP_TRACCAR && APP_DATABUF_SLOTS > 0
+	default n
+	help
+	  GNSS gets nothing while an RRC connection is up, and some cells keep
+	  it up long after a send: on the drive to Cornwall on 2026-10-24 the
+	  EE cells around Launceston held it for 5 to 347 s a time, which was
+	  71 % of all the blind time on the trip and 86 % of it on those cells.
+	  Release assistance does not move them, and GNSS priority mode cannot
+	  either: Nordic's header says it will not stop LTE connections.
+
+	  With this on, a vehicle on the move whose RRC connection is still up
+	  APP_HOLD_BREAK_PROBE_S after it began gets LTE switched off
+	  (AT+CFUN=20, which leaves the receiver running).  Records are built
+	  as usual and parked in the backlog.  After APP_HOLD_BREAK_WINDOW_S,
+	  or at once for anything that cannot wait (an alert, an ignition
+	  change, a stop, a filling backlog), LTE comes back (CFUN=21),
+	  registers, sends the batch and the backlog in a burst, and the next
+	  hold is cut straight after that send rather than waited for.  On the
+	  bench a whole cycle left the receiver blind for 3.3-6.5 s, against
+	  14-20 s per send when the network releases the connection itself.
+	  Where it releases within the probe nothing is ever cut.
+
+	  The price is a registration per cycle (2.8-5 s on the bench, 33 s
+	  once across an operator change) and a track that reaches the server
+	  in bursts every 20-odd seconds rather than every three.  If LTE does
+	  not register again within APP_HOLD_BREAK_REG_S the radio is left to
+	  the ordinary outage handling and the feature is off until the modem
+	  has registered again by itself, and for five minutes after that
+	  (parking clears it).  What the modem says about the search is logged
+	  meanwhile (function mode, registration status and cause, RRC state,
+	  signal), so the next one can be told from a cell that is not there.
+	  Never in track mode, and not while the vehicle is stopped or the
+	  engine is off.
+
+	  A watchdog reset, a CPU lockup or a crash with this built in also
+	  says where the breaker was: rst= on the next boot carries
+	  hb:<phase><s since the cut>/<s since the phase began>, e.g.
+	  wdt+hb:Q98/0, from a note kept in RAM that outlives the reset
+	  (crumb.c; holdbreak.h has the phases).  The car's reset on
+	  2026-10-26, 130 s after a cut, left no log and no stall address.
+
+	  Do not turn this on without a cap.  Its first real test was the car's
+	  drives from 2026-10-25, and it failed them: four times the modem did
+	  not register again after a restore and searched for 5, 43, 54 and 66
+	  minutes at most (the 5 minute one ended on a new tracking area, the
+	  rest at the next key-on), hearing a cell and reaching nothing.  The
+	  bench reproduced it on 2026-10-27 with no vehicle and no cell
+	  changes, on O2, doing nothing but the breaker's own cut and restore
+	  every 25 s: 29 clean cycles in 12.5 minutes, then the 30th did not
+	  register and nothing reached the network for 47 min 29 s; after a
+	  hold-off, 29 clean cycles again and 46 min 51 s.  1NCE logged a
+	  Create PDP, an Update location and a Delete PDP for every cycle and
+	  nothing during the search, and 29 attaches in the hour before each
+	  of the car's four.  Every cut is a detach and every restore a new
+	  attach, and the 30th in an hour is refused until an hour after that
+	  hour's first cut: both bench refusals ended 3601 and 3603 s after
+	  it, so the 47 minutes was 60 less the 12.5 the cycles had taken, on
+	  EE and O2 alike.  That is the shape of the modem's own Radio Policy
+	  Manager, the GSMA TS.34 limit that Nordic's DevZone answers (old
+	  nRF9160 threads) put at 30 attaches an hour.  The modem reports it as
+	  +CGEV: RESTR 1,2 with the seconds left; this firmware has never
+	  enabled +CGEREP, so it is unconfirmed, and no way to disable it is
+	  documented.  Modem firmware 2.0.4, the newest Nordic publishes and
+	  what the bench runs, has it.  A restart of the radio does not end
+	  it; time does.  A cap would have to count every cut from the hour's
+	  first and stay well under 30.  The car's remote.conf has it off from
+	  0.4.86.
+
+config APP_HOLD_BREAK_PROBE_S
+	int "Seconds an RRC connection has lasted before it is cut as a hold"
+	depends on APP_HOLD_BREAK
+	default 5
+	range 3 60
+	help
+	  Measured from the later of the connection's start and our last
+	  datagram, so the attach and the burst after a restore do not count
+	  against the cell.  Where the network lets go by itself it does so in
+	  2.8 s (O2, bench) and this should stay clear of that, or every send is
+	  cut.  Where it is 10-25 s (the TAC 12296 cells, which ignore release
+	  assistance) a shorter probe saves more.  With no ECU speed the
+	  vehicle only counts as moving while the receiver's last fix is under
+	  10 s old, so keep it below that.
+
+config APP_HOLD_BREAK_WINDOW_S
+	int "Longest LTE stays off at a time (s)"
+	depends on APP_HOLD_BREAK
+	default 20
+	range 5 60
+	help
+	  Records parked meanwhile come one a second, and the backlog holds
+	  APP_DATABUF_SLOTS of them before it starts thinning, so this plus
+	  the few seconds to the next batch must stay well below that.  The
+	  window ends sooner for the reasons under APP_HOLD_BREAK.  The longer
+	  it is, the smaller the share of the drive spent blind on the way back
+	  in, and the later the server sees the track.
+
+config APP_HOLD_BREAK_REG_S
+	int "Seconds LTE gets to register again before the cut is given up"
+	depends on APP_HOLD_BREAK
+	default 15
+	range 5 60
+	help
+	  The main loop waits this long, feeding the watchdog and polling the
+	  ECU.  Past it the radio is left searching, as in any outage, and the
+	  feature stays off until the modem has registered again, and for five
+	  minutes after that.
+
+config APP_HOLD_BREAK_MIN_KMH
+	int "Speed above which a hold is cut (km/h)"
+	depends on APP_HOLD_BREAK
+	default 10
+	range 2 200
+	help
+	  The ECU's speed where it answers, else the receiver's.  A vehicle
+	  that is stopped loses nothing by waiting: the position does not
+	  change.  A cut that is open ends below half this speed.
+
+config APP_HOLD_BREAK_STICKY
+	int "Sends cut straight after the send once a hold has been seen"
+	depends on APP_HOLD_BREAK
+	default 4
+	range 0 20
+	help
+	  A hold found by the probe is likely to be followed by another on the
+	  next send, and waiting out the probe each time is APP_HOLD_BREAK_PROBE_S
+	  more blind seconds per cycle.  So for this many sends after one, LTE
+	  is taken away as soon as the send and its replies are done.  The send
+	  after that waits for the network again, which is how the unit finds
+	  its way back to ordinary operation when the cells change.  0 probes
+	  every time.
+
 config APP_SIGNAL_SAMPLE_S
 	int "Seconds between serving-cell signal readings (0 = only at wakes)"
 	default 60
@@ -1111,12 +1244,32 @@ config APP_GNSS_EXT_BAUD
 	depends on APP_BOARD_HAS_EXT_GNSS
 	default 115200
 	help
-	  The rate the MAX-M10S is moved to once it has been found.  It starts
-	  at 9600 after every power-up; at that rate the satellite list alone
-	  (about 500 bytes) takes half a second to send and would delay the
+	  The rate the MAX-M10S is moved to once it has been found.  It comes up
+	  at 38400 after every power-up (the v4.0 board's does; 9600 is also
+	  looked for, as older u-blox parts start there).  At 38400 the satellite
+	  list alone (about 500 bytes) takes 130 ms to send and would delay the
 	  position behind it, which is why this is not left at the default.
 	  9600, 19200, 38400, 57600, 115200, 230400, 460800 and 921600 are
 	  accepted.
+
+config APP_GNSS_EXT_NMEA_FALLBACK
+	bool "Read the external receiver's NMEA when it will not take commands"
+	depends on APP_BOARD_HAS_EXT_GNSS
+	default y
+	help
+	  The receiver is configured over its UART at every power-up.  If it is
+	  heard (its NMEA output arrives) but never acknowledges the
+	  configuration -- the nRF's TX not reaching it, UBX input switched off --
+	  the driver carries on with the sentences the receiver sends by itself
+	  (RMC and GGA for the position, GSV for the satellites) instead of
+	  calling it dead, and raises an alert, at normal priority, that says
+	  the commands are not getting through.
+
+	  The fixes are the same ones.  What only the commands set is not:
+	  the receiver stays at its own defaults, one fix a second and the
+	  portable dynamic model rather than the automotive one, and nothing
+	  turns its NMEA off to leave the line quiet.  With this off such a
+	  receiver is reported dead after two failed bring-ups.
 
 config APP_GNSS_BACKUP_SUPPLY
 	bool "Keep the external GNSS receiver's backup supply (V_BCKP) on"
@@ -1138,6 +1291,75 @@ config APP_GNSS_BACKUP_SUPPLY
 	  little but the time and almanac: consider turning this off for a
 	  unit that reports less often than every couple of hours.  The
 	  board's actual draw has not been measured against the data sheet.
+
+config APP_ASSISTNOW
+	bool "u-blox AssistNow orbit assistance for the external receiver"
+	depends on APP_BOARD_HAS_EXT_GNSS && APP_FOTA
+	select REST_CLIENT
+	default y
+	help
+	  A receiver that has been without power for hours holds no usable
+	  ephemerides and must read them from the satellites, which takes 25 to
+	  30 s with a clear sky and minutes with a poor one.  AssistNow
+	  Predictive Orbits (free from u-blox) gives it orbits for the coming
+	  days, so it needs only to hear a few satellites.
+
+	  The firmware does not talk to u-blox.  The l0destar server registers
+	  each receiver with u-blox's service (the receiver's chip id and version
+	  reply, which this sends once), downloads the orbits once a day and keeps
+	  them, so a reboot or a firmware update loses nothing and u-blox's
+	  per-device request limit is never the thing that runs out.  When the
+	  receiver comes up and its first satellite lists show it holds fewer than
+	  five ephemerides, this asks the server (APP_FOTA_HOST, over the same TLS
+	  as the firmware manifest) for the data and passes it to the receiver
+	  with the time from the modem's clock.  The server has to be told to do
+	  its part: see the server's assistnow settings.
+
+	  Costs about 14 KB of RAM (the download buffer and a thread) and, per
+	  power-up that asks, one HTTPS request of up to APP_ASSISTNOW_BUF_SIZE.
+
+config APP_ASSISTNOW_GNSS
+	string "Constellations AssistNow data is asked for"
+	depends on APP_ASSISTNOW
+	default "gps,gal"
+	help
+	  Comma separated, from gps, gal, bds, glo and qzss.  What the server
+	  sends is cut to fit APP_ASSISTNOW_BUF_SIZE, a constellation at a time
+	  in this order, so name the ones that matter first.  GPS and Galileo
+	  are about 8 KB between them for a day's orbits and the almanacs; every
+	  constellation adds roughly half as much again.
+
+config APP_ASSISTNOW_BUF_SIZE
+	int "AssistNow download buffer (bytes)"
+	depends on APP_ASSISTNOW
+	default 10240
+	range 4096 32768
+	help
+	  Holds the whole HTTPS response, headers included, before it is passed
+	  to the receiver.  The server is told to send at most this less 512
+	  bytes of headers.  Static RAM: size it to what the constellations
+	  above need and no more.
+
+config APP_ASSISTNOW_TIME_ACC_S
+	int "Accuracy claimed for the time given to the receiver (s)"
+	depends on APP_ASSISTNOW
+	default 3
+	range 1 30
+	help
+	  The modem's clock comes from the network (NITZ, or NTP as a fallback)
+	  and is good to a second or two.  A receiver given a time that is
+	  further out than it was told starts slowly or not at all, so this is
+	  generous.  The receiver ignores it if its own clock, kept on the
+	  backup supply, is already running.
+
+config APP_ASSISTNOW_TIMEOUT_S
+	int "AssistNow request timeout (s)"
+	depends on APP_ASSISTNOW
+	default 25
+	range 5 60
+	help
+	  Per HTTPS request.  The request runs on a thread of its own, so
+	  unlike the firmware manifest's it is not bound by the watchdog window.
 
 config APP_DEAD_RECKONING
 	bool "Carry the motion through gaps between fixes (mv=)"
@@ -1463,6 +1685,64 @@ config APP_BATCH_SIZE
 	  250-300 bytes and BATCH_FLUSH_BYTES flushes before the datagram cap,
 	  so a larger value here mostly hands the decision to that byte guard.
 	  Ignition changes, settings syncs and send failures still flush at once.
+
+config APP_DRIVE_STREAM
+	bool "Stream telemetry continuously while the engine runs"
+	depends on APP_BOARD_HAS_EXT_GNSS
+	default y
+	help
+	  The built-in receiver shares the antenna with LTE, so a send costs it
+	  its fix and the drive is batched (APP_BATCH_SIZE) to send as seldom as
+	  it can.  The external receiver has an antenna of its own, so while the
+	  engine runs this sends each record as it is built, one per
+	  APP_DRIVE_STREAM_HZ, over a connection it holds up (the modem is told
+	  more is coming, so the radio does not release between records) rather
+	  than one released after each.  That also keeps the modem out of power
+	  saving mode: PSM is negotiated at attach and cannot be switched off
+	  under a registration, but the modem only enters it after the network's
+	  active time (10 s) with nothing to send, and a unit sending every
+	  second never gets there.
+
+	  Every record carries what a normal one does -- position, speed,
+	  battery, accelerometer, gyro, temperatures, cell and signal, the ECU's
+	  figures when the K wire is polled -- and goes out whole.  The K wire is
+	  polled between sends, so the figures are never more than a second old
+	  and no record waits on the bus.  The receiver is asked for fixes at the
+	  same rate (above 1 Hz) and put back to 1 Hz when the engine stops.
+
+	  A record lost on the way is still sent again: each one is held until
+	  the server's reply comes back, as in normal driving.  The price is
+	  data: about 300 bytes a record and a reply, 1.4 MB for an hour's driving
+	  at 1 Hz.  Records go back to being batched when the engine stops.
+
+config APP_DRIVE_STREAM_HZ
+	int "Target telemetry rate while the engine runs (records per second)"
+	depends on APP_DRIVE_STREAM
+	default 1
+	range 1 5
+	help
+	  What the stream aims for.  A record is built when the receiver
+	  delivers a fix, so the rate is the receiver's: above 1 Hz it is asked
+	  for fixes that often (the satellite list stays at one a second).  What
+	  a unit can sustain is set by the record: on the bench 140 to 270 ms to
+	  build and 15 to 25 ms to send gave 3.4 to 3.6 records a second, so 4 and
+	  5 will fall short.  Above 1 Hz the modem's temperature and supply
+	  readings, each an AT command, are refreshed once a second and not for
+	  every record.  The log says nothing while the stream keeps up, and every
+	  thirty seconds what it achieved when it did not.
+
+config APP_DRIVE_STREAM_FIX_WAIT_S
+	int "Longest a streamed record waits for a fix (s)"
+	depends on APP_DRIVE_STREAM
+	default 5
+	range 2 30
+	help
+	  Without a fix inside this the record is built from the last known
+	  position instead, dead reckoned past it where the ECU and gyro allow,
+	  and marked as not a fresh fix (cl=1), so the stream does not go quiet
+	  in a tunnel or a car park: a silent connection ends in the network's
+	  release and then in PSM.  The first record after the engine starts,
+	  with no position yet, still waits for one.
 
 config APP_DATABUF_SLOTS
 	int "Telemetry records held when the link is down"

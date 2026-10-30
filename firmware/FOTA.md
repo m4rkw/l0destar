@@ -44,7 +44,7 @@ Never set it in a production image; the unit would never take another update.
 
 | Trigger | Where |
 |---|---|
-| **Power-on** - the one unconditional check, so a freshly flashed or long-offline unit converges without waiting for a response | `main()`, once start-up has finished |
+| **Power-on** - the one unconditional check, so a freshly flashed or long-offline unit converges without waiting for a response. With the key on it waits for the first call after key-off, so a unit that reset on the road does not start a download there | `main()`, once start-up has finished; held back in `fota_check()` |
 | **Telemetry response advertised a newer version** (`fota=X.Y.Z` → `fota_notify_available`) | serviced at the next safe moment: `STATE_IDLE` while the engine is not running, after a send in `do_ignition_sleep()`, at key-off before sleeping, and on the `do_sleep()` telemetry wake |
 | Bare `fota` command from the server (manual force, skips the failure holdoff) | same |
 

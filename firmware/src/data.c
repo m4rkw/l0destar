@@ -25,6 +25,8 @@ int   data_index;
 bool  send_int_to_server;
 bool  force_record;
 bool  last_record_stale;
+int   collect_fix_wait_ms;
+bool  stream_keeps_records;
 bool  last_send_ok;
 
 static int  s_battery_warning_status;
@@ -217,6 +219,58 @@ static bool ign_off_settled(void)
 
     return s_ign_off_ms >= 0 &&
            k_uptime_get() - since >= (int64_t)BATTERY_WARN_SETTLE_S * 1000;
+}
+
+/* -- lean reads ---------------------------------------------------------- */
+
+/* The modem's die temperature and supply are AT commands, tens of
+ * milliseconds each, for figures that move over minutes.  A stream above 1 Hz
+ * (data_set_lean) reads them once a second and repeats the figure between;
+ * otherwise every record reads them. */
+static bool s_lean;
+#define LEAN_REFRESH_MS 1000
+
+void data_set_lean(bool on)
+{
+    s_lean = on;
+}
+
+static int read_temp_lean(float *t)
+{
+    static float last;
+    static int64_t at = INT64_MIN / 2;
+    int64_t now = k_uptime_get();
+
+    if (s_lean && now - at < LEAN_REFRESH_MS) {
+        *t = last;
+        return 0;
+    }
+    int err = modem_read_temp(t);
+
+    if (err == 0) {
+        last = *t;
+        at = now;
+    }
+    return err;
+}
+
+static int read_vbat_lean(int *mv)
+{
+    static int last;
+    static int64_t at = INT64_MIN / 2;
+    int64_t now = k_uptime_get();
+
+    if (s_lean && now - at < LEAN_REFRESH_MS) {
+        *mv = last;
+        return 0;
+    }
+    int err = modem_read_vbat(mv);
+
+    if (err == 0) {
+        last = *mv;
+        at = now;
+    }
+    return err;
 }
 
 /* -- data collection ------------------------------------------------------ */
@@ -459,6 +513,10 @@ int collect_data(int ignitionState)
          * car's ignition-off record waited in a car park on 2026-10-10. */
         int wait_ms = force_record ? TRANSITION_FIX_WAIT_MS : GPS_FIX_TIMEOUT_MS;
 
+        if (collect_fix_wait_ms > 0) {
+            wait_ms = collect_fix_wait_ms;
+        }
+
         if (gnss_collect(wait_ms, &fix) == 0 && fix.valid) {
             g_gnss = fix;
             have_fix = 1;
@@ -613,7 +671,7 @@ int collect_data(int ignitionState)
 
     /* nRF9151 SiP die temperature (°C) */
     float mcu_temp;
-    if (modem_read_temp(&mcu_temp) == 0) {
+    if (read_temp_lean(&mcu_temp) == 0) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
                      ",mt=%.1f", (double)mcu_temp);
@@ -626,7 +684,7 @@ int collect_data(int ignitionState)
      * VBUS with a cable plugged in.  Distinct from the vehicle battery above:
      * that one comes off the INA228 and is the ~12V rail. */
     int vsys_mv;
-    if (modem_read_vbat(&vsys_mv) == 0) {
+    if (read_vbat_lean(&vsys_mv) == 0) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
                      ",vs=%.2f", vsys_mv / 1000.0);
@@ -1056,10 +1114,29 @@ static void reply_apply(const char *resp)
     }
 }
 
+/* A stream is answered every second in the same words.  True when `resp` is
+ * what the last reply checked here said. */
+static bool reply_repeats(const char *resp)
+{
+    static uint32_t last;
+    uint32_t h = 2166136261u;           /* FNV-1a */
+
+    for (const char *c = resp; *c; c++) {
+        h = (h ^ (uint8_t)*c) * 16777619u;
+    }
+
+    bool same = (h == last);
+
+    last = h;
+    return same;
+}
+
 void data_reply(uint32_t id, const char *resp)
 {
     databuf_ack(id);
-    LOG_INF("resp #%u: %s", id, resp);
+    if (!transport_is_streaming() || !reply_repeats(resp)) {
+        LOG_INF("resp #%u: %s", id, resp);
+    }
     reply_apply(resp);
 }
 
@@ -1208,7 +1285,7 @@ int send_data(void)
      * its records carry an IMU burst too big for the backlog's slots, and a
      * second copy of a one-second sample, a minute late, is not worth the
      * airtime. */
-    if (!transport_is_streaming()) {
+    if (!transport_is_streaming() || stream_keeps_records) {
         databuf_sent(transport_sent_id(), s_tx, (size_t)rec_len);
     }
 

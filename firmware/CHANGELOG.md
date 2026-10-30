@@ -1,5 +1,447 @@
 # Changelog
 
+## Unreleased
+
+### A radio the network holds no longer costs a restart or a reset
+On 2026-10-24, driving to Cornwall, the network held the car's radio for up to
+347 s after a send on EE's rural cells in Somerset, Devon and Cornwall
+(tracking areas 26371 to 26771): the modem stayed RRC connected with nothing
+to send, GNSS saw no satellites, and 18 gaps ran past two minutes, 17 of them
+on EE.  That is the carrier's, and nothing here shortens it.  What the
+firmware did while the radio was held was its own.  A fix wait that timed out
+restarted the receiver, 64 times in the day and 60 of them with the radio
+held, and each restart made the next wait cold; a cold wait asks nRF Cloud for
+assistance 15 s in, with the radio still held.  At 19:30 the name lookup of
+one of those fetches sat on its query for 38 s.  The REST client compares its
+20 s timeout with the clock only after `getaddrinfo()` has returned, so the
+lookup was never bounded: the main loop went past the 32 s watchdog window
+("no kick for 32s"), and the call returned about four seconds before the
+hardware reset.
+
+- **The A-GNSS name lookup has a deadline.**  `agnss_fetch()` asks it first,
+from a thread of its own (1.5 KB of stack, about 600 bytes used), and waits in
+kicked one-second slices for `AGNSS_DNS_WAIT_MS` (10 s).  On a miss the
+attempt is dropped before the receiver has been paused; the thread finishes
+its query in its own time, and an attempt made meanwhile fails at once with
+`-EBUSY`.  The boot-time fetch has the same bound.
+- **The retry interval counts time the radio was free.**  `gnss_collect()`
+asks nRF Cloud 15 s into a cold wait; those 15 s now restart while the network
+holds an RRC connection, read from the LTE events (`modem_rrc_connected()`).
+The receiver's own blocked events are no use for this: they are edges, and a
+stop and start with the radio still held, which a fetch is, raises none.  That
+is also why `gap_warn` read "GNSS blocked 78 s, RRC connected 238 s" at 17:48.
+- **A fix wait the network held is not restarted.**  When the radio was held
+for at least half the wait and still is, the receiver is left running instead,
+up to `GNSS_KEEP_MAX` (3) times in a row, and `radio held by LTE for 30 of 30
+s, GNSS left running` is logged.  A restart cannot give the receiver the radio.
+After the third it restarts as before, in case the receiver has stopped
+hearing the radio's events.
+- On the bench, with the radio held by a packet a second to a DNS server, a
+lookup made to stall, and the receiver asking for assistance: the 0.4.79 logic
+restarted the receiver 30 s into the hold, fetched 15 s after that, tripped
+the watchdog 32 s later and reset ten seconds after that.  This build gave up
+on a stalled lookup after 10.1 s with the receiver untouched, refused a second
+attempt in 0.14 s, and in a 150 s hold left the receiver running at 30, 60 and
+90 s, restarted it at 120 s, made no fetch, and had a fix 12 s after the
+network let go.  The hold itself is the carrier's and was not reproduced on the
+road.  The car has not been updated.
+
+### LTE can be taken away from a network that will not release the radio
+What the entry above leaves alone is the hold itself.  On EE's rural cells the
+radio stayed RRC connected for up to 347 s after a send, 71 % of the trip's
+blind time, and GNSS saw nothing for all of it.  Release assistance does not
+move those cells, and GNSS priority mode cannot: Nordic's header says it "will
+not stop LTE connections".  `AT+CFUN=4` takes the receiver down with LTE and it
+does not come back.  `AT+CFUN=20` turns LTE off and leaves the receiver alone,
+and `AT+CFUN=21` turns it back on.  On the bench that cycle (off, register,
+one send, off again) left the receiver blind for 3.3 to 6.5 s, 12.8 s once
+across an O2 to Vodafone change, against 14 to 20 s for every send on the
+Vodafone cells there.  On O2, where the network lets go after 2.8 s by itself,
+it gains nothing, so it only acts on a connection that has outlived that.
+
+`CONFIG_APP_HOLD_BREAK` (default n, and not with Traccar) does it while the
+vehicle is on the move.  The fix wait runs a probe once a second while no fixes
+arrive: with the connection still up `APP_HOLD_BREAK_PROBE_S` (5 s) after our
+last datagram, at `APP_HOLD_BREAK_MIN_KMH` (10) or more, the replies due are
+taken in, anything unanswered goes back to the backlog, the socket is closed
+and LTE is switched off.  The receiver then fixes at 1 Hz, and what
+`STATE_SEND` would have sent is pushed to the backlog and the next batch
+collected, with the receiver left running.  After `APP_HOLD_BREAK_WINDOW_S`
+(20 s), at the next batch, LTE is switched on and given `APP_HOLD_BREAK_REG_S`
+(15 s) to register, then the backlog goes out oldest first and the batch after
+it, so the server meets the track in the order it was driven.  The next
+`APP_HOLD_BREAK_STICKY` (4) sends cut LTE straight after their replies instead
+of waiting for the probe; the one after that waits for the network, so a unit
+that has driven out of the holding cells goes back to ordinary operation by
+itself.
+
+Nothing is lost to a cut and nothing waits on it for long.  The loop ends it
+early for anything that cannot wait: the key off, the engine stopping, a stop
+(below half the speed limit), track mode, an alert or an impact to send, a
+setting to report, a failed send, and a backlog three-quarters full.  A restore
+that does not register in time leaves the radio searching, as in any outage,
+and switches the feature off until the modem has registered again by itself and
+for five minutes after that; a modem that refuses `CFUN=20` switches it off for
+the boot.  While LTE is cut `transport_send()` and the A-GNSS fetch refuse at
+once, STATE_IDLE does not count it as an outage, and the PSM grant the modem
+gives up and gets back is not reported each time.  `modem_radio_up()` and
+`modem_power_off()` also end a cut.
+
+What it costs is a registration per cycle (2.8 to 5 s on the bench) and a
+track that reaches the server in bursts every 20-odd seconds while a cut runs,
+rather than every three.  Records parked for ten seconds or more carry `age=`,
+as backlog always has.  A WRN line at each probe-cut says where, for how long
+the connection had been held, and the cycles, failures and re-attach times so
+far, so a drive shows what it did.
+
+The first drives on the car (2026-10-25, 0.4.80 and then 0.4.81, which gives
+the registration 30 s in its `remote.conf` instead of 15 because one re-attach
+took 15 s) showed it doing what it is for: of about 45 restores on 0.4.81, 44
+registered in about 3 s on average, and the share of the moving time spent in
+fix gaps of 20 s or more fell from 86 % on the same cells the day before to
+14 %.  The 45th never registered.  LTE was off for 21 s and then neither it,
+nor an offline/online cycle, nor NB-IoT found the network for ten minutes, at a
+spot that read -87 to -101 dBm before and after; the car was silent for 42
+minutes (telemetry stalled) and had no fix for 97 s while the search starved
+the receiver, and the log could not say whether the modem had found a cell and
+been refused or had found none.  So a restore that does not register now keeps
+the feature off until the modem has registered again by itself and for five
+minutes after that (`hb_registered()`, `HOLD_BREAK_HOLDOFF_MS`; parking clears
+it, `hb_new_trip()` from `do_sleep()`), where it used to try again after ten
+minutes whether or not the network had come back, and says what the modem makes
+of it.  A cut needs a registration, so staying off while the modem is
+unregistered holds nothing back, and a dead zone ends when the vehicle leaves
+it; the five minutes are for the case where the cycling had a hand in it, which
+the log will show.  The registration status changes since the `CFUN=21` are
+logged with their times when the cap is reached, and each change after it while
+the search lasts (at most 20).  The function mode, the registration status with
+the reject cause if it was refused, the RRC state and the signal (`CFUN`,
+`CEREG`, `CSCON`, `CESQ` on one `hold break:` line) are logged 5 s and 15 s
+into the wait, at the cap, and every 30 s after it (at most 20 times, with the
+key off: from the main loop and from the sleep loop once parked) for as long as
+the radio is still searching.  255 in the last two `CESQ` fields is no cell at all;
+a figure there is a cell that is not letting the unit in.
+
+Off by default because it is new.  The rules are in `holdbreak.c` with 39 host
+tests (`firmware/tests/test_holdbreak.py`), the car profile builds without
+application warnings, and the car has run it, but the re-attach time at speed
+on a long drive over EE's rural cells and the cause of that one failure are not
+known yet.  The car's `remote.conf` turns it on.  With the option off the
+application image is byte-identical to one built without this code (compared
+for the car's and the bench's builds, the signature on the signed image aside),
+so nothing else changes.
+
+### A watchdog reset says where the hold breaker was
+At 13:10 on 2026-10-26 the car cut LTE on a drive and was reset by the watchdog
+about 130 s later (`rst=wdt` on the first record after the boot; the last
+record before it is the cut's, the next is 201 s on, with no row between and
+about 1.3 km of the route missing).  The log lines that would have said where it
+was were in RAM, and no stall address was captured, nor in the car's three
+earlier watchdog resets: the software callback that records them probably
+never ran, and the hardware fallback fired on a wedge below thread level.  Only
+a note written to RAM before the reset needs nothing to run after it.
+
+- **The breaker keeps a note of where it is** (`crumb.c`, 20 bytes of noinit
+RAM): the phase, when the cycle began, when the phase began, and when the main
+loop last kicked the watchdog.  The phases (`holdbreak.h`) are `C` cutting
+(from the decision to the answer to `CFUN=20`), `O` LTE off, `R` restoring
+(`CFUN=21` and the wait for a registration), `Q` the four AT queries of the
+search report, which have no timeout of their own and now say so in the note,
+`F` the restore did not register, and `D` delivering the backlog; none is no
+cycle under way.  `watchdog_kick()` is the sign of life, so the last kick says
+when the loop stopped and the phase says what it had last begun.
+- **The next boot reports it after a reset nobody asked for**, in `rst=`:
+`wdt+hb:Q98/0` is a watchdog reset in phase `Q`, last alive 98 s after the cut
+and 0 s into the phase.  Only for a watchdog reset, a CPU lockup or a crash: a
+FOTA install or any commanded reboot reports nothing, and memory that was never
+written (a power-on) fails the note's magic and reads as nothing.  The note is
+taken in `SYS_INIT(APPLICATION)`, before `main()`, so no kick of the new boot
+writes over the old one's time.
+- **`rst=` is kept to 47 characters.**  The server's column is `varchar(48)` in
+strict mode: a longer value is refused, and the record with it, which is the
+first after a boot and carries `fw=`.  Nothing capped it before: `pin+sw+wdt+dbg`
+and four stall addresses already come to 53.  With the breaker built in, the
+parts are fitted by `hb_rst_compose()` in the order of what each is worth: the
+cause (cut short if it must be), the crumb (whole or not at all), then as many
+whole stall addresses as fit.  Without it `rst=` is assembled as before.
+
+The field's format and the budget are in `holdbreak.c`, host-tested with 14 new
+cases (53 in `firmware/tests/test_holdbreak.py`).  With the option off the
+application image is byte-identical to one built without this code (the sha256
+of `zephyr.bin` is the same before and after); with it on, the car profile
+builds without application warnings, 0.9 KB larger (flash 74.50 % of the
+application partition, RAM unchanged at 53.58 %), and the note lands in
+`.noinit` with the watchdog's and the crash handler's.  Not run on hardware:
+the first real test is the next watchdog reset on a drive.
+
+### A reset on the road no longer starts an update
+At 14:37 on 2026-10-26 the car announced `fota: 0.4.83 -> 0.4.84 available,
+downloading` while it was being driven, took 88 s over the download and
+rebooted: no record exists from 14:32:28 to 14:40:16 (7 min 48 s), and the
+reboot that installed it came on top of whatever had gone wrong first.  The
+first manifest fetch was 8.2 s after the attach and before any telemetry, which
+is what a boot looks like (the car's other boots fetch 7.9 to 10.5 s after
+their first attach; 180 ordinary breaker re-attaches sent telemetry first, a
+median of 1.1 s later), so the unit most likely reset about 305 s after the
+cut.  Why is not known: nothing from that boot survived the install reboot.
+What the boot did next is this code's: the power-on check is the one
+unconditional update check and, unlike every check that follows a server
+advert, nothing in `main()` held it back for the engine.
+
+- **The power-on check waits for key-off.**  `fota_check()` does nothing and
+leaves the check pending while that is the only one waiting and the ignition
+line is on (`ignition_read()`, in `fota_check()` so every call site is covered
+and not only the one in `main()`).  The first call after key-off makes it: the
+key-off site, or a timed wake.  A newer version advertised by the server is as
+before, serviced where the engine is not running.  A unit that is switched on
+with the key off, or flashed on the bench with it off, checks at power-on as it
+did.  Applies to every build with updates on, not only the car's.
+
+Not run on hardware (the next reset on a drive, or a boot with the key on, is
+the test: `key on — the power-on update check waits for key-off` in the log).
+
+### The search report waits for the key to go off
+Both resets on the road on 2026-10-26 (13:10, and 14:37 as above) came with the
+modem's search report running: four AT queries (`CFUN?`, `CEREG?`, `CSCON?`,
+`CESQ`) every 30 s while a restore that did not register leaves the radio
+searching, none of them with a timeout of its own.  Parked, the same report ran
+21 times in a row without trouble (10:55).  The car has also had watchdog resets
+with no breaker in the firmware (18 Sep, 11 Oct, 13 Oct), so this is a lead and
+not a finding; the breadcrumb above will say if the next reset is in phase `Q`.
+
+- **Every 30 s only with the key off** (`hb_watch_due()`).  With the key on the
+reports are held back and are not used up, and a drive does not leave them all
+due at once when it ends: the first comes within 30 s of key-off and the rest
+30 s apart.  The reports at 5 s, 15 s and the cap, inside the restore, are
+unchanged: they say, at the moment of the failure, whether a cell is heard and
+refusing the unit or there is none.
+
+Six more host cases for the schedule (59 in `firmware/tests/test_holdbreak.py`),
+each failing against a version that does not hold back, does not re-arm, or
+spends the reports while the key is on.
+
+### The hold breaker is off for the car
+On 2026-10-26 at 16:50 a restore after a cut never registered, and the car went
+dark for 54 minutes.  The unit was alive the whole time (no reset, the same boot
+as the 0.4.85 install).  The modem could hear a cell at -105 to -100 dBm in all
+11 readings and said "searching"; the network refused nothing and saw nothing:
+no attach reached it from 16:50:19 to 17:44:29.  What the unit did meanwhile
+changed nothing: the key-off at 16:55, an NB-IoT restart at about 16:55, a
+key-on at 17:19 for the drive home (11 minutes, still nothing), the modem off
+and on again.  It connected within 3.6 s at the key-on at 17:44.  Nothing was
+lost, but it all arrived 54 minutes late and the drive home is five points.
+
+It was the third failure on the road that day, after 13:10 and 14:32, and by
+far the worst, and the pattern is not random.  All four times the modem did not
+register after a restore (25 Oct 14:52, 26 Oct 10:55, 14:32 and 16:50) it came
+after 33 to 46 reconnect bursts in the previous 20-30 minutes, and none of the
+seven drives of 30 or fewer had one.  The 13:10 watchdog reset came at only 15
+bursts and is a different failure.
+
+The bench found the cause on 2026-10-27.  A rig built in a scratch copy of the
+tree did nothing but the breaker's own cut and restore every 25 s, parked, on
+the bench SIM (O2), with the receiver left running.  The 30th restore did not
+register, after 29 clean ones in 12.5 minutes (re-attach 2.4 to 4.9 s), and the
+modem searched for 47 min 29 s, hearing the cell with no reject, before it
+registered by itself.  After a 5 minute hold-off it managed exactly 29 clean
+cycles again and the 30th failed again, for 46 min 51 s.  1NCE logged a Create
+PDP, an Update location and a Delete PDP for every cycle and nothing at all
+during either search.  The car's four had 29 attaches each in the hour before,
+by the same log, and the busiest stretch without a failure had 23 in 15
+minutes.  So it is not EE, the road or a cell: every cut is a detach and every
+restore a new attach, and the 30th in an hour is refused until an hour after
+the first cut of that hour (both bench refusals ended 3601 and 3603 s after it,
+so the 47 minutes was 60 less the 12.5 the cycles had taken; the car's 25 Oct
+14:52 one, which came back after 43 minutes, ended about an hour after the
+first attach of its burst).  That is the shape of the modem's own Radio Policy
+Manager, the GSMA TS.34 signalling limit that Nordic's DevZone answers (old
+nRF9160 threads) put at 30 attaches an hour.  The modem reports it as
+`+CGEV: RESTR 1,2` with the seconds left and this firmware has never enabled
+`+CGEREP`, so it is not confirmed, and no way to disable it is documented.
+Modem firmware 2.0.4, which the bench runs, is the newest Nordic publishes and
+has it, so an update will not fix this.  With the breaker off the car made no
+attach at all between the 0.4.86 install and 11:20 on 27 Oct, through a 50
+minute drive on the same cells.  Bringing it back means a cap that counts every
+cut from the hour's first and stays well under 30.
+
+- **`CONFIG_APP_HOLD_BREAK` is commented out of the car's remote.conf** (with the
+reason beside it).  The code stays in the tree, inert when off, and the
+Kconfig help says what happened.  Uncomment both lines to turn it back on.
+- Not changed: the update check at power-on waits for key-off, and the rest of
+0.4.85.
+- Before it comes back, the log buffer needs a fix.  The ~4 KB ring filled with
+the 30 s search readings by 17:01, so 19 later lines were dropped, including the
+ones that would have said what the key-on at 17:19 did.
+
+### The v4.0 board streams a record a second while the engine runs
+A drive was batched three records to a datagram, each send released at once,
+because the built-in receiver shares its antenna with LTE and every send cost
+it a fix: about 0.6 records a second reaching the server, in groups.  The
+external receiver has an antenna of its own, so on the v4.0 build
+(`APP_DRIVE_STREAM`, on with `APP_BOARD_HAS_EXT_GNSS`; the car's v3.x image is
+unchanged) the engine-running cycle is now one record per fix, sent as it is
+built, `APP_DRIVE_STREAM_HZ` of them a second (default 1).
+
+- **The connection is held.**  A send tells the modem more is coming
+(`RAI_ONGOING`) instead of releasing after one reply, so the radio stays up
+between records.  That is also what keeps the modem out of PSM while driving:
+PSM is negotiated at attach and cannot be turned off under a registration (the
+note in `modem.c` says as much), but the modem enters it only after the
+network's 10 s active time with nothing to send, and a unit sending every
+second never gets there.  A fix that does not come within
+`APP_DRIVE_STREAM_FIX_WAIT_S` (5) gets a record from the last position
+(dead reckoned, `cl=1`) all the same, so a tunnel does not end in silence and
+then PSM.  Until a boot's first fix there is no position to use, so the stream
+waits for it as an ordinary collection does and builds no record to drop.
+- **Nothing is dropped from the record.**  It is the normal record: position,
+speed, battery, accelerometer, gyro, temperatures, cell and signal, and the
+ECU's figures from the K wire when it is polled.  The records are still held
+until the server's reply comes back, and sent again if it does not
+(`stream_keeps_records`, where track mode keeps none), so a lossy cell leaves
+late records and not holes.
+- **The K wire is polled between sends.**  The fix-wait tick that refreshed
+the OBD snapshot only fires when no fix arrives within a second, which a
+receiver delivering one every second never lets happen; the poll (about
+half a second of bus time) would then have run inside each record's build and
+pushed the cycle past the period.  `obd_sample_now()` polls right after the
+send, so the next record finds the figures a fraction of a second old.
+- **Nothing waits.**  No reply is waited for except across a change of ignition
+state, and the 200 ms pause after a send is skipped; replies are read as they
+come, which also carries the settings and commands.  The cycle is paced by
+the receiver: the record is built when its fix is, so the rate cannot
+exceed the receiver's.  The log is silent while the stream keeps up; when a
+30 s window falls short, or leans on the last position, it says so
+(`drive stream short of 1/s: 27 records in 30 s = 0.90/s (2 fixes let go by,
+0 from the last position)`).  The stream's short fix wait running out is its
+normal fallback, so the receiver driver no longer warns about it (it would
+have, every cycle, on the console and in the server's device log, in a car
+park or on a bench indoors); a wait for an ignition change still does.
+- **The loop says little.**  A record a second is five more console lines each
+in the old wording (`sending`, `sent`, `resp #`, `cmd: track=0`, `dead reckoning
+stopped: no ECU speed 0 s after the fix`), and with `CONFIG_LOG_MODE_IMMEDIATE`
+every character is UART time in the loop (about 47 ms of each second at 115200).
+While streaming, `sending N records` and `sent N bytes` are not logged (a send
+that takes 2 s still warns), a reply is logged only when it differs from the
+last, the `track=<0|1>` the server puts on every reply is not logged as a
+command when it says what the device already has (`cmd_run` already acted only
+on a change), and the dead reckoning stop that came before any ECU speed was
+read is said once until the ECU speaks.  What is left per record is its own
+line.
+- **Above 1 Hz.**  The receiver is asked for fixes at the target rate
+(`gnss_set_rate_hz`; its satellite list stays at one a second) and put back to
+1 Hz when the engine stops or the rail drops, and the modem's temperature and
+supply, AT commands, are read once a second and not for every record.  The
+bench built 3.4 to 3.6 records a second at best (2026-10-30), so 4 and 5 will
+fall short.
+- **Cost.**  About 300 bytes a record and a reply: 1.4 MB for an hour's
+driving at 1 Hz, so 350 hours or so of a 500 MB SIM.  When the engine stops
+the unit goes back to batching, with the key off to one record and sleep as
+before.
+- Not run on hardware yet; built and reviewed only.
+
+### The v4.0 board's receiver gets orbits from the server (u-blox AssistNow)
+A receiver that has sat unpowered for hours holds no usable ephemerides and
+reads them from the satellites: 25 to 30 s with a clear sky, minutes with a
+poor one (the bench's cold starts took 124 to 170 s with three to six
+satellites at 27 to 33 dBHz).  u-blox's AssistNow Predictive Orbits, free, give
+it orbits for the coming days.  Only the v4.0 build has this
+(`APP_ASSISTNOW`, on by default with `APP_BOARD_HAS_EXT_GNSS` and
+`APP_FOTA`); the car's v3.x image is unchanged.
+
+- **The firmware never talks to u-blox.**  The l0destar server registers each
+receiver with u-blox's service, downloads the orbits once a day and keeps them,
+so a reboot or a firmware update loses nothing, u-blox's per-device request
+limit (300 a month on an evaluation profile, 2 a day on a commercial one) is
+spent on the server's schedule, and the credential for the registration
+service stays on the server and out of the firmware image.  The unit asks the
+update server over the same TLS as the manifest (`/assist/data.bin`), and the
+server's reply is passed to the receiver as it is.
+- **When it asks.**  Once per power-up, when the first three satellite lists
+(UBX-NAV-SAT, whose flags now give the ephemerides, almanacs and AssistNow
+orbits on hand) show fewer than five ephemerides and there is no fix.  A hot
+start, where the backup supply kept them, asks for nothing, and orbit data is
+never sent to a receiver that has fresher.
+- **How it is given.**  On a thread of its own (`assistnow.c`), so a slow name
+lookup cannot hold the main loop past the watchdog: the time from the modem's
+clock first (UBX-MGA-INI-TIME_UTC, three seconds of accuracy), then the data,
+a few messages at a time with the receiver's UBX-MGA-ACK for each counted
+(`CFG-NAVSPG-ACKAIDING` is now set).  Only assistance messages go through: the
+data is walked frame by frame, checksums checked, and anything else a response
+carried, a configuration or a reset included, is dropped.
+- **Registering.**  A 404 from the server means it has not met this receiver.
+The unit then sends the receiver's replies to the chip id (UBX-SEC-UNIQID) and
+version (UBX-MON-VER) polls, byte for byte as hex, and the server does the rest.
+Both replies are kept by the driver for that.
+- Costs about 14 KB of RAM (the app was at 78 %, now 88 %): a 10 KB download
+buffer and the thread.  The server cuts what it sends to the buffer a whole
+constellation at a time (`APP_ASSISTNOW_GNSS`, default GPS and Galileo).
+- Tests: `tests/test_assistnow_ubx.py` builds the message builders, the
+frame scanner, the NAV-SAT counts and the calendar conversion on the host and
+checks them against `struct` layouts, `datetime` and, where installed,
+pyubx2.  The server side is `server/tests/test_assistnow.py`.
+- First run on the bench (2026-10-30): the registration worked.  The first
+real reply, 7 KB written with one `sendall`, was a single 7.4 KB TLS record,
+which the modem cannot decode: a record above about 2 KB fails the read with
+`EMSGSIZE`, logged as `http_client_req() error: -122` (it is why firmware comes
+down in 2 KB ranges).  The server now writes such a reply in 1,400-byte slices,
+each a record of its own (`assistnow.send_response`); the firmware is
+unchanged.  Not yet seen on the board: the data reaching the receiver.
+
+### The v4.0 board's receiver: the real pin map, its real baud rate, and NMEA when it will not listen
+The first v4.0 board on the bench (2026-10-30) showed three things the draft
+had wrong, and one it did not allow for.  Nothing here is built into the car's
+v3.4 image: the receiver driver is only built where `APP_BOARD_HAS_EXT_GNSS` is.
+
+- **The pin map is the PCB's of 2026-10-25.**  The design swapped two nets after
+the 18 Oct one the draft was read from: `L_SENSE` is on P0.13 (AIN0) and
+`GNSS_BCKP_EN` on P0.5.  The old map put the L-line sense on P0.5, which no ADC
+channel reaches (`L_SENSE on P0.5 has no SAADC channel` at every boot), and
+drove the sense pad as the backup-supply enable.  `APP_PIN_L_SENSE` is 13 and
+`APP_PIN_GNSS_BCKP_EN` 5 on v4.0; the L-line short check is available there as
+on v3.3, and the "cannot be read" warning is gone from the hardware reference.
+- **The receiver comes up at 38400, not 9600.**  That is what the module on the
+bench sent (a NMEA burst a second, no UART errors), and the driver found it only
+because 38400 was the last rate it tried.  It tries 38400, then the configured
+rate, then 9600.  The comments, the Kconfig help and the two reference pages
+said 9600.
+- **A receiver that is heard but takes no commands is read, not declared
+dead.**  The module's UART RX pad was open on the first board: it sent NMEA the
+whole time and never acknowledged anything (no reply to the baud change or to
+the configuration), so three attempts timed out, bring-up failed twice and the
+alert said "GNSS receiver not responding (UART)", which was the one thing it
+was not.  Now, when NMEA has been heard and the configuration still fails, the
+driver carries on with the sentences the receiver sends by itself
+(`src/gnss_nmea.c`): RMC and GGA make the position, speed, heading, altitude
+(above the ellipsoid, as the UBX path reports it), HDOP and time, GSV the
+satellites tracked and the strongest signal.  A fix comes out as the same
+`struct ubx_pvt` NAV-PVT decodes to, so everything after it is the one path.
+It is `APP_GNSS_EXT_NMEA_FALLBACK`, on by default.
+- **The alert says what is wrong.**  In that mode the alert is "GNSS receiver
+takes no commands, using NMEA (check UART TX)" at priority 0, since positions
+are still arriving; "not responding (UART)" is kept for a receiver that is
+silent.  The board test names the mode in its receiver line.
+- What the fallback does not have: the receiver stays at its own defaults, one
+fix a second and the portable dynamic model rather than the automotive one, and
+its NMEA is left on.  Both come back on the next power-up with the commands
+getting through.
+- **The receiver gets a second to take the new baud rate.**  With its RX pad
+joined, the same board's MAX-M10S took the baud-rate item and moved to it
+about 940 ms later, at its next NMEA burst.  The driver listened for 600 ms,
+went back to the old rate, met noise (24 to 26 UART errors in each 500 ms
+window), took it for a receiver that hears nothing, fell back to NMEA at the
+wrong rate and queued the "takes no commands" alert; the five-second silence
+check found the receiver at 115200 and configured it 12 s into the boot, and
+the alert went out anyway, as the first fix wait began.  The driver now asks
+again every 250 ms for 1.5 s (`receiver moved to 115200 baud after 942 ms`),
+finds the receiver once more when the configuration meets noise and not a
+receiver talking at the old rate, and raises the NMEA alert only while the
+fallback is still in force when it is asked.  Bring-up on that board is now
+about a second.
+- Tests: `tests/test_gnss_nmea.py` builds the NMEA decoder and the stream
+parser on the host and replays the burst the board's receiver sent, checks 60
+random fixes against `pynmea2`, and fuzzes both under address and undefined
+behaviour sanitizers.
+
 ## 0.4.79
 
 ### A tracker on the backup module reports at its own interval

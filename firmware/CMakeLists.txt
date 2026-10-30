@@ -7,7 +7,10 @@ project(l0destar)
 # The receiver: the nRF9151's own (gnss.c, and the nRF Cloud A-GNSS that feeds
 # it) or, on a board that has one, the external u-blox on its own UART.
 if(CONFIG_APP_BOARD_HAS_EXT_GNSS)
-    set(GNSS_SOURCES src/gnss_ext.c src/gnss_ubx.c)
+    set(GNSS_SOURCES src/gnss_ext.c src/gnss_ubx.c src/gnss_nmea.c)
+    if(CONFIG_APP_ASSISTNOW)
+        list(APPEND GNSS_SOURCES src/assistnow.c)
+    endif()
 else()
     set(GNSS_SOURCES src/gnss.c src/agnss.c)
 endif()
@@ -62,6 +65,9 @@ target_sources_ifdef(CONFIG_APP_DEMO_MODE app PRIVATE src/demo_mask.c)
 
 # The motion through gaps between GNSS fixes (see src/motion.c).
 target_sources_ifdef(CONFIG_APP_DEAD_RECKONING app PRIVATE src/motion.c)
+
+# When to take LTE away from a network that holds the radio (see Kconfig).
+target_sources_ifdef(CONFIG_APP_HOLD_BREAK app PRIVATE src/holdbreak.c src/crumb.c)
 
 # OBD-II telemetry / fault codes over the K wire.
 target_sources_ifdef(CONFIG_APP_KLINE_OBD app PRIVATE src/kline_obd.c)

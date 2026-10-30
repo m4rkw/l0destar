@@ -96,15 +96,21 @@
  * cold timeout.  On 2026-09-13 a single -116 (HTTP 0, no response) at key-on
  * left a search that took 2 min 23 s, with no telemetry meanwhile.  Retries
  * run from inside the fix wait, so GNSS keeps searching between attempts;
- * each attempt still pauses it for up to the 20 s REST timeout. */
+ * each attempt still pauses it for up to the 20 s REST timeout.  The interval
+ * counts time the receiver had the radio: blocked by LTE it is not searching,
+ * and on 2026-10-24 five of the six fetches on the road were made inside
+ * holds the network put on the radio (gnss_collect()). */
 #define AGNSS_RETRIES               2
 #define AGNSS_RETRY_INTERVAL_MS     15000
+/* How long a fetch waits for the name lookup before dropping the attempt,
+ * with the receiver still running (agnss_fetch()). */
+#define AGNSS_DNS_WAIT_MS           10000
 /* A receiver whose last fix is younger than this still holds usable
  * ephemerides (broadcast sets are good for hours), so a "cold" collect —
  * the restart after a warm timeout, the start after a short stop — searches
  * first and only asks nRF Cloud from the wait, after AGNSS_RETRY_INTERVAL_MS
- * without a fix.  Up-front fetches are for a receiver that has genuinely
- * lost its data. */
+ * of radio time without a fix.  Up-front fetches are for a receiver that has
+ * genuinely lost its data. */
 #define AGNSS_FIX_FRESH_MS          (30 * 60 * 1000)
 /* GNSS priority takes the radio from LTE's idle-mode work (paging, cell
  * measurements), and the modem ends it after the first fix or 40 s.  It is
@@ -127,6 +133,11 @@
 
 #define GNSS_PRIO_STARVED_EPOCHS    5
 #define GNSS_PRIO_WINDOW_MS         40000
+/* A fix wait that ends with the network holding the radio for most of it
+ * leaves the receiver running rather than restarting it, this many times in
+ * a row at most: a restart cannot give it the radio, and makes the next wait
+ * cold (gnss_collect()). */
+#define GNSS_KEEP_MAX               3
 
 /* -- voltage thresholds (Kconfig uses mV, code uses float V) -------------- */
 #define BATTERY_WARNING_LEVEL       (CONFIG_APP_BATTERY_WARNING_MV / 1000.0f)
@@ -377,6 +388,34 @@
 #define FIX_GAP_MOVING_KMH          10.0f
 /* At most one such warning a minute; the next says how many it held back. */
 #define FIX_GAP_WARN_SPACING_MS     60000
+
+/* -- hold breaker (APP_HOLD_BREAK; the options say what it is for) --------- */
+/* Past the window, with no batch due to end it: the loop's own check allows
+ * this much on top, so one that is a record or two from going out is not
+ * pre-empted.  Only a fix wait with no fixes in it (a tunnel) gets this far. */
+#define HOLD_BREAK_GRACE_MS         10000
+/* After the modem failed to let LTE go (a command that came back with an
+ * error): how long the feature stays off.  A refusal is for the rest of the
+ * boot. */
+#define HOLD_BREAK_COOLDOWN_MS      600000
+/* After a restore that did not register: the feature stays off until the modem
+ * has registered by itself (a cut needs a registration, and a dead zone ends
+ * when the vehicle leaves it), and then this much longer, in case the cycling
+ * had a hand in it.  Parking clears both: holdbreak.c's hb_new_trip(). */
+#define HOLD_BREAK_HOLDOFF_MS       300000
+/* After a restore that did not register, while the radio is still searching:
+ * what the modem says about it is logged this often, this many times, so the
+ * next one can be told from a cell that is not there (modem_search_report).
+ * Only with the key off: holdbreak.h, hb_watch_due(). */
+#define HOLD_BREAK_WATCH_MS         30000
+#define HOLD_BREAK_WATCH_N          20
+/* What unanswered datagrams get before LTE goes: replies are normally in
+ * within a fraction of a second, and anything still out after this is queued
+ * again for the burst. */
+#define HOLD_BREAK_SETTLE_MS        2000
+/* The backlog is a ring of APP_DATABUF_SLOTS records and thins itself when it
+ * fills.  Parking stops short of that: past this share the burst goes. */
+#define HOLD_BREAK_BACKLOG_PCT      75
 
 /* -- movement confirmation ------------------------------------------------- */
 #define MOVEMENT_CONFIRM_MS         CONFIG_APP_MOVEMENT_CONFIRM_MS

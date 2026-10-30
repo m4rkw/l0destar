@@ -43,6 +43,20 @@
 #define UBX_CLS_MON         0x0A
 #define UBX_ID_MON_VER      0x04
 
+/* Assistance (AssistNow): the receiver is told the time, roughly where it is,
+ * and the orbits.  INI-POS and INI-TIME share an id and differ in the first
+ * payload byte. */
+#define UBX_CLS_MGA         0x13
+#define UBX_ID_MGA_ANO      0x20
+#define UBX_ID_MGA_INI      0x40
+#define UBX_ID_MGA_ACK      0x60
+#define UBX_MGA_INI_POS_LLH 0x01
+#define UBX_MGA_INI_TIME_UTC 0x10
+
+/* The receiver's chip id; what AssistNow registers a unit by. */
+#define UBX_CLS_SEC         0x27
+#define UBX_ID_SEC_UNIQID   0x03
+
 /* -- configuration keys (CFG-VALSET) ------------------------------------------
  * Built as size << 28 | group << 16 | item.  The size field is 1 or 2 for a
  * flag or single byte, 3 for two bytes and 4 for four. */
@@ -56,6 +70,7 @@
 #define UBX_KEY_MSGOUT_NAV_DOP_UART1  0x20910039u   /* U1 */
 #define UBX_KEY_MSGOUT_NAV_SAT_UART1  0x20910016u   /* U1 */
 #define UBX_KEY_NAVSPG_DYNMODEL       0x20110021u   /* E1 */
+#define UBX_KEY_NAVSPG_ACKAIDING      0x10110025u   /* L, UBX-MGA-ACK for every assistance message */
 
 #define UBX_DYNMODEL_AUTOMOTIVE       4
 
@@ -70,7 +85,8 @@
 enum ubx_event {
     UBX_EV_NONE = 0,
     UBX_EV_FRAME,    /* a UBX frame with a good checksum: cls/id/len/payload */
-    UBX_EV_NMEA,     /* a NMEA sentence with a good checksum (not kept) */
+    UBX_EV_NMEA,     /* a NMEA sentence with a good checksum: the text between '$' and '*'
+                      * is in payload, NUL terminated, and its length in len */
 };
 
 struct ubx_parser {
@@ -95,10 +111,12 @@ struct ubx_parser {
 void ubx_parser_reset(struct ubx_parser *p);
 
 /* Feed one byte.  UBX_EV_FRAME leaves the frame in cls, id, len and payload
- * until the next call.  Garbage between frames, a bad checksum and a frame
- * longer than UBX_MAX_PAYLOAD are all dropped, and the next sync pattern
- * starts a new frame.  NMEA is recognised only so a receiver that has not
- * been configured yet can be told apart from one that is silent. */
+ * until the next call, UBX_EV_NMEA a sentence in payload and len.  Garbage
+ * between frames, a bad checksum and a frame longer than UBX_MAX_PAYLOAD are
+ * all dropped, and the next sync pattern starts a new frame.  A receiver that
+ * has not been configured yet sends NMEA: that tells it from one that is
+ * silent, and if it will not take configuration the sentences are all there
+ * is (gnss_nmea.h). */
 enum ubx_event ubx_parse_byte(struct ubx_parser *p, uint8_t b);
 
 /* -- decoded messages -------------------------------------------------------- */
@@ -133,6 +151,19 @@ struct ubx_sat_summary {
     uint8_t  tracked;         /* of those, with a signal (C/N0 > 0) */
     uint8_t  used;            /* of those, used in the solution */
     uint8_t  best_cno;        /* strongest, dBHz */
+    uint8_t  eph;             /* of those, with an ephemeris on hand (ephAvail) */
+    uint8_t  alm;             /* ... with an almanac (almAvail) */
+    uint8_t  ano;             /* ... with AssistNow orbit data (anoAvail) */
+};
+
+/* UBX-MGA-ACK, the receiver's answer to one assistance message when
+ * CFG-NAVSPG-ACKAIDING is on: `accepted` is the type field, `info` says why
+ * not (1 = it does not know the time yet, so no UTC time assistance came
+ * first; 5 = not ready), `msg_id` which message it answers. */
+struct ubx_mga_ack {
+    bool    accepted;
+    uint8_t info;
+    uint8_t msg_id;
 };
 
 bool ubx_decode_nav_pvt(const uint8_t *pl, uint16_t len, struct ubx_pvt *out);
@@ -140,6 +171,7 @@ bool ubx_decode_nav_dop(const uint8_t *pl, uint16_t len, struct ubx_dop *out);
 bool ubx_decode_nav_sat(const uint8_t *pl, uint16_t len, struct ubx_sat_summary *out);
 /* class and id the ACK or NAK answers; false if the payload is not one */
 bool ubx_decode_ack(const uint8_t *pl, uint16_t len, uint8_t *cls, uint8_t *id);
+bool ubx_decode_mga_ack(const uint8_t *pl, uint16_t len, struct ubx_mga_ack *out);
 
 /* -- text the rest of the firmware wants ---------------------------------------- */
 
@@ -168,5 +200,35 @@ size_t ubx_build_poll(uint8_t *out, size_t cap, uint8_t cls, uint8_t id);
  * a key has a size this does not handle or the frame does not fit. */
 size_t ubx_build_valset(uint8_t *out, size_t cap, uint8_t layers,
                         const struct ubx_cfg_item *items, size_t n);
+
+/* -- assistance ------------------------------------------------------------------ */
+
+/* A calendar time in UTC, with its accuracy. */
+struct ubx_utc {
+    uint16_t year;
+    uint8_t  month, day, hour, min, sec;     /* month and day from 1 */
+    uint32_t ns;
+    uint16_t tacc_s;                         /* accuracy: seconds ... */
+    uint32_t tacc_ns;                        /* ... and nanoseconds */
+};
+
+/* Unix time in milliseconds to a calendar time, no accuracy filled in.
+ * False before 2020, which is a clock that was never set. */
+bool ubx_utc_from_unix_ms(int64_t unix_ms, struct ubx_utc *out);
+
+/* UBX-MGA-INI-TIME_UTC: the time as of the moment the receiver reads it
+ * (reference "none"), the leap second count unknown.  0 if it does not fit. */
+size_t ubx_build_mga_ini_time_utc(uint8_t *out, size_t cap, const struct ubx_utc *t);
+
+/* UBX-MGA-INI-POS_LLH.  The accuracy is a standard deviation in centimetres
+ * and must not be optimistic: a position wrong by more than it does harm. */
+size_t ubx_build_mga_ini_pos_llh(uint8_t *out, size_t cap, int32_t lat_e7,
+                                 int32_t lon_e7, int32_t alt_cm, uint32_t pos_acc_cm);
+
+/* The frame at the start of buf: its length if it is complete and its
+ * checksum good; 0 if more bytes are needed to tell; -1 if buf does not start
+ * with a frame (no sync, too long, bad checksum), whereupon the caller skips
+ * a byte and tries again.  For walking a downloaded run of assistance messages. */
+int ubx_frame_scan(const uint8_t *buf, size_t avail);
 
 #endif /* GNSS_UBX_H_ */

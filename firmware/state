@@ -1,0 +1,587 @@
+WORK STATE — updated 2026-10-26 14:05 GMT (0.4.84 PUBLISHED for the car at 13:59: the breadcrumb; the car runs 0.4.83 until it pulls it)
+================================================================================
+
+UNITS: the database `speed`, `combined_speed` and `obd_speed` columns are MPH (the stall
+alert says mph too); the firmware's own log lines ("at 14 km/h", the 10 km/h cut speed) are
+km/h.  Several figures in earlier notes and messages today were DB speeds labelled km/h; they
+are corrected below.  Conclusions do not change.
+
+Nothing is committed. master is still 1302976 ("provisional v4.0 changes").
+You published 0.4.80 from this uncommitted tree at 11:52; the car installed it
+at key-off and was running it at 11:57:36.  0.4.81 followed at 13:26 (car
+updated 13:30), 0.4.82 at 17:42 (the car took it at a timed report, 18:18-18:20)
+and 0.4.83 at 18:22 (see below); the car is parked at Par and takes 0.4.83 at its
+next report or key-on.  Uncommitted in the working tree (11 files changed, plus
+three new files and this one):
+
+  EE-rural fix (applied earlier today, bench-verified)
+    firmware/src/{agnss.c, gnss.c, modem.c, app.h, config.h}, CHANGELOG.md
+  Hold breaker, APP_HOLD_BREAK (on the car since this morning; 0.4.80 -> 0.4.82)
+    new   firmware/src/holdbreak.c, holdbreak.h        the rules, no clock/radio
+    new   firmware/tests/test_holdbreak.py             39 host tests
+    edit  firmware/Kconfig                             6 options, default n
+    edit  firmware/CMakeLists.txt                      holdbreak.c if enabled
+    edit  firmware/src/main.c                          hold_break_* block + 6 call sites
+    edit  firmware/src/modem.c, app.h, transport.c, agnss.c, config.h
+    edit  firmware/CHANGELOG.md, docs/reference/firmware.md
+  Not mine: hardware/pulse2a/ (untracked).
+  Gitignored, changed: firmware/remote.conf — two short blocks at the end of
+    the car's section, each a comment and one option: CONFIG_APP_HOLD_BREAK=y
+    and CONFIG_APP_HOLD_BREAK_REG_S=30.  Delete the first block to turn the
+    feature off for the car, the second to go back to the 15 s default.
+
+0.4.83, PUBLISHED 18:22 (your word: "do it and push")
+---------------------------------------------------------------------
+You asked whether a latch makes sense if we turn the breaker back on when the modem
+registers again.  The honest answer was: barely, because a cut needs a registration
+(hb_cut_wanted requires `registered`), so the latch holds nothing back while the
+modem is unregistered, and at 14:52 it changed nothing (the modem stayed down until
+key-on).  Its only job is to stop an immediate repeat if the cycling itself caused
+the failure.  So 0.4.82's "off for the rest of the trip" became:
+  a restore that does not register in REG_S (30 s) -> breaker off (reg_wait) until
+  the modem registers again by itself, then a hold-off of HOLD_BREAK_HOLDOFF_MS
+  (5 min, config.h) -> cutting resumes.  Parking (do_sleep -> hb_new_trip) clears
+  both.  A refused CFUN=20 still switches it off for the boot.
+New WRN line when it lifts: "hold break: registered again N s after the restore gave
+up - cutting resumes in 5 min".  Nothing else changed; the 0.4.82 diagnostics stay.
+Files: holdbreak.h/.c (reg_wait + holdoff_until_ms replace trip_off; hb_registered();
+hb_cfg.holdoff_ms), main.c (hold_break_service lifts it; s_hb_fail_ms; comments),
+config.h (HOLD_BREAK_HOLDOFF_MS), Kconfig help, CHANGELOG, docs/reference/firmware.md,
+tests (39).
+Checked: 39 host tests pass; car build clean (no application warnings; flash 74.30 %,
+RAM 84.27 %); option OFF: zephyr.bin byte-identical to the fix-only build for the
+car and the bench (0 bytes differ, 742/743 and 741/742 objects, only uname.c.obj).
+Published 341,930 bytes, manifest + CA + range request verified.  NOT run on hardware.
+Still to decide with data: whether the 5 min should be longer/shorter, or the latch
+dropped, once a failure shows CESQ (255 = no cell = a hole; a figure = refused).
+
+0.4.82, PUBLISHED 17:42 (your word: "first option, then push the update")
+---------------------------------------------------------------------
+Two changes, both under APP_HOLD_BREAK (the car only), uncommitted like the rest:
+1. A restore that does not register in REG_S (30 s) switched the breaker off
+   until the unit was next parked (hb_new_trip(), called at the top of do_sleep()),
+   where it used to try again after 10 min.  SUPERSEDED by 0.4.83 above.
+2. It says what the modem makes of the search.  device.log WRN lines on t:
+   - "hold break: reg status since CFUN=21 (status@ms): 2@120 4@3100 ..." at the cap
+   - "hold break: N s without a registration: CFUN 21 | CEREG 5,2 | CSCON 0,0 |
+     CESQ 99,99,255,255,255,255" at 5 s and 15 s into the wait, at the cap, then
+     every 30 s (20 times at most) from the main loop and, once parked, the sleep loop
+   - "hold break: reg status N" for each change after the cap (20 at most)
+   Reading it: CEREG stat 2 searching, 3 denied (reject cause rides in the same
+   field), 4 unknown, 0 not registered; CESQ's last two fields 255 = no cell heard
+   at all, a figure = a cell heard that is not letting the unit in.  CFUN should read
+   21 (or 1): anything else means the CFUN=21 never took.
+Files: holdbreak.c/h (trip_off, hb_new_trip, hb_restored loses two unused
+parameters), modem.c (at_brief, modem_search_report, restore_history_report, the
+watch in modem_lte_restore and lte_handler), main.c (hold_break_watch, two call
+sites, the trip reset), config.h (HOLD_BREAK_WATCH_MS 30000 / _N 20), app.h,
+Kconfig help, CHANGELOG, docs/reference/firmware.md.
+Checked: 35 host tests pass; car build clean (no application warnings; flash
+74.23 %, RAM 84.26 %); with the option OFF zephyr.bin is byte-identical to the
+fix-only build for the car and the bench profile (0 bytes differ; 742/743 and
+741/742 objects identical, only uname.c.obj; Kconfig differs by APP_HOLD_BREAK=n).
+NOT run on hardware: the new lines have never been seen from a real modem.
+Published: 341,684 bytes, manifest + CA + range request verified.  The car picks it
+up at its next report or key-on; look for "fota: 0.4.81 -> 0.4.82" in app.log.
+
+DRIVE 15:44 -> 17:17 (still 0.4.81; the car is parked at Par, 50.3498,-4.7072)
+-----------------------------------------------------------------------------
+Short stops and a 7-minute drive at 17:10-17:17.  Cycles 44 -> 55, no new failure
+(1 failed in total, the 14:52 one), mean re-attach 2.74 s.  310 s moving, 35 % of
+it in gaps >= 5 s, none >= 20 s, no records missing.
+
+FIRST DRIVE ON 0.4.80 (11:57:47 - 12:02:04, 4 min 17 s, 5-19 mph, TAC 26731)
+-----------------------------------------------------------------------------
+Answer to "was it better or not driven far enough yet": inconclusive.  Too
+short and too slow to judge, and the one cycle it ran hit a snag.
+- 11:58:03 probe-cut at 13 km/h, 5 s after a send, as designed.
+- LTE off 21 s: 21 consecutive 1 Hz fixes (rids 18962-18982, no gap).
+- CFUN=21 then took about 15 s to register (bench: 2.8-5 s), on a different
+  cell of the same TAC.  It registered within a fraction of a second after the
+  15 s cap had given up (the live send right behind the failure found the
+  modem registered), so it was logged as a failure and the feature paused
+  itself for 10 min (until 12:08:43).  Cost: a 23.7 s fix gap.
+- Nothing lost: rids 18958-18997 all arrived; the parked ones drained by the
+  ordinary send flush by 11:59:04 and are filed by build time (age=).
+- While paused: two native holds, 58 s and 41 s.  On the 24th this TAC
+  (26731) had 1115 s of 1293 s moving time (86 %) inside fix gaps of 20 s or
+  more, 15 gaps of 45-130 s, so those are typical.
+- With a ~15 s re-attach and a 20 s window the blind share would be about 43 %
+  against 86 %: better, but only if the cap lets the cycle finish.
+Done at your word, 13:26: CONFIG_APP_HOLD_BREAK_REG_S=30 in the car's section
+of remote.conf (config only, no code) and ./push_fw.sh --device
+355025936386877 -> 0.4.81, 340,511 bytes, manifest live and verified over the
+TLS port.  The built config has REG_S=30 and the other defaults (probe 5 s,
+window 20 s, 10 km/h, sticky 4).  Next: a longer drive at speed on EE rural.
+
+SECOND DRIVE, ON 0.4.81 (14:09:10 - 14:12:33, 3 min 23 s, up to 31 mph, TAC 26731)
+-----------------------------------------------------------------------------------
+The car took 0.4.81 at 13:30 (key-on 13:28, "fota: 0.4.80 -> 0.4.81, rebooting"
+13:29:58, rst=sw), slept, drove 14:09-14:12 and parked; nothing since 14:12:33.
+- First cut 14:09:27 at 14 km/h (it waited for 10 km/h; connected 13 s by then).
+  Five full cycles, 0 failed, mean re-attach 3035 ms (the WRN line is cut off by
+  the 160-char log limit, so the worst is lost; no "to register again" WRN, so
+  none took over 8 s).  Sticky run of 4 used up, re-probe at 14:12:01: still
+  held after 6 s, cut again.  Exactly the designed behaviour.
+- From first cut to stop (184 s): 125 of 133 fix steps at 1 Hz, 7 blind gaps of
+  5.6-13.3 s (6.7 5.6 7.8 8.3 13.3 9.6 7.0) = 58 s = 32 % blind.  Same TAC on
+  the 24th: 86 %.  Cycle period 27.5 s: bursts of ~21 records in 7 datagrams.
+- The first 41 s of the drive (24 s and 17 s gaps) were at 3-6 mph (5-10 km/h),
+  under the 10 km/h cut speed.
+- Nothing lost: rids 55966-56103 contiguous, no duplicates, no unanswered or
+  watchdog warnings, no resets.  Live position is up to ~25 s behind while cycling.
+- Caveat: 3 minutes, 7 cycles, one TAC, slow.  The 15 s re-attach on the first
+  drive may have been the first boot after the update; not known.
+- API 500s from your phone's nav polling at 14:12:17: routine (208 since 22 Oct).
+
+THIRD DATA SET, ON 0.4.81 (14:34 - 15:44, three drives, same TAC 26731) — THE STALL
+-----------------------------------------------------------------------------------
+You reported a stall near Par Beach ("likely genuine loss of signal").  journeys.py
+did raise "telemetry stalled": stalled_at 14:52:27 (28 mph), alert 15:05:03,
+recovered 15:40:03 (~/.journeys_stall_state.6 on t).  What the logs show:
+- 44 cycles in 25 min of driving, 1 failed.  Everything else normal: re-attach
+  mean 2.8-3.4 s, one slow one (14.4 s at 14:38:26 after a cell change).
+- 14:52:28.7 CFUN=20 (sticky cut straight after the 14:52:26-27 burst, the last
+  datagram the server got), 14:52:49.7 CFUN=21 at 28.8 mph = 46 km/h (50.3507,-4.6911),
+  no registration in the 30 s cap (-116), modem left searching, feature paused
+  10 min.  GNSS had been stopped for the restore, then was starved by the LTE
+  search ("warm search starved 5 epochs, 2 SVs", priority mode 14:54:24): fix
+  gap 14:52:49 -> 14:54:26 = 97 s, first fix in the car park.  Ign off 14:54:29.
+- Still nothing 300 s later (14:57:51: NB-IoT added, offline/online at 14:57:54),
+  nothing at 15:02:56 (302 s, modem off until the next timed report).  Silent
+  until key-on ~15:35:24; first datagram 15:35:35; the 23 parked records
+  (rids 56554-56576, fix 14:52:29-14:54:29) arrived 15:36:51; nothing lost.
+- No "Registration rejected, EMM cause" and no "registration lost" WRN in that
+  window (the 24th had dozens of cause 9/10/11), so no reject was reported; the
+  modem just stayed searching.
+- NOT a coverage hole at the spots themselves: the parking spot read -99 dBm /
+  SNR 17 (band 3, cell 5425152) at key-on, and the road 40 m from where CFUN=21
+  went out read -87 dBm / SNR 16 at 15:37 with data going out; 14:51:27 on the
+  same cell 0.7 km back read -101 / 12.  The modem registered within seconds at
+  15:35.  So either a time-limited network-side condition (site outage, access
+  barring/congestion; 10-40 min) or something the breaker set off (attach rate,
+  modem state).  The logs cannot tell; the offline/online at 14:57 did not clear
+  it.  No ">= 5 min no registration" line anywhere in device.log 22-24 Oct (no
+  breaker); the first drive's 15 s and this are the only two, both with it.
+- Blind share of moving time, fix gaps >= 5 s: A 14:34-14:44 31.8 %, B 14:51-14:54
+  63 % (the failure), C 15:35-15:44 46.5 % (incl. a 73.5 s cold start at key-on);
+  all 42.4 %, 37.8 % without the failure.  Inside gaps >= 20 s: 13.7 % (6.5 %
+  without) against 86 % on this TAC on the 24th.
+- You answered: strong EE signal on the phone there, but 5G, not LTE-M.  That
+  rules out a site outage / RF dead spot (the site was up) but says nothing about
+  LTE-M itself.  An LTE-M-only outage with the site up would be unusual, so my
+  lean moved toward the breaker: the car's 1NCE SIM roams on EE, so every fresh
+  attach goes via the home network (HSS/IPX in Germany), which your phone's EE
+  SIM never uses and a tracker that stays registered never exercises; the
+  breaker does a detach + fresh attach every ~25 s in a hold.  Hypothesis only.
+  Check: the 1NCE portal's connectivity events for the SIM, 14:50-15:40.
+  RESULT (2026-10-26, your screenshots): nothing between the Delete PDP Context
+  at 14:52:27 (the breaker's detach) and the Create PDP Context at 15:35:29
+  (key-on attach).  No attach, no failed Update location, no reject cause, every
+  row green.  The home network never saw an attach, so the HSS/IPX theory above
+  is wrong; so is an attach-rate limit (10 re-attaches in 4.5 min right after
+  key-on, same 2.2/min as the 14:35-14:42 peak, none failed).  Left: radio or
+  EE's side, which the portal cannot see.
+- You chose "first option": build 0.4.82 (log what the modem makes of a failed
+  re-attach; stay off for the rest of the trip) and push it.  Done, see above.
+
+WHAT THE HOLD BREAKER DOES
+--------------------------
+On a vehicle at 10 km/h or more, when the RRC connection is still up 5 s after
+our last datagram (checked from the fix-wait tick, which only fires when no
+fix arrives within a second, i.e. in a hold): replies are taken in, anything
+unanswered goes back to the backlog, the socket is closed, LTE goes off with
+AT+CFUN=20 (receiver keeps running).  Records are parked in the backlog from
+STATE_SEND instead of sent.  At the first batch after 20 s: CFUN=21, up to REG_S
+(30 s on the car) to register, backlog out oldest first, then the live batch.  The next 4 sends
+are cut straight after their replies; the one after that waits for the
+network, so a unit that has left the holding cells goes back to normal.
+
+Ends early (restored at the top of the main loop) for: key off, engine not
+running, coasting, track mode, an alert or impact to send, a setting to
+report (send_int_to_server), a failed send, ignition not yet reported, backlog
+at 75 % (24 of 32), speed under 5 km/h.  No registration in REG_S: radio left
+to the modem, feature off until the modem registers again + 5 min (0.4.83; rest of the
+trip in 0.4.82; 10 min before that).  CFUN=20 refused: off for the boot.
+modem_radio_up(), modem_power_off() and modem_rescan_plmn() also clear a cut.
+
+WHAT IS PROVEN, AND WHAT IS NOT
+-------------------------------
+- Car profile with the option on builds: flash 73.87 %, RAM 84.21 %, no
+  application warnings.
+- With the option OFF the application image is byte-identical to the fix-only
+  build: zephyr.bin 0 bytes differ for the car and the bench profile; 742/743
+  and 741/742 objects identical (only uname.c.obj differs); resolved Kconfig
+  differs by one symbol (APP_HOLD_BREAK=n); devicetree, ELF sizes and symbols
+  identical; the signed image differs only by its signature.  Both builds in
+  one worktree path (the old v4compare.py method).
+- The rules (holdbreak.c) have 39 host tests; they pass from the main tree.
+- Run on hardware once (above), on the car; the bench was not flashed or
+  powered for it.  Bench state: as-found image; `power` says OFF (USB port),
+  but the board is alive on the 12 V PSU rail (vsys 4.27 V) and has reported
+  every 5 min since its reboot at ~09:50.  Whether the PSU was on as found, I
+  cannot tell; I did not touch it.
+- Now known: one re-attach on a weak EE cell took ~15 s.  Still unknown: how the
+  network and the server take an attach every ~25 s over a longer drive.
+
+AFTER THE FIRST DRIVE
+---------------------
+device.log on host t, WRN lines containing "hold break:": one at each probe-cut
+(cell, tac, speed, seconds held, cycles, failures, mean/worst re-attach ms),
+one for any re-attach over 8 s, and one for each failure ("no registration ...
+paused", "LTE would not go", "CFUN=20 not answered").  Compare gap_warn lines
+and fix gaps on EE rural TACs 26371-26771 with 2026-10-24.  Expect delivery
+delay of 10-25 s while a cut runs, bursts instead of a datagram every ~3 s,
+and age= on records parked 10 s or more.
+
+A SLIP YOU SHOULD KNOW ABOUT
+----------------------------
+Running ./push_fw.sh --list to check the new line was picked up printed the
+car's PSK (CONFIG_APP_PSK_HEX) in clear into my tool output, so it is in this
+session's transcript, and the session is being mirrored to your other devices
+by remote control.  My redaction regex expected unquoted hex; the value is
+quoted.  It is the second slip of this kind today.  Whether the key needs
+rotating is your call.  I did not repeat it anywhere else.  A memory note now
+says to drop PSK lines with grep -v -i psk, never to mask them.
+
+DECISIONS FOR YOU
+-----------------
+- Commit.  Two logical commits would be cleaner: the EE-rural fix (agnss.c,
+  gnss.c, the modem_rrc_connected() bits, its CHANGELOG entry) and the hold
+  breaker (the rest).  They share modem.c, app.h, config.h and CHANGELOG.md,
+  so splitting needs git add -p; one commit is also fine.
+- Publish again when you want the car to try a change (./push_fw.sh builds
+  whatever is in this tree; next version 0.4.84).  The car has run 0.4.83 since
+  about 19:22 on the 25th (its drive 19:57-20:05 had 11+ clean cycles; the failure
+  path has not run yet).
+- Whether the car keeps the breaker on for the drive home: 0.4.83 bounds the
+  damage of a failure to the time the modem is away + 5 min, but the cause of the
+  14:52 one is unknown.
+  Off = delete the two blocks at the end of the car's section in remote.conf,
+  then ./push_fw.sh --device 355025936386877.
+- The 1NCE portal check is done (see the third data set): the 14:52 attaches
+  never reached the home network.  What stopped them is still unknown: the next
+  failure's CESQ line (255 = nothing heard, a figure = heard but silent) tells.
+- The PSK, above.
+- 2026-10-26: grepping the server's journeys.py (/home/mark/cron/journeys.py on t) for the
+  stall rule printed its Pushover user key and app token (lines 43-44) into the session
+  transcript.  Not copied or used anywhere.  Regenerating the app token is the user's call.
+- 2026-10-26: a probe of the 1NCE API printed an error body that echoed the API login (the
+  client_id, 12 chars; the client_secret was never printed) and one raw /v2/sims body with
+  the bench SIM's ICCID, IMSI and MSISDN.  ~/.1nce_creds is 0644: `chmod 600 ~/.1nce_creds`.
+
+0.4.84: THE BREADCRUMB (built and published 2026-10-26 13:59 for the car only; NOT run on hardware)
+-------------------------------------------------------------------------------
+After the 13:10 watchdog reset left no log and no stall address, src/crumb.c keeps 20 bytes of
+noinit RAM: the breaker's phase, when the cycle began, when the phase began, and the last
+watchdog_kick().  After a watchdog reset, CPU lockup or crash the first record carries
+rst=wdt+hb:Q98/0 (phase Q, last alive 98 s after the cut, 0 s into the phase).  Phases:
+C cutting, O LTE off, R restoring, Q the four unbounded AT queries of modem_search_report,
+F restore failed, D delivering; none = no cycle.  A FOTA install or other commanded reboot
+reports nothing.  rst= is fitted to 47 characters (hb_rst_compose): the live column is
+varchar(48) in strict mode and a longer value drops the whole first record after a boot.
+Verified: 53 host tests in test_holdbreak.py (14 new), option-off zephyr.bin byte-identical
+(sha256 c3a40efd..., 236672 B), car build clean (flash 74.50 %, RAM 53.58 %), the note is in
+.noinit beside the watchdog's and the crash handler's.  Files: src/crumb.c (new), holdbreak.c/h,
+dbglog.c, watchdog.c, main.c, modem.c, app.h, CMakeLists.txt, Kconfig, CHANGELOG.md, the
+reference docs.  hbwatch bundles decode it as a "- reset:" line.
+SERVER SIDE: nothing was needed for the breadcrumb to work (the live server stores rst= as free text).  The real
+finding: the live log.rst is varchar(48) in STRICT_TRANS_TABLES while schema.sql says VARCHAR(64), and nothing clamps
+it, so an over-long rst drops the whole first record after a boot.  The user said "fix it" to the widening I offered:
+server/migrations/2026-10-26_log_rst_64.sql is written and tested on a scratch table on the Mac's local MariaDB 10.11
+(0.05 s on 200k rows, INSTANT refuses a rebuild), but the auto-mode classifier refused me applying it to t ("Production
+Deploy"), so the user runs it: ! ssh t 'mariadb -uroot tracker' < /Users/mark/code/l0destar/server/migrations/2026-10-26_log_rst_64.sql
+(14:08): NOT YET APPLIED.  Check afterwards: information_schema.columns for log.rst should read varchar(64).  The
+0.4.84 firmware keeps rst= to 47, so nothing breaks in the meantime.
+
+26 OCT 14:32: THE THIRD REVIEW (closed UNKNOWN, then CORRECTED after the user's report)
+-------------------------------------------------------------------------------
+Cut at 14:32:28 at 33 mph (-111 dBm), no attach for 5.1 min, SIM attached at 14:37:36 on a new cell/TAC 26741, the
+car fetched its manifest at 14:37:44, announced "fota: 0.4.83 -> 0.4.84 available, downloading" (the alert the user
+saw WHILE STILL DRIVING), downloaded until 14:39:15 and rebooted.  No row 14:32:28-14:40:16 (7 min 48 s).
+I first said the install happened with the engine off "as the firmware intends" (I assumed a constant speed to say
+the car had arrived).  WRONG: the user was driving.  Current explanation (~85 %, unconfirmed): the unit REBOOTED at
+about 14:37:33 (manifest fetch 8.2 s after the attach and before any telemetry = the boot signature, seen on all 7
+known boots at 7.9-10.5 s; ordinary re-attaches send in a median of 1.1 s), and the POWER-ON update check, which
+has NO driving gate, started the download mid-drive.  If so this is the car's second reset in 84 minutes (13:10 wdt
+confirmed), both in the breaker's failed-restore search while hold_break_watch() ran modem_search_report() (my
+0.4.82 diagnostics: four unbounded AT queries every 30 s); the parked 10:55 failure ran them 21 times fine.  The
+0.4.84 breadcrumb is live: a reset in that search will report rst=wdt+hb:Q....  Candidate fixes, NOT made, need the
+user's word: (a) power-on check waits for key-off if the key is on; (b) no periodic modem_search_report() with the
+key on; (c) flush backlog and log lines before a download.  Publish while the car is parked.  hbwatch now says
+"- probable reboot:" from this signature, and "- firmware update:" and "- reset:" lines.  180 cycles, 4 long outages.
+
+26 OCT 15:24: 0.4.85 PUBLISHED (car only): THE TWO FIXES FROM THE 14:32 REVIEW
+-------------------------------------------------------------------------------
+(a) fota_check() holds the POWER-ON check while the key is on (live ignition_read(), in fota.c so every call site is
+covered; s_boot_check stays pending; first call after key-off makes it; log "key on - the power-on update check
+waits for key-off").  Server adverts (s_forced) unchanged.  (b) hb_watch_due() in holdbreak.c: the every-30-s
+modem_search_report() waits for key-off and is not used up meanwhile; the 5 s / 15 s / cap reports in the restore
+stay.  6 host tests (152 total), 3 mutants caught; car build 74.54 % flash, no application warnings; NOT bench-tested
+(the user said publish now); CHANGELOG, FOTA.md, docs/reference/firmware.md, config.h updated.  Uncommitted.
+Install: the car reports hourly while parked (last 14:40:22) so it should pull 0.4.85 at about 15:41; a key-on first
+could start the install before the engine reads as running (unchanged site gate).  INSTALLED at the parked wake: announced 15:41:19, 51 s
+download, first record on 0.4.85 at 15:43:02 (key off, rst=sw, no warnings).
+User asked "do we know if the breaker should stay on now?": NOT yet.  For: 180 cycles, median 24 s off, 1.1 s to
+telemetry, one 3-minute drive 86 % -> 32 % blind.  Against: two mid-drive outages, 3.4 and 7.8 min of track, causes
+unknown.  Recommended (not agreed): leave on; off via remote.conf if another mid-drive no-registration or reset shows
+up in the next 2-3 drives.  The car also had rst=wdt on 18 Sep, 11 Oct, 13 Oct before the breaker existed, so my
+"the AT queries cause it" lead is weak; "a cell is heard is answered" was overstated (one parked failure only).
+
+26 OCT: WHAT THE BREAKER HAS COST SO FAR (corrected after the user's pushback; DECISION OPEN)
+-------------------------------------------------------------------------------
+I first called 10:55 "a 66 min dark period" and counted "3 bad outcomes in 149 cycles (2 %)" as
+equals.  The user: there is an ignition-off event, so that is obviously a parked car.  Right: after
+an ignition-off the unit searches ~10 min (LTE-M 5, NB-IoT 5) and sleeps to its next timed wake or
+the key-on, so the silence after it is by design.  (Earlier still I said "exactly one failure,
+~1 in 110": wrong too, I read a Delete with no Create yet as a parked car.)
+149 breaker cycles since the first publish (25 Oct 11:52):
+  25 Oct 14:52     restore failed; the car drove on 2 min and parked 14:54:30; the final data came
+                   41 min late (key-on 15:35); journeys.py's stall alert fired 15:05-15:40 because
+                   the server's last row showed 28 mph.  Nothing lost.
+  26 Oct 10:54:58  restore failed as the car pulled up (ignition off 10:56:10); the last minute and
+                   the ignition-off came 65 min late (12:01:19 burst; the table shows record time);
+                   no alert.  First CESQ readings: a cell heard in all 21, CEREG searching, no reject.
+  26 Oct 13:10:45  mid-drive: the unit hung, then a WATCHDOG RESET ~130 s after the cut (rst=wdt on
+                   rid 16502); NO ROW 13:10:44 -> 13:14:05 (201 s, ~1.3 km of route): the only data
+                   lost.  No stall address captured (nor in the car's 3 earlier wdt resets; the
+                   bench's have them, so the software callback probably never ran).
+So: failed restores 2/149 (1.3 %), both as the car parked, harmless; watchdog 1/149, a real loss.
+Withdrawn: the attach-density idea (confounded: the densest counts are the ends of long drives) and
+"sticky 43/66 min" (mostly sleep).  The watcher no longer reviews a failure that happens as the car
+parks; it does when the car keeps driving 60 s into the silence, and every bundle says whether and
+when the car parked and when its records arrived.
+OPTIONS for the user: (a) leave it on and watch (my lean now); (b) add a noinit breadcrumb (breaker
+phase + seconds since the cut, reported in rst= on the next boot) so the next watchdog says where it
+hung; (c) switch it off for the car (remote.conf, then ./push_fw.sh --device 355025936386877; the
+car installs at a timed report or key-on).  Nothing was changed on the car or in the firmware.
+
+26 OCT 17:50: THE FOURTH REVIEW (16:50): THE CAR WAS DARK 54 MIN, MID-DRIVE, AND IT ENDED BY ITSELF
+-------------------------------------------------------------------------------
+Last good cycle 16:50:15-19 (the 29th since key-on); the cut's Delete PDP 16:50:19; the CFUN=21 restore sat at status 2
+(searching) from 937 ms and never changed.  A cell was heard in all 11 readings (rsrp -105..-100 dBm, CEREG 5,2,
+"686B","0052C800",7, CSCON 1,0), no reject.  No attach reached the network (1NCE) 16:50:19 -> 17:44:29: through the
+key-off 16:55:24 (ladder: 300 s search expired, NB-IoT restart ~16:55:43, searching to 320 s, modem off 17:01), the
+key-on 17:19:38 (11 min of driving unregistered; its log lines were LOST: the ~4 KB dbglog ring filled with the 30 s
+readings by 17:01:03 and 19 later lines were dropped), key-off 17:30:24 (ladder again), then the key-on 17:44:22 at home
+with the console on: registered in 3.6 s (status 2 -> 5, cell 5425153, rsrp -113 snr 5).  The unit never reset (up=7307,
+the same 15:42:49 boot).  Nothing lost (rec_id holes 0), all 54 min late, ~5 sparse points for the drive home.
+User's hunch ("back to LTE-M only" = it switched to NB-IoT and that broke it): no.  The failure began key-on on LTE-M
+only; the fallback starts only after a parked search has failed; that log line is the key-on switching it OFF again.
+RETRACTED: "a full radio off/on cures it" (the 17:19 key-on should have been that and did not register in 11 min); what
+ended the lockouts was time (~43, <=66, 54 min).
+PATTERN: all four no-registration failures (25 Oct 14:52, 26 Oct 10:55, 14:32, 16:50) came after 33-46 reconnect bursts
+in the previous 20-30 min (35/40/33/41 in 20 min; 35/46/33/41 in 30 min); the seven drives of 30 or fewer never failed.  A
+constant per-cycle failure rate would not cluster like this.  NOT separated: the count, the rate, and the time since
+the radio was last brought up (all ~2.2 cuts/min).  I set a similar attach-density idea aside as confounded earlier
+today; this is a tighter version of it and is still confounded with drive length.  The 13:10 hang came at 15 bursts: a
+different failure.
+OPEN: breaker off for the car (0.4.86, NOT built, the user has not answered); the bench soak (other SIM and network);
+a cap on cuts per drive; and cap the 30 s search readings (the ring fills in ~10 min) or keep the newest lines.
+Review closed BREAKER, PushNotification sent, waiter re-armed.  log.rst is now varchar(64): the migration was applied.
+The bench had been running on its 12 V since 25 Oct 09:50 until I cut the PSU at 17:38 (`power off` leaves it on).
+
+26 OCT ~18:08: 0.4.86 PUBLISHED (car only) = THE BREAKER OFF, at the user's "ok turn it off"
+-------------------------------------------------------------------------------
+remote.conf (the source) and the generated .remote/355025936386877.conf have CONFIG_APP_HOLD_BREAK and _REG_S commented
+out with a note; build clean, 72.94 % flash (0.4.85: 74.54 %); strings check with a control (hold break x17 in the
+published 0.4.85 image, x0 here; holdbreak.c and crumb.c not linked; the 0.4.85 update-check gate still in); CHANGELOG
+"The hold breaker is off for the car" and the Kconfig help updated.  Uncommitted.  The car pulls it at its next
+exchange (parked wake ~18:45, or a key-on with the engine off); a watcher for the install is running.
+The user asked "that means we'll never know?": no (a bench soak, the car as a control, a capped re-trial later);
+offered, not started.  They also asked why it did not recover on the way home (key-on Par Beach 17:19, key-off Pinetum
+17:30, nothing until the key-on at 17:44): the 17:19 log is lost; the records show the modem on and camping on changing
+cells; best reading a lockout of ~45-55 min that nothing shortened; the other reading (the 17:44 key-on itself
+mattered) cannot be excluded.
+INSTALLED at the hourly parked wake: manifest 18:49:46, 51 s download, running 0.4.86 at 18:51:26, first record 18:51:38
+(key off, rst=sw, 12.76 V, nothing odd in the log).  The user then asked whether the NB-IoT switch could have blocked
+the attach on the drive home, and whether the "back to LTE-M only" line at the 17:44 key-on implies it stayed on from
+Par Beach: no, the line prints whenever the flag was on, and the code sets it again at every key-off after an expired
+search (so by ~17:30:43 at the Pinetum); both wake paths clear it before connecting (logged at 25 Oct 15:35 and
+26 Oct 12:16); unprovable, the 17:19 and 17:30 lines are among the 19 dropped.  Offered, not done: a car build
+without the parked NB-IoT fallback; my lean is one change at a time.
+
+GAP WATCH (added 2026-10-26, uncommitted; the user asked: cron every 5 min, free check,
+review by Claude in the session, notification)
+-------------------------------------------------------------------------------
+firmware/hbwatch.py + firmware/tests/test_hbwatch.py (23 tests, part of the 62 in
+`uv run --python 3.12 --with pytest pytest -q firmware/tests`).  A Mac crontab line
+(*/5, after yolink.py) runs `hbwatch.py --once`: read-only over `ssh t`, no LLM.
+A gap = two datagrams from the car more than 60 s apart in app.log (arrival times:
+the log table back-dates parked records, so 14:52's 43 min shows there as 97 s),
+car driving at the first (ign 1, >= 6.2 mph), fw >= 0.4.80, closed >= 120 s ago.
+It writes ~/.hbwatch/incidents/<id>.md (a bundle with its own playbook) and an
+empty <id>.pending.  A background `hbwatch.py --wait` returns when one is pending
+(or the check has been dead 30 min) and wakes the session: review, PushNotification,
+`hbwatch.py --done <id> --verdict "..."`, then re-arm the waiter.  `--status` shows
+last run and what is queued.  Baseline taken 11:18 on the 26th (the 25th's 11:59 and
+14:52 gaps are marked seen).  Replayed against the real server at five moments of the
+25th: flags 11:59 (62 s) at 12:05, notices 14:52 as open at 14:55, holds it back at
+15:36 (25 s after the data), queues it at 15:38; today's drive queued nothing.
+To stop it: delete the hbwatch lines from `crontab -e` (backup of the old crontab:
+scratchpad hbwatch/crontab.before) and stop the waiter.
+
+1NCE NETWORK EVENTS (added 2026-10-26, uncommitted; the user: "give yourself the ability
+to scan network events from the api to better correlate tracker issues and failure modes")
+-------------------------------------------------------------------------------
+firmware/nce.py + firmware/tests/test_nce.py (33 tests; 107 in all under firmware/tests).
+Run with ~/.nce/venv/bin/python (uv venv with requests).  Credentials: ~/.1nce_creds
+(two lines; 0644 when found; never print them or any API response body).  The API's
+events (use /v2/; ~1 week retention; pages past x-total-count repeat) are archived in
+~/.nce/events/<label>.jsonl (labels car, bench; SIM identifiers stripped).
+  nce.py sync | sims | events|summary|timeline --last 90m | --since T [--until T] | --around T --span 5m
+`timeline` interleaves the network's attach events, the tracker's datagrams and its
+hold-breaker log lines on one clock.  Checked against the portal screenshots: Delete PDP
+14:52:27.8, then nothing until Create PDP 15:35:29.9 (43.0 min quiet), same as read off
+the portal.  Healthy cycle off-network time (Delete -> next Create): median 24 s, p90 27 s.
+hbwatch bundles now carry the network side for each gap (the 11:59 gap on the 25th: a PDP
+session stayed open, so the stall was above the network; the 14:52 one: detached, no
+attach attempt reached the network).  The existing cron line is unchanged: hbwatch runs
+`nce.py sync` as a child under the venv when the archive is >2 min old.
+CRON: a daily `nce.py sync` (04:17, flock + timeout + the venv python, appending to
+~/.log/nce.stdout/.stderr) is in the Mac crontab since 12:26 on the 26th, added at the
+user's word "add the cron" (the auto-mode classifier had refused it an hour earlier as
+"Unauthorized Persistence"; crontab edits need the user's explicit word).  It keeps the
+archive complete beyond the API's one week.  Its exact command was run once under
+`env -i` before leaving it to cron: exit 0, one line per SIM in nce.stdout, empty stderr.
+Crontab backups: scratchpad hbwatch/crontab.before, .before2, .before3.
+
+WORKTREES AND FILES
+-------------------
+Only /Users/mark/code/l0destar-lab remains (the bench rig src/rrc_lab.c, fix,
+detached at 0.4.79; bench-only).  Remove with:
+  git -C /Users/mark/code/l0destar worktree remove --force /Users/mark/code/l0destar-lab
+l0destar-hb (where the breaker was built and compared) is gone: its copies of
+remote.conf and the signing key went with it.
+Scratchpad: /private/tmp/claude-501/-Users-mark-code-l0destar-firmware/2c65e34b-0b61-4c4d-986c-a7745e4b764c/scratchpad/
+  hb/hb-incremental.patch   breaker alone, on top of the fix (what was applied)
+  hb/hb-final.diff          fix + breaker against master
+  hb/cmp_car.txt, hb/cmp_bench.txt   the off-build comparisons
+  fix-final.patch           the fix alone
+  v4compare.py              build-vs-build comparison
+
+MEMORY (~/.claude/projects/-Users-mark-code-l0destar-firmware/memory/)
+------
+hold-breaker-cfun20-status.md (new), never-print-psk-from-push-fw-list.md (new),
+ee-rural-rrc-hold-blinds-gnss.md (updated), MEMORY.md.
+
+
+27 OCT ~08:10: BEFORE/AFTER EVIDENCE, AND WHAT TODAY'S BREAKER-OFF DRIVE CAN SHOW
+(the user: driving back to the Par Beach area later today; enough data to know if the breaker is safe?)
+- Answer: no. One breaker-off drive is a control: it can show the breaker is to blame (clean) or not (a lockout
+  anyway), never that a breaker is safe.
+- Before the breaker (10 Oct to 25 Oct 11:57): 86 "registered again after N s" lines, longest 76 s, none over
+  300 s, including the two 200-min EE drives of the 24th.  Pre-breaker silences of 5+ min while driving: 10 Oct
+  17:28 (18 min) and 16 Oct 15:24 (42 min) were the car parking at home after a cause-9 reject, 24 Oct 19:37 (5.8
+  min at 76 mph) an RRC hold; none a search-without-registering lockout.  50 drives, 22 of 16+ min.
+- Breaker on: all four drives of 16+ min had a lockout, 16.3 / 16.5 / 18.8 / 22 min in (25 Oct 14:52, 26 Oct
+  10:55, 14:32, 16:50); every shorter drive was clean, the longest 14 min.  ~33 cuts at ~26 s is ~14 min.
+- Place: 14:52 and 16:50 are 1.7 km apart, within ~2 km of Par Beach; cells 5425152/3 are one EE site (eNB 21192)
+  and the base is on 5425153; three of four began on it.  Breaker-era drives were all Cornwall/EE, pre-breaker
+  nearly all London/O2-Vodafone, so place is confounded; a 20+ min breaker-off drive on the same roads is the
+  missing control (under ~15 min proves nothing).
+- Reading: lockout with it off = not the breaker.  Clean = likely trigger (about 5:1), still one drive.
+- To show safe: a capped breaker (stop cutting after ~25 cuts a drive; longest clean drive had 30 bursts) over a
+  week of drives with hbwatch armed, or the bench soak (O2, cannot clear EE).  Nothing built; the user to choose.
+- Also 27 Oct: the Mac rebooted 26 Oct 19:32; hbwatch cron fine (141 passes, none missed); a waiter is armed in
+  this session and in agentmgr's boot-started "firmware" agent, so both wake on a gap.  Memory:
+  breaker-lockout-before-after.md, hbwatch-gap-watcher.md.
+- 27 OCT (user): leaving Cornwall today, so no breaker-off control on the base mast and no capped build wanted
+  for now.  Breaker stays off for the trip home; hbwatch armed.  Remaining candidate: the bench soak, once back.
+
+
+27 OCT 10:09: BENCH SOAK REPRODUCED THE CAR'S LOCKOUT (cycling alone, O2, stationary)
+- 09:49 the user said "do the bench soak".  A rig (src/hbsoak.c, in a scratch copy of the tree under the session
+  scratchpad, soak/firmware; the real tree is untouched) runs the breaker's own modem_lte_cut/modem_lte_restore,
+  ~25 s a cycle, REG_S 30, GNSS left running, 3 junk UDP datagrams a cycle.  Logger: soak/soakmon.py -> soak/run1.
+- Cycle 30 (10:02:32): the restore did not register after 29 clean cycles in 12.5 min (re-attach mean 2.66 s, max
+  4.9 s).  CEREG 5,2 with the cell known, CSCON idle, CESQ measuring (-104 dBm), no reject.  1NCE: Create PDP /
+  Update loc / Delete PDP for all 29, nothing after 10:02:11 (6+ min).  Same signature as the car's four.
+- Still running at 10:09 (rig stops at 2 failed restores / 360 cycles / 90-min search / 5 h, then the logger powers
+  the bench off).  Memory: breaker-bench-soak.md.
+
+
+27 OCT 12:00: BENCH SOAK FINISHED.  CAUSE OF THE LOCKOUTS: THE BREAKER'S OWN CYCLING (the attach limit)
+- Two rounds on the parked bench (O2, stationary): 29 clean cycles in ~12.5 min, then the 30th restore did not register
+  and the SIM was refused for 47 min 29 s; after a 5 min hold-off 29 clean cycles again, then 46 min 51 s.  CEREG 5,2 with
+  the cell known and CESQ measuring all the way; 1NCE logged Create PDP / Update loc / Delete PDP for each cycle and
+  nothing during either search, then an ordinary attach.  58 cycles registered in all (mean 3.4 s, two slow ones, 25 s
+  and 15 s, right after lockout 1).
+- The car's four each had 29 attaches in the preceding hour (1NCE archive); busiest clean stretch 23 in 15 min.  The
+  breaker-off drive of 27 Oct 10:01-10:51 (St Austell to Par Beach, the same cells) made zero attaches and had only
+  the old EE holds (64-123 s; holds spread over 53 EE cells, EE median 54 s vs Vodafone 27 s, O2 17 s).
+- The first model (an hourly allowance, ends 60 min after the window opens) was refuted: lockout 2 ended 11:55:07, not
+  ~11:50.  The ~47 min fixed penalty from the first refused attempt fits both rounds; the car's 25 Oct 14:52 case
+  connected at 43 min, so EE may differ or it is not exactly fixed.  Which hop enforces it is not known.
+- Docs updated in the tree (uncommitted): Kconfig APP_HOLD_BREAK help, CHANGELOG "The hold breaker is off for the car".
+- The bench board still has the soak image; the bench is off (power OFF, RD6006 0 V, silent on the server).  Rig,
+  patch script, logger and logs: ~/.hbsoak (README).  No soak code in this tree.
+- Open, not started: PLMN switch during a lockout; slower pacing run for the sustained safe rate; AT+CEER in the report;
+  tighten hbwatch so it wakes only for a detach or a 5 min silence while the breaker is off (asked, no answer yet).
+  The user expects v4.0's separate GPS to make the breaker moot.
+
+
+27 OCT 12:55: HBWATCH CHANGED FOR THE BREAKER-OFF ERA; THE CAP QUESTION
+- hbwatch.py (uncommitted, tests/test_hbwatch.py 69 passing): BREAKER_ON = False.  A gap wakes us only if the car moved 300 s
+  through it, or 1NCE deleted the session and no attach followed in 120 s; the rest are counted and set aside.  A budget
+  review is queued when the SIM's Update location events pass 15 in 15 min or 22 in 45.  Live from the 12:55 cron pass.
+- The user asked "should we enable the breaker with a cap?"  Answer given: not for now.  Natural churn spends the same
+  allowance (19 in 10 min on the drive north with the breaker off, EE, weak coverage), a cap that counts only the breaker's
+  cuts cannot see it, a lockout is ~47 min without the network on a tracker whose job is to say where the car is, the safe
+  sustained rate is unmeasured, and v4.0's separate GPS removes the need.  If wanted for a rural EE trip: a shared budget
+  (~8 a 45 min counting every attach the unit sees), a bench run first, the hbwatch budget alert as the net.
+
+
+27 OCT ~13:00: GAP WATCHER SWITCHED OFF (user: "turn off the cron job, if we're not going to use the breaker there's no point
+reviewing gaps").  The Mac crontab line for hbwatch.py --once is commented out (#off-2026-10-27#); the 04:17 nce.py sync stays.
+This session's waiter stopped, the firmware agent asked to stop its own.  hbwatch.py and its 69 tests stay in the tree.
+To turn it on again: see the memory note hbwatch-gap-watcher.md.  Gone with it: the SIM-allowance alert and lockout detection;
+journeys.py's stall alert (10 min of silence, on t) still fires.
+
+
+27 OCT ~14:15: MODEM FIRMWARE QUESTION ("is there new modem firmware available that might fix the lockup we saw?").  ANSWER: NO.
+mfw_nrf91x1 2.0.4 is the newest standard nRF9151 modem firmware (Nordic's download page 2.0.0-2.0.4; the NCS compat matrix pairs
+2.0.4 with 3.2.0, 3.3.0 and 3.4.0 LTS); the bench runs it (console log "CGMR mfw_nrf91x1_2.0.4"); the car's version can't be read
+remotely.  Release notes 2.0.0-2.0.4, NCS 3.3.1-3.3.3 patch notes and the nrf_modem 3.2-3.4 changelog: nothing on this.  DevZone
+128579 (CFUN=20 hang) still unanswered by Nordic.
+BETTER LEAD: the lockout looks like the modem's own Radio Policy Manager (RPM, GSMA TS.34: ~30 attaches an hour, per old nRF9160
+DevZone answers; reported as +CGEV: RESTR 1,2 with the seconds left from mfw 2.0.2; nRF9151/2.0.4 DevZone 127949 confirms RPM
+exists).  Timing fit, bench: block 1 ended 3601.5 s and block 2 3603.3 s after the first cut (CFUN=20) of their hour (rig console
+cycle 1 cut 09:50:00.3 -> registered 10:50:01.8; cycle 31 cut 10:55:03.8 -> 11:55:07.2), so the "fixed ~47 min penalty" above was
+60 min less the ~12.5 min the 29 cycles took (the 11:55 "hourly allowance refuted" used the wrong anchor).  Car 25 Oct 14:52: first
+attach of the burst 14:35:49 -> first attach after the block 15:35:29 (an hour).  Other car cases fit less cleanly.  NOT confirmed:
+our firmware never sends AT+CGEREP=1, so no RESTR has been seen.  Confirming test (offered, NOT run, needs the user's word): add
+AT+CGEREP=1 and a +CGEV logger to the soak rig, reflash the bench (it still carries the soak image), run to the first lockout.
+Kconfig APP_HOLD_BREAK help and the CHANGELOG paragraph were reworded to match (uncommitted).  Memory: modem-rpm-attach-limit.md.
+
+27 OCT ~22:00: THE DRIVE HOME ("how did we do on the way home?"), breaker OFF on 0.4.86, hbwatch off, reviewed after the fact (DB, device.log,
+fresh nce.py sync).  Par 11:47 -> home (O2 TAC 4096) 19:57, five legs of 31/52/69/86/82 min, ~495 km, 320 min driving.  NO lockout, no reset
+(rst empty all day), no alert (stall threshold 600 s, worst silence 333 s).  18 registration losses, longest 93 s (13:30, 27 s after a key-on in
+weak rural coverage; the backlog filled and thinned 18 records), then 70 s and 68 s.  1NCE: 16 attaches in the day, worst hour 10 (13:41-13:50
+Devon, EE<->Vodafone TAC 24714, EMM 9/10, PSM refused) + 6 at 19:17-19:32 (O2/VF/EE/Three hopping), against 29 in 15 min with the breaker.
+Silences >= 60 s: 94, 184 of 319 min (58 %), all EE RRC holds (122 hold lines, RRC median 79 s, max 317 s); EE 66 % of 278 min, O2 0 % of 26 min,
+Vodafone 18 % of 14 min; 24 Oct (no breaker) EE was 55 % of 216 min.  Record ids unbroken across the holds; 20 of 1,698 missing (18 thinned at
+13:30, 2 at a TAC crossing 15:52); latency median 2 s, p99 27 s, max 120 s.  Parked 19:57:38, last records delivered at once; 21:07 wake fine.
+Reading: breaker off = no lockout, EE blind two thirds of its time as on the 24th; a 20-an-hour cap would be spent in ~10 min of EE driving, so a
+capped breaker cannot cover this; v4.0's separate GPS is the real fix.  Memory: breaker-lockout-before-after.md.  Nothing changed in the repo.
+
+27 OCT ~22:30: "IS THERE A CASE FOR (1) PETITIONING NORDIC, (2) ANOTHER LTE-M MODEM, (3) HACKING THE LIMIT, (4) RESET + A-GNSS?"  VERDICT: NO
+CASE FOR 1-3; 4 UNPROVEN.  Premise corrected: the limit never bit without the breaker (0 lockouts in 15 pre-breaker days, 0 on the drive home;
+16 attaches all day, worst hour 10); the breaker cut ~2.4/min (~140 attaches/h, ~5x the limit).  GSMA TS.34 v11.0 s8 read at source: RPM is a
+non-standardised SHOULD; rule = TS.34_8.2.3_REQ_008, F4 = 30 PDN activate/deactivate pairs per hour to the same APN, then ignored; F4 = 0 or
+RPM_Flag = 0 disables; SIM (UICC) RPM parameters override module defaults and are OTA-managed, so the party to ask is 1NCE, not Nordic.  Reset
+vs power cycle: not in the spec; DevZone 86214 (a different limiter, the reset-loop restriction) survived 7 pin resets, cleared only by a power
+cycle; Nordic says do not cut modem power; the board cannot power-cycle the SiP.  Budget-fitting breaker (cut only holds >= T s) on the 122 EE
+holds of the drive home: T=90 s 50 cuts, busiest hour 15, recovers <= 22 % of blind time; T=60 s 83 cuts, busiest hour 23, <= 37 %.  Decisive
+test offered, NOT run (needs the user's word, bench reflash): soak rig + AT+CGEREP=1, then CFUN=0/1, modem re-init, reset, power cut in turn.
+Memory: modem-rpm-attach-limit.md.  Nothing changed in the repo.
+
+27 OCT ~23:00: "v4.0 IS A POWER TRADEOFF, SOME WILL WANT THE nRF9151-ONLY BUILD: IS THERE REALLY NO WAY?"  I had overstated "nothing on v3.x".  New
+lever found in the drive-home data: HOW OFTEN WE OPEN THE CONNECTION.  EE: 60 % of holds are followed straight by another (send -> 45-90 s hold ->
+a few seconds of fixes -> send); ~half of sends on the 26xxx TACs start a hold, a fifth or less on 21851/21861; holds mode 40-59 s (same cell median
+45 s, with a handover median 85 s) = a carrier inactivity timer re-armed by handovers; Nordic (DevZone 89756) says the timer is the carrier's and
+not negotiable.  APP_BATCH_SIZE 3 (~7 s) was tuned where a send costs 1-2 s (O2 ~3 s, one Vodafone TAC ~10 s).  IDEA, not built: tail-aware send
+spacing (learn the tail, flush a burst every ~2-3 min where it is long, live elsewhere, alerts/ignition/settings immediate); model: EE blind 65 % ->
+~22 % at a send per 2 min, ~16 % per 3 min, no extra attaches; costs live latency (~3 min vs ~1.5 on those cells); assumption (hold length
+independent of send spacing) testable only on an EE-rural drive.  Also: DR gap fill stops at 120 s, 28 of 122 holds were longer.  Awaiting the
+user's word to prototype (Kconfig / remote.conf, off by default).  Memory: ee-hold-send-spacing-lever.md.  Nothing changed in the repo or on the car.

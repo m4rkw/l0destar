@@ -120,6 +120,20 @@ extern bool  use_cached_gps;
 extern bool  force_record;
 /* Set by collect_data(): the record it just built has no live fix behind it. */
 extern bool  last_record_stale;
+/* The drive stream (APP_DRIVE_STREAM) asks collect_data() for two things.
+ * collect_fix_wait_ms, when above 0, replaces how long it waits for a fix
+ * (callers set it for one call and clear it); running out of it is the
+ * stream's normal fallback, so the receiver driver does not warn about it.
+ * stream_keeps_records holds the
+ * records of a streamed send until the server's reply comes back, as a send
+ * that is not streamed does; track mode leaves it off, its records being too
+ * big for the backlog's slots. */
+extern int   collect_fix_wait_ms;
+extern bool  stream_keeps_records;
+/* Lean: the modem's temperature and supply, AT commands that cost tens of
+ * milliseconds each for figures that move over minutes, are read at most once
+ * a second instead of for every record.  For a stream above 1 Hz. */
+void data_set_lean(bool on);
 extern bool  powered_on;
 extern char  ignition;
 extern int8_t previous_ignition;
@@ -234,6 +248,7 @@ int  modem_attach_ms(void);
  * take differences.  RRC connected time is time the network held the radio,
  * which GNSS cannot then have; losses counts registrations lost. */
 uint32_t modem_rrc_connected_ms(void);
+bool     modem_rrc_connected(void);     /* now, from the LTE events */
 uint32_t modem_reg_losses(void);
 const char *modem_rat(void);           /* "CATM1" / "NBIOT" / "UNKNOWN" */
 bool modem_is_nbiot(void);
@@ -243,6 +258,25 @@ int  modem_rescan_plmn(int timeout_s); /* force cell/PLMN reselection */
  * takes effect at the next one. */
 int  modem_nbiot_fallback(bool on);
 bool modem_nbiot_fallback_on(void);
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+/* LTE off with the receiver left running (AT+CFUN=20) and on again (CFUN=21):
+ * the hold breaker, main.c's.  While cut, modem_is_registered() is false and
+ * nothing can be sent.  Both run `tick` (may be NULL) once a second while
+ * they wait.  modem_lte_cut() is 0, an error with LTE as it was, or
+ * -ETIMEDOUT with the command taken and not yet answered, which counts as cut;
+ * modem_lte_restore() the attach time in ms, or an error, -ETIMEDOUT with the
+ * radio left searching.  A restore that times out also reports what the modem
+ * says at 5 s, 15 s and the cap, and logs the registration status changes that
+ * follow; modem_search_report() is the same line again, for the caller to
+ * repeat while the radio is still searching. */
+uint32_t modem_rrc_age_ms(void);        /* how long the connection now up has been; 0 if none */
+bool modem_lte_is_cut(void);
+int  modem_lte_cut(void (*tick)(void));
+int  modem_lte_restore(int timeout_s, void (*tick)(void));
+void modem_search_report(void);
+#else
+static inline bool modem_lte_is_cut(void) { return false; }
+#endif
 
 int  gnss_init(void);
 int  gnss_start(void);
@@ -267,6 +301,11 @@ int32_t  gnss_last_wait_ms(void);
  * thing.  With the external one gnss_blocked_ms() and gnss_starved_epochs()
  * are always 0: nothing takes its radio. */
 const char *gnss_module_version(void);
+/* Fixes per second the external receiver is asked for (1 to 10), from now and
+ * at every power-up until changed; the satellite list stays at about one a
+ * second.  The receiver's thread applies it, so this returns at once.
+ * -ENOTSUP when the receiver takes no commands (its NMEA is being read). */
+int  gnss_set_rate_hz(int hz);
 #endif
 
 #ifdef CONFIG_APP_DEMO_MODE
@@ -448,6 +487,24 @@ void watchdog_kick(void);
 /* "stall:<addr>/..." once after a watchdog reset, else NULL (watchdog.c) */
 const char *watchdog_last_stall(void);
 
+/* Where the hold breaker was when the unit last gave a sign of life, kept in
+ * noinit RAM across a reset (crumb.c; holdbreak.h has the phases and the
+ * field's format).  crumb_previous() is what the last boot left, "hb:Q98/0",
+ * for dbglog_reset_cause() to report after a reset nobody asked for. */
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+void        crumb_cut(void);               /* a cycle begins: time zero */
+void        crumb_phase(char phase);       /* a phase begins; 0 ends the cycle */
+char        crumb_phase_get(void);
+void        crumb_alive(void);             /* from watchdog_kick() */
+const char *crumb_previous(void);
+#else
+static inline void        crumb_cut(void) { }
+static inline void        crumb_phase(char phase) { (void)phase; }
+static inline char        crumb_phase_get(void) { return 0; }
+static inline void        crumb_alive(void) { }
+static inline const char *crumb_previous(void) { return NULL; }
+#endif
+
 void reboot_now(void);
 void status_delay(long ms);   /* watchdog-aware sleep */
 const char *fatal_last_crash(void); /* "fatal:<reason>@<pc>" once, else NULL */
@@ -566,6 +623,11 @@ void obd_close(void);
  * record built after the fix costs no bus time and engine RPM has useful
  * resolution instead of one sample per record.  Never opens a session. */
 void obd_sample_tick(void);
+/* The same poll without the tick's minimum gap, for a loop that samples once
+ * a cycle at its own cadence (the drive stream, after each send): the record
+ * built next finds the snapshot a fraction of a second old and needs no bus
+ * time. */
+void obd_sample_now(void);
 
 /* Bridge the gaps where nothing else is talking to the ECU (the send and the
  * idle between cycles), so the session is not dropped and re-initialised on

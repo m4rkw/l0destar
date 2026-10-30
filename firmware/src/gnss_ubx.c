@@ -156,6 +156,7 @@ enum ubx_event ubx_parse_byte(struct ubx_parser *p, uint8_t b)
             /* Not a sentence after all.  A UBX sync byte may be what ended it. */
             p->state = (b == 0xB5) ? S_SYNC2 : S_SYNC1;
         } else {
+            p->payload[p->nmea_len] = b;    /* the text, for the NMEA decoder */
             p->nmea_cs ^= b;
             p->nmea_len++;
         }
@@ -171,6 +172,8 @@ enum ubx_event ubx_parse_byte(struct ubx_parser *p, uint8_t b)
 
         p->state = S_SYNC1;
         if (lo >= 0 && ((p->nmea_hi << 4) | lo) == p->nmea_cs) {
+            p->len = p->nmea_len;
+            p->payload[p->nmea_len] = '\0';
             p->nmea++;
             return UBX_EV_NMEA;
         }
@@ -242,6 +245,9 @@ bool ubx_decode_nav_sat(const uint8_t *pl, uint16_t len, struct ubx_sat_summary 
     o->tracked = 0;
     o->used = 0;
     o->best_cno = 0;
+    o->eph = 0;
+    o->alm = 0;
+    o->ano = 0;
     for (uint8_t i = 0; i < n; i++) {
         const uint8_t *sv = pl + 8 + 12 * i;
         uint8_t cno = sv[2];
@@ -256,7 +262,27 @@ bool ubx_decode_nav_sat(const uint8_t *pl, uint16_t len, struct ubx_sat_summary 
         if (flags & 0x08) {         /* svUsed */
             o->used++;
         }
+        if (flags & (1u << 11)) {   /* ephAvail */
+            o->eph++;
+        }
+        if (flags & (1u << 12)) {   /* almAvail */
+            o->alm++;
+        }
+        if (flags & (1u << 13)) {   /* anoAvail */
+            o->ano++;
+        }
     }
+    return true;
+}
+
+bool ubx_decode_mga_ack(const uint8_t *pl, uint16_t len, struct ubx_mga_ack *o)
+{
+    if (len < 8) {
+        return false;
+    }
+    o->accepted = (pl[0] == 1);
+    o->info = pl[2];
+    o->msg_id = pl[3];
     return true;
 }
 
@@ -392,4 +418,129 @@ size_t ubx_build_valset(uint8_t *out, size_t cap, uint8_t layers,
         }
     }
     return frame_finish(out, UBX_CLS_CFG, UBX_ID_CFG_VALSET, (uint16_t)off);
+}
+
+/* -- assistance ------------------------------------------------------------------ */
+
+bool ubx_utc_from_unix_ms(int64_t unix_ms, struct ubx_utc *o)
+{
+    if (unix_ms < 1577836800000LL) {            /* 2020-01-01: a clock never set */
+        return false;
+    }
+
+    int64_t days = unix_ms / 86400000LL;
+    int64_t rem = unix_ms % 86400000LL;
+
+    /* Days since 1970-01-01 to a proleptic Gregorian date (H. Hinnant's
+     * civil_from_days), so it needs no libc time functions. */
+    int64_t z = days + 719468;
+    int64_t era = (z >= 0 ? z : z - 146096) / 146097;
+    unsigned doe = (unsigned)(z - era * 146097);
+    unsigned yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    int64_t y = (int64_t)yoe + era * 400;
+    unsigned doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    unsigned mp = (5 * doy + 2) / 153;
+    unsigned d = doy - (153 * mp + 2) / 5 + 1;
+    unsigned m = mp < 10 ? mp + 3 : mp - 9;
+
+    if (m <= 2) {
+        y++;
+    }
+    o->year = (uint16_t)y;
+    o->month = (uint8_t)m;
+    o->day = (uint8_t)d;
+    o->hour = (uint8_t)(rem / 3600000);
+    o->min = (uint8_t)(rem / 60000 % 60);
+    o->sec = (uint8_t)(rem / 1000 % 60);
+    o->ns = (uint32_t)(rem % 1000) * 1000000u;
+    o->tacc_s = 0;
+    o->tacc_ns = 0;
+    return true;
+}
+
+static void wr16(uint8_t *p, uint16_t v)
+{
+    p[0] = (uint8_t)v;
+    p[1] = (uint8_t)(v >> 8);
+}
+
+static void wr32(uint8_t *p, uint32_t v)
+{
+    for (int k = 0; k < 4; k++) {
+        p[k] = (uint8_t)(v >> (8 * k));
+    }
+}
+
+size_t ubx_build_mga_ini_time_utc(uint8_t *out, size_t cap, const struct ubx_utc *t)
+{
+    uint8_t pl[24] = { 0 };
+
+    pl[0] = UBX_MGA_INI_TIME_UTC;
+    pl[1] = 0;                  /* version */
+    pl[2] = 0;                  /* ref: on receipt, no EXTINT pulse */
+    pl[3] = 0x80;               /* leap seconds unknown */
+    wr16(pl + 4, t->year);
+    pl[6] = t->month;
+    pl[7] = t->day;
+    pl[8] = t->hour;
+    pl[9] = t->min;
+    pl[10] = t->sec;
+    wr32(pl + 12, t->ns);
+    wr16(pl + 16, t->tacc_s);
+    wr32(pl + 20, t->tacc_ns);
+    return ubx_build_frame(out, cap, UBX_CLS_MGA, UBX_ID_MGA_INI, pl, sizeof(pl));
+}
+
+size_t ubx_build_mga_ini_pos_llh(uint8_t *out, size_t cap, int32_t lat_e7,
+                                 int32_t lon_e7, int32_t alt_cm, uint32_t pos_acc_cm)
+{
+    uint8_t pl[20] = { 0 };
+
+    pl[0] = UBX_MGA_INI_POS_LLH;
+    wr32(pl + 4, (uint32_t)lat_e7);
+    wr32(pl + 8, (uint32_t)lon_e7);
+    wr32(pl + 12, (uint32_t)alt_cm);
+    wr32(pl + 16, pos_acc_cm);
+    return ubx_build_frame(out, cap, UBX_CLS_MGA, UBX_ID_MGA_INI, pl, sizeof(pl));
+}
+
+int ubx_frame_scan(const uint8_t *buf, size_t avail)
+{
+    if (avail < 1) {
+        return 0;
+    }
+    if (buf[0] != 0xB5) {
+        return -1;
+    }
+    if (avail < 2) {
+        return 0;
+    }
+    if (buf[1] != 0x62) {
+        return -1;
+    }
+    if (avail < 6) {
+        return 0;
+    }
+
+    uint16_t len = rd16(buf + 4);
+
+    if (len > UBX_MAX_PAYLOAD) {
+        return -1;
+    }
+
+    size_t total = (size_t)len + UBX_FRAME_OVERHEAD;
+
+    if (avail < total) {
+        return 0;
+    }
+
+    uint8_t a = 0, b = 0;
+
+    for (size_t i = 2; i < (size_t)len + 6; i++) {
+        ck_add(&a, &b, buf[i]);
+    }
+    if (buf[len + 6] != a || buf[len + 7] != b) {
+        return -1;
+    }
+    return (int)total;
 }

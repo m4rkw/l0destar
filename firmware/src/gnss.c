@@ -30,6 +30,9 @@ static bool s_have_fix;
 static bool s_agnss_needed;
 static int  s_tracked_sv;
 static bool s_blocked;
+/* Fix waits in a row that timed out with the network holding the radio and
+ * left the receiver running instead of restarting it (GNSS_KEEP_MAX). */
+static int  s_kept_running;
 
 /* Consecutive epochs without a fix that the receiver flagged as short of
  * radio time (NRF_MODEM_GNSS_PVT_FLAG_NOT_ENOUGH_WINDOW_TIME).  Counted in
@@ -190,6 +193,7 @@ int gnss_start(void)
 {
     s_have_fix = false;
     s_blocked = false;
+    s_kept_running = 0;
     blocked_end();
     atomic_set(&s_starved_epochs, 0);
     k_sem_reset(&s_fix_sem);
@@ -207,6 +211,7 @@ int gnss_stop(void)
 
 int gnss_resume(void)
 {
+    s_kept_running = 0;
     blocked_end();
     atomic_set(&s_starved_epochs, 0);
     k_sem_reset(&s_fix_sem);
@@ -231,6 +236,7 @@ void gnss_set_tick(void (*cb)(void))
 int gnss_collect(int timeout_ms, struct gnss_fix *out)
 {
     const int64_t entered_ms = k_uptime_get();
+    const uint32_t rrc_at_entry = modem_rrc_connected_ms();
     bool cold = !s_have_fix;
 
     if (cold && timeout_ms >= GPS_FIX_TIMEOUT_MS) {
@@ -384,6 +390,20 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
             }
         }
 
+        /* The interval before asking nRF Cloud for help is time the receiver
+         * had the radio to search with.  With the network holding it the
+         * receiver is searching nothing, and a hold can run for minutes (EE
+         * in Devon and Cornwall on 2026-10-24: up to 347 s), so counted from
+         * the start the retries went into it, each a TLS exchange that keeps
+         * the radio busy, and one of them stalled the main loop past the
+         * watchdog window.  The fix came within seconds of those holds
+         * ending, with no assistance.  Read from the RRC state rather than
+         * s_blocked: the receiver's blocked events are edges, and a stop and
+         * start with the radio still held (a fetch pauses it) raises none. */
+        if (agnss_left > 0 && modem_rrc_connected()) {
+            agnss_next_ms = now + AGNSS_RETRY_INTERVAL_MS;
+        }
+
         if (s_agnss_needed && agnss_left > 0 &&
             now >= agnss_next_ms && modem_is_registered()) {
             agnss_left--;
@@ -417,6 +437,29 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
         return err;
     }
     if (err) {
+        uint32_t held_ms = modem_rrc_connected_ms() - rrc_at_entry;
+
+        /* The network held the radio for most of the wait, and still does:
+         * the receiver was never given it to search with, so there is
+         * nothing for a restart to repair, and it turns the next wait cold
+         * (the extended timeout, the A-GNSS wanted/retry path).  On
+         * 2026-10-24, 60 of the 64 restarts were these, on a drive where the
+         * network held the radio for up to 347 s at a time and the fix came
+         * within seconds of each release.  A few in a row are left alone;
+         * past that the receiver is taken to have stopped hearing the
+         * radio's events, and restarted as before. */
+        if (modem_rrc_connected() && held_ms * 2 >= (uint32_t)s_last_wait_ms &&
+            s_kept_running < GNSS_KEEP_MAX) {
+            s_kept_running++;
+            LOG_WRN("%s fix timeout — radio held by LTE for %u of %d s, "
+                    "GNSS left running (%d SVs)",
+                    cold ? "cold" : "warm",
+                    (unsigned)((held_ms + 500) / 1000),
+                    (int)((s_last_wait_ms + 500) / 1000), s_tracked_sv);
+            out->valid = false;
+            return err;
+        }
+        s_kept_running = 0;
         LOG_WRN("%s fix timeout — restarting GNSS (%d SVs%s, %d starved)",
                 cold ? "cold" : "warm", s_tracked_sv,
                 s_blocked ? ", blocked by LTE" : "",
@@ -430,6 +473,7 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
         return err;
     }
 
+    s_kept_running = 0;
     pvt_to_fix(&s_pvt, out);
     out->epoch_ms = s_pvt_ms;
     return 0;

@@ -14,6 +14,7 @@
 #include <modem/at_monitor.h>
 
 #include "app.h"
+#include "holdbreak.h"
 #include "ca_cert.h"
 
 LOG_MODULE_REGISTER(modem, CONFIG_APP_LOG_LEVEL);
@@ -27,6 +28,25 @@ AT_MONITOR(rai_urc, "%RAI", rai_urc_handler, PAUSED);
 struct cell_info g_cell;
 
 static bool s_connected;
+
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+/* LTE is off on purpose, receiver running: AT+CFUN=20, until the CFUN=21 in
+ * modem_lte_restore().  See modem_lte_cut(). */
+static bool s_lte_cut;
+
+/* What a restore that does not register leaves behind, for telling a cell that
+ * is not there from one that will not let us in (2026-10-25: ten minutes
+ * searching, and nothing to say which).  While modem_lte_restore() waits,
+ * the registration status changes are kept with their times (uptime ms | 1, 0
+ * when no restore is waiting); at its cap they are logged in one line, and
+ * the next s_search_watch changes after that are logged as they come. */
+#define RESTORE_STATUS_N 8
+static atomic_t s_restore_since;
+static atomic_t s_restore_n;
+static int8_t   s_restore_status[RESTORE_STATUS_N];
+static uint32_t s_restore_ms[RESTORE_STATUS_N];
+static int      s_search_watch;
+#endif
 
 /* Uptime at which registration was last lost, 0 while registered or powered
  * off on purpose (modem_power_off()).  Losing the network is logged at WRN so
@@ -118,6 +138,26 @@ uint32_t modem_rrc_connected_ms(void)
     return since ? total + ((uint32_t)k_uptime_get() - since) : total;
 }
 
+/* Whether the network holds an RRC connection now.  A level, from the LTE
+ * events, which keep coming however the receiver is started and stopped;
+ * GNSS's own blocked/unblocked events are edges that do not survive a stop
+ * and start with the radio still held. */
+bool modem_rrc_connected(void)
+{
+    return atomic_get(&s_rrc_since) != 0;
+}
+
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+/* How long the connection now up has been, 0 if there is none: what tells a
+ * network that holds the radio from one that is merely mid-send. */
+uint32_t modem_rrc_age_ms(void)
+{
+    uint32_t since = (uint32_t)atomic_get(&s_rrc_since);
+
+    return since ? (uint32_t)k_uptime_get() - since : 0;
+}
+#endif
+
 uint32_t modem_reg_losses(void)
 {
     return (uint32_t)atomic_get(&s_reg_losses);
@@ -152,6 +192,11 @@ static inline void radio_active(void) { }
 static int  s_psm_active_s = -1;
 static int  s_psm_tau_s = -1;
 static bool s_psm_offline;
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+/* The hold breaker has cycled LTE and the grant above is from before: see
+ * psm_report(). */
+static bool s_hb_psm_kept;
+#endif
 
 /* The modem's own account of whether it is in PSM, from
  * LTE_LC_EVT_MODEM_SLEEP_ENTER/EXIT.  A modem that stays registered without
@@ -179,6 +224,21 @@ bool modem_psm_asleep(void)
 static void psm_report(const struct lte_lc_psm_cfg *cfg)
 {
     static bool seen;
+
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+    /* LTE taken away by the hold breaker takes the grant with it, and the
+     * next attach brings the same one back, every cycle: neither is news.
+     * The grant from before the cut is kept, so the answer that follows the
+     * restore is compared with it and reported only if it differs. */
+    if (s_hb_psm_kept) {
+        if (cfg->active_time < 0 && s_lte_cut) {
+            LOG_INF("PSM cleared by the hold breaker's cut — grant kept");
+            return;
+        }
+        s_hb_psm_kept = false;
+    }
+#endif
+
     bool changed = !seen || cfg->tau != s_psm_tau_s ||
                    cfg->active_time != s_psm_active_s;
 
@@ -257,6 +317,16 @@ static void lte_handler(const struct lte_lc_evt *evt)
             evt->nw_reg_status == LTE_LC_NW_REG_REGISTERED_HOME ||
             evt->nw_reg_status == LTE_LC_NW_REG_REGISTERED_ROAMING;
 
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+        uint32_t restore_since = (uint32_t)atomic_get(&s_restore_since);
+        int restore_i = (int)atomic_get(&s_restore_n);
+
+        if (restore_since && restore_i < RESTORE_STATUS_N) {
+            s_restore_status[restore_i] = (int8_t)evt->nw_reg_status;
+            s_restore_ms[restore_i] = (uint32_t)k_uptime_get() - restore_since;
+            atomic_inc(&s_restore_n);
+        }
+#endif
         if (registered && !s_connected && s_lost_ms) {
             LOG_WRN("registered again after %lld s (status %d)",
                     (k_uptime_get() - s_lost_ms) / 1000,
@@ -270,10 +340,19 @@ static void lte_handler(const struct lte_lc_evt *evt)
                     evt->nw_reg_status);
         } else {
             LOG_INF("nw reg status: %d", evt->nw_reg_status);
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+            if (s_search_watch > 0) {
+                s_search_watch--;
+                LOG_WRN("hold break: reg status %d", evt->nw_reg_status);
+            }
+#endif
         }
         s_connected = registered;
         network_ready = registered;
         if (registered) {
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+            s_search_watch = 0;
+#endif
             /* Timed before the semaphore is given, so a waiter that wakes
              * on it already sees the finished figure. */
             search_ended();
@@ -630,6 +709,10 @@ int modem_rescan_plmn(int timeout_s)
 
     s_connected = false;
     network_ready = false;
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+    s_lte_cut = false;
+    s_search_watch = 0;
+#endif
 
     int err = lte_lc_offline();
     if (err) {
@@ -685,13 +768,18 @@ int modem_radio_up(void)
     enum lte_lc_func_mode mode;
 
     if (lte_lc_func_mode_get(&mode) == 0 &&
-        mode == LTE_LC_FUNC_MODE_NORMAL) {
+        (mode == LTE_LC_FUNC_MODE_NORMAL ||
+         (IS_ENABLED(CONFIG_APP_HOLD_BREAK) &&
+          mode == LTE_LC_FUNC_MODE_ACTIVATE_LTE))) {
         LOG_INF("radio already up — leaving the search to the modem");
         return 0;
     }
 
 #if IS_ENABLED(CONFIG_APP_PSM_PROBE)
     s_psm_offline = false;
+#endif
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+    s_lte_cut = false;      /* CFUN=1 turns LTE on whatever took it off */
 #endif
 
     modem_set_apn(g_settings.apn);
@@ -753,6 +841,10 @@ void modem_power_off(void)
     s_lost_ms = 0;
     s_search_ms = 0;
     network_ready = false;
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+    s_lte_cut = false;
+    s_search_watch = 0;
+#endif
     /* A powered-off modem holds no connection, whether or not the idle
      * notification made it out first. */
     rrc_end();
@@ -857,6 +949,233 @@ bool modem_nbiot_fallback_on(void)
 {
     return s_nbiot_fallback;
 }
+
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+/* The hold breaker's two halves (main.c decides when; holdbreak.c has the
+ * rules).
+ *
+ * AT+CFUN=20 switches LTE off and leaves the receiver alone, which is the
+ * whole point: CFUN=4 takes GNSS with it and it does not come back, and
+ * priority mode cannot stop a connection the network is holding.  CFUN=21
+ * switches LTE on again, with the settings made before the first CFUN=1
+ * still in place.  Bench, 2026-10-24: the detach took 0.3-2.1 s,
+ * registration 2.8-5 s afterwards (33 s once, across an operator change),
+ * and the first reply 0.13-0.2 s after that.
+ *
+ * Done as modem_power_off() and modem_nbiot_fallback() do their CFUN=0/4: the
+ * state is cleared before the command, so lte_handler takes the
+ * not-registered URC as our doing and not as a lost registration, and the
+ * socket goes first, since it does not survive the PDN.  The command is sent
+ * asynchronously and waited for in slices that feed the watchdog, as
+ * offline_kicked() does for CFUN=4, which once took 60 s to detach. */
+#define LTE_CMD_CAP_S 15
+
+/* offline_kicked() for any function, with `tick` (may be NULL) run beside
+ * the kick once a second for a caller whose other work must not stop for the
+ * length of a detach. */
+static int cfun_kicked(int func, int cap_s, void (*tick)(void))
+{
+    k_sem_reset(&s_offline_sem);
+
+    int err = nrf_modem_at_cmd_async(offline_resp, "AT+CFUN=%d", func);
+
+    if (err) {
+        return err;
+    }
+    for (int waited = 0; waited < cap_s; waited++) {
+        if (k_sem_take(&s_offline_sem, K_SECONDS(1)) == 0) {
+            return s_offline_ok ? 0 : -EIO;
+        }
+        watchdog_kick();
+        if (tick) {
+            tick();
+        }
+    }
+    return -ETIMEDOUT;
+}
+
+bool modem_lte_is_cut(void)
+{
+    return s_lte_cut;
+}
+
+int modem_lte_cut(void (*tick)(void))
+{
+    const bool was_connected = s_connected;
+    const bool was_ready = network_ready;
+    const int64_t t0 = k_uptime_get();
+
+    s_connected = false;
+    s_lost_ms = 0;
+    s_search_ms = 0;
+    network_ready = false;
+#if IS_ENABLED(CONFIG_APP_PSM_PROBE)
+    s_hb_psm_kept = true;
+#endif
+    s_lte_cut = true;
+    transport_teardown();
+
+    int err = cfun_kicked(20, LTE_CMD_CAP_S, tick);
+
+    if (err && err != -ETIMEDOUT) {
+        /* Never sent, or refused: the modem is as it was, no URC is coming to
+         * say so, and the flags cleared above would stay cleared — every
+         * later send would be parked as if the network were gone. */
+        s_connected = was_connected;
+        network_ready = was_ready;
+        s_lte_cut = false;
+        LOG_ERR("hold break: CFUN=20 failed (%d) after %lld ms", err,
+                k_uptime_get() - t0);
+        return err;
+    }
+    rrc_end();
+    if (err) {
+        /* Taken, and not answered: LTE is as good as off.  Left open so the
+         * window ends in modem_lte_restore() like any other; if the answer
+         * never comes, the next AT command waits on it and the watchdog
+         * resets the unit, as it does for modem_nbiot_fallback(). */
+        LOG_WRN("hold break: CFUN=20 not answered after %lld ms",
+                k_uptime_get() - t0);
+        return err;
+    }
+    LOG_INF("hold break: LTE off in %lld ms", k_uptime_get() - t0);
+    return 0;
+}
+
+/* One AT query as a short field for the log: "CEREG 5,2" for "+CEREG: 5,2",
+ * "CEREG err -5" if the modem would not answer. */
+static void at_brief(char *out, size_t out_sz, const char *label,
+                     const char *cmd)
+{
+    char raw[80];
+    int err = nrf_modem_at_cmd(raw, sizeof(raw), "%s", cmd);
+
+    if (err) {
+        snprintf(out, out_sz, "%s err %d", label, err);
+        return;
+    }
+
+    const char *body = raw;
+
+    if (*body == '+' || *body == '%') {
+        body++;
+    }
+    strncpy(out, body, out_sz - 1);
+    out[out_sz - 1] = '\0';
+
+    char *eol = strpbrk(out, "\r\n");
+
+    if (eol) {
+        *eol = '\0';
+    }
+    char *colon = strchr(out, ':');
+
+    if (colon) {
+        memmove(colon, colon + 1, strlen(colon + 1) + 1);
+    }
+}
+
+/* What the modem says while a restore has not registered, on one line: the
+ * function mode it is in (is CFUN=21 in force at all), the registration status
+ * with the reject cause if it was refused, the RRC state, and the signal it
+ * hears — 255 in CESQ's last two fields is no cell at all, a figure there is a
+ * cell that is not letting us in. */
+void modem_search_report(void)
+{
+    const char was = crumb_phase_get();
+    char cfun[24], cereg[40], cscon[24], cesq[40];
+
+    /* None of the four has a timeout of its own: a modem that does not answer
+     * ends in the watchdog, and the note says it was here. */
+    crumb_phase(HB_PH_QUERY);
+    at_brief(cfun, sizeof(cfun), "CFUN", "AT+CFUN?");
+    at_brief(cereg, sizeof(cereg), "CEREG", "AT+CEREG?");
+    at_brief(cscon, sizeof(cscon), "CSCON", "AT+CSCON?");
+    at_brief(cesq, sizeof(cesq), "CESQ", "AT+CESQ");
+    crumb_phase(was);
+    LOG_WRN("hold break: %d s without a registration: %s | %s | %s | %s",
+            MAX(modem_unregistered_s(), 0), cfun, cereg, cscon, cesq);
+}
+
+/* The registration status changes since the restore began, status@ms. */
+static void restore_history_report(void)
+{
+    char buf[80];
+    size_t n = 0;
+    int count = MIN((int)atomic_get(&s_restore_n), RESTORE_STATUS_N);
+
+    buf[0] = '\0';
+    for (int i = 0; i < count && n < sizeof(buf); i++) {
+        n += snprintf(buf + n, sizeof(buf) - n, "%s%d@%u", i ? " " : "",
+                      s_restore_status[i], (unsigned)s_restore_ms[i]);
+    }
+    LOG_WRN("hold break: reg status since CFUN=21 (status@ms): %s",
+            count ? buf : "none");
+}
+
+int modem_lte_restore(int timeout_s, void (*tick)(void))
+{
+    if (!s_lte_cut) {
+        return 0;
+    }
+
+    const int64_t t0 = k_uptime_get();
+    const int64_t deadline = t0 + (int64_t)timeout_s * 1000;
+    /* What the modem says, at these seconds into a wait that is still going:
+     * the cap has its own report below. */
+    static const int report_s[] = { 5, 15 };
+    size_t reports = 0;
+
+    /* Before the command, so a registration that beats the wait is kept. */
+    atomic_set(&s_restore_n, 0);
+    atomic_set(&s_restore_since, (atomic_val_t)((uint32_t)t0 | 1U));
+    search_started();
+
+    int err = cfun_kicked(21, LTE_CMD_CAP_S, tick);
+
+    s_lte_cut = false;
+    if (err) {
+        /* Still off as far as anyone can tell, and nothing else will turn it
+         * on: the full bring-up. */
+        atomic_set(&s_restore_since, 0);
+        LOG_ERR("hold break: CFUN=21 failed (%d) after %lld ms", err,
+                k_uptime_get() - t0);
+        (void)modem_radio_up();
+        return err < 0 ? err : -EIO;
+    }
+
+    for (;;) {
+        int64_t left = deadline - k_uptime_get();
+
+        if (left <= 0) {
+            break;
+        }
+        if (k_sem_take(&s_reg_sem, K_MSEC(MIN(left, 1000))) == 0) {
+            /* Timed by the registration event, as every attach is. */
+            atomic_set(&s_restore_since, 0);
+            return MAX(s_attach_ms, 0);
+        }
+        watchdog_kick();
+        if (tick) {
+            tick();
+        }
+        if (reports < ARRAY_SIZE(report_s) &&
+            k_uptime_get() - t0 >= (int64_t)report_s[reports] * 1000) {
+            reports++;
+            if (deadline - k_uptime_get() > 1000) {
+                modem_search_report();
+            }
+        }
+    }
+    atomic_set(&s_restore_since, 0);
+    LOG_WRN("hold break: no registration %lld s after CFUN=21 — radio left "
+            "searching", (k_uptime_get() - t0) / 1000);
+    restore_history_report();
+    modem_search_report();
+    s_search_watch = HOLD_BREAK_WATCH_N;
+    return -ETIMEDOUT;
+}
+#endif
 
 int modem_connect(void)
 {

@@ -25,12 +25,23 @@ static void locate_now(void)
     send_data();
 }
 
+/* True for a command that is only the track=<0|1> the server puts on every
+ * reply (Track mode, below), saying what the device already has. */
+static bool track_echo(const char *cmd)
+{
+    return strncmp(cmd, "track=", 6) == 0 &&
+           (cmd[6] == '0' || cmd[6] == '1') && cmd[7] == '\0' &&
+           (cmd[6] == '1') == (g_settings.track_mode != 0);
+}
+
 void cmd_run(char *cmd)
 {
     char *tmp;
     long val;
 
-    LOG_INF("cmd: %s", cmd);
+    if (!track_echo(cmd)) {
+        LOG_INF("cmd: %s", cmd);
+    }
 
     tmp = strstr(cmd, "int=");
     if (tmp) {

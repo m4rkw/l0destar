@@ -11,7 +11,9 @@
  * fota_check() therefore only acts when a check is pending:
  *
  *   1. power-on — the one unconditional check, so a freshly flashed or
- *      long-offline unit converges without waiting for a telemetry response
+ *      long-offline unit converges without waiting for a telemetry response.
+ *      With the key on it waits for the first call after key-off: a unit that
+ *      reset on the road must not start a download there
  *   2. the server response advertised a newer version (fota=X.Y.Z -> 
  *      fota_notify_available)
  *   3. the server sent a bare `fota` command (manual force, skips holdoff)
@@ -586,6 +588,22 @@ int fota_check(enum fota_ctx ctx)
 
     if (!s_forced && !s_boot_check) {
         return 0;   /* nothing pending — the common case, no traffic */
+    }
+    if (!s_forced && ignition_read() == 0) {
+        /* Only the power-on check is pending, and the key is on.  A download
+         * stops GNSS and telemetry for minutes and ends in a reboot, and a
+         * reset on the road would otherwise start one wherever the car is:
+         * 2026-10-26 14:37, an update announced and installed while driving,
+         * 7 min 48 s without a record.  The check stays pending; the first
+         * call with the key off makes it (key-off, a timed wake), or a server
+         * advert, which the call sites already hold back for the engine. */
+        static bool said;
+
+        if (!said) {
+            said = true;
+            LOG_INF("key on — the power-on update check waits for key-off");
+        }
+        return 0;
     }
     if (FOTA_HOST[0] == '\0') {
         /* A Traccar build with no APP_FOTA_HOST, say: nowhere to ask, so

@@ -79,20 +79,24 @@
 #              the antenna bias tee, through the same SiP32431 load switch as
 #              the other rails; PP3V3_GNSS_ST (P0.14) senses it like the
 #              others.  The receiver's backup supply is a separate switched
-#              rail, GNSS_BCKP_EN (P0.13), with a 100K pulldown and no sense
+#              rail, GNSS_BCKP_EN (P0.5), with a 100K pulldown and no sense
 #              line: it keeps the ephemeris and time across the VCC cycles.
 #              The receiver's UART (GNSS_TX P0.9, GNSS_RX P0.8) and 1PPS
 #              output (GNSS_TIMEPULSE P0.7) end in PP3V3_GNSS and are parked
 #              with it like the CAN and K-line pins.  So the AUX domain, which
 #              was only ever the GPS bias tee, is the receiver's rail now, and
 #              the callers that held it around a fix did not need to change.
-#              Taken from the KiCad netlist in ~/Documents/l0destar_v4.0 as of
-#              2026-10-18.  Two pins swapped places to make room: P0.5 was
-#              PP3V3_GPS_ST and P0.14 was L_SENSE, and now P0.14 is
-#              PP3V3_GNSS_ST and L_SENSE is on P0.5 — which has no analog
-#              input, so the L-line sense cannot be read (see
-#              APP_PIN_L_SENSE).  CAN and K-wire have their own connector pins
-#              (no interface-select pads), but APP_OBD_MODE is used as on v3.4.
+#              Taken from the KiCad PCB and schematic in
+#              ~/Documents/l0destar_v4.0 as saved on 2026-10-25.  Against v3.4
+#              three signals moved: the rail enable (GPS_ENABLE P0.13) is
+#              GNSS_ENABLE on P0.6, the rail sense (PP3V3_GPS_ST P0.5) is
+#              PP3V3_GNSS_ST on P0.14, and L_SENSE went from P0.14 to P0.13 —
+#              still an analog input (AIN0), so the L-line sense reads as on
+#              v3.3/v3.4 — while P0.5 became the backup-supply enable.  (The
+#              2026-10-18 design had L_SENSE on P0.5, which no ADC channel
+#              reaches, and GNSS_BCKP_EN on P0.13; the two nets were swapped.)
+#              CAN and K-wire have their own connector pins (no
+#              interface-select pads), but APP_OBD_MODE is used as on v3.4.
 
 choice APP_BOARD
 	prompt "Carrier board"
@@ -352,7 +356,7 @@ config APP_PIN_L_SEND
 config APP_PIN_L_SENSE
 	int "K-wire L-line sense pin (v3.3+; must be an AIN pin, P0.13-P0.20)"
 	default 14 if APP_BOARD_L0DESTAR_V3_3 || APP_BOARD_L0DESTAR_V3_4
-	default 5  if APP_BOARD_L0DESTAR_V4_0
+	default 13 if APP_BOARD_L0DESTAR_V4_0
 	default -1
 	help
 	  The L wire read back through a 1N4148 (cathode to L) and a 47K.  The
@@ -369,12 +373,8 @@ config APP_PIN_L_SENSE
 	  AIN pin if a board is reworked; anything outside that range leaves
 	  the sense reporting unavailable.
 
-	  v4.0 as drawn has L_SENSE on P0.5 and PP3V3_GNSS_ST on P0.14 — the
-	  two swapped back from v3.3 — so L_SENSE has no SAADC channel there:
-	  the L-line short check is unavailable (kline_can_use_l() then drives
-	  L without it, relying on the AL5809's 90 mA limit).  Swapping the two
-	  nets on the PCB restores it: set this to 14 and APP_PIN_GPS_RAIL_ST
-	  to 5.
+	  v4.0 puts L_SENSE on P0.13 (AIN0) and the PP3V3_GNSS rail sense on
+	  P0.14, so the L-line short check works there as it does on v3.3.
 
 config APP_PIN_L_RECV
 	int "K-wire L-line receive pin"
@@ -752,7 +752,7 @@ config APP_PIN_GNSS_TIMEPULSE
 
 config APP_PIN_GNSS_BCKP_EN
 	int "External GNSS backup supply (V_BCKP) switch pin (-1 = not fitted)"
-	default 13 if APP_BOARD_L0DESTAR_V4_0
+	default 5 if APP_BOARD_L0DESTAR_V4_0
 	default -1
 	help
 	  Enables PP3V3_GNSS_BCKP through its own load switch.  It has a 100K

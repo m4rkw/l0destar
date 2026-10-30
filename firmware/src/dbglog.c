@@ -67,6 +67,7 @@
 #include <zephyr/drivers/hwinfo.h>
 
 #include "app.h"
+#include "holdbreak.h"
 
 #define HEAD_SIZE  CONFIG_APP_DEBUG_LOG_HEAD
 #define TAIL_SIZE  CONFIG_APP_DEBUG_LOG_TAIL
@@ -559,9 +560,15 @@ const char *dbglog_reset_cause(void)
         };
         uint32_t cause = 0;
         size_t pos = 0;
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+        uint32_t raw = 0;
+#endif
 
         s_read = true;
         if (hwinfo_get_reset_cause(&cause) == 0 && cause != 0) {
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+            raw = cause;
+#endif
             for (size_t i = 0; i < ARRAY_SIZE(names); i++) {
                 if (!(cause & names[i].bit)) {
                     continue;
@@ -592,10 +599,24 @@ const char *dbglog_reset_cause(void)
         /* And a watchdog reset says where the loop was stuck. */
         const char *stall = watchdog_last_stall();
 
+#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+        /* A reset nobody asked for says where the hold breaker was, too
+         * (crumb.c).  rst= is varchar(48) on the server, in strict mode, and a
+         * longer value loses the record: the parts are fitted in order of what
+         * each is worth (holdbreak.h). */
+        const bool unasked = (raw & (RESET_WATCHDOG | RESET_CPU_LOCKUP)) != 0 ||
+                             crash != NULL;
+        char head[sizeof(s_cause)];
+
+        memcpy(head, s_cause, sizeof(head));
+        (void)hb_rst_compose(s_cause, sizeof(s_cause), head,
+                             unasked ? crumb_previous() : NULL, stall);
+#else
         if (stall && pos < sizeof(s_cause)) {
             snprintf(s_cause + pos, sizeof(s_cause) - pos, "%s%s",
                      pos ? "+" : "", stall);
         }
+#endif
     }
     return s_cause[0] ? s_cause : NULL;
 }

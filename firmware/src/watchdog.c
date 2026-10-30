@@ -163,6 +163,7 @@ void watchdog_init(void)
 
 void watchdog_kick(void)
 {
+    crumb_alive();      /* the breaker's note of the last sign of life */
     if (s_channel >= 0) {
         task_wdt_feed(s_channel);
     }

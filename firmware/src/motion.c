@@ -384,6 +384,10 @@ static struct {
 	int64_t moving_ms;
 } s_dr;
 
+/* A stop that came before any speed was read has been said.  With a fix a
+ * second it would be said every second for as long as the ECU is quiet. */
+static bool s_no_speed_said;
+
 /* The absolute heading at heading change `psi` (on s_psi's scale). */
 static struct {
 	bool  ok;
@@ -517,11 +521,17 @@ static void dr_advance(bool final, int64_t now)
 			return;
 		}
 		if (got < 0) {
-			LOG_INF("dead reckoning stopped: no ECU speed %lld s "
-				"after the fix", (t - s_dr.fix_ms) / 1000);
+			int64_t age = (t - s_dr.fix_ms) / 1000;
+
+			if (age > 0 || !s_no_speed_said) {
+				LOG_INF("dead reckoning stopped: no ECU speed %lld s "
+					"after the fix", age);
+			}
+			s_no_speed_said = (age == 0);
 			s_dr.ok = false;
 			return;
 		}
+		s_no_speed_said = false;
 		if (jump > t) {
 			/* Standing still until the ECU spoke again. */
 			s_dr.t_ms = MIN(jump, now);

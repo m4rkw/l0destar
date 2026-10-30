@@ -8,7 +8,7 @@
  *
  *  - It has a radio of its own.  LTE cannot block it, the modem has no GNSS in
  *    its system mode on this board (modem.c), and a send costs the receiver
- *    nothing.  So there is no A-GNSS, no priority mode and no starving, and
+ *    nothing.  So there is no nRF Cloud A-GNSS, no priority mode and no starving, and
  *    gnss_stop()/gnss_resume() — which exist to hand the nRF's single RF
  *    front-end to LTE — leave the receiver alone.  It runs whenever its rail
  *    is up, and g_gnss keeps up with it through a send.
@@ -25,12 +25,27 @@
  *    a parked wake gets the data sheet's 1 s hot start and not a 25 s cold
  *    one.  Cycling VCC does not lose them.
  *
+ *  - What the backup supply cannot keep is orbits for a unit that has sat for
+ *    days, or a receiver that lost it.  For that there is u-blox AssistNow
+ *    (assistnow.c), which this driver asks for once per power-up when the
+ *    first few satellite lists show fewer than ASSIST_EPH_MIN ephemerides on
+ *    hand and there is no fix yet, and through which it passes the data to the
+ *    receiver (gnss_ext_assist_inject).  It also keeps the receiver's chip id
+ *    and version replies as they came, which is how AssistNow registers a unit.
+ *
  *  - The receiver is configured at every power-up, in RAM only.  It is found
- *    at whichever baud rate it answers on (a MAX-M10S starts at 9600 with NMEA
- *    out), moved to APP_GNSS_EXT_BAUD, told to stop NMEA and to send UBX-NAV-PVT,
- *    -DOP and -SAT once a second.  Nothing is written to its flash or battery
- *    backed layers, so a receiver that has been reconfigured by hand still
- *    comes up the way this expects.
+ *    at whichever baud rate it answers on (a MAX-M10S comes up at 38400 with
+ *    NMEA out), moved to APP_GNSS_EXT_BAUD, told to stop NMEA and to send
+ *    UBX-NAV-PVT, -DOP and -SAT once a second.  Nothing is written to its flash
+ *    or battery backed layers, so a receiver that has been reconfigured by hand
+ *    still comes up the way this expects.
+ *
+ *  - A receiver that can be heard but never acknowledges the configuration
+ *    (the nRF's TX not reaching it, UBX input switched off) is not dead: the
+ *    driver carries on with the NMEA it sends by itself (gnss_nmea.c) and
+ *    raises an alert that says so.  Fixes come out the same; the receiver
+ *    keeps its own defaults, 1 Hz and the portable dynamic model.  See
+ *    APP_GNSS_EXT_NMEA_FALLBACK.
  *
  * Bytes are received into DMA buffers by the nrfx UARTE driver and passed to a
  * thread through a ring buffer.  The thread parses the UBX frames (gnss_ubx.c),
@@ -63,6 +78,8 @@
 #include <nrfx_uarte.h>
 
 #include "app.h"
+#include "assistnow.h"
+#include "gnss_nmea.h"
 #include "gnss_ubx.h"
 #include "hw_domain.h"
 #include "pins.h"
@@ -86,8 +103,14 @@ LOG_MODULE_REGISTER(gnss, CONFIG_APP_LOG_LEVEL);
 #define FIND_MS             6000     /* how long a bring-up searches before giving up */
 #define SILENT_MS           5000     /* no NAV-PVT for this long: find the receiver again */
 #define ACK_MS              500
+#define SWITCH_MS           1500     /* how long a receiver gets to take up a new baud rate */
 #define DEAD_AFTER_FAILS    2        /* failed bring-ups before the receiver is called dead */
 #define RETRY_PAUSE_MS      2000
+#define ASSIST_EPH_MIN      5        /* ephemerides on hand below which assistance is wanted */
+#define ASSIST_EPOCHS       3        /* satellite lists seen first, so a hot start has listed its own */
+#define ASSIST_WINDOW       16       /* assistance messages sent between looks at the acknowledgements */
+#define ASSIST_LAG          4        /* ... unacknowledged messages allowed to be in flight */
+#define ASSIST_ACK_MS       1500     /* how long the last acknowledgements are waited for */
 
 #define THREAD_STACK        3072
 #define THREAD_PRIO         K_PRIO_PREEMPT(8)
@@ -470,12 +493,45 @@ static bool s_dead_alerted;
 static volatile bool s_dead_alert_due;
 static int s_fails;
 
+/* The receiver took no configuration and is being read through its NMEA
+ * (APP_GNSS_EXT_NMEA_FALLBACK).  Set and cleared by the thread, read by the
+ * callers for the log and the alert. */
+static volatile bool s_nmea_mode;
+static bool s_nmea_alerted;
+/* Fixes per second asked of the receiver (gnss_set_rate_hz), applied by the
+ * thread: at once if it is running, and in configure() at every bring-up. */
+static volatile int s_rate_hz = 1;
+static volatile bool s_rate_dirty;
+static struct nmea_decoder s_nmea;
+static uint32_t s_nmea_epoch;       /* numbers the epochs; stands where NAV-PVT has iTOW */
+
 static int8_t  s_ack_result;        /* 0 waiting, 1 ACK, -1 NAK */
 static uint8_t s_ack_cls, s_ack_id;
 static bool s_ver_logged;
 static char s_ver[64];      /* module name and software version, 30 + 1 + 30 at most */
 
 static int32_t s_last_wait_ms;
+
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+/* AssistNow (assistnow.c).  The receiver's replies to the chip id and version
+ * polls are kept as received, header and checksum and all, because registering
+ * a unit sends them verbatim.  Written by the receiver's thread, read by
+ * assistnow.c's, under the mutex. */
+static K_MUTEX_DEFINE(s_ids_lock);
+static uint8_t s_uniqid_frame[24];
+static size_t  s_uniqid_len;
+static uint8_t s_monver_frame[400];
+static size_t  s_monver_len;
+
+static atomic_t s_mga_ok;                   /* UBX-MGA-ACK: taken */
+static atomic_t s_mga_bad;                  /* ... not used */
+static volatile uint8_t s_mga_first_info;   /* why the first one was not */
+
+static volatile bool s_configured;          /* the UBX configuration was acknowledged this power-up */
+static volatile bool s_assist_asked;        /* assistance was requested this power-up */
+static volatile bool s_assisted;            /* ... and given, or given up on */
+static int s_sat_epochs;                    /* satellite lists since the configuration */
+#endif
 
 static void fix_ready(void)
 {
@@ -510,6 +566,31 @@ static void publish(const struct gnss_fix *f, int64_t now)
     }
 }
 
+/* A position, from NAV-PVT or from the NMEA the receiver sends by itself, as
+ * the fix the rest of the firmware reads.  `epoch` numbers it for the DOP
+ * pairing in publish(): NAV-PVT's iTOW, or the count of NMEA epochs. */
+static void publish_pvt(const struct ubx_pvt *v, uint32_t epoch, int64_t now)
+{
+    struct gnss_fix f = {0};
+
+    f.valid = true;
+    f.fix_uptime_ms = now;
+    f.epoch_ms = now;
+    ubx_fmt_deg6(v->lat_e7, f.lat_str, sizeof(f.lat_str));
+    ubx_fmt_deg6(v->lon_e7, f.lon_str, sizeof(f.lon_str));
+    f.speed_kmh = v->gspeed_mms * 0.0036f;
+    /* Above the ellipsoid, as the built-in receiver reports it, so altitudes
+     * stay comparable across boards; hMSL would read 45 m lower in England. */
+    f.altitude_m = v->height_mm * 0.001f;
+    f.heading_deg = v->head_mot_e5 * 1e-5f;
+    f.sats = v->num_sv;
+    f.hdop_x10 = s_hdop_x10;
+    ubx_fmt_time(v, f.time_iso, sizeof(f.time_iso));
+    s_pub_itow = epoch;
+    s_search_epochs = 0;
+    publish(&f, now);
+}
+
 static void on_pvt(const uint8_t *pl, uint16_t len)
 {
     struct ubx_pvt v;
@@ -524,25 +605,7 @@ static void on_pvt(const uint8_t *pl, uint16_t len)
     if (!(v.fix_ok && v.fix_type >= 2 && v.num_sv > 0)) {
         return;
     }
-
-    struct gnss_fix f = {0};
-
-    f.valid = true;
-    f.fix_uptime_ms = now;
-    f.epoch_ms = now;
-    ubx_fmt_deg6(v.lat_e7, f.lat_str, sizeof(f.lat_str));
-    ubx_fmt_deg6(v.lon_e7, f.lon_str, sizeof(f.lon_str));
-    f.speed_kmh = v.gspeed_mms * 0.0036f;
-    /* Above the ellipsoid, as the built-in receiver reports it, so altitudes
-     * stay comparable across boards; hMSL would read 45 m lower in England. */
-    f.altitude_m = v.height_mm * 0.001f;
-    f.heading_deg = v.head_mot_e5 * 1e-5f;
-    f.sats = v.num_sv;
-    f.hdop_x10 = s_hdop_x10;
-    ubx_fmt_time(&v, f.time_iso, sizeof(f.time_iso));
-    s_pub_itow = v.itow_ms;
-    s_search_epochs = 0;
-    publish(&f, now);
+    publish_pvt(&v, v.itow_ms, now);
 }
 
 /* DOP follows PVT within a couple of milliseconds and in no guaranteed order,
@@ -584,6 +647,56 @@ static void on_sat(const uint8_t *pl, uint16_t len)
     if (!s_have_fix && (s_search_epochs++ % 5) == 0) {
         LOG_INF("searching: %d SVs tracked, best cn0=%d dBHz", s_tracked_sv, s_best_cno);
     }
+
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+    /* Asked for once per power-up, and only by a receiver that holds hardly
+     * any ephemerides and has not found its position on its own.  A hot start
+     * (the backup supply kept them) needs nothing, and orbit data sent to a
+     * receiver that has fresher would only replace them.  A few lists are let
+     * go by first: the first after the configuration may not have the
+     * receiver's own database in it yet. */
+    s_sat_epochs++;
+    if (s_configured && !s_nmea_mode && !s_have_fix && !s_assist_asked &&
+        s_sat_epochs >= ASSIST_EPOCHS && s.eph < ASSIST_EPH_MIN) {
+        s_assist_asked = true;
+        LOG_INF("assistance wanted: ephemerides for %u of %u satellites, almanac for %u",
+                s.eph, s.listed, s.alm);
+        assistnow_request();
+    }
+#endif
+}
+
+/* One sentence of the receiver's own output, once it has refused configuration
+ * (s_nmea_mode).  RMC is the heartbeat, as NAV-PVT is on the UBX path.  A
+ * position goes out when its RMC and GGA are both in, carrying that GGA's
+ * HDOP, so unlike the UBX path there is no DOP still to come.  The satellite
+ * summary is the GSV of the epoch before, logged as NAV-SAT's is. */
+static void on_nmea(const struct ubx_parser *p)
+{
+    unsigned f = nmea_feed(&s_nmea, (const char *)p->payload, p->len);
+    int64_t now = k_uptime_get();
+
+    if (f & NMEA_F_RMC) {
+        s_last_pvt_ms = now;
+    }
+    if (f & NMEA_F_SATS) {
+        s_tracked_sv = s_nmea.sats.tracked;
+        s_best_cno = s_nmea.sats.best_cno;
+        if (!s_have_fix && (s_search_epochs++ % 5) == 0) {
+            LOG_INF("searching: %d SVs tracked, best cn0=%d dBHz", s_tracked_sv, s_best_cno);
+        }
+    }
+    if (f & NMEA_F_EPOCH) {
+        struct ubx_pvt v;
+        uint16_t hdop_e2;
+
+        if (nmea_epoch_pvt(&s_nmea, &v, &hdop_e2)) {
+            s_hdop_x10 = (hdop_e2 + 5) / 10;
+            s_nmea_epoch++;
+            s_dop_itow = s_nmea_epoch;      /* this epoch's HDOP is already in */
+            publish_pvt(&v, s_nmea_epoch, now);
+        }
+    }
 }
 
 static void on_mon_ver(const uint8_t *pl, uint16_t len)
@@ -610,6 +723,31 @@ static void on_mon_ver(const uint8_t *pl, uint16_t len)
     }
 }
 
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+/* A reply kept as it came: the frame is rebuilt from its payload, which gives
+ * back the same bytes.  0 length if it does not fit. */
+static void keep_frame(uint8_t *dst, size_t cap, size_t *len, const struct ubx_parser *p)
+{
+    k_mutex_lock(&s_ids_lock, K_FOREVER);
+    *len = ubx_build_frame(dst, cap, p->cls, p->id, p->payload, p->len);
+    k_mutex_unlock(&s_ids_lock);
+}
+
+static void on_mga_ack(const uint8_t *pl, uint16_t len)
+{
+    struct ubx_mga_ack a;
+
+    if (!ubx_decode_mga_ack(pl, len, &a)) {
+        return;
+    }
+    if (a.accepted) {
+        atomic_inc(&s_mga_ok);
+    } else if (atomic_inc(&s_mga_bad) == 0) {
+        s_mga_first_info = a.info;
+    }
+}
+#endif
+
 static void on_frame(const struct ubx_parser *p)
 {
     if (p->cls == UBX_CLS_NAV) {
@@ -628,6 +766,13 @@ static void on_frame(const struct ubx_parser *p)
         }
     } else if (p->cls == UBX_CLS_MON && p->id == UBX_ID_MON_VER) {
         on_mon_ver(p->payload, p->len);
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+        keep_frame(s_monver_frame, sizeof(s_monver_frame), &s_monver_len, p);
+    } else if (p->cls == UBX_CLS_SEC && p->id == UBX_ID_SEC_UNIQID) {
+        keep_frame(s_uniqid_frame, sizeof(s_uniqid_frame), &s_uniqid_len, p);
+    } else if (p->cls == UBX_CLS_MGA && p->id == UBX_ID_MGA_ACK) {
+        on_mga_ack(p->payload, p->len);
+#endif
     }
 }
 
@@ -647,6 +792,9 @@ static void drain(void)
                 on_frame(&s_parser);
             } else if (ev == UBX_EV_NMEA) {
                 s_events++;
+                if (s_nmea_mode) {
+                    on_nmea(&s_parser);
+                }
             }
         }
     }
@@ -724,9 +872,10 @@ static int send_poll(uint8_t cls, uint8_t id)
  * answers it just as slowly as the part would). */
 static int find_receiver(uint32_t gen)
 {
-    /* The data sheet's default first, then where this puts it, then the
-     * other rate a receiver is commonly left at. */
-    const uint32_t wanted[] = { 9600, GNSS_BAUD, 38400 };
+    /* A MAX-M10S comes up at 38400 (as the v4.0 board's does), so that first;
+     * then where this puts it, for a receiver that outlived a restart of the
+     * firmware; then 9600, which older u-blox parts start at. */
+    const uint32_t wanted[] = { 38400, GNSS_BAUD, 9600 };
     uint32_t rates[ARRAY_SIZE(wanted)];
     size_t nrates = 0;
     int64_t end = k_uptime_get() + FIND_MS;
@@ -759,7 +908,13 @@ static int find_receiver(uint32_t gen)
 }
 
 /* Move the receiver to the configured rate.  Not fatal if it will not go: it
- * is used at the rate it answers on. */
+ * is used at the rate it answers on.
+ *
+ * It does not re-clock at once.  The v4.0 board's MAX-M10S, asked 100 ms
+ * earlier, still answered nothing at the new rate, and was sending at it by its
+ * next NMEA burst, a second after the command.  A half-second wait gave up on
+ * it, went back to the old rate and configured a receiver that was no longer
+ * there.  So it is asked again every PROBE_MS for SWITCH_MS. */
 static void switch_baud(uint32_t gen)
 {
     uint32_t old = s_baud;
@@ -775,14 +930,19 @@ static void switch_baud(uint32_t gen)
     if (uart_send(f, n)) {
         return;
     }
-    /* Let it finish the acknowledgement at the old rate and re-clock. */
+    /* Let it finish the acknowledgement at the old rate. */
     k_msleep(100);
     if (uart_open(GNSS_BAUD) == 0) {
+        const int64_t asked = k_uptime_get(), end = asked + SWITCH_MS;
+
         ubx_parser_reset(&s_parser);
-        (void)send_poll(UBX_CLS_NAV, UBX_ID_NAV_STATUS);
-        if (wait_alive(gen, 500)) {
-            LOG_INF("receiver moved to %u baud", (unsigned)s_baud);
-            return;
+        while (powered(gen) && k_uptime_get() < end) {
+            (void)send_poll(UBX_CLS_NAV, UBX_ID_NAV_STATUS);
+            if (wait_alive(gen, PROBE_MS)) {
+                LOG_INF("receiver moved to %u baud after %d ms", (unsigned)s_baud,
+                        (int)(k_uptime_get() - asked) + 100);
+                return;
+            }
         }
     }
     if (powered(gen) && uart_open(old) == 0) {
@@ -794,17 +954,21 @@ static int configure(uint32_t gen)
 {
     /* The satellite list is a few hundred bytes: once a second only if the
      * link has the room. */
-    const uint32_t sat_every = (s_baud >= 115200) ? 1 : 5;
+    const int hz = s_rate_hz;
+    const uint32_t sat_every = ((s_baud >= 115200) ? 1 : 5) * (uint32_t)hz;
     const struct ubx_cfg_item cfg[] = {
         { UBX_KEY_UART1INPROT_UBX,      1 },
         { UBX_KEY_UART1OUTPROT_UBX,     1 },
         { UBX_KEY_UART1OUTPROT_NMEA,    0 },
-        { UBX_KEY_RATE_MEAS,            1000 },
+        { UBX_KEY_RATE_MEAS,            (uint32_t)(1000 / hz) },
         { UBX_KEY_RATE_NAV,             1 },
         { UBX_KEY_NAVSPG_DYNMODEL,      UBX_DYNMODEL_AUTOMOTIVE },
         { UBX_KEY_MSGOUT_NAV_PVT_UART1, 1 },
         { UBX_KEY_MSGOUT_NAV_DOP_UART1, 1 },
         { UBX_KEY_MSGOUT_NAV_SAT_UART1, sat_every },
+        /* An UBX-MGA-ACK for every assistance message (AssistNow), so what
+         * reached the receiver is known.  It sends none for anything else. */
+        { UBX_KEY_NAVSPG_ACKAIDING,     1 },
     };
     uint8_t f[96];
     size_t n = ubx_build_valset(f, sizeof(f), UBX_LAYER_RAM, cfg, ARRAY_SIZE(cfg));
@@ -842,18 +1006,81 @@ static int configure(uint32_t gen)
     return err;
 }
 
+/* Change how often the receiver fixes, with the configuration already in.
+ * The satellite list is kept at about one a second whatever the rate. */
+static void apply_rate(uint32_t gen)
+{
+    const int hz = s_rate_hz;
+    const struct ubx_cfg_item cfg[] = {
+        { UBX_KEY_RATE_MEAS,            (uint32_t)(1000 / hz) },
+        { UBX_KEY_RATE_NAV,             1 },
+        { UBX_KEY_MSGOUT_NAV_SAT_UART1, ((s_baud >= 115200) ? 1u : 5u) * (uint32_t)hz },
+    };
+    uint8_t f[48];
+    size_t n = ubx_build_valset(f, sizeof(f), UBX_LAYER_RAM, cfg, ARRAY_SIZE(cfg));
+
+    if (n == 0 || uart_send(f, n)) {
+        return;
+    }
+    if (wait_ack(gen, UBX_CLS_CFG, UBX_ID_CFG_VALSET, ACK_MS) != 0) {
+        LOG_WRN("receiver did not acknowledge %d fixes a second", hz);
+    }
+}
+
+/* The receiver is heard but takes no configuration: read the NMEA it sends by
+ * itself.  Its positions are worth more than the alert that it is dead, which
+ * it is not; the alert says what is wrong instead. */
+static void start_nmea_mode(void)
+{
+    nmea_reset(&s_nmea);
+    s_search_epochs = 0;
+    snprintf(s_ver, sizeof(s_ver), "NMEA only, takes no commands");
+    s_nmea_mode = true;
+    LOG_WRN("receiver takes no configuration: reading its NMEA at %u baud "
+            "(is the nRF's TX reaching it?)", (unsigned)s_baud);
+}
+
 static int bring_up(uint32_t gen)
 {
-    int err;
+    int err = -ETIMEDOUT;
+    bool talking = false;
 
     s_ver_logged = false;
-    err = find_receiver(gen);
-    if (err) {
-        return err;
+    s_nmea_mode = false;
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+    s_configured = false;
+#endif
+
+    /* Twice at most.  A receiver can re-clock under the configuration (the
+     * bench's did, a moment after switch_baud stopped waiting), and what is
+     * then heard at the old rate is noise, which is not a receiver that will
+     * not listen: find it again before deciding that. */
+    for (int pass = 0; pass < 2 && powered(gen); pass++) {
+        err = find_receiver(gen);
+        if (err) {
+            return err;
+        }
+        switch_baud(gen);
+
+        /* NMEA heard while the configuration goes in shows the receiver is
+         * talking at this rate, whatever it then does with what it is told. */
+        const uint32_t nmea0 = s_parser.nmea;
+
+        err = configure(gen);
+        talking = (s_parser.nmea != nmea0);
+        if (err == 0 || talking) {
+            break;
+        }
+        if (pass == 0 && powered(gen)) {
+            LOG_WRN("nothing valid at %u baud while configuring — finding the receiver again",
+                    (unsigned)s_baud);
+        }
     }
-    switch_baud(gen);
-    err = configure(gen);
     if (err) {
+        if (IS_ENABLED(CONFIG_APP_GNSS_EXT_NMEA_FALLBACK) && powered(gen) && talking) {
+            start_nmea_mode();
+            return 0;
+        }
         return err;
     }
     LOG_INF("receiver configured: %u baud, NAV-PVT/DOP/SAT every second",
@@ -861,6 +1088,11 @@ static int bring_up(uint32_t gen)
     /* What it is, for the log and the board test.  The reply is read with the
      * positions; the receiver is configured whether or not it comes. */
     (void)send_poll(UBX_CLS_MON, UBX_ID_MON_VER);
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+    (void)send_poll(UBX_CLS_SEC, UBX_ID_SEC_UNIQID);
+    s_sat_epochs = 0;
+    s_configured = true;
+#endif
     return 0;
 }
 
@@ -877,6 +1109,10 @@ static int run(uint32_t gen)
     s_last_pvt_ms = started;
     while (powered(gen)) {
         pump_once();
+        if (s_rate_dirty) {
+            s_rate_dirty = false;
+            apply_rate(gen);
+        }
         seen |= (s_last_pvt_ms != started);
 
         if (k_uptime_get() - s_last_pvt_ms > SILENT_MS) {
@@ -938,13 +1174,29 @@ static void rail_notify(bool up)
         s_gen++;
         s_fails = 0;
         s_dead = false;
+        s_nmea_mode = false;
         s_tracked_sv = 0;
         s_best_cno = 0;
+        s_rate_hz = 1;
+        s_rate_dirty = false;
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+        s_configured = false;
+        s_assist_asked = false;
+        s_assisted = false;
+        s_sat_epochs = 0;
+        k_mutex_lock(&s_ids_lock, K_FOREVER);
+        s_uniqid_len = 0;
+        s_monver_len = 0;
+        k_mutex_unlock(&s_ids_lock);
+#endif
         s_rail_up = true;
         k_sem_give(&s_wake_sem);
         return;
     }
     s_rail_up = false;
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+    s_configured = false;
+#endif
     s_gen++;
     uart_close();
     k_sem_give(&s_rx_sem);          /* let the thread notice */
@@ -1028,15 +1280,41 @@ const char *gnss_module_version(void)
     return s_ver;
 }
 
+int gnss_set_rate_hz(int hz)
+{
+    if (hz < 1 || hz > 10) {
+        return -EINVAL;
+    }
+    if (s_nmea_mode) {
+        return -ENOTSUP;                /* it takes no commands */
+    }
+    if (hz == s_rate_hz) {
+        return 0;
+    }
+    s_rate_hz = hz;
+    s_rate_dirty = true;
+    k_sem_give(&s_rx_sem);              /* let the thread look now */
+    return 0;
+}
+
 /* Once per boot, the first time a caller learns the receiver is not
- * answering.  From the callers' side and not the thread's: the alert queue is
- * the main thread's. */
+ * answering, or is answering only in NMEA.  From the callers' side and not the
+ * thread's: the alert queue is the main thread's.  The NMEA one is for as long
+ * as it is so: a bring-up that fell back and then won on its next pass (the
+ * receiver had re-clocked) is not a receiver that takes no commands, and the
+ * main thread may not ask until after. */
 static void alert_if_dead(void)
 {
     if (s_dead_alert_due && !s_dead_alerted) {
         s_dead_alerted = true;
         alert_enqueue("GNSS receiver not responding (UART)",
                       CONFIG_APP_HW_FAULT_PRIORITY);
+    }
+    if (s_nmea_mode && !s_nmea_alerted) {
+        s_nmea_alerted = true;
+        /* It is hearing nothing but still sending positions, so a fault to
+         * notice and not a loss: normal priority, below the dead alert's. */
+        alert_enqueue("GNSS receiver takes no commands, using NMEA (check UART TX)", 0);
     }
 }
 
@@ -1091,6 +1369,7 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
         if (s_tick_cb) {
             s_tick_cb();
         }
+        alert_if_dead();            /* bring-up can finish while this waits */
 
         int64_t now = k_uptime_get();
         int ign = ignition_read();
@@ -1133,13 +1412,20 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     if (err == -EIO) {
         alert_if_dead();
     }
+    if (err == -EAGAIN && collect_fix_wait_ms > 0) {
+        /* The drive stream's short wait running out is how it goes on without
+         * a fix: main.c sends the last position and counts it.  Not a fault to
+         * warn about every few seconds, and a warning is sent to the server. */
+        return err;
+    }
     if (err) {
         LOG_WRN("%s fix %s (%d SVs tracked, best cn0 %d dBHz, %s)",
                 cold ? "cold" : "warm",
                 err == -EAGAIN ? "timeout" : "wait ended early",
                 s_tracked_sv, s_best_cno,
                 !s_rail_up ? "rail off" :
-                s_dead ? "receiver not answering" : "receiver up");
+                s_dead ? "receiver not answering" :
+                s_nmea_mode ? "receiver up, NMEA only" : "receiver up");
         return err;
     }
 
@@ -1151,3 +1437,131 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     out->epoch_ms = s_pvt_ms;
     return 0;
 }
+
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+
+/* -- assistance (assistnow.c) ------------------------------------------------------ */
+
+static size_t hex_upper(char *out, size_t cap, const uint8_t *in, size_t n)
+{
+    static const char digits[] = "0123456789ABCDEF";
+
+    if (cap < 2 * n + 1) {
+        return 0;
+    }
+    for (size_t i = 0; i < n; i++) {
+        out[2 * i] = digits[in[i] >> 4];
+        out[2 * i + 1] = digits[in[i] & 15];
+    }
+    out[2 * n] = '\0';
+    return 2 * n;
+}
+
+int gnss_ext_ids(char *uid_hex, size_t uid_sz, char *ver_hex, size_t ver_sz)
+{
+    int err = -EAGAIN;
+
+    k_mutex_lock(&s_ids_lock, K_FOREVER);
+    if (s_uniqid_len && s_monver_len) {
+        err = (hex_upper(uid_hex, uid_sz, s_uniqid_frame, s_uniqid_len) &&
+               hex_upper(ver_hex, ver_sz, s_monver_frame, s_monver_len)) ? 0 : -ENOSPC;
+    }
+    k_mutex_unlock(&s_ids_lock);
+    return err;
+}
+
+bool gnss_ext_assist_useful(void)
+{
+    return s_rail_up && s_configured && !s_nmea_mode && !s_have_fix && !s_assisted;
+}
+
+void gnss_ext_assist_done(void)
+{
+    s_assisted = true;
+}
+
+/* What a server may pass to the receiver: the assistance messages and nothing
+ * else.  A response that carried a configuration or a reset would otherwise be
+ * obeyed, so the whitelist is the ids of the ephemeris and almanac messages of
+ * each constellation, AssistNow Offline orbits and the time and position
+ * hints; the database dump and flash messages are not on it. */
+static bool assist_frame_ok(const uint8_t *f, int n)
+{
+    if (n > (int)sizeof(s_tx) || f[2] != UBX_CLS_MGA) {
+        return false;
+    }
+    switch (f[3]) {
+    case 0x00:                  /* GPS */
+    case 0x02:                  /* Galileo */
+    case 0x03:                  /* BeiDou */
+    case 0x05:                  /* QZSS */
+    case 0x06:                  /* GLONASS */
+    case UBX_ID_MGA_ANO:
+    case UBX_ID_MGA_INI:
+        return true;
+    default:
+        return false;
+    }
+}
+
+int gnss_ext_assist_inject(const uint8_t *data, size_t len, struct gnss_assist_result *res)
+{
+    size_t off = 0;
+    unsigned sent = 0;
+    int err = 0;
+
+    memset(res, 0, sizeof(*res));
+    atomic_set(&s_mga_ok, 0);
+    atomic_set(&s_mga_bad, 0);
+    s_mga_first_info = 0;
+
+    while (off < len) {
+        int n = ubx_frame_scan(data + off, len - off);
+
+        if (n == 0) {
+            break;                      /* a truncated last frame */
+        }
+        if (n < 0) {
+            off++;                      /* not a frame: on to the next sync pattern */
+            continue;
+        }
+        if (!s_rail_up || !s_configured || s_nmea_mode) {
+            err = -ENODEV;
+            break;
+        }
+        if (assist_frame_ok(data + off, n)) {
+            if (uart_send(data + off, (size_t)n)) {
+                err = -EIO;
+                break;
+            }
+            sent++;
+            if (sent % ASSIST_WINDOW == 0) {
+                /* Let the receiver catch up: it takes assistance as fast as it
+                 * is sent only until its buffers fill. */
+                const int64_t until = k_uptime_get() + 300;
+
+                while (k_uptime_get() < until &&
+                       (unsigned)(atomic_get(&s_mga_ok) + atomic_get(&s_mga_bad)) + ASSIST_LAG < sent) {
+                    k_msleep(5);
+                }
+            } else {
+                k_msleep(2);
+            }
+        }
+        off += (size_t)n;
+    }
+
+    const int64_t until = k_uptime_get() + ASSIST_ACK_MS;
+
+    while (k_uptime_get() < until &&
+           (unsigned)(atomic_get(&s_mga_ok) + atomic_get(&s_mga_bad)) < sent) {
+        k_msleep(10);
+    }
+    res->sent = (uint16_t)MIN(sent, (unsigned)UINT16_MAX);
+    res->accepted = (uint16_t)atomic_get(&s_mga_ok);
+    res->refused = (uint16_t)atomic_get(&s_mga_bad);
+    res->first_info = s_mga_first_info;
+    return err;
+}
+
+#endif /* CONFIG_APP_ASSISTNOW */

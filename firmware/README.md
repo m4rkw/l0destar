@@ -69,7 +69,13 @@ UARTE2, with the UBX framing and message decoding in `src/gnss_ubx.c`; the
 receiver's rail is the AUX domain, so the code that held it for the old GPS
 antenna bias holds it for the receiver too. The modem is left without GNSS,
 nothing is fetched from nRF Cloud, and a send no longer interrupts the
-position. See [the hardware reference](../docs/reference/hardware.md#v40-external-gnss-receiver)
+position. A receiver that is heard but takes none of the commands is read
+through the NMEA it sends by itself (`src/gnss_nmea.c`,
+`APP_GNSS_EXT_NMEA_FALLBACK`) rather than reported dead. A receiver that
+comes up without ephemerides is given u-blox AssistNow orbits
+(`src/assistnow.c`, `APP_ASSISTNOW`), which the l0destar server registers and
+downloads for it and serves over the same TLS port as the firmware. See
+[the hardware reference](../docs/reference/hardware.md#v40-external-gnss-receiver)
 for the pins and the backup supply, and `APP_GNSS_BACKUP_SUPPLY` for its cost.
 
 ---

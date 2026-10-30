@@ -613,12 +613,12 @@ int obd_snapshot_take(struct obd_snapshot *s)
  * the record builder's poll sorts it out.  A successful read also resets
  * the ECU's P3 timer, so ticking keeps the session alive through a long
  * fix. */
-void obd_sample_tick(void)
+static void obd_sample(int64_t min_gap_ms)
 {
 	if (!s_open || s_abort || !obd_ignition_on()) {
 		return;
 	}
-	if (k_uptime_get() - s_live_ms < OBD_TICK_MIN_GAP_MS) {
+	if (k_uptime_get() - s_live_ms < min_gap_ms) {
 		return;
 	}
 	if (!pid_supported(PID_RPM)) {
@@ -630,6 +630,16 @@ void obd_sample_tick(void)
 	s_no_reopen = true;
 	obd_poll_fast(NULL);
 	s_no_reopen = false;
+}
+
+void obd_sample_tick(void)
+{
+	obd_sample(OBD_TICK_MIN_GAP_MS);
+}
+
+void obd_sample_now(void)
+{
+	obd_sample(0);
 }
 
 bool obd_dtc_pending(void)
