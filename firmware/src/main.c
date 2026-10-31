@@ -411,8 +411,12 @@ static int  s_coast_iters;
  *   - the fix wait is short and a record without a fix is built from the
  *     last position (collect_fix_wait_ms, force_record);
  *   - the send does not wait for a reply, nor sleep 200 ms, and the K wire
- *     is polled right after it (obd_sample_now), so the next record finds the
- *     figures a fraction of a second old and needs no bus time;
+ *     is polled right after it (obd_sample_now), in the time before the next
+ *     fix and giving way to it, so the next record finds the figures a
+ *     fraction of a second old and needs no bus time;
+ *   - a fix that came while a record was built and sent is kept for the next
+ *     (no gnss_resume()), so a cycle a little over the period costs a little
+ *     lag and not a whole period;
  *   - above 1 Hz the receiver is asked for fixes that often.
  * The cycle is paced by the receiver: collect_data() returns when its next
  * fix does, so the rate cannot exceed the receiver's, and a cycle that takes
@@ -424,7 +428,7 @@ static int  s_coast_iters;
 #define DS_PERIOD_MS    (1000 / DS_HZ)
 #define DS_FIX_WAIT_MS  (CONFIG_APP_DRIVE_STREAM_FIX_WAIT_S * 1000)
 #define DS_LOG_MS       30000
-#define DS_OBD_EVERY_MS 900         /* inside OBD_LIVE_FRESH_MS (kline_obd.c) */
+#define DS_OBD_EVERY_MS 900         /* the K wire is polled about once a second at most */
 
 static bool    s_ds_on;             /* the engine is running: records go as a stream */
 static int64_t s_ds_t0_ms;          /* start of the log window (0: no record yet) */
@@ -477,6 +481,7 @@ static void drive_stream_sync(void)
 
     if (on != s_ds_on) {
         s_ds_on = on;
+        obd_stream_mode(on);
         if (on) {
             s_ds_t0_ms = 0;             /* the window opens with the first record */
             s_ds_records = s_ds_stale = s_ds_missed = 0;
@@ -3331,10 +3336,12 @@ int main(void)
             /* The K wire, now, in the time before the next fix: the record
              * built then takes the figures from this poll and costs no bus
              * time of its own.  At most about once a second, whatever the
-             * rate. */
+             * rate, counted from the start of one poll to the start of the
+             * next: the poll runs up to the next fix, so counting from its
+             * end would skip every other one. */
             if (s_ds_on && k_uptime_get() - s_ds_obd_ms >= DS_OBD_EVERY_MS) {
-                obd_sample_now();
                 s_ds_obd_ms = k_uptime_get();
+                obd_sample_now();
             }
 #endif
 
@@ -3397,7 +3404,16 @@ int main(void)
             } else if (!engine_running && !s_coasting) {
                 s_state = STATE_IGNITION_SLEEP;
             } else {
-                gnss_resume();
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+                /* The stream does not throw away the fix that came while the
+                 * record was built and sent: it is the next record's, at most
+                 * a period old.  Dropping it cost a whole period whenever the
+                 * cycle ran a little over one. */
+                if (!s_ds_on)
+#endif
+                {
+                    gnss_resume();
+                }
                 s_state = STATE_GPS_COLLECT;
             }
             break;

@@ -287,6 +287,10 @@ int  gnss_collect(int timeout_ms, struct gnss_fix *out);  /* blocking with timeo
  * against code that runs outside the wait. */
 void gnss_set_tick(void (*cb)(void));
 int  gnss_resume(void);   /* restart without resetting fix state (warm) */
+/* A fix has been announced that no gnss_collect() has taken.  The drive stream
+ * uses it to keep a fix that came while it was busy, and to cut a poll of the
+ * K wire short for it. */
+bool gnss_fix_pending(void);
 /* For explaining a gap between fixes (data.c).  Running totals in 32-bit
  * milliseconds and counts, which wrap: take differences.  Blocked is time
  * the receiver ran but LTE had the radio; starved is epochs it flagged as
@@ -626,8 +630,12 @@ void obd_sample_tick(void);
 /* The same poll without the tick's minimum gap, for a loop that samples once
  * a cycle at its own cadence (the drive stream, after each send): the record
  * built next finds the snapshot a fraction of a second old and needs no bus
- * time. */
+ * time.  While obd_stream_mode() is on it fills the time before the next fix
+ * and gives way to it, so it never makes a record late. */
 void obd_sample_now(void);
+/* The drive stream is running (true) or not.  Records then take the snapshot
+ * as it is, up to a few seconds old, and do not poll for a newer one. */
+void obd_stream_mode(bool on);
 
 /* Bridge the gaps where nothing else is talking to the ECU (the send and the
  * idle between cycles), so the session is not dropped and re-initialised on

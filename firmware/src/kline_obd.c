@@ -87,6 +87,15 @@ LOG_MODULE_REGISTER(kline_obd, CONFIG_APP_LOG_LEVEL);
 #define OBD_TICK_MIN_GAP_MS    700
 #define OBD_SLOW_MAX_AGE_MS    30000
 
+/* In the drive stream a record takes a snapshot up to this old rather than
+ * poll for one: the bus time inside a record's own build is what pushed the
+ * stream past its period.  The post-send poll keeps it well inside this. */
+#define OBD_STREAM_FRESH_MS    3000
+
+/* The fast PIDs after RPM and speed, and the slow one, that the stream's poll
+ * works through in turn (obd_poll). */
+#define OBD_EXTRAS             3
+
 /* How long engine RPM and vehicle speed stay usable for the tracker's own
  * decisions after the last successful read.  Long enough to ride out a
  * session reopen, short enough that a dead ECU falls back to the GNSS and
@@ -127,6 +136,8 @@ static int64_t  s_live_ms;                        /* last fast poll */
 static int64_t  s_slow_ms[ARRAY_SIZE(s_slow_pids)];
 static unsigned int s_slow_idx;
 static bool     s_no_reopen;    /* set while polling from the fix-wait tick */
+static bool     s_stream;       /* the drive stream is running (obd_stream_mode) */
+static unsigned int s_extra;    /* next of OBD_EXTRAS for the stream's poll */
 
 /* Stored-code count as last seen in mode 01 PID 01, and whether it has moved
  * since the last report was sent. */
@@ -505,41 +516,9 @@ static int obd_snapshot_copy(struct obd_snapshot *s)
 	return s->valid ? 0 : -ENODATA;
 }
 
-/* The poll.  Fast PIDs every call, one slow PID in rotation, merged into
- * the live snapshot; see POLLING at the top.  With `s` the snapshot is
- * copied out afterwards.  Unsupported PIDs do not use a rotation slot. */
-int obd_poll_fast(struct obd_snapshot *s)
+/* One slow-moving PID: the next in rotation that the ECU supports. */
+static void obd_read_slow(int64_t now)
 {
-	if (s) {
-		obd_snapshot_clear(s);
-	}
-	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
-		return -ENODEV;
-	}
-	if (!obd_ignition_on()) {
-		obd_close();
-		return -ESHUTDOWN;
-	}
-
-	s_abort = false;
-	s_reopened_this_poll = false;
-
-	int err = obd_ensure_session();
-
-	if (err) {
-		return err;
-	}
-
-	int64_t now = k_uptime_get();
-
-	obd_get(PID_RPM,      &s_live.rpm);
-	obd_get(PID_SPEED,    &s_live.speed);
-	obd_note_state(s_live.rpm, s_live.speed);
-	obd_note_rpm(s_live.rpm);
-	obd_get(PID_THROTTLE, &s_live.throttle);
-	obd_get(PID_LOAD,     &s_live.load);
-	s_live_ms = now;
-
 	for (unsigned int tries = 0; tries < ARRAY_SIZE(s_slow_pids) && !s_abort; tries++) {
 		unsigned int idx = s_slow_idx;
 		uint8_t pid = s_slow_pids[idx];
@@ -569,6 +548,80 @@ int obd_poll_fast(struct obd_snapshot *s)
 		}
 		break;
 	}
+}
+
+/* The poll.  Fast PIDs every call, one slow PID in rotation, merged into
+ * the live snapshot; see POLLING at the top.  With `s` the snapshot is
+ * copied out afterwards.  Unsupported PIDs do not use a rotation slot.
+ *
+ * `slack` is the drive stream's poll, made in the time between a send and the
+ * next fix: five exchanges are half a second or more of bus time, and with the
+ * build and the send that is more than a one-second period, so it must not
+ * hold up a record.  RPM and speed are read every time.  After them come the
+ * throttle, the load and the slow PID in turn, the first always, so that every
+ * one gets its turn, and the rest only while no fix is waiting.  Nothing is
+ * asked at all if a fix is waiting and the snapshot is young enough, and an
+ * ECU that does not answer RPM is not asked anything more. */
+static int obd_poll(struct obd_snapshot *s, bool slack)
+{
+	if (s) {
+		obd_snapshot_clear(s);
+	}
+	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
+		return -ENODEV;
+	}
+	if (!obd_ignition_on()) {
+		obd_close();
+		return -ESHUTDOWN;
+	}
+
+	s_abort = false;
+	s_reopened_this_poll = false;
+
+	int err = obd_ensure_session();
+
+	if (err) {
+		return err;
+	}
+
+	int64_t now = k_uptime_get();
+
+	if (slack && gnss_fix_pending() && s_live_ms != 0 &&
+	    now - s_live_ms < OBD_STREAM_FRESH_MS - 1000) {
+		return 0;
+	}
+
+	obd_get(PID_RPM, &s_live.rpm);
+
+	bool silent = slack && s_live.rpm == OBD_NA && pid_supported(PID_RPM);
+
+	if (silent) {
+		s_live.speed = OBD_NA;
+	} else {
+		obd_get(PID_SPEED, &s_live.speed);
+	}
+	obd_note_state(s_live.rpm, s_live.speed);
+	obd_note_rpm(s_live.rpm);
+
+	if (!slack) {
+		obd_get(PID_THROTTLE, &s_live.throttle);
+		obd_get(PID_LOAD,     &s_live.load);
+		s_live_ms = now;
+		obd_read_slow(now);
+	} else {
+		s_live_ms = now;
+		for (unsigned int i = 0; i < OBD_EXTRAS && !s_abort && !silent; i++) {
+			if (i > 0 && gnss_fix_pending()) {
+				break;
+			}
+			switch (s_extra) {
+			case 0:  obd_get(PID_THROTTLE, &s_live.throttle); break;
+			case 1:  obd_get(PID_LOAD,     &s_live.load);     break;
+			default: obd_read_slow(now);                      break;
+			}
+			s_extra = (s_extra + 1) % OBD_EXTRAS;
+		}
+	}
 
 	/* Only a poll that never had to reopen proves the session is healthy.
 	 * Clearing the count on any successful poll would defeat the limiter
@@ -587,16 +640,31 @@ int obd_poll_fast(struct obd_snapshot *s)
 	return s ? obd_snapshot_copy(s) : 0;
 }
 
+int obd_poll_fast(struct obd_snapshot *s)
+{
+	return obd_poll(s, false);
+}
+
+/* The drive stream (main.c) starts and stops. */
+void obd_stream_mode(bool on)
+{
+	s_stream = on;
+}
+
 /* What a normal telemetry record carries: the live snapshot, polled first
  * only if the tick has not refreshed it lately (a warm fix that was already
- * waiting, say, so the wait never ticked). */
+ * waiting, say, so the wait never ticked).  In the drive stream a record
+ * never waits for the bus unless the snapshot is much older: the poll after
+ * each send keeps it fresh, and one made here is on top of that, which kept
+ * the stream a whole period late. */
 int obd_snapshot_take(struct obd_snapshot *s)
 {
 	if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
 		obd_snapshot_clear(s);
 		return -ENODEV;
 	}
-	if (s_live_ms == 0 || k_uptime_get() - s_live_ms > OBD_LIVE_FRESH_MS) {
+	if (s_live_ms == 0 || k_uptime_get() - s_live_ms >
+	    (s_stream ? OBD_STREAM_FRESH_MS : OBD_LIVE_FRESH_MS)) {
 		return obd_poll_fast(s);
 	}
 	return obd_snapshot_copy(s);
@@ -613,7 +681,7 @@ int obd_snapshot_take(struct obd_snapshot *s)
  * the record builder's poll sorts it out.  A successful read also resets
  * the ECU's P3 timer, so ticking keeps the session alive through a long
  * fix. */
-static void obd_sample(int64_t min_gap_ms)
+static void obd_sample(int64_t min_gap_ms, bool slack)
 {
 	if (!s_open || s_abort || !obd_ignition_on()) {
 		return;
@@ -628,18 +696,20 @@ static void obd_sample(int64_t min_gap_ms)
 	}
 
 	s_no_reopen = true;
-	obd_poll_fast(NULL);
+	obd_poll(NULL, slack);
 	s_no_reopen = false;
 }
 
 void obd_sample_tick(void)
 {
-	obd_sample(OBD_TICK_MIN_GAP_MS);
+	obd_sample(OBD_TICK_MIN_GAP_MS, false);
 }
 
+/* The drive stream's poll, right after a send: it gives way to the next fix
+ * (see obd_poll). */
 void obd_sample_now(void)
 {
-	obd_sample(0);
+	obd_sample(0, s_stream);
 }
 
 bool obd_dtc_pending(void)

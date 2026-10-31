@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.4.89
+
+### The v4.0 stream holds 1 Hz with the K wire polled
+With OBD on, the car's stream ran at 0.5 Hz: records exactly 2 s apart, 96 of
+122 intervals on one drive.  A cycle is build and send (about 0.3 s) plus a
+five-exchange poll of half a second or more, over the one-second fix period
+whenever the ECU is slow, and `gnss_resume()` after the send threw away the fix
+that had come meanwhile, so the next record waited a whole period.  A record
+built from a snapshot over a second old then polled the bus again in line,
+which kept the cycle long.
+
+- **A fix that arrives while a record is built and sent is used next**, not
+  discarded (`gnss_fix_pending()`; no `gnss_resume()` while streaming).  A cycle
+  a little over the period now costs a little lag.
+- **The K wire is polled in the time before the next fix and gives way to it**
+  (`obd_sample_now()`): RPM and speed every time, then the throttle, the load
+  and the slow PID in turn, the first always and the rest while no fix is
+  waiting.  A fix already waiting skips the poll if the snapshot is under 2 s
+  old, and an ECU that does not answer RPM is not asked more.  The 900 ms guard
+  counts from the start of a poll.
+- **Records do not poll the bus while streaming** (`obd_stream_mode()`): a
+  snapshot up to 3 s old is taken as it is.
+- Compiled and linked with the stream and OBD on; not run on hardware.
+
 ## 0.4.88
 
 ### A radio the network holds no longer costs a restart or a reset

@@ -220,6 +220,11 @@ int gnss_resume(void)
     return err;
 }
 
+bool gnss_fix_pending(void)
+{
+    return k_sem_count_get(&s_fix_sem) > 0;
+}
+
 /* Optional callback run about once a second while gnss_collect() waits.
  * The GPS wait is most of a telemetry cycle and the thread is otherwise
  * asleep on a semaphore, so it is the one place a second subsystem can be

@@ -1250,6 +1250,11 @@ int gnss_resume(void)
     return 0;
 }
 
+bool gnss_fix_pending(void)
+{
+    return k_sem_count_get(&s_fix_sem) > 0;
+}
+
 /* Optional callback run about once a second while gnss_collect() waits; see
  * the note in gnss.c. */
 static void (*s_tick_cb)(void);
