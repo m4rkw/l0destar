@@ -41,9 +41,10 @@ SESSION=l0destar-test
 BAUD=115200
 
 # --- board table: newest first; first entry is the default -------------------
-# id|menu label|Kconfig board select|flags (obd = ask which OBD interface)
+# id|menu label|Kconfig board select|flags (obd = ask which OBD interface;
+# both = CAN and K-wire can be fitted together: separate connector pins)
 BOARDS=(
-    "v4.0|l0destar v4.0  (v3.4 + external MAX-M10S GNSS)|CONFIG_APP_BOARD_L0DESTAR_V4_0=y|obd"
+    "v4.0|l0destar v4.0  (v3.4 + external MAX-M10S GNSS)|CONFIG_APP_BOARD_L0DESTAR_V4_0=y|obd,both"
     "v3.4|l0destar v3.4  (v3.3 map, IMU NC pads fixed)|CONFIG_APP_BOARD_L0DESTAR_V3_4=y|obd"
     "v3.3|l0destar v3.3  (v3.1 map, fixed L-line + L sense)|CONFIG_APP_BOARD_L0DESTAR_V3_3=y|obd"
     "v3.2|l0destar v3.2  (v3.1 map + MCU OVP)|CONFIG_APP_BOARD_L0DESTAR_V3_2=y|obd"
@@ -137,12 +138,15 @@ if [[ "$BOARD_FLAGS" == *obd* ]]; then
     echo "   1) none                 [default]"
     echo "   2) CAN"
     echo "   3) K-wire (ISO 14230)"
+    [[ "$BOARD_FLAGS" == *both* ]] && echo "   4) CAN + K-wire (both fitted)"
     read -r -p "OBD [1]: " obd
     obd="${obd:-1}"
     case "$obd" in
         1) OBD_MODE=0; echo "  -> no OBD" ;;
         2) OBD_MODE=1; echo "  -> CAN" ;;
         3) OBD_MODE=2; echo "  -> K-wire (ISO 14230)" ;;
+        4) [[ "$BOARD_FLAGS" == *both* ]] || { echo "Invalid selection: $obd" >&2; exit 1; }
+           OBD_MODE=3; echo "  -> CAN + K-wire" ;;
         *) echo "Invalid selection: $obd" >&2; exit 1 ;;
     esac
 elif [[ "$BOARD_ID" == "v3.0" ]]; then
@@ -189,6 +193,9 @@ CRASH_MG="${CRASH_MG:-1200}"
     fi
     echo "# longer registration wait for the bench (default is 60 s)"
     echo "CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT=180"
+    echo "# a cold start under a poor sky (a bench window, an indoor antenna) can take"
+    echo "# longer than the default 5 minutes"
+    echo "CONFIG_APP_GPS_COLD_FIX_TIMEOUT_MS=600000"
     echo "# desk-bang friendly impact threshold"
     echo "CONFIG_APP_CRASH_THRESHOLD_MG=$CRASH_MG"
     [[ -n "$APN" ]] && echo "CONFIG_APP_APN=\"$APN\""

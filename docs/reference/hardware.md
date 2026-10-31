@@ -16,7 +16,7 @@ different Connect Kit pins and switches its power rails differently. Select the 
 
 | Board | Status | Board selection | Interface setting | FOTA board id |
 |---|---|---|---|---|
-| v4.0 | Designed, not yet built or tested | `CONFIG_APP_BOARD_L0DESTAR_V4_0=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v4.0`, `v4.0+can`, `v4.0+kline` |
+| v4.0 | Designed, not yet built or tested | `CONFIG_APP_BOARD_L0DESTAR_V4_0=y` | `CONFIG_APP_OBD_MODE=0`, `1`, `2` or `3` | `v4.0`, `v4.0+can`, `v4.0+kline`, `v4.0+can+kline` |
 | v3.4 | Designed, not yet built or tested | `CONFIG_APP_BOARD_L0DESTAR_V3_4=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.4`, `v3.4+can`, `v3.4+kline` |
 | v3.3 | Built and bench tested | `CONFIG_APP_BOARD_L0DESTAR_V3_3=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.3`, `v3.3+can`, `v3.3+kline` |
 
@@ -35,6 +35,7 @@ which rails to switch and which drivers to start:
 | `0` | None (the default) | none | - |
 | `1` | CAN | S5R1 and S5R3 | 3.3V CAN rail |
 | `2` | K-wire | S5R2 and S5R4 | 3.3V K and 12V K rails |
+| `3` | CAN and K-wire (v4.0 only) | none: separate connector pins | 3.3V CAN, 3.3V K and 12V K rails |
 
 ## v4.0: external GNSS receiver
 
@@ -61,8 +62,8 @@ not been built or tested, and none of the figures here are measured on it.
   The antenna requirements below are unchanged.
 - **Vehicle connector and interface pads.** S1J1 is an 8-way Molex Micro-Fit 3.0 and the interface
   selection pads are gone: CAN and K-wire each have their own connector pins, so fitting an
-  interface is just fitting its parts. `CONFIG_APP_OBD_MODE` still says which one the firmware
-  should test and start.
+  interface is just fitting its parts, and both can be fitted. `CONFIG_APP_OBD_MODE` says which
+  the firmware should test and start: `1` CAN, `2` K-wire, `3` both.
 
 | Pin | Function |
 |---|---|

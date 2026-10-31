@@ -85,8 +85,10 @@ config APP_L_SENSE_TEST
 	  production.
 
 config APP_OBD_MODE
-	int "OBD interface mode (0=none, 1=CAN, 2=K-line)"
+	int "OBD interface mode (0=none, 1=CAN, 2=K-line, 3=both on v4.0)"
 	default 0
+	range 0 3 if APP_BOARD_L0DESTAR_V4_0
+	range 0 2
 	help
 	  Which OBD interface is populated on a v3.1/v3.2/v3.3/v3.4/v4.0 board.
 	  The jumper pads select the electrical path; this tells firmware which
@@ -94,9 +96,10 @@ config APP_OBD_MODE
 	    0 = no OBD interface (S5R1-S5R4 all open)
 	    1 = CAN bus (S5R1 + S5R3; PP3V3_CAN via CAN_EN)
 	    2 = K-wire / ISO 14230 (S5R2 + S5R4; PP3V3_K + PP12V_K via K_EN)
+	    3 = both (v4.0 only)
 	  v4.0 has no select pads: CAN and K-wire each have their own connector
-	  pins, and fitting one is just fitting its parts.  The setting means
-	  the same there, and only one interface is tested at boot.
+	  pins, so both can be fitted and used at once, and the boot self-test
+	  and the board test exercise the rails of each.
 	  Ignored on boards other than v3.1+.
 
 config APP_CAN_TEST
@@ -1694,42 +1697,52 @@ config APP_DRIVE_STREAM
 	  The built-in receiver shares the antenna with LTE, so a send costs it
 	  its fix and the drive is batched (APP_BATCH_SIZE) to send as seldom as
 	  it can.  The external receiver has an antenna of its own, so while the
-	  engine runs this sends each record as it is built, one per
-	  APP_DRIVE_STREAM_HZ, over a connection it holds up (the modem is told
-	  more is coming, so the radio does not release between records) rather
-	  than one released after each.  That also keeps the modem out of power
-	  saving mode: PSM is negotiated at attach and cannot be switched off
-	  under a registration, but the modem only enters it after the network's
-	  active time (10 s) with nothing to send, and a unit sending every
-	  second never gets there.
+	  engine runs this sends each record as it is built, as fast as it can
+	  (APP_DRIVE_STREAM_HZ is the most a second), over a connection it holds
+	  up (the modem is told more is coming, so the radio does not release
+	  between records) rather than one released after each.  That also keeps
+	  the modem out of power saving mode: PSM is negotiated at attach and
+	  cannot be switched off under a registration, but the modem only enters
+	  it after the network's active time (10 s) with nothing to send, and a
+	  unit sending every second never gets there.
 
 	  Every record carries what a normal one does -- position, speed,
 	  battery, accelerometer, gyro, temperatures, cell and signal, the ECU's
 	  figures when the K wire is polled -- and goes out whole.  The K wire is
-	  polled between sends, so the figures are never more than a second old
-	  and no record waits on the bus.  The receiver is asked for fixes at the
-	  same rate (above 1 Hz) and put back to 1 Hz when the engine stops.
+	  polled between sends, about once a second, so the figures are a second
+	  or so old and no record waits on the bus.  The receiver is asked for
+	  faster fixes (above 1 Hz) and put back to 1 Hz when the engine stops.
 
 	  A record lost on the way is still sent again: each one is held until
 	  the server's reply comes back, as in normal driving.  The price is
 	  data: about 300 bytes a record and a reply, 1.4 MB for an hour's driving
-	  at 1 Hz.  Records go back to being batched when the engine stops.
+	  at a record a second.  Records go back to being batched when the engine
+	  stops.
 
 config APP_DRIVE_STREAM_HZ
-	int "Target telemetry rate while the engine runs (records per second)"
+	int "Most telemetry records a second while the engine runs (0 = no limit)"
 	depends on APP_DRIVE_STREAM
-	default 1
-	range 1 5
+	default 0
+	range 0 10
 	help
-	  What the stream aims for.  A record is built when the receiver
-	  delivers a fix, so the rate is the receiver's: above 1 Hz it is asked
-	  for fixes that often (the satellite list stays at one a second).  What
-	  a unit can sustain is set by the record: on the bench 140 to 270 ms to
-	  build and 15 to 25 ms to send gave 3.4 to 3.6 records a second, so 4 and
-	  5 will fall short.  Above 1 Hz the modem's temperature and supply
-	  readings, each an AT command, are refreshed once a second and not for
-	  every record.  The log says nothing while the stream keeps up, and every
-	  thirty seconds what it achieved when it did not.
+	  A limit, not a target.  With 0 the stream goes as fast as it can: the
+	  receiver is asked for 10 fixes a second, so one is always waiting, and
+	  each pass takes the latest, builds the record, sends it and now and
+	  then polls the K wire.  The rate is what a pass costs: on the bench
+	  140 to 270 ms to build and 15 to 25 ms to send gave 3.4 to 3.6 records
+	  a second without the K wire, and polling it takes a share of that.
+
+	  With a limit the receiver is asked for fixes at that rate (above 1 Hz)
+	  and a record is built for each, so the rate cannot exceed it; the K-wire
+	  poll gives way to a fix that is waiting, so the limit is held while a
+	  pass allows it.  Falling short of a limit is not reported.  Above 1 Hz
+	  the modem's temperature and supply readings, each an AT command, are
+	  refreshed once a second and not for every record.  The log says
+	  nothing while the stream works, and every thirty seconds how many
+	  records had to be built from the last position.
+
+	  Data is about 300 bytes a record and a reply: 1.4 MB an hour of
+	  driving for each record a second.
 
 config APP_DRIVE_STREAM_FIX_WAIT_S
 	int "Longest a streamed record waits for a fix (s)"
@@ -1744,6 +1757,26 @@ config APP_DRIVE_STREAM_FIX_WAIT_S
 	  release and then in PSM.  The first record after the engine starts,
 	  with no position yet, still waits for one.
 
+config APP_DRIVE_STREAM_WINDOW_MS
+	int "Longest a streamed record waits for a free unanswered-datagram slot (ms, 0 = no flow control)"
+	depends on APP_DRIVE_STREAM
+	default 250
+	range 0 5000
+	help
+	  The stream sends no more datagrams than APP_DATABUF_UNACKED_SLOTS
+	  can track answers for.  With every slot waiting, a record waits this
+	  long for a reply to free one; if none does it is held in the backlog
+	  (spaced by APP_DATABUF_STREAM_GAP_S) and goes out with it once the link
+	  answers again, instead of being pushed into a modem that is not
+	  delivering until its buffer is full and send() blocks for ten seconds.
+	  The rate is then what the link answers: a window of six slots at
+	  a second's round trip is six datagrams a second.  Slots are freed
+	  early for a send that a later send's reply has overtaken, or whose
+	  socket has been closed; with nothing answered, one send in three
+	  seconds goes anyway to find out whether the link is back.  0 sends as
+	  fast as the loop runs and requeues the oldest unanswered datagram when
+	  the slots are full, as before.
+
 config APP_DATABUF_SLOTS
 	int "Telemetry records held when the link is down"
 	default 32
@@ -1757,6 +1790,23 @@ config APP_DATABUF_SLOTS
 	  the resolution a long outage comes back at, not how long an outage
 	  can be covered.  32 slots hold 2.7 minutes at a 5 s cadence, or 21
 	  minutes at 40 s after three thinnings.
+
+config APP_DATABUF_STREAM_GAP_S
+	int "Seconds between the records the backlog keeps while streaming (0 = every one)"
+	depends on APP_DRIVE_STREAM
+	default 3
+	range 0 60
+	help
+	  The drive stream builds a record every few hundred milliseconds, and
+	  at that rate the slots above are full in seconds and then thinned by
+	  half again and again.  While it runs the backlog keeps a record only
+	  if none it holds was built within this many seconds of it (by the
+	  record's own up= second), and the gap doubles with each thinning, as
+	  the sample interval does.  32 slots at 3 s hold 96 s before any
+	  thinning; the car's longest registration losses so far were 76 s and
+	  93 s.  The records in between are not kept, which costs nothing while
+	  the link is up (they were sent) and a straight line between points
+	  3 s apart while it is not.  0 keeps every record until the slots fill.
 
 config APP_DATABUF_REC_MAX
 	int "Longest telemetry record the backlog can hold (bytes)"
@@ -1801,6 +1851,11 @@ config APP_DATABUF_UNACKED_SLOTS
 	  backlog to make room.  0 turns this off: a send the modem takes
 	  counts as delivered, as before.  The Traccar transport needs none,
 	  since its HTTP response is already the receipt.
+
+	  The drive stream also uses them as its send window
+	  (APP_DRIVE_STREAM_WINDOW_MS): six slots at a second's round trip are
+	  six datagrams a second, and they bound how many the modem is holding
+	  when its uplink stalls (it blocked send() after about nine).
 
 config APP_ACK_TIMEOUT_S
 	int "Seconds without an answer before a datagram's records are sent again"

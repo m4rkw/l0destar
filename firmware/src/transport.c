@@ -47,8 +47,14 @@ LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
 
 /* How many recent sends a reply can still be credited to.  More than one
  * telemetry cycle puts out (the record, two of backlog, an alert), so a reply
- * that turns up a cycle late — or several, behind a stall — still counts. */
+ * that turns up a cycle late — or several, behind a stall — still counts.  The
+ * drive stream sends six or seven a second, where eight is a second and a
+ * quarter, and a reply later than that was never recognised. */
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+#define SENT_TRACK   16
+#else
 #define SENT_TRACK   8
+#endif
 
 /* The server's address is looked up once per boot and kept: a lookup is a
  * round trip of its own through the modem, and on a marginal link it can take
@@ -119,6 +125,18 @@ uint32_t transport_sent_id(void)
 {
     return s_last_id;
 }
+
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+static uint32_t s_gen;
+
+uint32_t transport_generation(void)
+{
+    return s_gen;
+}
+#define SOCKET_CLOSED() (s_gen++)
+#else
+#define SOCKET_CLOSED() ((void)0)
+#endif
 
 /* The id of the send the reply now in s_rx answers, with its plaintext in
  * s_reply, or 0 when it answers none of the sends still remembered. */
@@ -294,6 +312,7 @@ void transport_close(void)
         zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
         zsock_close(s_sock);
         s_sock = -1;
+        SOCKET_CLOSED();
     }
 }
 
@@ -302,6 +321,7 @@ void transport_teardown(void)
     if (s_sock >= 0) {
         zsock_close(s_sock);
         s_sock = -1;
+        SOCKET_CLOSED();
     }
 }
 

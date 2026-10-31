@@ -29,6 +29,7 @@ static struct nrf_modem_gnss_agnss_data_frame s_agnss_req;
 static bool s_have_fix;
 static bool s_agnss_needed;
 static int  s_tracked_sv;
+static int  s_best_cn0;             /* strongest of them, tenths of dBHz as the modem gives it */
 static bool s_blocked;
 /* Fix waits in a row that timed out with the network holding the radio and
  * left the receiver running instead of restarting it (GNSS_KEEP_MAX). */
@@ -126,6 +127,7 @@ static void on_gnss_event(int event)
                 in_fix++;
         }
         s_tracked_sv = tracked;
+        s_best_cn0 = best_cn0;
 
         if ((pvt.flags & NRF_MODEM_GNSS_PVT_FLAG_FIX_VALID) && in_fix > 0) {
             s_pvt = pvt;
@@ -223,6 +225,12 @@ int gnss_resume(void)
 bool gnss_fix_pending(void)
 {
     return k_sem_count_get(&s_fix_sem) > 0;
+}
+
+void gnss_sky(int *tracked, int *best_cn0_dbhz)
+{
+    *tracked = s_tracked_sv;
+    *best_cn0_dbhz = (s_best_cn0 + 5) / 10;
 }
 
 /* Optional callback run about once a second while gnss_collect() waits.

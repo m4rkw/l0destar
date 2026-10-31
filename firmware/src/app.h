@@ -291,6 +291,11 @@ int  gnss_resume(void);   /* restart without resetting fix state (warm) */
  * uses it to keep a fix that came while it was busy, and to cut a poll of the
  * K wire short for it. */
 bool gnss_fix_pending(void);
+/* The sky as the receiver last reported it: space vehicles with a signal, and
+ * the strongest signal in dBHz.  Both 0 until it has said anything.  The
+ * running firmware logs them as "searching: N SVs tracked, best cn0=X dBHz";
+ * the board test prints them. */
+void gnss_sky(int *tracked, int *best_cn0_dbhz);
 /* For explaining a gap between fixes (data.c).  Running totals in 32-bit
  * milliseconds and counts, which wrap: take differences.  Blocked is time
  * the receiver ran but LTE had the radio; starved is epochs it flagged as
@@ -364,6 +369,9 @@ int  transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms
  * transport_poll() reads whatever replies have come in, without waiting,
  * and hands each to data_reply(); -ENOTCONN with no socket to read. */
 uint32_t transport_sent_id(void);
+/* Counts the sockets that have been closed.  A send made on one cannot be
+ * answered once it has changed (databuf.c).  Only with APP_DRIVE_STREAM. */
+uint32_t transport_generation(void);
 int  transport_poll(void);
 bool transport_is_streaming(void);
 /* A reply to an earlier send that was not waited for: the receipt for that
@@ -390,6 +398,16 @@ int      databuf_flush(int max_datagrams);   /* returns records sent */
 int      databuf_count(void);
 uint32_t databuf_dropped(void);
 void     databuf_reset(void);
+/* The drive stream is running (true) or not.  While it is, the backlog keeps
+ * records APP_DATABUF_STREAM_GAP_S apart by when they were built, so a stream
+ * of them does not fill the slots in seconds.  Only with APP_DRIVE_STREAM. */
+void     databuf_stream(bool on);
+/* Flow control for the stream: false when every unanswered-datagram slot is
+ * still taken after up to max_ms, and the caller holds the record in the
+ * backlog.  True when a send may go -- also, when nothing at all is being
+ * answered, once in a few seconds on a full window, so a link that has come
+ * back is found.  Always true when the stream is not running or max_ms is 0. */
+bool     databuf_window_wait(int max_ms);
 /* Records a send has put out, held under its transport id until the server
  * answers for them (databuf_ack) — see APP_DATABUF_UNACKED_SLOTS.  Records
  * whose answer does not come in APP_ACK_TIMEOUT_S go back into the backlog
@@ -630,12 +648,15 @@ void obd_sample_tick(void);
 /* The same poll without the tick's minimum gap, for a loop that samples once
  * a cycle at its own cadence (the drive stream, after each send): the record
  * built next finds the snapshot a fraction of a second old and needs no bus
- * time.  While obd_stream_mode() is on it fills the time before the next fix
- * and gives way to it, so it never makes a record late. */
+ * time.  While obd_stream_mode() is on it is the stream's poll: under a limit
+ * it fills the time before the next fix and gives way to it, so it never makes
+ * a record late; with none it is RPM, speed and one more, and costs the
+ * stream the bus time it takes. */
 void obd_sample_now(void);
-/* The drive stream is running (true) or not.  Records then take the snapshot
- * as it is, up to a few seconds old, and do not poll for a newer one. */
-void obd_stream_mode(bool on);
+/* The drive stream is running (true) or not, and whether a limit paces it
+ * (true) or it goes as fast as it can.  Records then take the snapshot as it
+ * is, up to a few seconds old, and do not poll for a newer one. */
+void obd_stream_mode(bool on, bool paced);
 
 /* Bridge the gaps where nothing else is talking to the ECU (the send and the
  * idle between cycles), so the session is not dropped and re-initialised on

@@ -472,6 +472,13 @@ static int64_t s_pvt_ms;
 static volatile bool s_have_fix;
 static int64_t s_start_ms;
 static uint32_t s_pub_itow;
+/* The epoch s_fix is of, and of the fix gnss_collect() last returned: a fix is
+ * handed out once.  13.5 % of a streamed drive's records (2026-10-31) repeated
+ * the previous one's time and position, so a fix was given for an epoch that
+ * had already been taken. */
+static uint32_t s_fix_epoch;
+static uint32_t s_handed_epoch;
+static bool s_handed;
 static long s_hdop_x10;
 static uint32_t s_dop_itow;
 
@@ -550,6 +557,7 @@ static void publish(const struct gnss_fix *f, int64_t now)
     unsigned int key = irq_lock();
 
     s_fix = *f;
+    s_fix_epoch = s_pub_itow;
     s_pvt_ms = now;
     g_gnss = *f;
     irq_unlock(key);
@@ -1231,6 +1239,7 @@ int gnss_init(void)
 int gnss_start(void)
 {
     s_have_fix = false;
+    s_handed = false;
     s_start_ms = k_uptime_get();
     k_sem_reset(&s_fix_sem);
     if (!s_rail_up) {
@@ -1253,6 +1262,12 @@ int gnss_resume(void)
 bool gnss_fix_pending(void)
 {
     return k_sem_count_get(&s_fix_sem) > 0;
+}
+
+void gnss_sky(int *tracked, int *best_cn0_dbhz)
+{
+    *tracked = s_tracked_sv;
+    *best_cn0_dbhz = s_best_cno;
 }
 
 /* Optional callback run about once a second while gnss_collect() waits; see
@@ -1323,6 +1338,16 @@ static void alert_if_dead(void)
     }
 }
 
+/* Whether the fix now held is of the epoch gnss_collect() last returned. */
+static bool fix_repeats(void)
+{
+    unsigned int key = irq_lock();
+    bool same = s_handed && s_fix_epoch == s_handed_epoch;
+
+    irq_unlock(key);
+    return same;
+}
+
 /* Same contract as gnss.c: -EAGAIN on timeout, -EINTR if the ignition changed
  * (the caller wants to report that, not a position), and in addition -ENODEV
  * when the receiver's rail is off and -EIO when it is not answering, both
@@ -1367,7 +1392,10 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
         }
         err = k_sem_take(&s_fix_sem, K_MSEC((int)MIN(left, tick)));
         if (err == 0) {
-            break;
+            if (!fix_repeats()) {
+                break;
+            }
+            continue;               /* the same epoch again: wait for the next */
         }
         watchdog_kick();
 
@@ -1437,6 +1465,8 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
     unsigned int key = irq_lock();
 
     *out = s_fix;
+    s_handed_epoch = s_fix_epoch;
+    s_handed = true;
     irq_unlock(key);
     out->fix_uptime_ms = k_uptime_get();
     out->epoch_ms = s_pvt_ms;

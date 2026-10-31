@@ -37,6 +37,14 @@
  *     10.7 min    20 s
  *     21 min      40 s
  *
+ * The drive stream builds a record every few hundred milliseconds, and at that
+ * rate 32 slots are full in seconds and then thinned again and again.  While
+ * it runs a record is kept only if none held was built within
+ * APP_DATABUF_STREAM_GAP_S of it, by its own up= second (so records requeued
+ * together are not mistaken for dense ones), and that gap doubles with each
+ * thinning, as the interval does above.  At 3 s the slots hold 96 s: the
+ * car's longest registration losses so far were 76 s and 93 s.
+ *
  * DRAINING
  * --------
  * The backlog must never delay live telemetry, so it is drained a datagram or
@@ -69,6 +77,15 @@ static int      s_interval_mult = 1;    /* 1, 2, 4 ... after each decimation */
 static int      s_push_seq;             /* for decimated sampling */
 static uint32_t s_dropped;              /* records lost to decimation */
 
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+#define STREAM_GAP_S CONFIG_APP_DATABUF_STREAM_GAP_S
+static int32_t  s_up[SLOTS];            /* the second each held record was built; -1 unknown */
+static bool     s_stream;               /* the drive stream is running */
+#define STREAMING s_stream
+#else
+#define STREAMING false
+#endif
+
 /* -- ages -------------------------------------------------------------------
  *
  * The server files a record at the moment it arrives.  For one sent late —
@@ -95,6 +112,46 @@ static const char *field_find(const char *s, size_t len, const char *key)
     }
     return NULL;
 }
+
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+/* The second a record was built, from its up= field; -1 if it has none. */
+static int32_t record_up(const char *rec, size_t len)
+{
+    const char *p = field_find(rec, len, ",up=");
+    const char *stop = rec + len;
+    int64_t v = 0;
+    int digits = 0;
+
+    if (!p) {
+        return -1;
+    }
+    for (p += 4; p < stop && *p >= '0' && *p <= '9' && v <= INT32_MAX; p++) {
+        v = v * 10 + (*p - '0');
+        digits++;
+    }
+    return (digits > 0 && v <= INT32_MAX) ? (int32_t)v : -1;
+}
+
+/* Whether a held record was built less than `gap` seconds from `up`.  All of
+ * them are looked at, not just the newest: records requeued after an unanswered
+ * send are older than ones the outage has since put there. */
+static bool near_held(int32_t up, int32_t gap)
+{
+    for (int i = 0; i < s_count; i++) {
+        int32_t u = s_up[(s_head + i) % SLOTS];
+
+        if (u >= 0 && (up >= u ? up - u : u - up) < gap) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void databuf_stream(bool on)
+{
+    s_stream = on;
+}
+#endif
 
 /* One record into out: without the age= it may already carry, and with a
  * fresh one when `mark` and it was built AGE_MARK_S or more before now_s.
@@ -217,6 +274,9 @@ static void databuf_decimate(void)
         if (src != dst) {
             memcpy(s_rec[dst], s_rec[src], s_len[src]);
             s_len[dst] = s_len[src];
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+            s_up[dst] = s_up[src];
+#endif
         }
         kept++;
     }
@@ -228,6 +288,9 @@ static void databuf_decimate(void)
             s_count, s_interval_mult);
 }
 
+/* 0 if the record was taken (or thinned away by the sample interval, which
+ * counts as taken), 1 if the stream's spacing left it out, negative if it does
+ * not fit a slot. */
 int databuf_push(const char *rec, size_t len)
 {
     if (len == 0 || len >= REC_MAX) {
@@ -239,6 +302,19 @@ int databuf_push(const char *rec, size_t len)
         return -EMSGSIZE;
     }
 
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+    int32_t up = record_up(rec, len);
+
+    /* Streaming: records come every few hundred milliseconds, so they are kept
+     * a gap apart by when they were built, the gap doubling with each thinning.
+     * Not counted in s_push_seq, which is for pushes at a steady rate. */
+    if (s_stream && STREAM_GAP_S > 0 && up >= 0) {
+        if (near_held(up, STREAM_GAP_S * s_interval_mult)) {
+            s_dropped++;
+            return 1;                   /* left out, which is not stored */
+        }
+    } else
+#endif
     /* Once thinned, only keep one record in every s_interval_mult so the
      * stored sample interval stays uniform across the whole outage instead of
      * being dense at the start and sparse later. */
@@ -255,6 +331,9 @@ int databuf_push(const char *rec, size_t len)
 
     memcpy(s_rec[slot], rec, len);
     s_len[slot] = (uint16_t)len;
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+    s_up[slot] = up;
+#endif
     s_count++;
     return 0;
 }
@@ -279,8 +358,12 @@ int databuf_push_lines(const char *buf, size_t len)
         p = nl + 1;
     }
 
-    LOG_INF("backlog: +%d record%s (%d held, %u dropped)",
-            stored, stored == 1 ? "" : "s", s_count, s_dropped);
+    /* Nothing to say about a streamed record the spacing left out: that is
+     * most of them. */
+    if (stored > 0 || !STREAMING) {
+        LOG_INF("backlog: +%d record%s (%d held, %u dropped)",
+                stored, stored == 1 ? "" : "s", s_count, s_dropped);
+    }
     return stored;
 }
 
@@ -355,13 +438,44 @@ static void databuf_drop(int n)
  * enough for a full backlog at two datagrams a round. */
 #define DELIVER_ROUNDS   8
 
+/* -- FLOW CONTROL (drive stream) --------------------------------------------
+ *
+ * The slots are also a window.  At six or seven sends a second they are full
+ * whenever a reply is a second late, and on a stalled uplink the modem took
+ * about nine datagrams before its own buffer was full and send() sat out its
+ * ten seconds, then reconnected and lost the replies (2026-10-31, three times
+ * in eight minutes).  So while the stream runs it sends no more than the slots
+ * hold: databuf_window_wait() gives a reply a moment to free one, and when none
+ * does the record is held in the backlog, as an outage's would be.
+ *
+ * A slot is freed by its reply; by a later send's reply, once it is
+ * WINDOW_LOST_MS old (it was lost, or its reply was not recognised); by the
+ * socket it went out on being closed (its reply cannot come); or after
+ * APP_ACK_TIMEOUT_S.  Were it only the last, a few lost datagrams would shut
+ * the window for half a minute each.  With nothing answered at all, one send
+ * in WINDOW_PROBE_MS goes anyway, so a link that has come back is found. */
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM) && CONFIG_APP_DATABUF_UNACKED_SLOTS > 0 && \
+    CONFIG_APP_DRIVE_STREAM_WINDOW_MS > 0
+#define FLOW_CONTROL 1
+#define WINDOW_LOST_MS   1500
+#define WINDOW_PROBE_MS  3000
+#endif
+
 #if UNANSWERED > 0
 static struct {
     uint32_t id;                  /* transport's id for the send; 0 = free */
     int64_t  sent_ms;
     uint16_t len;
+#ifdef FLOW_CONTROL
+    uint32_t gen;                 /* transport_generation() it went out on */
+#endif
     char     recs[UDP_PACKET_SIZE];
 } s_out[UNANSWERED];
+#endif
+
+#ifdef FLOW_CONTROL
+static uint32_t s_acked_high;     /* the highest send id a reply has come for */
+static int64_t  s_probe_ms;       /* when a send last went out on a full window */
 #endif
 
 /* When a reply last came in, from any send: the evidence that the link is
@@ -397,10 +511,12 @@ static void requeue(int i)
         p = nl + 1;
     }
 
-    LOG_WRN("datagram #%u unanswered after %lld s — %d record%s back in "
-            "the backlog", s_out[i].id,
-            (k_uptime_get() - s_out[i].sent_ms) / 1000,
-            stored, stored == 1 ? "" : "s");
+    if (stored > 0 || !STREAMING) {
+        LOG_WRN("datagram #%u unanswered after %lld s — %d record%s back in "
+                "the backlog", s_out[i].id,
+                (k_uptime_get() - s_out[i].sent_ms) / 1000,
+                stored, stored == 1 ? "" : "s");
+    }
     s_out[i].id = 0;
 }
 
@@ -421,6 +537,32 @@ static int oldest(int64_t min_age_ms)
     }
     return best;
 }
+
+#ifdef FLOW_CONTROL
+/* The unanswered send that went out first, among those whose reply cannot be
+ * coming (see FLOW CONTROL); -1 if none. */
+static int lost(void)
+{
+    int64_t now = k_uptime_get();
+    uint32_t gen = transport_generation();
+    int best = -1;
+
+    for (int i = 0; i < UNANSWERED; i++) {
+        if (s_out[i].id == 0) {
+            continue;
+        }
+
+        bool gone = s_out[i].gen != gen ||
+                    (s_out[i].id < s_acked_high &&
+                     now - s_out[i].sent_ms >= WINDOW_LOST_MS);
+
+        if (gone && (best < 0 || s_out[i].sent_ms < s_out[best].sent_ms)) {
+            best = i;
+        }
+    }
+    return best;
+}
+#endif
 #endif
 
 void databuf_sent(uint32_t id, const char *recs, size_t len)
@@ -453,6 +595,9 @@ void databuf_sent(uint32_t id, const char *recs, size_t len)
         s_out[slot].id = id;
         s_out[slot].sent_ms = k_uptime_get();
         s_out[slot].len = (uint16_t)len;
+#ifdef FLOW_CONTROL
+        s_out[slot].gen = transport_generation();
+#endif
         memcpy(s_out[slot].recs, recs, len);
         return;
     }
@@ -471,6 +616,11 @@ void databuf_ack(uint32_t id)
     s_last_ack_ms = k_uptime_get();
     /* Every reply comes through here, and an alert may be what it answers. */
     alert_ack(id);
+#ifdef FLOW_CONTROL
+    if (id > s_acked_high) {
+        s_acked_high = id;
+    }
+#endif
 #if UNANSWERED > 0
     for (int i = 0; i < UNANSWERED; i++) {
         if (s_out[i].id == id) {
@@ -512,9 +662,57 @@ int databuf_expire(void)
         requeue(i);
         n++;
     }
+#ifdef FLOW_CONTROL
+    /* The stream does not wait half a minute for what cannot be coming. */
+    while (s_stream && (i = lost()) >= 0) {
+        requeue(i);
+        n++;
+    }
+#endif
 #endif
     return n;
 }
+
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+bool databuf_window_wait(int max_ms)
+{
+#ifndef FLOW_CONTROL
+    ARG_UNUSED(max_ms);
+    return true;
+#else
+    if (!s_stream || max_ms <= 0) {
+        return true;
+    }
+
+    int64_t deadline = k_uptime_get() + max_ms;
+
+    for (;;) {
+        if (transport_poll() < 0) {
+            return true;        /* no socket: the send opens one, or says why not */
+        }
+        databuf_expire();
+        if (databuf_unacked() < UNANSWERED) {
+            return true;
+        }
+        if (k_uptime_get() >= deadline) {
+            break;
+        }
+        k_msleep(5);
+    }
+
+    /* Full, and nothing freed a slot.  If replies are coming this is only a
+     * slow link and the record waits in the backlog; if none has come for a
+     * while, a send now and then finds out whether the link is back. */
+    int64_t now = k_uptime_get();
+
+    if (now - s_last_ack_ms >= WINDOW_PROBE_MS && now - s_probe_ms >= WINDOW_PROBE_MS) {
+        s_probe_ms = now;
+        return true;
+    }
+    return false;
+#endif
+}
+#endif
 
 int databuf_settle(int timeout_ms)
 {
@@ -575,6 +773,12 @@ int databuf_flush(int max_datagrams)
     }
 
     for (int i = 0; i < max_datagrams && s_count > 0; i++) {
+#ifdef FLOW_CONTROL
+        /* The window is for the stream's own records first. */
+        if (s_stream && databuf_unacked() >= UNANSWERED) {
+            break;
+        }
+#endif
         int n_recs = 0;
         int len = databuf_pack(batch, sizeof(batch), &n_recs);
 

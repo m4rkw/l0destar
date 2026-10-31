@@ -92,9 +92,20 @@ LOG_MODULE_REGISTER(kline_obd, CONFIG_APP_LOG_LEVEL);
  * stream past its period.  The post-send poll keeps it well inside this. */
 #define OBD_STREAM_FRESH_MS    3000
 
+/* ...and a slow field is kept this long there: with no limit on the stream the
+ * poll has room for one slow PID in three, so eight of them take half a minute
+ * to come round. */
+#define OBD_STREAM_SLOW_MAX_AGE_MS 60000
+
 /* The fast PIDs after RPM and speed, and the slow one, that the stream's poll
  * works through in turn (obd_poll). */
 #define OBD_EXTRAS             3
+
+/* Only a record's own poll reopens a session, and in the stream its snapshot
+ * is always young, so a session that died mid-drive would be polled to the end
+ * of it.  The stream's poll therefore closes one after this many polls in a
+ * row with no answer to RPM, and the next record reopens it. */
+#define OBD_SILENT_POLLS       2
 
 /* How long engine RPM and vehicle speed stay usable for the tracker's own
  * decisions after the last successful read.  Long enough to ride out a
@@ -137,7 +148,9 @@ static int64_t  s_slow_ms[ARRAY_SIZE(s_slow_pids)];
 static unsigned int s_slow_idx;
 static bool     s_no_reopen;    /* set while polling from the fix-wait tick */
 static bool     s_stream;       /* the drive stream is running (obd_stream_mode) */
+static bool     s_paced;        /* ... under a limit: its poll gives way to a waiting fix */
 static unsigned int s_extra;    /* next of OBD_EXTRAS for the stream's poll */
+static unsigned int s_silent;   /* stream polls in a row with no answer to RPM */
 
 /* Stored-code count as last seen in mode 01 PID 01, and whether it has moved
  * since the last report was sent. */
@@ -185,6 +198,7 @@ static void obd_live_reset(void)
 {
 	obd_snapshot_clear(&s_live);
 	s_live_ms = 0;
+	s_silent = 0;
 	memset(s_slow_ms, 0, sizeof(s_slow_ms));
 }
 
@@ -486,10 +500,11 @@ static void obd_note_rpm(int32_t rpm)
 static int obd_snapshot_copy(struct obd_snapshot *s)
 {
 	int64_t now = k_uptime_get();
+	int64_t slow_max = s_stream ? OBD_STREAM_SLOW_MAX_AGE_MS : OBD_SLOW_MAX_AGE_MS;
 
 	*s = s_live;
 	for (unsigned int i = 0; i < ARRAY_SIZE(s_slow_pids); i++) {
-		if (s_slow_ms[i] && now - s_slow_ms[i] <= OBD_SLOW_MAX_AGE_MS) {
+		if (s_slow_ms[i] && now - s_slow_ms[i] <= slow_max) {
 			continue;
 		}
 		switch (s_slow_pids[i]) {
@@ -559,9 +574,12 @@ static void obd_read_slow(int64_t now)
  * build and the send that is more than a one-second period, so it must not
  * hold up a record.  RPM and speed are read every time.  After them come the
  * throttle, the load and the slow PID in turn, the first always, so that every
- * one gets its turn, and the rest only while no fix is waiting.  Nothing is
- * asked at all if a fix is waiting and the snapshot is young enough, and an
- * ECU that does not answer RPM is not asked anything more. */
+ * one gets its turn, and the rest only while no fix is waiting.  Under a
+ * limit (s_paced) nothing is asked at all if a fix is waiting and the snapshot
+ * is young enough; with none a fix is nearly always waiting, so each poll is
+ * RPM, speed and one more and none is skipped.  An ECU that does not answer
+ * RPM is not asked anything more, and after OBD_SILENT_POLLS such polls in a
+ * row its session is closed, for the next record's snapshot to reopen. */
 static int obd_poll(struct obd_snapshot *s, bool slack)
 {
 	if (s) {
@@ -586,7 +604,7 @@ static int obd_poll(struct obd_snapshot *s, bool slack)
 
 	int64_t now = k_uptime_get();
 
-	if (slack && gnss_fix_pending() && s_live_ms != 0 &&
+	if (slack && s_paced && gnss_fix_pending() && s_live_ms != 0 &&
 	    now - s_live_ms < OBD_STREAM_FRESH_MS - 1000) {
 		return 0;
 	}
@@ -594,6 +612,16 @@ static int obd_poll(struct obd_snapshot *s, bool slack)
 	obd_get(PID_RPM, &s_live.rpm);
 
 	bool silent = slack && s_live.rpm == OBD_NA && pid_supported(PID_RPM);
+
+	if (slack) {
+		if (!silent) {
+			s_silent = 0;
+		} else if (++s_silent >= OBD_SILENT_POLLS) {
+			LOG_DBG("OBD silent for %u polls — closing the session", s_silent);
+			obd_close();
+			return -ETIMEDOUT;
+		}
+	}
 
 	if (silent) {
 		s_live.speed = OBD_NA;
@@ -627,8 +655,11 @@ static int obd_poll(struct obd_snapshot *s, bool slack)
 	 * Clearing the count on any successful poll would defeat the limiter
 	 * in precisely the case it exists for: a session that dies every
 	 * cycle, reopens, and completes — which would then re-initialise the
-	 * bus every cycle forever without ever tripping the limit. */
-	if (!s_abort && !s_reopened_this_poll) {
+	 * bus every cycle forever without ever tripping the limit.  In the
+	 * stream the session is reopened by the next record after the poll has
+	 * closed it, which this cannot tell from a first open, so there the
+	 * count is left to the window: three opens in a minute stand off. */
+	if (!s_abort && !s_reopened_this_poll && !s_stream) {
 		s_reopen_count = 0;
 	}
 
@@ -646,9 +677,11 @@ int obd_poll_fast(struct obd_snapshot *s)
 }
 
 /* The drive stream (main.c) starts and stops. */
-void obd_stream_mode(bool on)
+void obd_stream_mode(bool on, bool paced)
 {
 	s_stream = on;
+	s_paced = paced;
+	s_silent = 0;
 }
 
 /* What a normal telemetry record carries: the live snapshot, polled first

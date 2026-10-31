@@ -579,6 +579,19 @@ int collect_data(int ignitionState)
 
     float v = battery_sample_with_engine_check();
 
+    /* The receiver's thread rewrites g_gnss with every fix it publishes, and
+     * the IMU and battery reads above are I2C transfers that let it run.  At
+     * ten fixes a second the record was then formatted from the next fix, which
+     * the next record carries again: 13.5 % of a streamed drive's records
+     * repeated the previous one's time and position (2026-10-31).  The record's
+     * own fix goes back before anything below that can wait. */
+    if (have_fix && !use_cached_gps && !stale) {
+        unsigned int key = irq_lock();
+
+        g_gnss = fix;
+        irq_unlock(key);
+    }
+
     if (data_index > 0 && data_index < DATA_LIMIT - 1) {
         data_current[data_index++] = '\n';
     }
@@ -1211,6 +1224,21 @@ int send_data(void)
         s_prev_send_ms = k_uptime_get();
         return send_failed(false);
     }
+
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM) && CONFIG_APP_DRIVE_STREAM_WINDOW_MS > 0
+    /* The stream does not put more datagrams out than the backlog has slots to
+     * track answers for (databuf.c, FLOW CONTROL).  With them all waiting the
+     * record is held, as an outage's would be, and goes with the backlog when
+     * a reply frees a slot: sent into a modem that is not delivering it would
+     * only join the queue until send() blocked.  Not after a send that failed:
+     * modem_recover() runs while last_send_ok is false and wants a send to try
+     * again, not a held record. */
+    if (last_send_ok && transport_is_streaming() && stream_keeps_records &&
+        !databuf_window_wait(CONFIG_APP_DRIVE_STREAM_WINDOW_MS)) {
+        databuf_push_lines(data_current, (size_t)data_index);
+        return 0;
+    }
+#endif
 
     /* The records, each marked with its age if it is not fresh — one held
      * through an outage says when it was built (see databuf_stamp) — then

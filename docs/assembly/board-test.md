@@ -27,6 +27,16 @@ v3.4 has seven test points. Readings below are with 12V applied to the board.
 
 The unprotected buck output has no test point on v3.4; measure it at the non-ground pad of S6C5.
 
+v4.0 has the same seven on the main sheet, but its receiver's rails differ from the v3.4 GPS rail:
+
+| Test point | Net | Expected |
+|---|---|---|
+| S12TP4 | PP3V3_GNSS_BCKP | The receiver's backup supply: 0V until the firmware enables it, then 3.3V from boot while `CONFIG_APP_GNSS_BACKUP_SUPPLY` is on (the default) |
+| S16TP1 | PP3V3_GNSS | 0V until the firmware switches the receiver's rail on (test 1), then 3.3V. Stands in for v3.4's S12TP4 |
+
+Wherever the steps below name S12TP4 as the GPS rail, read S16TP1 on a v4.0. The CAN rail (S12TP5)
+and the K-wire rails (S12TP6, S12TP7) are the same, and a v4.0 can carry both interfaces.
+
 ## Stage 1: unpowered checks
 
 With no power applied and the Connect Kit **not** fitted:
@@ -124,9 +134,10 @@ CONFIG_APP_APN="your.apn"
 
 The script asks three things:
 
-1. **Board version.** Choose the revision you built: **v3.4** for a v3.4 board.
+1. **Board version.** Choose the revision you built: **v4.0** for a v4.0 board, **v3.4** for a v3.4 board.
 2. **OBD interface**: none, CAN or K-wire (ISO 14230), matching the parts and pads
-   you fitted.
+   you fitted. A v4.0 has a fourth choice, **CAN + K-wire**, because the two circuits have separate
+   connector pins and can both be fitted; the test then covers the rails and the loopback of each.
 3. **APN.** It shows the APN it found and where it found it. It only asks if it finds none, and
    leaving the answer empty skips the modem test.
 
@@ -140,7 +151,7 @@ attaches you to the console. Press **Enter** to start the tests.
 `CONFIG_APP_APN`, `CONFIG_APP_DEMO_MODE` (masks the GPS coordinates in the output),
 `CONFIG_APP_BOARD_TEST_HIDE_COORDS` (drops them altogether) and `CONFIG_APP_CRASH_THRESHOLD_MG`
 (the impact threshold, 1200mg by default for the test - a firm bang on the desk is 1.5-3g). The
-test build also limits network registration to 180 seconds.
+test build also allows 180 seconds for network registration and 10 minutes for the GPS fix.
 
 Useful `screen` keys: `Ctrl-A [` scrolls back, `Ctrl-A d` detaches (reattach with
 `screen -r l0destar-test`) and `Ctrl-A k` kills the session. The console output is logged to
@@ -151,22 +162,22 @@ Useful `screen` keys: `Ctrl-A [` scrolls back, `Ctrl-A d` detaches (reattach wit
 | # | Test | What you do | Passes when |
 |---|---|---|---|
 | 1 | GPS rail switching | Nothing | The GPS rail's sense line follows it off and back on. The rail is left on. |
-| 2 | OBD rail switching | Nothing | CAN builds: the CAN 3.3V rail cycles. K-wire builds: the K-wire 3.3V and 12V rails cycle. Skipped with no interface. |
+| 2 | OBD rail switching | Nothing | CAN builds: the CAN 3.3V rail cycles. K-wire builds: the K-wire 3.3V and 12V rails cycle. With both fitted, both cycle, and the output says which failed. Skipped with no interface. |
 | 3 | Ignition sense | Switch the ignition on and off three times within 180 seconds | All six edges are seen. |
 | 4 | Ignition wake from sleep | Switch the ignition off when asked (within 60 seconds), wait for `SLEEPING`, then switch it on within 180 seconds | The board wakes on the ignition edge and reads the ignition as on. |
 | 5 | Battery voltage | Raise the supply by at least 1V, then lower it by at least 1V, within 300 seconds | The INA228 reading follows both steps. |
 | 6 | Accelerometer | Put the board flat and still; tilt and rotate it and watch the roll and pitch follow; then bang the desk at least once within 300 seconds | An impact is captured, with its peak g, rotation rate and duration. |
 | 7 | Movement wake from sleep | Leave the board still, wait for `SLEEPING`, then move or tap it within 180 seconds | The board wakes on movement. |
-| 8 | Raw GPS fix | Nothing, but the GPS antenna needs a view of the sky | A fix with no assistance data, within the cold-start timeout (300 seconds by default). |
+| 8 | Raw GPS fix | Nothing, but the GPS antenna needs a view of the sky | A fix with no assistance data, within 10 minutes (the test build's cold-start timeout; a cold start under a poor sky can take 5 minutes or more). Every 5 seconds it prints how many satellites are tracked and the strongest signal in dBHz, as the running firmware logs them, and the time to the fix. On a v4.0 it is the external receiver, which keeps its time and ephemeris on its backup supply, so a repeat run starts warm. |
 | 9 | Modem and DNS | Nothing | The SIM is detected, the modem registers with your APN, and `www.google.com` resolves. Skipped when there is no SIM. |
-| 10 | K-line loopback | Nothing | The K-wire transceiver echoes what is sent through it, and the L-line FET works where it is fitted. Skipped without a K-wire interface or if its rails failed. |
-| 11 | CAN loopback | Nothing | The MCP2518FD passes its internal and external (through the transceiver) loopback modes. No other device on the bus is needed. Skipped without a CAN interface or if its rail failed. |
+| 10 | K-line loopback | Nothing | The K-wire transceiver echoes what is sent through it, and the L-line FET works where it is fitted. Skipped without a K-wire interface or if its own rails failed. |
+| 11 | CAN loopback | Nothing | The MCP2518FD passes its internal and external (through the transceiver) loopback modes. No other device on the bus is needed. Skipped without a CAN interface or if its own rail failed. |
 
 Keep the voltage step in test 5 modest - from 12V up to about 13V and back is plenty.
 
 A failed test is reported and the run continues. Tests that depend on hardware that has already
-failed are skipped rather than run: there is no GPS search on a dead GPS rail and no loopback on a
-rail that never came up. The run ends with a summary:
+failed are skipped rather than run: there is no GPS search on a dead GPS rail and no loopback on an interface whose
+rail never came up (with both fitted, the other interface still runs). The run ends with a summary:
 
 ```text
 ==============================================
@@ -199,7 +210,7 @@ firmware when you are done, as described in
 | The reset fails and pyocd reports APPROTECT | The chip booted with debug access locked. `./flash.sh` is the recovery path: its load step is allowed to unlock the part and reprogram it. |
 | The boot output is too quiet to diagnose a problem | Run with `VERBOSE=1` to keep the module logs; warnings and errors always print. |
 | Test 6 prints `interrupt but no FIFO data (src 0x..) -- hit harder?` | Bang the desk harder. |
-| Test 8 times out | Check the antenna on the GPS port is an active antenna, that the u.FL cables go GPS to GPS, and that the antenna can see the sky. |
+| Test 8 times out | Read the last `SVs tracked` line first. None tracked points at the antenna, its cable, the rail or the receiver; some tracked but no fix at the view of the sky, so move the antenna outdoors. Also check the antenna on the GPS port is an active antenna and that the u.FL cables go GPS to GPS. |
 | Test 9 reports no SIM, or registration fails | Check the SIM is seated, that your network has LTE-M coverage where you are, and the APN. |
 
 The script tries a `power on` command when no debug probe is visible. That is the author's helper

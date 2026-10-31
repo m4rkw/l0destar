@@ -93,7 +93,7 @@ int hw_selftest(void)
 		fails++;
 	}
 
-	if (CONFIG_APP_OBD_MODE == 1) {
+	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_CAN)) {
 		/* CAN: PP3V3_CAN only. */
 		if (hw_domain_request(HW_DOMAIN_CAN, HW_DOMAIN_USER_MAIN)) {
 			fails++;   /* logged and alerted by hw_domain */
@@ -104,7 +104,8 @@ int hw_selftest(void)
 				fails++;
 			}
 		}
-	} else if (CONFIG_APP_OBD_MODE == 2) {
+	}
+	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE)) {
 		/* K-line: PP3V3_K and PP12V_K share K_EN — hw_domain_request
 		 * only reports success when both sense lines confirm. */
 		if (hw_domain_request(HW_DOMAIN_K, HW_DOMAIN_USER_MAIN)) {

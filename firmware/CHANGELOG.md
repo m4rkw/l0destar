@@ -1,5 +1,94 @@
 # Changelog
 
+## 0.4.94
+
+### The board test shows the sky while it waits for a fix, and waits 10 minutes
+Test 8 printed only "still searching".  Every 5 s it now prints the satellites
+tracked and the strongest signal, as the running firmware logs them
+(`N SVs tracked, best cn0 X dBHz`), once more when it ends, and the time to the
+fix.  `gnss_sky()` gives both for either receiver.
+
+- **The wait is 10 minutes, not 5** (`CONFIG_APP_GPS_COLD_FIX_TIMEOUT_MS` in
+  `board_test.conf`): a cold start under a poor sky can take that long.
+
+### A v4.0 can have CAN and K-wire both fitted: `APP_OBD_MODE=3`
+`APP_OBD_MODE` named one interface, but v4.0 has connector pins for each and no
+select pads, so a board can carry both circuits.
+
+- **`APP_OBD_MODE=3`** (v4.0 only; any other board stops at configure) sets
+  `APP_BOARD_HAS_CAN` and `APP_BOARD_HAS_KLINE`; the board id is
+  `v4.0+can+kline`.
+- **The board test** cycles the rails of each interface fitted, says which
+  failed, and loops each back; a failed rail skips only its own loopback.
+  `board_test.sh` offers "CAN + K-wire" on v4.0.  The boot self-test cycles
+  both rails too.
+- **A v4.0 build without K-wire telemetry did not link** (the drive stream's
+  call into `kline_obd.c`): the board test images, and a CAN-only or no-OBD
+  unit.  Fixed.
+- Built for the board test with each of the four choices, and as the car's
+  config with both fitted; not run on hardware.
+
+### The stream goes as fast as it can; `APP_DRIVE_STREAM_HZ` is a limit
+It was a target of 1 to 5 a second, default 1.  It is now the most records a
+second, 0 to 10, default 0: no limit.
+
+- **No limit:** the receiver is asked for 10 fixes a second so one is always
+  waiting, and each pass takes the latest.  The bench built and sent 3.4 to 3.6
+  a second without the K wire; polling it (about once a second: RPM, speed and
+  one more PID, none skipped) takes a share.  About 1.4 MB an hour for each
+  record a second.
+- **A limit** is held by the receiver's rate as before, and the poll gives way
+  to a waiting fix.  Falling short of it is not reported; the 30 s line now
+  says only how many records came from the last position.
+- Slow PIDs are kept 60 s in the stream, since one in three polls reads one.
+- Compiled and linked with the stream and OBD on; not run on hardware.  Above
+  1 Hz has only run in the bench's rate-test image, not in this loop.
+
+### The stream stops sending when the link is not answering, and never sends a fix twice
+On a weak cell the modem stopped delivering and `send()` blocked for ten
+seconds, then reconnected and lost the replies.  At the stream's rate the six
+unanswered-datagram slots overflowed, and some records repeated the previous fix.
+
+- **Flow control** (`APP_DRIVE_STREAM_WINDOW_MS`, 250; 0 is off): no more
+  datagrams than the slots can track.  With them all waiting, a record waits
+  that long for a reply, then is held in the backlog.  A slot also frees when a
+  later send's reply has overtaken it or its socket was closed; with nothing
+  answered, one send in 3 s goes anyway.
+- **Replies are recognised up to 16 sends back**, not 8 (`SENT_TRACK`).
+- **A fix is handed to a record once** (`gnss_collect()`), **and a record is
+  formatted from the fix it collected**: the receiver's thread rewrote `g_gnss`
+  during the build, so one record in seven carried the next fix and the next
+  record carried it again (`collect_data()`).
+- Run on the host against a simulated link and compiled for the car's config;
+  not run on hardware.
+
+### The backlog spaces out a stream's records
+At a record every few hundred ms the 32 backlog slots were full in 13 s and
+thinned by half again and again.  While the stream runs, the backlog keeps a
+record only if none held was built within `APP_DATABUF_STREAM_GAP_S` (3) of it,
+by its `up=`; the gap doubles with each thinning.  32 slots then hold 96 s
+untouched (the car's longest registration losses so far: 76 s and 93 s).
+
+- The line for a streamed record the spacing left out, and the warning for a
+  requeued one that was dropped the same way, are not logged.
+- Dead reckoning is unchanged: the gyro and ECU speed logs are by time, not by
+  record.  A thinned backlog still breaks the pair (consecutive `rec_id`s) the
+  server needs to fill a gap, as before.
+- A v3.x board has no stream and the backlog is unchanged there.
+- Checked on the host around the real `databuf.c` (identical to before with the
+  stream off; 96 s untouched, then thinned) and built for the car's config; not
+  run on hardware.
+
+### A stream session that dies is reopened
+0.4.89 polled a K-wire session that died mid-drive to the end of it: only a
+record's own poll reopens one, and in the stream its snapshot is always young.
+
+- **Two polls in a row with no answer to RPM close the session**
+  (`OBD_SILENT_POLLS`); the next record reopens it.
+- **The reopen limit still holds in the stream**: three opens in a minute stand
+  off for a minute.
+- Compiled and linked with the stream and OBD on; not run on hardware.
+
 ## 0.4.89
 
 ### The v4.0 stream holds 1 Hz with the K wire polled

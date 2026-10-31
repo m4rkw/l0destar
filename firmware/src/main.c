@@ -396,7 +396,8 @@ static int  s_coast_iters;
  * The built-in receiver shares its antenna with LTE, which is why a drive is
  * batched and every send is released at once.  The external one has an
  * antenna of its own, so while the engine runs each record is sent as it is
- * built, one per 1/APP_DRIVE_STREAM_HZ second, over a connection held up
+ * built, as fast as it can (at most APP_DRIVE_STREAM_HZ a second if that is
+ * set), over a connection held up
  * between them (the modem is told more is coming) and still held until the
  * server answers for it.  A connection that is never idle for the network's
  * active time never reaches power saving mode, and that is how the modem is
@@ -411,21 +412,26 @@ static int  s_coast_iters;
  *   - the fix wait is short and a record without a fix is built from the
  *     last position (collect_fix_wait_ms, force_record);
  *   - the send does not wait for a reply, nor sleep 200 ms, and the K wire
- *     is polled right after it (obd_sample_now), in the time before the next
- *     fix and giving way to it, so the next record finds the figures a
- *     fraction of a second old and needs no bus time;
+ *     is polled right after it (obd_sample_now), about once a second, so the
+ *     next record finds the figures a fraction of a second old and needs no
+ *     bus time; under a limit the poll fills the time before the next fix
+ *     and gives way to it;
  *   - a fix that came while a record was built and sent is kept for the next
  *     (no gnss_resume()), so a cycle a little over the period costs a little
  *     lag and not a whole period;
- *   - above 1 Hz the receiver is asked for fixes that often.
- * The cycle is paced by the receiver: collect_data() returns when its next
- * fix does, so the rate cannot exceed the receiver's, and a cycle that takes
- * longer than the period lets fixes go by, which the log counts.
+ *   - above 1 Hz the receiver is asked for fixes at the limit, or at
+ *     DS_FAST_HZ with none.
+ * Under a limit the cycle is paced by the receiver: collect_data() returns
+ * when its next fix does, so the rate cannot exceed the limit.  With none the
+ * receiver is faster than a cycle, a fix is always waiting, and the rate is
+ * the cycle's: a build, a send and the K wire's share.  Falling short of a
+ * limit is not reported; the stream goes as fast as it can.
  *
  * Track mode (do_track) has its own, and the sync below leaves it alone. */
 #if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
-#define DS_HZ           CONFIG_APP_DRIVE_STREAM_HZ
-#define DS_PERIOD_MS    (1000 / DS_HZ)
+#define DS_MAX_HZ       CONFIG_APP_DRIVE_STREAM_HZ      /* 0: no limit */
+#define DS_FAST_HZ      10          /* what the receiver is asked for with none */
+#define DS_RX_HZ        (DS_MAX_HZ > 0 ? DS_MAX_HZ : DS_FAST_HZ)
 #define DS_FIX_WAIT_MS  (CONFIG_APP_DRIVE_STREAM_FIX_WAIT_S * 1000)
 #define DS_LOG_MS       30000
 #define DS_OBD_EVERY_MS 900         /* the K wire is polled about once a second at most */
@@ -434,8 +440,6 @@ static bool    s_ds_on;             /* the engine is running: records go as a st
 static int64_t s_ds_t0_ms;          /* start of the log window (0: no record yet) */
 static int     s_ds_records;        /* built in it */
 static int     s_ds_stale;          /* ... from the last position, no fix */
-static int     s_ds_missed;         /* fixes the stream let go by */
-static int64_t s_ds_epoch_ms;       /* fix time of the last record that had one */
 static int64_t s_ds_obd_ms;         /* when the K wire was last polled here */
 
 static bool drive_stream_wanted(void)
@@ -444,32 +448,22 @@ static bool drive_stream_wanted(void)
            !(IS_ENABLED(CONFIG_APP_TRACK_MODE) && g_settings.track_mode);
 }
 
-/* What the stream achieved over the last window, said only when it fell short
- * of the target or had to lean on the last position.  A stream that is keeping
- * up has nothing to report: the records are the evidence. */
+/* Said over the last window only if records had to be built from the last
+ * position, for want of a fix.  A stream that is working has nothing to
+ * report: the records are the evidence, and a rate under the limit is not a
+ * shortfall. */
 static void drive_stream_window(void)
 {
-    int64_t elapsed;
-    int expected;
-
     if (s_ds_t0_ms == 0) {
         return;                     /* no record yet, as when waiting for a first fix */
     }
-    elapsed = k_uptime_get() - s_ds_t0_ms;
-    expected = (int)(elapsed * DS_HZ / 1000);
-
-    if (elapsed > 0 &&
-        (s_ds_missed > 0 || s_ds_stale > 0 || s_ds_records * 10 < expected * 9)) {
-        LOG_INF("drive stream short of %d/s: %d records in %lld s = %.2f/s "
-                "(%d fixes let go by, %d from the last position)", DS_HZ,
-                s_ds_records, elapsed / 1000,
-                (double)s_ds_records * 1000.0 / (double)elapsed,
-                s_ds_missed, s_ds_stale);
+    if (s_ds_stale > 0) {
+        LOG_INF("drive stream: %d of %d records in %lld s from the last position",
+                s_ds_stale, s_ds_records, (k_uptime_get() - s_ds_t0_ms) / 1000);
     }
     s_ds_t0_ms = k_uptime_get();
     s_ds_records = 0;
     s_ds_stale = 0;
-    s_ds_missed = 0;
 }
 
 /* Once per pass of the main loop: follow the engine in and out, and hold the
@@ -481,25 +475,27 @@ static void drive_stream_sync(void)
 
     if (on != s_ds_on) {
         s_ds_on = on;
-        obd_stream_mode(on);
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+        obd_stream_mode(on, DS_MAX_HZ > 0);
+#endif
+        databuf_stream(on);
         if (on) {
             s_ds_t0_ms = 0;             /* the window opens with the first record */
-            s_ds_records = s_ds_stale = s_ds_missed = 0;
-            s_ds_epoch_ms = 0;
+            s_ds_records = s_ds_stale = 0;
             s_ds_obd_ms = 0;
-            data_set_lean(DS_HZ > 1);
-            if (DS_HZ > 1) {
-                int err = gnss_set_rate_hz(DS_HZ);
+            data_set_lean(DS_RX_HZ > 1);
+            if (DS_RX_HZ > 1) {
+                int err = gnss_set_rate_hz(DS_RX_HZ);
 
                 if (err) {
                     LOG_WRN("receiver not asked for %d fixes a second: %d",
-                            DS_HZ, err);
+                            DS_RX_HZ, err);
                 }
             }
         } else {
             drive_stream_window();
             data_set_lean(false);
-            if (DS_HZ > 1) {
+            if (DS_RX_HZ > 1) {
                 (void)gnss_set_rate_hz(1);
             }
         }
@@ -519,16 +515,6 @@ static void drive_stream_note_record(void)
     }
     if (last_record_stale) {
         s_ds_stale++;
-        s_ds_epoch_ms = 0;
-    } else if (g_gnss.epoch_ms > 0) {
-        if (s_ds_epoch_ms > 0) {
-            int64_t gap = g_gnss.epoch_ms - s_ds_epoch_ms;
-
-            if (gap > DS_PERIOD_MS * 3 / 2) {
-                s_ds_missed += (int)((gap + DS_PERIOD_MS / 2) / DS_PERIOD_MS) - 1;
-            }
-        }
-        s_ds_epoch_ms = g_gnss.epoch_ms;
     }
     s_ds_records++;
     if (k_uptime_get() - s_ds_t0_ms >= DS_LOG_MS) {
@@ -3333,12 +3319,11 @@ int main(void)
 #endif
 
 #if IS_ENABLED(CONFIG_APP_DRIVE_STREAM) && IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
-            /* The K wire, now, in the time before the next fix: the record
-             * built then takes the figures from this poll and costs no bus
-             * time of its own.  At most about once a second, whatever the
-             * rate, counted from the start of one poll to the start of the
-             * next: the poll runs up to the next fix, so counting from its
-             * end would skip every other one. */
+            /* The K wire, now: the record built next takes the figures from
+             * this poll and costs no bus time of its own.  At most about once
+             * a second, whatever the rate, counted from the start of one poll
+             * to the start of the next: under a limit the poll runs up to the
+             * next fix, so counting from its end would skip every other one. */
             if (s_ds_on && k_uptime_get() - s_ds_obd_ms >= DS_OBD_EVERY_MS) {
                 s_ds_obd_ms = k_uptime_get();
                 obd_sample_now();

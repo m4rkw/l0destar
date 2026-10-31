@@ -4,15 +4,19 @@
  * operator through every piece of fitted hardware in a fixed order:
  *
  *   1. GPS/AUX rail switching (left ON afterwards)
- *   2. OBD rail switching        (v3.1+ with an OBD interface fitted)
+ *   2. OBD rail switching        (v3.1+ with an OBD interface fitted: the rails
+ *                                 of each one fitted, both on a v4.0 built
+ *                                 with APP_OBD_MODE=3)
  *   3. Ignition sense            (3 on/off toggles)
  *   4. Ignition wake from sleep  (once)
  *   5. Battery voltage           (up >= 1 V, then down >= 1 V)
  *   6. Accelerometer             (live roll/pitch readout; continues on the
  *                                 first impact, reported with its metrics)
  *   7. Movement wake from sleep  (once)
- *   8. Raw GPS fix               (no A-GNSS assistance; coords masked by
- *                                 APP_DEMO_MODE, dropped entirely by
+ *   8. Raw GPS fix               (no A-GNSS assistance; satellites tracked
+ *                                 and the best signal every 5 s while it
+ *                                 searches; coords masked by APP_DEMO_MODE,
+ *                                 dropped entirely by
  *                                 APP_BOARD_TEST_HIDE_COORDS)
  *   9. Modem + DNS               (needs SIM + APN; resolves www.google.com)
  *  10. K-line loopback           (kline_test(): TX -> transceiver -> RX)
@@ -20,9 +24,10 @@
  *
  * A failed step is reported and the run continues; steps whose prerequisite
  * hardware failed are skipped (no fix attempt on a dead GPS rail, no OBD rail
- * test on a board without one, no modem test without SIM/APN, no loopbacks
- * on rails that never came up).  Nothing here touches the watchdog, so a
- * stalled step can sit at its prompt forever minus the per-step timeout.
+ * test on a board without one, no modem test without SIM/APN, no loopback on
+ * an interface whose rails never came up -- the other one still runs).
+ * Nothing here touches the watchdog, so a stalled step can sit at its prompt
+ * forever minus the per-step timeout.
  *
  * Bench-only code, kept out of production images by the Kconfig gate.
  */
@@ -280,49 +285,72 @@ static bool test_gps_rail(void)
 
 /* -- 2: OBD rail switching --------------------------------------------------- */
 
-/* Returns 1 on pass, 0 on fail, -1 when there is no OBD rail to test — the
- * loopback tests (11/12) use it to skip when their rail is already known bad. */
-static int test_obd_rails(void)
+/* One interface's rails, up and down.  Each is reported on its own so a v4.0
+ * with both fitted says which one failed. */
+static bool cycle_can_rails(void)
 {
+	bool ok = true;
+
+	printk("        CAN fitted: cycling PP3V3_CAN\n");
+	if (hw_domain_request(HW_DOMAIN_CAN, HW_DOMAIN_USER_MAIN)) {
+		printk("        CAN rail did not come up\n");
+		return false;
+	}
+	ok &= wait_sense(PIN_CAN_RAIL_ST, 1, "PP3V3_CAN on") == 0;
+	hw_domain_release(HW_DOMAIN_CAN, HW_DOMAIN_USER_MAIN);
+	ok &= wait_sense(PIN_CAN_RAIL_ST, 0, "PP3V3_CAN off") == 0;
+	return ok;
+}
+
+static bool cycle_k_rails(void)
+{
+	bool ok = true;
+
+	printk("        K-line fitted: cycling PP3V3_K + PP12V_K\n");
+	if (hw_domain_request(HW_DOMAIN_K, HW_DOMAIN_USER_MAIN)) {
+		printk("        K rails did not come up\n");
+		return false;
+	}
+	ok &= wait_sense(PIN_K3V3_RAIL_ST, 1, "PP3V3_K on") == 0;
+	ok &= wait_sense(PIN_K12V_RAIL_ST, lvl12(1), "PP12V_K on") == 0;
+	hw_domain_release(HW_DOMAIN_K, HW_DOMAIN_USER_MAIN);
+	ok &= wait_sense(PIN_K3V3_RAIL_ST, 0, "PP3V3_K off") == 0;
+	ok &= wait_sense(PIN_K12V_RAIL_ST, lvl12(0), "PP12V_K off") == 0;
+	return ok;
+}
+
+/* Each fitted interface's rails.  *can / *k come back 1 on pass, 0 on fail,
+ * -1 when that interface has no rail to test — the loopback tests (10/11) use
+ * them to skip when their own rail is already known bad, so one interface
+ * failing does not hide the other. */
+static void test_obd_rails(int *can, int *k)
+{
+	/* OBD_MODE only means something on the boards that switch CAN and K
+	 * separately; elsewhere the loopbacks are the only OBD test. */
+	const bool has_can = IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN) &&
+			     IS_ENABLED(CONFIG_APP_BOARD_HAS_CAN);
+	const bool has_k = IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN) &&
+			   IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE);
+
+	*can = *k = -1;
 	printk("\n=== TEST 2: OBD rail switching ===\n");
 
-	if (CONFIG_APP_OBD_MODE == 1) {
-		bool ok = true;
-
-		printk("        CAN fitted: cycling PP3V3_CAN\n");
-		if (hw_domain_request(HW_DOMAIN_CAN, HW_DOMAIN_USER_MAIN)) {
-			printk("        CAN rail did not come up\n");
-			ok = false;
-		} else {
-			ok &= wait_sense(PIN_CAN_RAIL_ST, 1, "PP3V3_CAN on") == 0;
-			hw_domain_release(HW_DOMAIN_CAN, HW_DOMAIN_USER_MAIN);
-			ok &= wait_sense(PIN_CAN_RAIL_ST, 0, "PP3V3_CAN off") == 0;
-		}
-		record(1, ok ? R_PASS : R_FAIL);
-		return ok ? 1 : 0;
-	} else if (CONFIG_APP_OBD_MODE == 2) {
-		bool ok = true;
-
-		printk("        K-line fitted: cycling PP3V3_K + PP12V_K\n");
-		if (hw_domain_request(HW_DOMAIN_K, HW_DOMAIN_USER_MAIN)) {
-			printk("        K rails did not come up\n");
-			ok = false;
-		} else {
-			ok &= wait_sense(PIN_K3V3_RAIL_ST, 1, "PP3V3_K on") == 0;
-			ok &= wait_sense(PIN_K12V_RAIL_ST, lvl12(1),
-					 "PP12V_K on") == 0;
-			hw_domain_release(HW_DOMAIN_K, HW_DOMAIN_USER_MAIN);
-			ok &= wait_sense(PIN_K3V3_RAIL_ST, 0, "PP3V3_K off") == 0;
-			ok &= wait_sense(PIN_K12V_RAIL_ST, lvl12(0),
-					 "PP12V_K off") == 0;
-		}
-		record(1, ok ? R_PASS : R_FAIL);
-		return ok ? 1 : 0;
+	if (!has_can && !has_k) {
+		printk("        no OBD interface on this build\n");
+		record(1, R_SKIP);
+		return;
 	}
-
-	printk("        no OBD interface on this build\n");
-	record(1, R_SKIP);
-	return -1;
+	if (has_can) {
+		*can = cycle_can_rails();
+	}
+	if (has_k) {
+		*k = cycle_k_rails();
+	}
+	if (has_can && has_k) {
+		printk("        CAN rails %s, K-line rails %s\n",
+		       *can ? "OK" : "FAILED", *k ? "OK" : "FAILED");
+	}
+	record(1, (*can == 0 || *k == 0) ? R_FAIL : R_PASS);
 }
 
 /* -- 3: ignition toggles ----------------------------------------------------- */
@@ -641,6 +669,17 @@ static void test_move_wake(void)
 
 /* -- 8: raw GPS fix ------------------------------------------------------------ */
 
+/* What the running firmware logs while it searches: how many satellites have
+ * a signal and how strong the best one is.  None at all points at the antenna,
+ * its cable or the rail; a few weak ones at the view of the sky. */
+static void print_sky(int t)
+{
+	int tracked, best;
+
+	gnss_sky(&tracked, &best);
+	printk("        %3d s: %d SVs tracked, best cn0 %d dBHz\n", t, tracked, best);
+}
+
 static void test_gps_fix(bool rail_ok, bool modem_ok)
 {
 	printk("\n=== TEST 8: raw GPS fix (no assistance) ===\n");
@@ -695,15 +734,18 @@ static void test_gps_fix(bool rail_ok, bool modem_ok)
 
 	printk("        searching (cold, unaided, up to %d s)...\n", timeout_s);
 
-	for (int t = 0; t < timeout_s; t++) {
+	int t;
+
+	for (t = 0; t < timeout_s; t++) {
 		if (g_gnss.valid) {
 			break;
 		}
-		if (t && (t % 15) == 0) {
-			printk("        still searching (%d s)\n", t);
+		if (t && (t % 5) == 0) {
+			print_sky(t);
 		}
 		k_msleep(1000);
 	}
+	print_sky(t);
 	gnss_stop();
 
 #ifdef CONFIG_APP_BOARD_HAS_EXT_GNSS
@@ -729,14 +771,14 @@ static void test_gps_fix(bool rail_ok, bool modem_ok)
 #endif
 
 	if (IS_ENABLED(CONFIG_APP_BOARD_TEST_HIDE_COORDS)) {
-		printk("        FIX OK: sats=%ld hdop=%ld.%ld alt=%.0fm "
+		printk("        FIX OK after %d s: sats=%ld hdop=%ld.%ld alt=%.0fm "
 		       "time=%s (coords hidden)\n",
-		       g_gnss.sats, g_gnss.hdop_x10 / 10, g_gnss.hdop_x10 % 10,
+		       t, g_gnss.sats, g_gnss.hdop_x10 / 10, g_gnss.hdop_x10 % 10,
 		       (double)g_gnss.altitude_m, g_gnss.time_iso);
 	} else {
-		printk("        FIX OK: %s,%s  sats=%ld hdop=%ld.%ld alt=%.0fm"
+		printk("        FIX OK after %d s: %s,%s  sats=%ld hdop=%ld.%ld alt=%.0fm"
 		       " time=%s\n",
-		       lat, lon,
+		       t, lat, lon,
 		       g_gnss.sats, g_gnss.hdop_x10 / 10, g_gnss.hdop_x10 % 10,
 		       (double)g_gnss.altitude_m, g_gnss.time_iso);
 	}
@@ -814,7 +856,7 @@ static void test_modem(bool modem_ok)
 
 /* -- 10: K-line loopback -------------------------------------------------------- */
 
-static void test_kline_loop(int obd_res)
+static void test_kline_loop(int k_rails)
 {
 	printk("\n=== TEST 10: K-line loopback ===\n");
 
@@ -823,7 +865,7 @@ static void test_kline_loop(int obd_res)
 		record(9, R_SKIP);
 		return;
 	}
-	if (IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN) && obd_res == 0) {
+	if (IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN) && k_rails == 0) {
 		printk("        K rails failed earlier -- no point driving them\n");
 		record(9, R_SKIP);
 		return;
@@ -837,7 +879,7 @@ static void test_kline_loop(int obd_res)
 
 /* -- 11: CAN loopback ------------------------------------------------------------ */
 
-static void test_can_loop(int obd_res)
+static void test_can_loop(int can_rails)
 {
 	printk("\n=== TEST 11: CAN loopback ===\n");
 
@@ -846,7 +888,7 @@ static void test_can_loop(int obd_res)
 		record(10, R_SKIP);
 		return;
 	}
-	if (IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN) && obd_res == 0) {
+	if (IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN) && can_rails == 0) {
 		printk("        CAN rail failed earlier -- no point driving it\n");
 		record(10, R_SKIP);
 		return;
@@ -882,7 +924,9 @@ void board_test_run(void)
 	}
 
 	bool gps_rail_ok = test_gps_rail();
-	int obd_res = test_obd_rails();
+	int can_rails, k_rails;
+
+	test_obd_rails(&can_rails, &k_rails);
 
 	test_ignition();
 	test_ign_wake();
@@ -894,8 +938,8 @@ void board_test_run(void)
 
 	test_gps_fix(gps_rail_ok, modem_ok);
 	test_modem(modem_ok);
-	test_kline_loop(obd_res);
-	test_can_loop(obd_res);
+	test_kline_loop(k_rails);
+	test_can_loop(can_rails);
 
 	int pass = 0, fail = 0, skip = 0;
 
