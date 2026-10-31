@@ -69,7 +69,7 @@ The server listens for trackers on two ports:
 | Listener | Port | Carries |
 |---|---|---|
 | UDP with ChaCha20-Poly1305 | 65480/udp | all telemetry, alerts and replies |
-| TLS | 65481/tcp | firmware update downloads, and nothing else |
+| TLS | 65481/tcp | firmware update downloads and AssistNow orbit data, and nothing else |
 
 Both are on without any settings: the TLS listener starts once `tls_cert` and `tls_key` are set, which the first start does. Keep both ports at their defaults, in `config.yaml` and in the `-p` options of `docker run`, because both numbers are compiled into the firmware.
 
@@ -118,6 +118,26 @@ home_check:
 ```
 
 Nothing happens until something calls `POST /api/1.0/home`, usually a cron job at a time the vehicles are normally at home ([Server deployment](deployment.md)). Each listed vehicle whose last position is further than `radius_m` metres from its point, and which is not marked as garaged, raises a notification. A single mapping, without the list, is also accepted. An entry missing its `imei`, `latitude` or `longitude` stops the server at start-up with an error naming the entry, rather than leaving that vehicle silently unchecked.
+
+## AssistNow orbit assistance
+
+A receiver that has sat unpowered for hours holds no usable ephemerides and has to read them from the satellites: 25 to 30 seconds with a clear sky, minutes with a poor one. u-blox's AssistNow Predictive Orbits, free, tell it where the satellites will be for the coming days. This is for units with an external u-blox receiver, the v4.0 board.
+
+The server does the u-blox side so the unit does not. It registers each receiver with u-blox, downloads the orbits once a day and gives the unit the part it can use, over the same TLS port as the firmware. A reboot or a firmware update loses nothing, u-blox's per-device request limit is spent on the server's schedule and not the unit's, and the credential for the registration service stays out of the firmware image.
+
+You need a free Thingstream account at portal.thingstream.io. Under **Services > ZTP > Device Profiles** create a profile (module **OTHER**, assistance data **Predictive Orbits**) and copy the **ZTP token** from its Details tab. An Evaluation profile takes three devices at 300 requests a month each; a Commercial one allows 2 a day. Then:
+
+```yaml
+assistnow:
+  ztp_token: '...'          # a secret, like a device's key
+  gnss: [gps, gal, bds]     # downloaded; each unit says which of them it wants
+  orbit_days: 3             # 1, 3, 7 or 14 days of orbits per download
+  refresh_hours: 20         # at most one download per device in this time
+```
+
+Without `ztp_token` the server answers `/assist/` with 501 and nothing else changes. Apply `migrations/2026-10-30_device_assist.sql` first. A unit registers its receiver the first time it asks, and is then held to that receiver (a different one is refused with 403) until you run `tools/assistnow.py reset <imei> --yes`, which is what to do after replacing one. `tools/assistnow.py status` shows who has registered, what was last downloaded and any error; `refresh <imei>` downloads now, using one of the unit's requests to u-blox.
+
+The unit asks only when its receiver comes up without ephemerides, once per power-up, so a unit with a backup supply on its receiver rarely asks at all. See `APP_ASSISTNOW` in the [firmware reference](../reference/firmware.md).
 
 ## Command-line tools
 

@@ -198,7 +198,7 @@ same decision see [Hardware](hardware.md#interface-selection-pads).
 | `APP_BOARD_HAS_KLINE` | bool | `y` on the bench, v2.1, v2.5K, v2.6K and v3.0; on v3.1-v4.0 when `APP_OBD_MODE=2`; otherwise `n` | K-wire transceiver fitted |
 | `APP_L_SEND_ENABLED` | bool | `y` on v3.3, v3.4, v4.0 and the bench, `n` on every other board | Allows the firmware to drive the L line. Boards before v3.3 switch the L pull-down straight onto the wire, and an L wire shorted to battery destroys the transistor and can take the nRF9151 with it, so leave it off on those unless you know the wire is safe |
 | `APP_BOARD_HAS_AIO` | bool | `y` on v2.1 | 0-30V AIO inputs fitted; adds `+aio` to the board identity |
-| `APP_BOARD_HAS_L_SENSE` | bool | `y` on v3.3, v3.4 and v4.0 | L-line sense input fitted, read through the ADC to detect an L wire shorted to battery. On v4.0 as drawn the pin has no ADC channel and the sense is unavailable (see `APP_PIN_L_SENSE`) |
+| `APP_BOARD_HAS_L_SENSE` | bool | `y` on v3.3, v3.4 and v4.0 | L-line sense input fitted, read through the ADC to detect an L wire shorted to battery |
 | `APP_L_SENSE_LOW_MV` | int | `2800` | Depends on `APP_BOARD_HAS_L_SENSE`. Below this the L line counts as pulled low; a line that is high, open or shorted to battery reads at the 3.6V full scale |
 | `APP_BOARD_HAS_RAIL_SENSE` | bool | `y` on v3.1-v4.0 | Switched-rail status inputs fitted, so the boot self-test and the `RAIL:` alerts can tell a rail that did not come up |
 | `APP_BOARD_CAN_ON_AUX` | bool, hidden | `y` on v2.1, v2.5C and v2.6C | The CAN circuit is powered from the AUX domain |
@@ -211,8 +211,17 @@ same decision see [Hardware](hardware.md#interface-selection-pads).
 | `APP_BOARD_RAIL_ST_12V_ACTIVE_LOW` | bool, hidden | `y` on v3.1-v4.0 | The 12V K rail sense reads low while the rail is up |
 | `APP_LED_ACTIVE_LOW` | bool | `y` for a bench build on the DK, otherwise `n` | Status LED polarity |
 | `APP_BOARD_HAS_EXT_GNSS` | bool | `y` on v4.0, otherwise `n` | A u-blox MAX-M10S on UARTE2 does the GNSS, in place of the nRF9151's built-in receiver (`src/gnss_ext.c`). The modem then has no GNSS in its system mode, nothing fetches A-GNSS assistance, and a send does not interrupt the receiver. It selects `NRFX_UARTE` |
-| `APP_GNSS_EXT_BAUD` | int | `115200` | Depends on `APP_BOARD_HAS_EXT_GNSS`. The rate the receiver is moved to once found; it starts at 9600 after every power-up |
+| `APP_GNSS_EXT_BAUD` | int | `115200` | Depends on `APP_BOARD_HAS_EXT_GNSS`. The rate the receiver is moved to once found; it comes up at 38400 after every power-up (9600 is also looked for, for older parts) |
+| `APP_GNSS_EXT_NMEA_FALLBACK` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_GNSS`. A receiver that is heard but never acknowledges the configuration (the nRF's TX not reaching it, UBX input off) is read through the NMEA it sends by itself, RMC and GGA for the position and GSV for the satellites, instead of being reported dead, and an alert at normal priority says the commands are not getting through. The fixes are the same; the receiver keeps its own defaults, 1 Hz and the portable dynamic model. With it off the receiver is reported dead after two failed bring-ups |
 | `APP_GNSS_BACKUP_SUPPLY` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_GNSS`. Holds the receiver's backup supply (V_BCKP) on from boot, through sleep, so it keeps its ephemeris and time between fixes: a parked wake then gets a 1 s hot start rather than a cold start of 23 to 28 s or more. It costs the data sheet's 28µA typical at 3.3V, against a sleep current of about 35 to 45µA at 12V; unmeasured on a v4.0 board. Consider turning it off for a unit that reports less often than every couple of hours |
+| `APP_DRIVE_STREAM` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_GNSS`. While the engine runs, sends each record as it is built, `APP_DRIVE_STREAM_HZ` a second, over a connection held up between sends (no batching, no PSM: the modem is never idle for the network's active time), with the normal record including the ECU's figures and the K wire polled between sends. Records are still held until the server's reply, and batching returns when the engine stops. About 1.4 MB an hour at 1 Hz |
+| `APP_DRIVE_STREAM_HZ` | int | `1` | Target records a second (1 to 5). The receiver is asked for fixes that often above 1 Hz; the bench sustained 3.4 to 3.6, so 4 and 5 fall short. The log says nothing while the stream keeps up and, every 30 s, what it achieved when it did not |
+| `APP_DRIVE_STREAM_FIX_WAIT_S` | int | `5` | Longest a streamed record waits for a fix before it is built from the last position (flagged `cl=1`) so the stream does not go quiet; with no position yet it waits for the first fix |
+| `APP_ASSISTNOW` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_GNSS` and `APP_FOTA`. When the receiver comes up with fewer than five ephemerides and no fix, asks the update server (`APP_FOTA_HOST`, over the same TLS as the manifest) for u-blox AssistNow orbits and gives them to the receiver with the time from the modem's clock. The server registers the receiver with u-blox and downloads the orbits; see [AssistNow](../server/configuration.md#assistnow-orbit-assistance). Costs about 14 KB of RAM. |
+| `APP_ASSISTNOW_GNSS` | string | `"gps,gal"` | Constellations asked for, in order of priority; the server cuts what it sends to the buffer a whole constellation at a time |
+| `APP_ASSISTNOW_BUF_SIZE` | int | `10240` | Bytes for the whole HTTPS response, headers included |
+| `APP_ASSISTNOW_TIME_ACC_S` | int | `3` | Accuracy, in seconds, claimed for the time given to the receiver |
+| `APP_ASSISTNOW_TIMEOUT_S` | int | `25` | Per HTTPS request; it runs on its own thread, so it is not bound by the watchdog window |
 
 The domain flags tell the firmware which pins end inside a switched rail. Those pins are parked
 as inputs with pull-downs whenever their rail is off, so a powered nRF9151 never back-feeds a
@@ -247,7 +256,7 @@ P0.11 or P0.12, which carry the Connect Kit's console.
 | `APP_PIN_K1_RX` | K-line receive | 3 | 3 | 3 | 4 | 25 | 21 |
 | `APP_PIN_K_SLEEP` | TJA1027T sleep control | 2 | 2 | 2 | 3 | -1 | -1 |
 | `APP_PIN_L_SEND` | L-line pull-down | 4 | 4 | 4 | 5 | -1 | -1 |
-| `APP_PIN_L_SENSE` | L-line sense, must be P0.13-P0.20 (v4.0 as drawn: P0.5, which cannot be read) | 14 | 5 | -1 | -1 | -1 | -1 |
+| `APP_PIN_L_SENSE` | L-line sense, must be P0.13-P0.20 | 14 | 13 | -1 | -1 | -1 | -1 |
 | `APP_PIN_CAN_SCK` | MCP2518FD SPI clock | 17 | 17 | 17 | 13 | -1 | -1 |
 | `APP_PIN_CAN_SDI` | MCP2518FD SPI data in | 16 | 16 | 16 | 14 | -1 | -1 |
 | `APP_PIN_CAN_SDO` | MCP2518FD SPI data out | 18 | 18 | 18 | 15 | -1 | -1 |
@@ -263,7 +272,7 @@ P0.11 or P0.12, which carry the Connect Kit's console.
 | `APP_PIN_GNSS_TX` | External GNSS UART transmit, to the receiver's RXD | -1 | 9 | -1 | -1 | -1 | -1 |
 | `APP_PIN_GNSS_RX` | External GNSS UART receive, from the receiver's TXD | -1 | 8 | -1 | -1 | -1 | -1 |
 | `APP_PIN_GNSS_TIMEPULSE` | External GNSS 1PPS input, not read yet | -1 | 7 | -1 | -1 | -1 | -1 |
-| `APP_PIN_GNSS_BCKP_EN` | External GNSS backup supply switch | -1 | 13 | -1 | -1 | -1 | -1 |
+| `APP_PIN_GNSS_BCKP_EN` | External GNSS backup supply switch | -1 | 5 | -1 | -1 | -1 | -1 |
 
 The remaining pin symbols only apply to older or bench hardware: `APP_PIN_K2_TX` and
 `APP_PIN_K2_RX`, a second K-line transceiver on the bench (24 and 23, `-1` on every PCB);
@@ -463,6 +472,19 @@ Discovery, run once per vehicle with the ignition on (see
 |---|---|---|---|
 | `APP_MODEM_STUCK_CFUN_S` | int | `600` | Seconds registered but unable to send before the modem's functional mode is cycled. Time spent unregistered is not counted; do not shorten it to seconds, because re-attaching can take minutes |
 | `APP_MODEM_STUCK_RESET_S` | int | `1800` | Seconds registered but unable to send before the modem library is restarted - the last resort, which forces a full band scan |
+
+### Hold breaker
+
+Some cells keep the RRC connection up for minutes after a send, and GNSS gets nothing meanwhile. With `APP_HOLD_BREAK` on, a vehicle on the move whose connection is still up a few seconds after its last send gets LTE switched off with `AT+CFUN=20`, which leaves the receiver running. Records are parked in the backlog; when the window is out LTE comes back with `AT+CFUN=21`, registers, and the backlog and the batch go in a burst. After a watchdog reset, a CPU lockup or a crash the next boot's `rst=` also says where the breaker was when the unit last gave a sign of life, as `hb:<phase><s since the cut>/<s since the phase began>`: `wdt+hb:Q98/0` is a watchdog reset in phase `Q` (the AT queries about a search), last alive 98 s after the cut and 0 s into the phase. Phases: `C` cutting, `O` LTE off, `R` restoring, `Q` a modem query, `F` the restore did not register, `D` delivering. The whole field is kept to 47 characters (the server's `rst` column is `varchar(48)` and refuses more). Off by default and not compatible with Traccar; `remote.conf` turns it on per device.
+
+| Symbol | Type | Default | Meaning |
+|---|---|---|---|
+| `APP_HOLD_BREAK` | bool | `n` | Depends on `!APP_TRACCAR` and `APP_DATABUF_SLOTS > 0`. Cut LTE when the network will not release the radio. Never in track mode, with the engine off, or below `APP_HOLD_BREAK_MIN_KMH`. Anything that cannot wait ends a cut at once: an alert, an impact, a setting to report, a failed send, an ignition change, a backlog three-quarters full |
+| `APP_HOLD_BREAK_PROBE_S` | int, 3-60 | `5` | Seconds the connection has outlived our last datagram before it is called a hold. Keep it above the 2.8 s O2 lets go in, and below 10 s on a unit with no ECU speed, whose receiver speed is only good for 10 s |
+| `APP_HOLD_BREAK_WINDOW_S` | int, 5-60 | `20` | Longest LTE stays off at a time. One record a second is parked meanwhile, and the backlog holds `APP_DATABUF_SLOTS` of them |
+| `APP_HOLD_BREAK_REG_S` | int, 5-60 | `15` | Seconds LTE gets to register again. Past it the radio is left searching, as in any outage, and the feature is off until the modem has registered again by itself and for five minutes after that (parking clears it). What the modem says meanwhile (function mode, registration status and cause, RRC state, signal) is logged as `hold break:` warnings at 5 s, 15 s, the cap and, with the key off, every 30 s after it (at most 20) |
+| `APP_HOLD_BREAK_MIN_KMH` | int, 2-200 | `10` | Speed above which a hold is cut; a cut ends below half of it |
+| `APP_HOLD_BREAK_STICKY` | int, 0-20 | `4` | Sends after a hold is found that cut LTE straight after the send, without waiting for the probe. The send after those waits for the network again, which is how the unit returns to ordinary operation when the cells change. `0` probes every time |
 
 ### Logging, demo mode and provisioning
 

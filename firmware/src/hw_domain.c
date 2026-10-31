@@ -156,8 +156,14 @@ static void dom_add_sense(struct domain *d, int pin, bool active_low,
 }
 
 /* A rail-status input, if its interface is fitted: attached to the domain
- * and read as a plain input, since the board's divider or pull-up defines
- * both levels (an internal pulldown would fight the 100K/1M dividers).
+ * and read as an input.  The 3.3V senses are dividers that define both levels
+ * themselves, so they get no pull (an internal one would fight the 100K/1M).
+ * An inverted sense is a 2N7002's open drain, whose high level is only ever a
+ * pull-up, so it gets the nRF's as well as the board's 100K.  Without one a
+ * net the board leaves floating reads low, which is "rail present": the v4.0
+ * bench's PP12V_K_ST did that with the rail off, and the request path would
+ * have taken a dead rail for a live one.  The pull-up costs ~250 uA, and only
+ * while the rail is up and the 2N7002 is conducting.
  *
  * If it is not fitted, the pin is left disconnected instead.  The parts that
  * drive a sense line belong to its interface (S7R3/S7R4 for CAN; S7R8/S7R9
@@ -179,7 +185,8 @@ static void dom_rail_sense(struct domain *d, int pin, bool active_low,
 		return;
 	}
 	dom_add_sense(d, pin, active_low, name);
-	gpio_pin_configure(hw_gpio0, pin, GPIO_INPUT);
+	gpio_pin_configure(hw_gpio0, pin,
+			   active_low ? GPIO_INPUT | GPIO_PULL_UP : GPIO_INPUT);
 }
 
 /* True once every sense line for this domain reads the wanted state. */

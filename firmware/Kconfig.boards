@@ -666,8 +666,9 @@ config APP_L_SENSE_LOW_MV
 # rail itself (high = rail up, ~3.0 V, ~3 uA draw while up), and the 12V sense
 # is a 2N7002 whose gate is fed by a 180K/100K divider off PP12V_K with a 100K
 # pull-up to the always-on 3.3V rail on the drain, so it reads INVERTED:
-# low = PP12V_K present.  All four are always-on inputs; read them with no
-# internal pull (the external network defines both levels).
+# low = PP12V_K present.  All four are always-on inputs.  The three dividers
+# are read with no internal pull (the divider defines both levels); the 12V
+# sense also gets the nRF pull-up, since its high level is only a pull-up.
 
 config APP_BOARD_HAS_RAIL_SENSE
 	bool "Switched-rail sense/fault detection inputs fitted"

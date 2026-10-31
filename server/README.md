@@ -24,6 +24,9 @@ live on hardware you control.
   webhook, or nothing at all.
 - **Delivers firmware** as per-device signed images with range support, over
   TLS.
+- **Assists the GNSS receiver** of a unit that has an external one: u-blox
+  AssistNow orbits, registered and downloaded here and served over TLS
+  (`tracker/assistnow.py`).
 - **Serves a map** with live position over a WebSocket and journey replay.
 - **Tracks several vehicles**: a device list, a map per vehicle, and an API
   that is told which device each request is about.

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.88
 
 ### A radio the network holds no longer costs a restart or a reset
 On 2026-10-24, driving to Cornwall, the network held the car's radio for up to
@@ -441,6 +441,32 @@ about a second.
 parser on the host and replays the burst the board's receiver sent, checks 60
 random fixes against `pynmea2`, and fuzzes both under address and undefined
 behaviour sanitizers.
+
+### The 12 V rail sense can no longer read "present" from a floating net
+The boot self-test on the v4.0 bench board failed `PP12V_K off: expected 1,
+still 0` ("SELFTEST:K 12V stuck"): P0.31 (PP12V_K_ST) read low with the rail
+off, though the rail itself switched 12 V to 0 V with K_EN.  The nRF had no pull
+on the pin (`PIN_CNF[31]` was 0), and the net was floating: set to the internal
+pull-up and released, it kept its high level, and it read low from reset
+because nothing took it anywhere else.  The PCB has the pull-up (S7R7, 100K to
+PP3V3, the kit's VDD_GPIO); why it did not hold the net up on that board is not
+found.  The self-test only said so on the way off.  On the way on, a floating
+pin reads low, which is the "rail present" level for this sense, so
+`hw_domain_request()` would have taken a PP12V_K that never came up for a live
+one.
+
+- **The inverted sense gets the nRF pull-up as well as the board's.**  A 2N7002
+open drain has no high level of its own, so `dom_rail_sense()` now configures an
+active-low sense as `GPIO_INPUT | GPIO_PULL_UP`.  The three 3.3 V senses are
+unchanged: their dividers define both levels, and a pull would fight them.  In
+parallel with the board's 100K it changes nothing on a board that has one, and
+it costs about 250 uA while PP12V_K is up and the 2N7002 conducting, which is
+only while the K rail is on.  It reaches every board with the sense, v3.1 to
+v4.0, so the car's next image carries it.
+- Bench, v4.0, 12 V on: `PIN_CNF[31]` is 0xC and the pin reads high with the K
+rail off; the self-test passes (`PP3V3_K off: OK`, `PP12V_K off: OK`, all rails
+OK), and the K domain still comes up first, so the pin does go low while the
+rail is on.
 
 ## 0.4.79
 

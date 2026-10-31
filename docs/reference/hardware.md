@@ -39,7 +39,7 @@ which rails to switch and which drivers to start:
 ## v4.0: external GNSS receiver
 
 v4.0 is v3.4 with a u-blox MAX-M10S on the board doing the GNSS, in place of the receiver built
-into the nRF9151. This section is taken from the KiCad design files of 2026-10-18. The board has
+into the nRF9151. This section is taken from the KiCad design files of 2026-10-25. The board has
 not been built or tested, and none of the figures here are measured on it.
 
 - **Receiver and rail.** The MAX-M10S (S16U2) takes VCC and VCC_IO from `PP3V3_GNSS`, a switched
@@ -83,22 +83,16 @@ The receiver's signals, and the pins that moved to make room for them:
 | `GNSS_RX` | 6 | P0.8 | UART into the nRF9151, from the receiver's TXD through 1K |
 | `GNSS_TIMEPULSE` | 7 | P0.7 | The receiver's 1PPS output; the firmware does not read it yet |
 | `GNSS_ENABLE` | 8 | P0.6 | Enables `PP3V3_GNSS` |
-| `GNSS_BCKP_EN` | 21 | P0.13 | Enables `PP3V3_GNSS_BCKP` (was `GPS_ENABLE`) |
+| `GNSS_BCKP_EN` | 9 | P0.5 | Enables `PP3V3_GNSS_BCKP` (v3.4 has the `PP3V3_GPS_ST` sense here) |
 | `PP3V3_GNSS_ST` | 22 | P0.14 | Reads `PP3V3_GNSS` back, high when up |
-| `L_SENSE` | 9 | P0.5 | The L-line sense; see the warning below |
+| `L_SENSE` | 21 | P0.13 | The L-line sense, read through the ADC (AIN0) as on v3.4, which has it on P0.14 |
 
 The receiver's EXTINT, LNA_EN, RESET_N, VCC_RF and I2C pins are unconnected; RESET_N has an
 internal pull-up. SAFEBOOT_N goes to a test point, S16TP2, as does TIMEPULSE (S16TP3) and the
-switched rail (S16TP1). After every power-up the receiver speaks UART at 9600 baud, NMEA out, which
-the firmware finds, moves to 115200 and switches to UBX.
-
-!!! warning "L_SENSE is on a pin the ADC cannot read"
-    v3.3 and v3.4 put L_SENSE on P0.14 (an analog input) and the GPS rail sense on P0.5, which only
-    needs a digital read. The v4.0 design has them the other way round: `L_SENSE` is on Connect Kit
-    pin 9 (P0.5) and `PP3V3_GNSS_ST` on pin 22 (P0.14). Only P0.13 to P0.20 can be sampled, so
-    the L-line short-to-battery check is unavailable on a board built as drawn, and a 5-baud init
-    drives the L line without it, relying on the AL5809's 90mA limit. Swapping the two nets restores
-    it; then set `CONFIG_APP_PIN_L_SENSE=14` and `CONFIG_APP_PIN_GPS_RAIL_ST=5`.
+switched rail (S16TP1). After every power-up the receiver speaks UART at 38400 baud, NMEA out, which
+the firmware finds, moves to 115200 and switches to UBX. If the receiver is heard but takes none of
+the commands, as when the nRF's TX does not reach its RXD pin, the firmware reads that NMEA instead
+and raises an alert (`CONFIG_APP_GNSS_EXT_NMEA_FALLBACK`).
 
 ## Interface selection pads
 
@@ -282,13 +276,13 @@ specification below should do.
 
 ## L-line driving on K-wire boards
 
-`CONFIG_APP_L_SEND_ENABLED`, on by default for v3.3 and v3.4 builds, lets the firmware drive the
-K-wire interface's L line. The L pull-down is current-limited to 90mA by an AL5809-90, and the
-L_SENSE input (Connect Kit P0.14, an analog input) lets the firmware test for an L wire shorted to
-battery: before a 5-baud init drives L, it pulls the line low for 5ms and, if the line stays high,
-leaves L out of the init. Not every vehicle needs the L line: the reference vehicle opens its
-diagnostic session on the K wire alone. Discovery tries K alone first and reports whether L was
-needed, and the tracker drives L in its own session only with `CONFIG_APP_KLINE_USE_L`.
+`CONFIG_APP_L_SEND_ENABLED`, on by default for v3.3, v3.4 and v4.0 builds, lets the firmware drive
+the K-wire interface's L line. The L pull-down is current-limited to 90mA by an AL5809-90, and the
+L_SENSE input (Connect Kit P0.14, or P0.13 on v4.0; an analog input) lets the firmware test for an
+L wire shorted to battery: before a 5-baud init drives L, it pulls the line low for 5ms and, if the
+line stays high, leaves L out of the init. Not every vehicle needs the L line: the reference vehicle
+opens its diagnostic session on the K wire alone. Discovery tries K alone first and reports whether
+L was needed, and the tracker drives L in its own session only with `CONFIG_APP_KLINE_USE_L`.
 
 L_SENSE classifies the line with a threshold, `CONFIG_APP_L_SENSE_LOW_MV` (default 2800mV): a line
 pulled low reads about 2.0V, while a line that is high, open or shorted to battery reads at the

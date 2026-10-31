@@ -354,8 +354,8 @@ manifest, so it simply never updates. Failing to update is the safe direction.
 The device downloads manifests and images from the server's TLS listener on
 port 65481. The modem terminates TLS itself, and trusts the server only if its
 certificate was issued by the CA compiled into the firmware. The listener
-serves firmware and nothing else: a connection that does not open with `GET`
-or `HEAD` is closed without a reply.
+serves firmware and AssistNow orbit data (below) and nothing else: a connection
+that does not open with `GET` or `HEAD` is closed without a reply.
 
 The server implements only what the nRF91 FOTA stack issues: `GET` and `HEAD`
 under `/fw/`, HTTP/1.1 keep-alive, and `Range`. The modem decodes about 2 KB
@@ -386,3 +386,51 @@ because the device goes quiet between ranges for as long as the radio makes it. 
 RRC re-establishment in weak signal outlasts a short timeout, and the
 downloader has no resume — so one timed-out read costs the whole transfer and
 the next attempt restarts at byte zero.
+
+## AssistNow orbit assistance
+
+A device with an external u-blox GNSS receiver (the v4.0 board) that finds the
+receiver holding fewer than five ephemerides after power-up asks the TLS
+listener for orbits. Two more GETs, under `/assist/`, on the same connection
+rules as the firmware's (HTTP/1.1, keep-alive). The server does the talking to
+u-blox; see `tracker/assistnow.py` for why.
+
+| Path | Purpose |
+|---|---|
+| `/assist/data.bin?imei=<imei>&gnss=<list>&max=<bytes>` | UBX-MGA messages, ready to be sent to the receiver |
+| `/assist/register?imei=<imei>&uid=<hex>&ver=<hex>` | register the device's receiver |
+
+`data.bin` answers `200` with `application/octet-stream`: a UBX-MGA-INI-POS_LLH
+message for the device's last GNSS fix when it is under a week old (its
+accuracy widens with age: 5 km under an hour, 50 km under a day, 200 km under
+a week), then, for each constellation of `gnss` (comma separated, from `gps`,
+`gal`, `bds`, `glo`, `qzss`; default as configured) in the order named, the
+almanac messages followed by one UBX-MGA-ANO message per satellite, the one
+stamped nearest today and not more than three days from it. Constellations are
+whole or absent: the first that would take the total past `max` (default 8192,
+at least 1024) ends it. The firmware passes it on as it is, after a
+UBX-MGA-INI-TIME_UTC of its own from the modem's clock. `204` with no body:
+registered, but nothing usable yet (a download is under way). `404`: unknown
+IMEI or a receiver the server has not met, which is the device's cue to
+register. `501`: AssistNow is not configured here.
+
+**Write the reply in small TLS records.** The nRF91 modem decodes a TLS record
+of about 2 KB at most (`NRF_SOCKET_TLS_MAX_MESSAGE_SIZE`) and fails the read of
+a larger one with `EMSGSIZE` (`-122`, logged by the device as
+`http_client_req() error: -122`). A single `sendall` of the 7 KB orbit reply is
+a single 7 KB record, so the reference server writes any reply that does not fit
+in 1,400 bytes in slices of that size, the first carrying the header
+(`assistnow.send_response`), and sets `TCP_NODELAY` so each slice is not held
+back for the ACK of the one before. The same limit is why a firmware image is
+fetched as 2 KB ranges. A server of your own must do the equivalent; the 204
+and 404 answers are small enough not to matter.
+
+`register` carries the receiver's two replies, byte for byte as hex: the
+UBX-SEC-UNIQID reply (18 bytes) in `uid` and the UBX-MON-VER reply (about 240)
+in `ver`. They are checked to be those frames, passed to u-blox's
+zero-touch-provisioning service with the server's token, and the credential
+that comes back is kept against the device. The first download follows before
+the reply, `200`. A device that has registered a receiver is refused another
+(`403`) until an operator resets it; `400` for replies that are not what they
+claim, `429` for a retry within a minute of a failure, `502` when u-blox
+refused.

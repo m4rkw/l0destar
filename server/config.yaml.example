@@ -139,6 +139,35 @@ notify:
 #     longitude: 0.0
 
 # ---------------------------------------------------------------------------
+# AssistNow orbit assistance (optional)
+#
+# For devices with an external u-blox GNSS receiver (the l0destar v4.0 board).
+# The receiver has no use for the satellites' own ephemerides after hours
+# unpowered, and finds them slowly with a poor view of the sky; AssistNow
+# Predictive Orbits, free from u-blox, give it orbits for the coming days.
+# This server registers each device's receiver with u-blox, downloads the
+# orbits once a day and serves them to the device (tracker/assistnow.py), so a
+# reboot or a firmware update loses nothing and u-blox's per-device request
+# limit is spent on a schedule of this server's, not the device's.
+#
+# Needs a Thingstream account (portal.thingstream.io), free:
+# Services > ZTP > Device Profiles > Create Profile (module OTHER, data
+# Predictive Orbits), then the profile's Details tab shows the ZTP token.
+# An Evaluation profile takes three devices at 300 requests a month each; a
+# Commercial one 2 a day.  The token is a secret like a device's PSK.  Leave
+# it out and AssistNow is off: the server answers /assist/ with 501.
+#
+# Apply migrations/2026-10-30_device_assist.sql first.  A device registers
+# itself on first use; tools/assistnow.py shows who has, and resets one.
+# ---------------------------------------------------------------------------
+
+# assistnow:
+#   ztp_token: ''
+#   gnss: [gps, gal, bds]      # downloaded; each device says which of them it wants
+#   orbit_days: 3              # 1, 3, 7 or 14 days of orbits per download
+#   refresh_hours: 20          # at most one download per device in this time
+
+# ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
 

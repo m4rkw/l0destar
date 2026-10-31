@@ -276,6 +276,26 @@ CREATE TABLE `device_nonce` (
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- AssistNow orbit assistance for devices with an external GNSS receiver: the
+-- receiver's registration with u-blox's service and the last download of orbits,
+-- served to the device over the TLS listener.  See tracker/assistnow.py.
+CREATE TABLE `device_assist` (
+  `device_id`     INT UNSIGNED NOT NULL,
+  `uniqid`        CHAR(12)     DEFAULT NULL COMMENT 'the receiver chip id (6 bytes, hex) this registered with',
+  `chipcode`      VARCHAR(255) DEFAULT NULL COMMENT 'u-blox credential for that receiver; a secret',
+  `service_url`   VARCHAR(255) DEFAULT NULL COMMENT 'where u-blox said to fetch orbits from',
+  `registered_at` DATETIME     DEFAULT NULL,
+  `fetched_at`    DATETIME     DEFAULT NULL COMMENT 'when `blob` was downloaded',
+  `blob_until`    DATE         DEFAULT NULL COMMENT 'last day the orbits in `blob` are stamped for',
+  `blob_days`     TINYINT UNSIGNED DEFAULT NULL COMMENT 'days of orbits asked for',
+  `next_try_at`   DATETIME     DEFAULT NULL COMMENT 'no download attempts before this (back-off, usage limit)',
+  `last_error`    VARCHAR(255) DEFAULT NULL,
+  `blob`          MEDIUMBLOB   DEFAULT NULL COMMENT 'the service response as received: UBX-MGA messages',
+  PRIMARY KEY (`device_id`),
+  CONSTRAINT `device_assist_device` FOREIGN KEY (`device_id`) REFERENCES `device` (`id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Commands waiting for a device to check in.  Rows are deleted as they are
 -- handed over, so delivery is at-most-once: a command lost to a dropped reply
 -- is re-queued by whoever issued it, which is safer than replaying a

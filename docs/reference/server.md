@@ -310,3 +310,10 @@ Served by the TLS listener on port 65481, not by the web application.
 | `/fw/manifest.txt?imei=<imei>&v=<version>` | The manifest published for that device, or `status=blocked` for a version withheld from it. A request whose `v=` is the version staged for that device marks the update as installed; nothing authenticates it. |
 | `/fw/<file>` | A firmware image, with range requests. |
 | `/fw/published.txt` | Every version ever published; `push_fw.sh` uses it to number the next release. |
+
+The same listener also answers AssistNow requests, for a unit with an external GNSS receiver (the v4.0 board). See [AssistNow](../server/configuration.md#assistnow-orbit-assistance).
+
+| Path | Purpose |
+|---|---|
+| `/assist/data.bin?imei=<imei>&gnss=<list>&max=<bytes>` | The almanac and the orbit for each satellite stamped nearest today, as UBX-MGA messages, for the constellations named, cut to the size given; headed by the device's last position when there is a recent one. `404` if the server has not registered this device's receiver, `204` if it has nothing yet, `501` if AssistNow is not configured. |
+| `/assist/register?imei=<imei>&uid=<hex>&ver=<hex>` | Registers the device's receiver with u-blox: `uid` and `ver` are its replies to the chip id and version polls, as hex. `200`, or `403` if the device registered a different receiver, `502` if u-blox refused. |

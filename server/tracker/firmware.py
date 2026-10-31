@@ -39,7 +39,7 @@ import datetime
 import os
 import re
 
-from . import config, db, logs, notify
+from . import assistnow, config, db, logs, notify
 
 VERSION_RE = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}$')
 IMAGE_RE = re.compile(r'^l0destar-(\d{1,3}\.\d{1,3}\.\d{1,3})-\d+\.bin$')
@@ -278,6 +278,7 @@ def published_versions():
 # HTTP/1.1 keep-alive, and Range.  The modem decodes about 2 KB per TLS record,
 # so the downloader fetches an image as a long run of sequential 2048-byte
 # ranged GETs on one connection and expects 206 plus Content-Range for each.
+# The one addition is GET under /assist/, which is assistnow.py's.
 
 def _respond(conn, status, body=b'', ctype='application/octet-stream',
              extra='', keep=True, head_only=False):
@@ -356,6 +357,16 @@ def serve_http(conn, ip, first_bytes, log=None):
         head_only = method == 'HEAD'
 
         path, _, query = target.partition('?')
+
+        # AssistNow orbit data for devices with an external GNSS receiver.
+        # Served on this listener because it is the one a device already
+        # trusts, with the CA it was built with; see assistnow.py.
+        if path.startswith('/assist/'):
+            status, ctype, body = assistnow.handle(path, query, ip, log)
+            assistnow.send_response(conn, status, ctype, body, keep=keep, head_only=head_only)
+            if not keep:
+                return
+            continue
 
         if path == '/fw/published.txt':
             versions = published_versions()
