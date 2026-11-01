@@ -172,7 +172,8 @@ CREATE TABLE `log` (
   `motion`        VARCHAR(255) DEFAULT NULL COMMENT 'mv=: <gap ds>:<v0 km/h>:<steps>:<end>, see deadreckon.py',
 
   `fw`            VARCHAR(16)  DEFAULT NULL COMMENT 'running firmware version, carried forward',
-  `dbg`           VARCHAR(255) DEFAULT NULL COMMENT 'debug counters, only after a fault',
+  `board`         VARCHAR(32)  DEFAULT NULL COMMENT 'board the running build is for (bd=), carried forward while fw is the same',
+  `dbg`          VARCHAR(255) DEFAULT NULL COMMENT 'debug counters, only after a fault',
   -- Every sticky RESETREAS bit the firmware saw, joined with '+', not a
   -- single cause: "pin+sw+dbg+lockup" is one value.  The firmware formats
   -- it into a 40-byte buffer, so 39 chars is the ceiling; do not narrow.

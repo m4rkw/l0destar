@@ -33,6 +33,61 @@ def published(fw_dir):
     return image
 
 
+# -- the board an image was built for ------------------------------------------
+
+def image_with(fw_dir, version, *strings, imei=IMEI):
+    """An image whose only readable content is these C strings."""
+    path = os.path.join(fw_dir, 'l0destar-%s-%s.bin' % (version, imei))
+    with open(path, 'wb') as f:
+        f.write(b'\x00\x13' + b''.join(b'\x00' + s.encode() + b'\x00' for s in strings) + b'\xff')
+    return path
+
+
+def test_image_board_is_read_from_the_image(fw_dir):
+    image_with(fw_dir, '0.4.96', 'v4.3', 'v4.0p1+kline')
+    assert firmware.image_board(IMEI, '0.4.96') == 'v4.0p1+kline'
+
+
+def test_image_board_is_none_without_an_image_or_when_it_says_nothing(fw_dir):
+    image_with(fw_dir, '0.4.60', 'v4.3', 'v3.3')
+    assert firmware.image_board(IMEI, '0.4.60') is None
+    assert firmware.image_board(IMEI, '0.4.61') is None
+
+
+def test_image_board_is_per_device(fw_dir):
+    image_with(fw_dir, '0.4.96', 'v4.0p1+kline')
+    assert firmware.image_board('350000000000001', '0.4.96') is None
+
+
+@pytest.mark.parametrize('version', ['../../etc/passwd', '0.4', '0.4.96/../1', '', None, '0.4.96\x00'])
+def test_image_board_never_builds_a_path_from_a_bad_version(fw_dir, version):
+    # The version arrives from the device.
+    assert firmware.image_board(IMEI, version) is None
+
+
+def test_image_board_cannot_be_walked_out_of_the_firmware_directory(fw_dir):
+    # A directory to step through and a file above the firmware directory
+    # that the walk would land on.
+    inside = os.path.join(fw_dir, 'l0destar-1')
+    outside = os.path.join(os.path.dirname(fw_dir), 'secret-%s.bin' % IMEI)
+    os.makedirs(inside)
+    with open(outside, 'wb') as f:
+        f.write(b'\x00v4.0+kline\x00')
+    try:
+        assert firmware.image_board(IMEI, '1/../../secret') is None
+    finally:
+        os.unlink(outside)
+        os.rmdir(inside)
+
+
+def test_a_republished_image_is_read_again(fw_dir):
+    path = image_with(fw_dir, '0.4.96', 'v4.0+kline')
+    assert firmware.image_board(IMEI, '0.4.96') == 'v4.0+kline'
+    os.unlink(path)
+    image_with(fw_dir, '0.4.96', 'v4.0p1+kline')
+    assert firmware.image_board(IMEI, '0.4.96') == 'v4.0p1+kline'
+
+
 def test_latest_version(published):
     assert firmware.latest_version(IMEI) == '0.4.12'
 

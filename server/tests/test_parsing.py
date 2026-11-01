@@ -43,6 +43,10 @@ def test_extras():
     assert d['request_int'] == '1'
 
 
+def test_board():
+    assert telemetry.parse_csv_line(FULL + ',bd=v4.0p1+kline')['board'] == 'v4.0p1+kline'
+
+
 def test_record_id():
     assert telemetry.parse_csv_line(FULL + ',rid=41238')['rec_id'] == '41238'
 

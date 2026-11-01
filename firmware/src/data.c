@@ -295,11 +295,14 @@ static void append_sync_fields(void)
      * settings never change never reported its build.  Emit it on the first
      * packet after every boot as well — including the one after a FOTA swap —
      * and the server carries it forward onto subsequent rows.  Still not on
-     * every record: ~10 bytes that cannot change without a reboot. */
+     * every record: ~30 bytes that cannot change without a reboot.  bd= is
+     * the board the build is for (v4.0p1+kline), which the manifest names
+     * only for the update that fetched it: a bridge release (FOTA.md) is
+     * offered under another unit's id. */
     if (send_int_to_server || s_fw_pending) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
-                     ",fw=%s", fota_version());
+                     ",fw=%s,bd=%s", fota_version(), fota_board_id());
         if (n > 0) data_index += n;
     }
 

@@ -183,10 +183,11 @@ same decision see [Hardware](hardware.md#interface-selection-pads).
 | `APP_BOARD_L0DESTAR_V3_3` | v3.3 (fixes the L-line pull-down and adds L_SENSE) | `v3.3` |
 | `APP_BOARD_L0DESTAR_V3_4` (default) | v3.4 (same pin map as v3.3) | `v3.4` |
 | `APP_BOARD_L0DESTAR_V4_0` | v4.0 (v3.4 with an external u-blox MAX-M10S GNSS receiver) | `v4.0` |
+| `APP_BOARD_L0DESTAR_V4_0P1` | v4.0p1 (the first v4.0 prototype: the v4.0 pin map under its own board id) | `v4.0p1` |
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_OBD_MODE` | int | `0` | The OBD interface populated on a v3.1, v3.2, v3.3, v3.4 or v4.0 board: `0` none, `1` CAN, `2` K-wire, and on v4.0 only `3` both. It sets the `APP_BOARD_HAS_CAN` and `APP_BOARD_HAS_KLINE` defaults, and with them which rails the boot self-test and the board test exercise. Ignored on other boards |
+| `APP_OBD_MODE` | int | `0` | The OBD interface populated on a v3.1, v3.2, v3.3, v3.4, v4.0 or v4.0p1 board: `0` none, `1` CAN, `2` K-wire, and on v4.0 and v4.0p1 only `3` both. It sets the `APP_BOARD_HAS_CAN` and `APP_BOARD_HAS_KLINE` defaults, and with them which rails the boot self-test and the board test exercise. Ignored on other boards |
 | `APP_BOARD_ID` | string, hidden | per board, as above | Board identity for update manifests. The full identity appends the fitted interfaces - `v3.4+kline`, `v3.4+can` or plain `v3.4`, and `v4.0+can+kline` with both - and a device refuses an image built for a different one |
 | `APP_BOARD_IS_L0DESTAR` | bool, hidden | `y` for every board but the bench | Switches the pin and flag defaults from bench values to PCB values |
 
@@ -194,26 +195,26 @@ same decision see [Hardware](hardware.md#interface-selection-pads).
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_BOARD_HAS_CAN` | bool | `y` on v2.1, v2.5C, v2.6C and v3.0; on v3.1-v4.0 when `APP_OBD_MODE=1`, and on v4.0 when it is `3`; otherwise `n` | MCP2518FD CAN controller fitted. On v3.0, which lays out both interfaces, set the one you did not populate to `n` |
-| `APP_BOARD_HAS_KLINE` | bool | `y` on the bench, v2.1, v2.5K, v2.6K and v3.0; on v3.1-v4.0 when `APP_OBD_MODE=2`, and on v4.0 when it is `3`; otherwise `n` | K-wire transceiver fitted |
-| `APP_L_SEND_ENABLED` | bool | `y` on v3.3, v3.4, v4.0 and the bench, `n` on every other board | Allows the firmware to drive the L line. Boards before v3.3 switch the L pull-down straight onto the wire, and an L wire shorted to battery destroys the transistor and can take the nRF9151 with it, so leave it off on those unless you know the wire is safe |
+| `APP_BOARD_HAS_CAN` | bool | `y` on v2.1, v2.5C, v2.6C and v3.0; on v3.1-v4.0p1 when `APP_OBD_MODE=1`, and on v4.0 and v4.0p1 when it is `3`; otherwise `n` | MCP2518FD CAN controller fitted. On v3.0, which lays out both interfaces, set the one you did not populate to `n` |
+| `APP_BOARD_HAS_KLINE` | bool | `y` on the bench, v2.1, v2.5K, v2.6K and v3.0; on v3.1-v4.0p1 when `APP_OBD_MODE=2`, and on v4.0 and v4.0p1 when it is `3`; otherwise `n` | K-wire transceiver fitted |
+| `APP_L_SEND_ENABLED` | bool | `y` on v3.3, v3.4, v4.0, v4.0p1 and the bench, `n` on every other board | Allows the firmware to drive the L line. Boards before v3.3 switch the L pull-down straight onto the wire, and an L wire shorted to battery destroys the transistor and can take the nRF9151 with it, so leave it off on those unless you know the wire is safe |
 | `APP_BOARD_HAS_AIO` | bool | `y` on v2.1 | 0-30V AIO inputs fitted; adds `+aio` to the board identity |
-| `APP_BOARD_HAS_L_SENSE` | bool | `y` on v3.3, v3.4 and v4.0 | L-line sense input fitted, read through the ADC to detect an L wire shorted to battery |
+| `APP_BOARD_HAS_L_SENSE` | bool | `y` on v3.3, v3.4, v4.0 and v4.0p1 | L-line sense input fitted, read through the ADC to detect an L wire shorted to battery |
 | `APP_L_SENSE_LOW_MV` | int | `2800` | Depends on `APP_BOARD_HAS_L_SENSE`. Below this the L line counts as pulled low; a line that is high, open or shorted to battery reads at the 3.6V full scale |
-| `APP_BOARD_HAS_RAIL_SENSE` | bool | `y` on v3.1-v4.0 | Switched-rail status inputs fitted, so the boot self-test and the `RAIL:` alerts can tell a rail that did not come up |
+| `APP_BOARD_HAS_RAIL_SENSE` | bool | `y` on v3.1-v4.0p1 | Switched-rail status inputs fitted, so the boot self-test and the `RAIL:` alerts can tell a rail that did not come up |
 | `APP_BOARD_CAN_ON_AUX` | bool, hidden | `y` on v2.1, v2.5C and v2.6C | The CAN circuit is powered from the AUX domain |
 | `APP_BOARD_KLINE_ON_AUX` | bool, hidden | `y` on v2.1 | The whole K-line circuit is powered from the AUX domain |
 | `APP_BOARD_KLINE_SHIFT_ON_AUX` | bool, hidden | `y` on v2.5K and v2.6K | The level shifter is on AUX and the transceiver rails on `K_EN`; the K-line pins are released only while both are up |
 | `APP_BOARD_OBD_DOMAIN` | bool, hidden | `y` on v3.0 | CAN and K-line share one switched OBD domain |
-| `APP_BOARD_SPLIT_OBD_DOMAIN` | bool, hidden | `y` on v3.1-v4.0 | CAN and K-line rails are switched independently |
-| `APP_BOARD_CAN_XSTBY` | bool, hidden | `y` on v2.5C, v2.6C and v3.0-v4.0 | The CAN transceiver's standby pin is driven by the MCP2518FD, so putting the controller to sleep puts the transceiver in standby |
+| `APP_BOARD_SPLIT_OBD_DOMAIN` | bool, hidden | `y` on v3.1-v4.0p1 | CAN and K-line rails are switched independently |
+| `APP_BOARD_CAN_XSTBY` | bool, hidden | `y` on v2.5C, v2.6C and v3.0-v4.0p1 | The CAN transceiver's standby pin is driven by the MCP2518FD, so putting the controller to sleep puts the transceiver in standby |
 | `APP_BOARD_IGN_EXT_PULLUP` | bool, hidden | `y` on every l0destar board | The ignition sense line has an external pull-up, so the nRF9151's internal one stays off |
-| `APP_BOARD_RAIL_ST_12V_ACTIVE_LOW` | bool, hidden | `y` on v3.1-v4.0 | The 12V K rail sense reads low while the rail is up |
+| `APP_BOARD_RAIL_ST_12V_ACTIVE_LOW` | bool, hidden | `y` on v3.1-v4.0p1 | The 12V K rail sense reads low while the rail is up |
 | `APP_LED_ACTIVE_LOW` | bool | `y` for a bench build on the DK, otherwise `n` | Status LED polarity |
-| `APP_BOARD_HAS_EXT_GNSS` | bool | `y` on v4.0, otherwise `n` | A u-blox MAX-M10S on UARTE2 does the GNSS, in place of the nRF9151's built-in receiver (`src/gnss_ext.c`). The modem then has no GNSS in its system mode, nothing fetches A-GNSS assistance, and a send does not interrupt the receiver. It selects `NRFX_UARTE` |
+| `APP_BOARD_HAS_EXT_GNSS` | bool | `y` on v4.0 and v4.0p1, otherwise `n` | A u-blox MAX-M10S on UARTE2 does the GNSS, in place of the nRF9151's built-in receiver (`src/gnss_ext.c`). The modem then has no GNSS in its system mode, nothing fetches A-GNSS assistance, and a send does not interrupt the receiver. It selects `NRFX_UARTE` |
 | `APP_GNSS_EXT_BAUD` | int | `115200` | Depends on `APP_BOARD_HAS_EXT_GNSS`. The rate the receiver is moved to once found; it comes up at 38400 after every power-up (9600 is also looked for, for older parts) |
 | `APP_GNSS_EXT_NMEA_FALLBACK` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_GNSS`. A receiver that is heard but never acknowledges the configuration (the nRF's TX not reaching it, UBX input off) is read through the NMEA it sends by itself, RMC and GGA for the position and GSV for the satellites, instead of being reported dead, and an alert at normal priority says the commands are not getting through. The fixes are the same; the receiver keeps its own defaults, 1 Hz and the portable dynamic model. With it off the receiver is reported dead after two failed bring-ups |
-| `APP_GNSS_BACKUP_SUPPLY` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_GNSS`. Holds the receiver's backup supply (V_BCKP) on from boot, through sleep, so it keeps its ephemeris and time between fixes: a parked wake then gets a hot start rather than a cold start helped by AssistNow. On the bench, with the time and position given at power-up, a hot start took 3 to 12 s (median 6 s, seven starts, up to 30 s after a fix, most of it the receiver booting and being found) and a cold start with AssistNow 103 s (one start, under a poor sky); before that, a hot start four minutes after a fix took 4 to 16 s (median 9 s, six starts) and a cold start with AssistNow 17 to 79 s (median 27 s, eight starts). It costs the data sheet's 28µA typical at 3.3V, about 30µA measured on a v4.0 board, against a sleep current of about 35 to 45µA at 12V. See `APP_GNSS_BACKUP_OFF_UTC_HOUR` to hold it for part of the day only |
+| `APP_GNSS_BACKUP_SUPPLY` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_GNSS`. Holds the receiver's backup supply (V_BCKP) on from boot, through sleep, so it keeps its ephemeris and time between fixes: a parked wake then gets a hot start rather than a cold start helped by AssistNow. On the bench, with the time and position given at power-up, a hot start took 3 to 12 s (median 6 s, seven starts, up to 30 s after a fix, most of it the receiver booting and being found) and a cold start with AssistNow 103 s (one start, under a poor sky); before that, a hot start four minutes after a fix took 4 to 16 s (median 9 s, six starts) and a cold start with AssistNow 17 to 79 s (median 27 s, eight starts). It costs the data sheet's 28µA typical at 3.3V, about 30µA measured on a v4.0p1 board, against a sleep current of about 35 to 45µA at 12V. See `APP_GNSS_BACKUP_OFF_UTC_HOUR` to hold it for part of the day only |
 | `APP_GNSS_BACKUP_OFF_UTC_HOUR` | int, -1 to 23 | `-1` | Depends on `APP_GNSS_BACKUP_SUPPLY`. The hour of the day, UTC, at which a parked unit drops the backup supply: at that hour, or before the sleep that would take it past the hour, since the unit is not woken for it. The supply comes back with the receiver's rail, the next time the unit is driven or boots, and stays until the hour comes round again. 0 is midnight UTC and 23 midnight in British Summer Time. -1 holds it for as long as the unit sleeps. A unit with no valid clock holds it |
 | `APP_DRIVE_STREAM` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_GNSS`. While the engine runs, sends each record as it is built, as fast as it can (at most `APP_DRIVE_STREAM_HZ` a second), over a connection held up between sends (no batching, no PSM: the modem is never idle for the network's active time), with the normal record including the ECU's figures and the K wire polled between sends. Records are still held until the server's reply, and batching returns when the engine stops. About 1.4 MB an hour for each record a second |
 | `APP_DRIVE_STREAM_HZ` | int, 0-10 | `0` | Most records a second while the engine runs; 0 is no limit, as fast as the unit can. With no limit the receiver is asked for 10 fixes a second so one is always waiting, and the rate is what a pass costs: the bench built and sent 3.4 to 3.6 a second without the K wire, which takes a share. With a limit the receiver is asked for fixes at that rate above 1 Hz and the K-wire poll gives way to a waiting fix. Falling short of a limit is not reported; every 30 s the log says only how many records came from the last position |
@@ -242,7 +243,7 @@ defaults follow the board selection; override one only for a reworked board. The
 the current boards and the bench; the v2.x maps are in `Kconfig.boards`. No l0destar board uses
 P0.11 or P0.12, which carry the Connect Kit's console.
 
-| Symbol | Signal | v3.3, v3.4 | v4.0 | v3.1, v3.2 | v3.0 | Bench, Connect Kit | Bench, DK |
+| Symbol | Signal | v3.3, v3.4 | v4.0, v4.0p1 | v3.1, v3.2 | v3.0 | Bench, Connect Kit | Bench, DK |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `APP_PIN_AUX_SW` | GPS rail enable; `GNSS_ENABLE` on v4.0, the receiver's rail | 13 | 6 | 13 | 26 | 13 | 10 |
 | `APP_PIN_CAN_EN` | CAN rail enable | 23 | 23 | 23 | -1 | -1 | -1 |

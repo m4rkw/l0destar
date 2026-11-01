@@ -329,6 +329,7 @@ def summary(device, database=None, log=None):
         'battery_level': _nullable_float(log.get('battery_level')),
         'ignition_state': log.get('ignition_state'),
         'fw': log.get('fw'),
+        'board': log.get('board'),
         'rat': log.get('rat') or '',
         'operator': db.lookup_operator(log.get('mcc'), log.get('mnc'),
                                        database=database) or '',

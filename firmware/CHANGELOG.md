@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.4.98
+
+### The board in the telemetry
+The first record after every boot carries `bd=<board id>` (`v4.0p1+kline`) beside
+`fw=`, as does a settings-sync record, and the reply to `config` says
+`board=`.  The server stores it as `log.board` on every row, carried forward
+while `fw` is the same.
+
+- **Server.**  `migrations/2026-11-01_log_board.sql` adds the column.  For
+  firmware that does not send `bd=` the server reads the board from the image it
+  published at that version, and `tools/backfill_board.py` does the same for
+  rows from before (only empty boards, shows its plan unless told `--apply`).
+  The API's device list and status, and `tools/device.py`, show it.
+- Traccar units send it as `board`.
+- Built for the car and a Traccar unit; the server tests pass, and the
+  migration and backfill ran on a copy of the live run structure.  Not run on
+  hardware.
+
+## 0.4.97
+
+### v4.0p1: a board profile for the first v4.0 prototype
+`APP_BOARD_L0DESTAR_V4_0P1` (`board=v4.0p1`) is the first v4.0 prototype
+(`hardware/l0destar_v4.0_prototype1`): v4.0's pin map and options under a board
+id of its own, so a FOTA image is only taken by the revision it was built for.
+Boards fabricated before `GNSS_BCKP_EN` and `L_SENSE` moved keep their overrides
+(`APP_PIN_GNSS_BCKP_EN=13`, `APP_PIN_L_SENSE=5`, `APP_BOARD_HAS_L_SENSE=n`) in
+their conf.
+
+- **v4.0 is unchanged.**  The two share a hidden `APP_BOARD_V4_0_FAMILY`, and
+  the board test offers both.
+- **Moving a unit from v4.0 over the air.**  A unit refuses a manifest that names
+  another board, and the board it checks is its running image's, so
+  `./push_fw.sh --device <imei> --as-board v4.0+kline` publishes the first v4.0p1
+  release under the old id, once.  Nothing remembers the option: the release
+  after it goes out as v4.0p1.  Without it a unit still on v4.0 refuses the
+  manifest, and the script warns (FOTA.md, "Changing a unit's board id").
+- Built for v4.0, v3.4, v4.0p1 and the car's conf: v4.0 and v3.4 resolve as
+  before, and the car's v4.0p1 with its overrides differs from its v4.0 with
+  them only in the board id.  `push_fw.sh` is tested against a stand-in server.
+  The car moved to it over the air.
+
 ## 0.4.95
 
 ### The receiver is told the time and the last position at power-up

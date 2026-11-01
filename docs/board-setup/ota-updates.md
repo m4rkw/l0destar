@@ -101,6 +101,17 @@ done: 1 device(s) will pull 0.4.13 on their next telemetry
 | `--no-build` | Publish the images already in `build_remote_*/`. |
 | `--force` | Allow a version that is not newer than the live one. |
 | `--patch <n>` | Use this patch number instead of working it out. |
+| `--as-board <id>` | With `--device`: publish that device's image under board id `<id>`. For the one release that moves a unit to a new board id; see below. |
+
+### Moving a unit to a different board id
+
+A device refuses a manifest naming a board other than its own, and the board it checks is the one its running image was built for. If a board profile is renamed or split, as the first v4.0 prototype boards were (`v4.0` became `v4.0p1`), a unit on the old id refuses the new image's manifest. Change the device's section in `remote.conf` to the new profile, then publish once under the id the unit has:
+
+```sh
+./push_fw.sh --device 350000000000000 --as-board v4.0+kline
+```
+
+The unit installs that release like any other and is the new board id from then on, so publish its next release without the option. See [FOTA.md](../../firmware/FOTA.md#changing-a-units-board-id).
 
 ### Version numbers
 
@@ -126,7 +137,7 @@ On the server, `tls.log` shows the manifest request and the first and last range
 |---|---|---|
 | `fota: <old> -> <new> failed after <n> attempts (err <e>, cause <c>)` | The download did not complete. | Check TCP 65481 is reachable from outside and the certificate is valid. The device retries by itself; the `fota` command retries now. |
 | `<name>: fota: <version> failed to boot (running <old>) — updates withheld until retried` | The image installed but did not start, and MCUboot reverted it. | Publish a fixed, newer version (offered automatically), or retry the same one with `command.py <imei> fota-retry`. |
-| Console: `manifest targets board '...', this unit is '...' — refusing` | The device's section in `remote.conf` does not match its hardware. | Correct the section and publish again. |
+| Console: `manifest targets board '...', this unit is '...' — refusing` | The device's section in `remote.conf` does not match its hardware, or the unit is still on an older board id than the image you built. | Correct the section and publish again; for a unit that has to change board id, [publish once with `--as-board`](#moving-a-unit-to-a-different-board-id). |
 | Console: `battery ... — deferring update` | The vehicle battery reads below 12.0V. | Nothing: it tries again at the next check. |
 | Console: `manifest request failed` while telemetry works | The TCP path to port 65481 is broken - working UDP telemetry proves nothing about TCP - or the modem trusts a different CA. | Check port 65481 is forwarded and open; a failed connection often reports error 22 (EINVAL) rather than a timeout. If the board ever booted the tracker firmware with another CA, the recovery is in [firmware build options](../reference/firmware.md). |
 

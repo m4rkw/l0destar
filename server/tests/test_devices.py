@@ -55,21 +55,22 @@ def test_device_list_says_how_to_enrol_when_empty(client, logged_in, database):
 
 def test_devices_api_describes_each_device(client, logged_in, device, second_device):
     send(device, record(0, 51.5, -0.1, 0,
-                        extras=',mcc=234;mnc=10;rat=CATM1,fw=0.4.12'))
+                        extras=',mcc=234;mnc=10;rat=CATM1,fw=0.4.12,bd=v4.0p1+kline'))
     listed = {d['imei']: d
               for d in client.get('/api/1.0/devices').get_json()['devices']}
 
     assert set(listed) == {CAR, VAN}
     assert set(listed[CAR]) == {
         'id', 'imei', 'name', 'registration', 'last_seen', 'latitude',
-        'longitude', 'speed', 'battery_level', 'ignition_state', 'fw', 'rat',
-        'operator', 'track_mode',
+        'longitude', 'speed', 'battery_level', 'ignition_state', 'fw', 'board',
+        'rat', 'operator', 'track_mode',
     }
     car, van = listed[CAR], listed[VAN]
     assert (car['name'], car['registration']) == ('Car', 'AB12CDE')
     assert (car['latitude'], car['longitude']) == (51.5, -0.1)
     assert (car['battery_level'], car['ignition_state']) == (12.4, 0)
     assert (car['fw'], car['rat'], car['operator']) == ('0.4.12', 'CATM1', 'Test Network')
+    assert (car['board'], van['board']) == ('v4.0p1+kline', None)
     assert car['last_seen'] is not None
     assert (van['last_seen'], van['latitude'], van['speed']) == (None, None, None)
 

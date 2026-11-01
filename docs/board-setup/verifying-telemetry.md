@@ -72,8 +72,9 @@ ORDER BY id DESC LIMIT 5;
 | Battery | `battery_level` | Within a few tens of millivolts of your bench supply. |
 | Ignition | Switch pin 5 on, wait for a record, switch it off | `ignition_state` follows the switch. A journey opens when the ignition comes on and closes after it goes off; switching back on within 5 minutes continues the same journey. |
 | Firmware | `fw` | `0.4.0` for a bench build. It is sent after a restart and copied onto every later record. |
+| Board | `board` | The board the build was made for, for example `v3.4+kline`. It travels with `fw`; for firmware that predates it the server reads it from the image it published at that version. |
 | Network | `rat`, `mcc`, `mnc` | `rat` is `CATM1`. The map shows the operator's name once the server has operator data (`tools/import_plmn.py`, see the [server reference](../reference/server.md)). |
-| Replies and commands | `command.py <imei> config` | Once the device next reads a reply, an alert such as `fw=0.4.0 int=0 ma=1 tm=0 bat=12.4V ign=on up=512s`. |
+| Replies and commands | `command.py <imei> config` | Once the device next reads a reply, an alert such as `fw=0.4.0 board=v3.4+kline int=0 ma=1 tm=0 bat=12.4V ign=on up=512s`. |
 | Web interface | Sign in | The device in the device list, with a recent last-seen time, and its position on the map. |
 
 To queue the `config` command, on the server:

@@ -43,12 +43,12 @@ def send(device, *lines):
 
 
 def test_list_shows_every_device(tool, capsys, device, second_device):
-    send(device, record(0, 51.5, -0.1, 1, extras=',fw=0.4.12'))
+    send(device, record(0, 51.5, -0.1, 1, extras=',fw=0.4.12,bd=v4.0p1+kline'))
     code, out, _ = run(tool, capsys, 'list')
 
     assert code == 0
     assert device['imei'] in out and second_device['imei'] in out
-    assert '0.4.12' in out and '12.40V' in out
+    assert '0.4.12' in out and 'v4.0p1+kline' in out and '12.40V' in out
     assert 'never' in out           # the second device has not reported
 
 

@@ -49,6 +49,46 @@ IMAGE_RE = re.compile(r'^l0destar-(\d{1,3}\.\d{1,3}\.\d{1,3})-\d+\.bin$')
 # picked up without a restart.
 _manifest_cache = {}
 
+# A board id as the firmware spells it: the board, then each fitted interface.
+# The firmware compares the manifest's board= against this string, so every
+# image carries it as a C string, NUL before and after.  An id with no
+# interface (v3.4 on its own) cannot be told from the other version-like
+# strings in a binary, so such an image says nothing.  tools/backfill_board.py
+# carries a copy of this pattern for deployments that run without this
+# package; tests/test_backfill_board.py keeps the two the same.
+BOARD_IN_IMAGE = re.compile(
+    rb'(?<=\x00)((?:bench|v[0-9]+\.[0-9]+(?:[a-z][0-9]*)?)'
+    rb'(?:\+(?:can|kline|aio))+)(?=\x00)')
+
+# (path, mtime, size) -> board or None.  An image is read once, and a
+# republished one is a different key.
+_image_boards = {}
+
+
+def image_board(imei, version):
+    """The board the image published to this device at this version was built
+    for, read from the image: what a record from firmware too old to send
+    bd= can still be told apart by.  None when there is no such image or it
+    does not say.  The version arrives from a device, so it is checked before
+    it becomes part of a path."""
+    imei = str(imei or '')
+    if not imei.isdigit() or not VERSION_RE.match(version or ''):
+        return None
+    path = os.path.join(config.FW_DIR, 'l0destar-%s-%s.bin' % (version, imei))
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return None
+    key = (path, stat.st_mtime_ns, stat.st_size)
+    if key not in _image_boards:
+        try:
+            with open(path, 'rb') as handle:
+                found = {m.group(1) for m in BOARD_IN_IMAGE.finditer(handle.read())}
+        except OSError:
+            return None
+        _image_boards[key] = found.pop().decode('ascii') if len(found) == 1 else None
+    return _image_boards[key]
+
 
 def manifest_path(imei):
     """Path to one device's manifest, or None if the IMEI is unusable."""

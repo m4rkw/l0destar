@@ -676,8 +676,9 @@ P0.20 on the nRF9151. v3.3 puts L_SENSE on P0.14 (AIN1) and moves the
 PP3V3_GPS rail sense, which only ever needed a digital read, to P0.05.
 `kline_l_sense_init()` rejects any `CONFIG_APP_PIN_L_SENSE` outside that
 range ("L_SENSE on P0.x has no SAADC channel") and the sense reports
-unavailable.  The v4.0 boards fabricated with L_SENSE on P0.5 build with
-`CONFIG_APP_BOARD_HAS_L_SENSE=n`: the L line is driven without the short check.
+unavailable.  The first v4.0 prototypes (v4.0p1), fabricated with L_SENSE on
+P0.5, build with `CONFIG_APP_BOARD_HAS_L_SENSE=n`: the L line is driven
+without the short check.
 
 ## Signal path (v2.6K)
 
