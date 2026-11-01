@@ -217,6 +217,14 @@ import_plmn.py <file.csv>
 
 Loads mobile network operator names, so the web interface can show which network a tracker is on. The CSV needs a header row with `mcc`, `mnc` and `operator` columns, and optionally `country`. Existing entries are updated. No list is bundled. The file has to be inside the container, so pipe it in: `sudo docker exec -i l0destar python tools/import_plmn.py /dev/stdin < plmn.csv`.
 
+### `backfill_board.py`
+
+```text
+backfill_board.py [--apply] [--config config.yaml] [--fw-dir fw]
+```
+
+Fills `log.board` for rows from before a unit reported its board (`bd=`), from the images in `fw_dir`: every image carries the board it was built for, so a row's `fw` says which board it was running. Rows from a build that has no image (a build flashed over USB reports `0.4.0` whatever it was made from) are filled only when the nearest rows either side agree on a board, and the rest stay empty. It shows what it would do and writes nothing without `--apply`, writes only empty boards, and can be run again. It needs `migrations/2026-11-01_log_board.sql` first. A unit whose firmware does not send `bd=` gets its board from the image as its records arrive, so this is for the history.
+
 ## Log files
 
 All in `/srv/l0destar/logs` (`log_dir`):
@@ -258,6 +266,7 @@ Deleting a `device` row deletes its `log`, `journey`, `dtc`, `command` and `devi
 | `2026-09-06_track_mode.sql` | the track mode switch, and the track mode columns of `log` |
 | `2026-09-12_fota_state.sql` | per-device update state, so a failing image is not downloaded over and over |
 | `2026-09-14_device_nonce.sql` | replay protection that survives a restart |
+| `2026-11-01_log_board.sql` | the board a build is for (`log.board`), beside the firmware version |
 
 ## HTTP endpoints
 

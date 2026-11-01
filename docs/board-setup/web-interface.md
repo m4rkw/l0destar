@@ -93,9 +93,9 @@ These use the signed-in session, and are what the web page itself calls. Without
 
 | Endpoint | Returns |
 |---|---|
-| `GET /api/1.0/devices` | Every device: `id`, `imei`, `name`, `registration`, `last_seen`, `latitude`, `longitude`, `speed`, `battery_level`, `ignition_state`, `fw`, `rat`, `operator`, `track_mode`. |
+| `GET /api/1.0/devices` | Every device: `id`, `imei`, `name`, `registration`, `last_seen`, `latitude`, `longitude`, `speed`, `battery_level`, `ignition_state`, `fw`, `board`, `rat`, `operator`, `track_mode`. |
 | `GET /api/1.0/carpos` | The latest `position`, the resting accelerometer reading (`accel_baseline`) and the `track_mode` switch. |
-| `GET /api/1.0/status` | The device's IMEI, name, synced settings (`int`, `ma`), firmware version and last-seen time. |
+| `GET /api/1.0/status` | The device's IMEI, name, synced settings (`int`, `ma`), firmware version, board and last-seen time. |
 | `GET /api/1.0/journeys` | Completed journeys, newest first: `page` (from 0) and `per_page` (default 50, at most 200). |
 | `GET /api/1.0/journey/<id>/points` | Every point of one journey. With `imei`, an error if the journey belongs to another device. |
 | `GET /api/1.0/trackmode`, `POST /api/1.0/trackmode` | Read, or set with `{"imei": "...", "on": 1}`, the track mode switch. |

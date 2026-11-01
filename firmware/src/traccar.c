@@ -258,6 +258,7 @@ static const struct {
     int         div;
 } s_extras[] = {
     { "fw",    "versionFw",     1   },
+    { "bd",    "board",         1   },
     { "mt",    "deviceTemp",    1   },
     { "it",    "imuTemp",       1   },
     { "vs",    "battery",       1   },   /* the SiP's own supply, not the car's */

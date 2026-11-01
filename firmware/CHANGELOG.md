@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.98
+
+### The board in the telemetry
+The first record after every boot carries `bd=<board id>` (`v4.0p1+kline`) beside
+`fw=`, as does a settings-sync record, and the reply to `config` says
+`board=`.  The server stores it as `log.board` on every row, carried forward
+while `fw` is the same.
+
+- **Server.**  `migrations/2026-11-01_log_board.sql` adds the column.  For
+  firmware that does not send `bd=` the server reads the board from the image it
+  published at that version, and `tools/backfill_board.py` does the same for
+  rows from before (only empty boards, shows its plan unless told `--apply`).
+  The API's device list and status, and `tools/device.py`, show it.
+- Traccar units send it as `board`.
+- Built for the car and a Traccar unit; the server tests pass, and the
+  migration and backfill ran on a copy of the live run structure.  Not run on
+  hardware.
+
 ## 0.4.97
 
 ### v4.0p1: a board profile for the first v4.0 prototype

@@ -73,6 +73,7 @@ other tracker; the rest keep the record's key.
 | `mcc`, `mnc`, `lac`, `cid` | `cell` | `mcc,mnc,lac,cid`, Traccar's cell-tower format, so its geolocation can use it |
 | `rat` | `rat` | `CATM1` / `NBIOT` |
 | `fw` | `versionFw` | |
+| `bd` | `board` | |
 | `rst` | `resetCause` | |
 | `mt`, `it` | `deviceTemp`, `imuTemp` | °C |
 | `vs` | `battery` | The nRF9151's supply rail, volts |

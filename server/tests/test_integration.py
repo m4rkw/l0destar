@@ -4,6 +4,7 @@ Skipped unless ``TRACKER_TEST_DB`` is set; see conftest.py.  These are
 destructive — they truncate every table they touch.
 """
 
+import os
 import re
 
 import pytest
@@ -338,6 +339,59 @@ def test_sticky_fields_carry_forward(device, database):
     assert row['cid'] == 'ff'
     assert row['rat'] == 'CATM1'
     assert row['fw'] == '0.4.12'
+
+
+def test_board_is_stored_beside_the_version(device, database):
+    send(device, record(0, 51.5, -0.1, 0, extras=',fw=0.4.97,bd=v4.0p1+kline'))
+
+    row = last_log(database)
+    assert (row['fw'], row['board']) == ('0.4.97', 'v4.0p1+kline')
+
+
+def test_board_carries_forward_while_the_version_is_the_same(device, database):
+    send(device, record(0, 51.5, -0.1, 0, extras=',fw=0.4.97,bd=v4.0p1+kline'))
+    send(device, record(1, 51.5, -0.1, 0))
+
+    row = last_log(database)
+    assert (row['fw'], row['board']) == ('0.4.97', 'v4.0p1+kline')
+
+
+def test_board_is_not_carried_onto_another_version(device, database):
+    # A build too old to report a board must leave its rows empty, not
+    # wearing the one before it: the unit may have changed boards.
+    send(device, record(0, 51.5, -0.1, 0, extras=',fw=0.4.97,bd=v4.0p1+kline'))
+    send(device, record(1, 51.5, -0.1, 0, extras=',fw=0.4.98'))
+    send(device, record(2, 51.5, -0.1, 0))
+
+    row = last_log(database)
+    assert (row['fw'], row['board']) == ('0.4.98', None)
+
+
+def test_board_comes_from_the_published_image_when_the_firmware_sends_none(device, database, fw_dir):
+    # 0.4.97 predates bd=: the image says which board it was made for.
+    with open(os.path.join(fw_dir, 'l0destar-0.4.97-%s.bin' % device['imei']), 'wb') as f:
+        f.write(b'\x00v4.3\x00v4.0p1+kline\x00')
+    send(device, record(0, 51.5, -0.1, 0, extras=',fw=0.4.97'))
+    send(device, record(1, 51.5, -0.1, 0))
+
+    rows = database.all('SELECT `board` FROM `log` ORDER BY `id`')
+    assert [r['board'] for r in rows] == ['v4.0p1+kline'] * 2
+
+
+def test_a_board_the_device_reports_wins_over_the_image(device, database, fw_dir):
+    with open(os.path.join(fw_dir, 'l0destar-0.4.97-%s.bin' % device['imei']), 'wb') as f:
+        f.write(b'\x00v4.0+kline\x00')
+    send(device, record(0, 51.5, -0.1, 0, extras=',fw=0.4.97,bd=v4.0p1+kline'))
+
+    assert last_log(database)['board'] == 'v4.0p1+kline'
+
+
+def test_unusable_board_is_dropped_and_the_record_still_stores(device, database):
+    send(device, record(0, 51.5, -0.1, 0, extras=',fw=0.4.97,bd=v4.0p1+kline'))
+    send(device, record(1, 51.5, -0.1, 0, extras=',bd=' + 'x' * 40))
+
+    rows = database.all('SELECT `fw`, `board` FROM `log` ORDER BY `id`')
+    assert [(r['fw'], r['board']) for r in rows] == [('0.4.97', 'v4.0p1+kline')] * 2
 
 
 def test_per_packet_fields_do_not_carry_forward(device, database):

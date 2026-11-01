@@ -60,7 +60,7 @@ import re
 import threading
 import time
 
-from . import config, db, deadreckon, logs, notify
+from . import config, db, deadreckon, firmware, logs, notify
 
 # Fixed fields, in wire order, named for the columns they are stored in.  The
 # eleventh is seconds since boot on current firmware; its column kept the
@@ -83,6 +83,7 @@ EXTRA_KEYS = {
     'int': 'int',                # reporting interval the device believes it has
     'ma':  'movement_alarm',
     'fw':  'fw',                 # running firmware version, e.g. 0.4.12
+    'bd':  'board',              # board the running build is for, e.g. v4.0p1+kline
     'mcc': 'mcc',
     'mnc': 'mnc',
     'lac': 'lac',
@@ -143,6 +144,10 @@ TRACK_MODE_IDLE_SECONDS = 3600
 # When absent, the previous row's value is carried forward.
 STICKY_KEYS = ('mcc', 'mnc', 'lac', 'cid', 'rat', 'fw')
 
+# What the firmware may call its board (Kconfig APP_BOARD_ID plus the fitted
+# interfaces): the column holds 32 characters and the database refuses more.
+BOARD_RE = re.compile(r'^[A-Za-z0-9._+-]{1,31}$')
+
 # Fields that mean "right now" and must never be carried forward.
 PER_PACKET_KEYS = (
     'accel_x', 'accel_y', 'accel_z', 'gyro_x', 'gyro_y', 'gyro_z',
@@ -201,7 +206,7 @@ LOG_COLUMNS = [
     'device_id', 'ip', 'timestamp', 'gsm_timestamp', 'gsm_timestamp_offset',
     'latitude', 'longitude', 'altitude', 'speed', 'heading', 'hdop',
     'satellites', 'ignition_state', 'battery_level', 'powered_on',
-    'dbg', 'rst', 'fw',
+    'dbg', 'rst', 'fw', 'board',
     'mcc', 'mnc', 'lac', 'cid', 'cell_location', 'rat',
     'accel_x', 'accel_y', 'accel_z', 'gyro_x', 'gyro_y', 'gyro_z',
     'waketime', 'uptime', 'mcu_temp', 'imu_temp', 'dead_reckoning', 'vsys',
@@ -348,6 +353,24 @@ def _build_entry(data, device, ip, previous):
             entry[key] = data[key]
         elif previous is not None and previous.get(key) is not None:
             entry[key] = previous[key]
+
+    # The board goes with the build, as fw does, but is carried forward only
+    # while the version is the same: a build too old to report one must leave
+    # its rows empty, not wearing the previous build's board.
+    board = data.get('board')
+    if board is not None and not BOARD_RE.match(board):
+        logs.app.warning('unusable bd=%r from %s', board,
+                         device.get('imei', '?'))
+        board = None
+    if (board is None and previous is not None
+            and entry.get('fw') == previous.get('fw')):
+        board = previous.get('board')
+    if board is None and entry.get('fw'):
+        # Firmware too old to send bd=: the image published at that version
+        # says which board it was made for.
+        board = firmware.image_board(device.get('imei'), entry['fw'])
+    if board is not None:
+        entry['board'] = board
 
     for key in PER_PACKET_KEYS:
         if key in data:

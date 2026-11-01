@@ -501,6 +501,7 @@ def status():
         'name': device.get('name'),
         'settings': telemetry.device_config(device),
         'firmware': (row or {}).get('fw'),
+        'board': (row or {}).get('board'),
         'last_seen': row['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
         if row and row.get('timestamp') else None,
     })

@@ -68,7 +68,7 @@ def list_devices(args):
         print('no devices enrolled - see tools/adddevice.py')
         return 0
 
-    rows = [('imei', 'name', 'registration', 'last seen', 'firmware',
+    rows = [('imei', 'name', 'registration', 'last seen', 'firmware', 'board',
              'battery', 'ignition')]
     for device in devices:
         log = _latest(device)
@@ -78,6 +78,7 @@ def list_devices(args):
             device['registration'] or '-',
             _when(log.get('timestamp')),
             log.get('fw') or '-',
+            log.get('board') or '-',
             _volts(log.get('battery_level')),
             _ignition(log),
         ))
@@ -126,6 +127,7 @@ def show(args):
             ('battery', _volts(log.get('battery_level'))),
             ('ignition', _ignition(log)),
             ('firmware', log.get('fw') or '-'),
+            ('board', log.get('board') or '-'),
             ('network', ' '.join(v for v in network if v) or '-'),
         ]
     else:

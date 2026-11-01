@@ -47,6 +47,7 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `ri` | request config in the response | per-packet |
 | `int`, `ma` | settings the device believes it has | per-packet |
 | `fw` | running firmware version | **carried forward** |
+| `bd` | board the running build is for, for example `v4.0p1+kline`; stored as `board` | **carried forward** while `fw` is the same; from firmware without it, read from the image published at that version |
 | `mcc`, `mnc`, `lac`, `cid` | serving cell | **carried forward** |
 | `rat` | `CATM1` or `NBIOT` | **carried forward** |
 | `cl` | position is cell-derived, not GNSS | per-packet |

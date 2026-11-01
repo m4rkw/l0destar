@@ -277,11 +277,16 @@ never a manifest naming a half-uploaded file), and then verifies the endpoint
 the way that device will: CA-verified TLS, the manifest fetched through the
 same `?imei=` query the firmware sends, and `206` to a ranged GET.
 
-A unit reports its running version to the server as `fw=` on the first
-telemetry record after each boot, on any settings-sync record, and in the reply
-to the `config` command; the server stores it on every `log` row by carrying
-the last value forward. The
-update itself is visible as three alerts: `fota: x -> y available, downloading`
+A unit reports its running version to the server as `fw=`, and the board the
+build is for as `bd=`, on the first telemetry record after each boot, on any
+settings-sync record, and in the reply to the `config` command (`fw=` and
+`board=`). The server stores both on every `log` row, carrying the last values
+forward while the version is the same; for firmware that predates `bd=` it reads
+the board from the image it published at that version, and
+`server/tools/backfill_board.py` does the same for rows from before. The
+manifest's `board=` is not that record: it names the board of the unit the
+update is offered to, so a bridge release carries the one the unit is leaving.
+The update itself is visible as three alerts: `fota: x -> y available, downloading`
 as the transfer starts, `fota: x -> y, rebooting` before the swap and
 `fota: updated to y` from the server once the device reports running it. The
 first is raised

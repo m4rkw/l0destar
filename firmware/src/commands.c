@@ -154,9 +154,9 @@ void cmd_run(char *cmd)
     if (strstr(cmd, "config")) {
         char msg[160];
         snprintf(msg, sizeof(msg),
-                 "fw=%s int=%d ma=%d tm=%d backup=%d bat=%.1fV ign=%s "
-                 "up=%llus",
-                 fota_version(),
+                 "fw=%s board=%s int=%d ma=%d tm=%d backup=%d bat=%.1fV "
+                 "ign=%s up=%llus",
+                 fota_version(), fota_board_id(),
                  g_settings.loop_interval,
                  (int)g_settings.movement_alarm,
                  (int)g_settings.track_mode,
