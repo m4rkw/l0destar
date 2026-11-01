@@ -130,6 +130,39 @@ already published rather than from the repo, every push is newer than the last
 by construction. To roll a fleet back, rebuild the old code and push it: it
 goes out under the next number.
 
+## Changing a unit's board id
+
+A device refuses a manifest whose `board=` is not its own, and the id it checks
+is the running image's. So when a unit changes board profile - the first v4.0
+prototype boards went from `v4.0` to `v4.0p1` - an ordinary release cannot move
+it across: the old image refuses the new image's manifest. One release is
+published under the id the unit knows:
+
+1. Change the unit's section in `remote.conf` to the new profile.
+2. `./push_fw.sh --device <imei> --as-board <the old id>` (`v4.0+kline` for a
+   K-wire v4.0). It builds the new image and publishes it with `board=` set to
+   the old id. The unit installs it like any release, and since the image is the
+   build's own, it is the new id from the next boot.
+3. Every later release goes out as usual, under the new id.
+
+`--as-board` needs `--device`, refuses the build's own id, and refuses an id the
+unit was not last offered (`--force` overrides that: a unit flashed by USB with
+an id the server never saw). Nothing remembers it, so it cannot carry over to
+the next release.
+
+Mistakes are harmless. An ordinary release before the unit has moved is refused
+by the unit (`manifest targets board 'v4.0p1+kline', this unit is 'v4.0+kline' -
+refusing`), and the script warns when the manifest it replaces names a different
+board; publish the bridge instead. A bridge repeated after the unit has moved is
+refused the same way, and the next ordinary release replaces its manifest.
+
+To go back, set the unit's profile to the old one and publish it the same way,
+with `--as-board v4.0p1+kline`.
+
+The board check is what keeps an image off a board it was not built for, and the
+bridge is the one place it is stepped round by hand: bridge only an image built
+for the pin map the unit has.
+
 ## Server side
 
 The public server in `server/` keeps firmware in its `fw_dir`, `/srv/l0destar/fw`

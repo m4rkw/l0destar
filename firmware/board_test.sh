@@ -45,6 +45,7 @@ BAUD=115200
 # both = CAN and K-wire can be fitted together: separate connector pins)
 BOARDS=(
     "v4.0|l0destar v4.0  (v3.4 + external MAX-M10S GNSS)|CONFIG_APP_BOARD_L0DESTAR_V4_0=y|obd,both"
+    "v4.0p1|l0destar v4.0p1 (first v4.0 prototype)|CONFIG_APP_BOARD_L0DESTAR_V4_0P1=y|obd,both"
     "v3.4|l0destar v3.4  (v3.3 map, IMU NC pads fixed)|CONFIG_APP_BOARD_L0DESTAR_V3_4=y|obd"
     "v3.3|l0destar v3.3  (v3.1 map, fixed L-line + L sense)|CONFIG_APP_BOARD_L0DESTAR_V3_3=y|obd"
     "v3.2|l0destar v3.2  (v3.1 map + MCU OVP)|CONFIG_APP_BOARD_L0DESTAR_V3_2=y|obd"

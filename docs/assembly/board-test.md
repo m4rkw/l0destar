@@ -134,9 +134,10 @@ CONFIG_APP_APN="your.apn"
 
 The script asks three things:
 
-1. **Board version.** Choose the revision you built: **v4.0** for a v4.0 board, **v3.4** for a v3.4 board.
+1. **Board version.** Choose the revision you built: **v4.0** for a v4.0 board, **v4.0p1** for the first v4.0
+   prototype (`hardware/l0destar_v4.0_prototype1`), **v3.4** for a v3.4 board.
 2. **OBD interface**: none, CAN or K-wire (ISO 14230), matching the parts and pads
-   you fitted. A v4.0 has a fourth choice, **CAN + K-wire**, because the two circuits have separate
+   you fitted. A v4.0 or v4.0p1 has a fourth choice, **CAN + K-wire**, because the two circuits have separate
    connector pins and can both be fitted; the test then covers the rails and the loopback of each.
 3. **APN.** It shows the APN it found and where it found it. It only asks if it finds none, and
    leaving the answer empty skips the modem test.

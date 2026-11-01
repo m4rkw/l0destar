@@ -17,6 +17,7 @@ different Connect Kit pins and switches its power rails differently. Select the 
 | Board | Status | Board selection | Interface setting | FOTA board id |
 |---|---|---|---|---|
 | v4.0 | Designed, not yet built or tested | `CONFIG_APP_BOARD_L0DESTAR_V4_0=y` | `CONFIG_APP_OBD_MODE=0`, `1`, `2` or `3` | `v4.0`, `v4.0+can`, `v4.0+kline`, `v4.0+can+kline` |
+| v4.0p1 | First prototype of v4.0, built | `CONFIG_APP_BOARD_L0DESTAR_V4_0P1=y` | `CONFIG_APP_OBD_MODE=0`, `1`, `2` or `3` | `v4.0p1`, `v4.0p1+can`, `v4.0p1+kline`, `v4.0p1+can+kline` |
 | v3.4 | Designed, not yet built or tested | `CONFIG_APP_BOARD_L0DESTAR_V3_4=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.4`, `v3.4+can`, `v3.4+kline` |
 | v3.3 | Built and bench tested | `CONFIG_APP_BOARD_L0DESTAR_V3_3=y` | `CONFIG_APP_OBD_MODE=0`, `1` or `2` | `v3.3`, `v3.3+can`, `v3.3+kline` |
 
@@ -53,7 +54,7 @@ not been built or tested, and none of the figures here are measured on it.
   `GNSS_BCKP_EN` (load switch S7U1, a 100K pulldown, no sense line, test point S12TP4). Held on
   while the main rail is off, it keeps the receiver's ephemeris and time, so a parked wake gets a hot
   start and not a cold start of 23 to 28 s or more. The data sheet gives 28µA typical for the
-  receiver in this state at 3.3V, and about 30µA was measured on a v4.0 board, a large addition to the
+  receiver in this state at 3.3V, and about 30µA was measured on a v4.0p1 board, a large addition to the
   sleep current expected of v3.4, so the firmware can leave it off (`CONFIG_APP_GNSS_BACKUP_SUPPLY`)
   or drop it for the night (`CONFIG_APP_GNSS_BACKUP_OFF_UTC_HOUR`).
 - **Antenna.** The GNSS SMA feeds the receiver's RF input through the same 47pF DC block. The U.FL
@@ -91,7 +92,10 @@ The receiver's signals, and the pins that moved to make room for them:
 The boards fabricated from the earlier design have the nets of pins 9 and 21 the other way round:
 `GNSS_BCKP_EN` on pin 21 (P0.13) and `L_SENSE` on pin 9 (P0.5), which no ADC channel reaches. They
 need `CONFIG_APP_PIN_GNSS_BCKP_EN=13`, `CONFIG_APP_PIN_L_SENSE=5` and `CONFIG_APP_BOARD_HAS_L_SENSE=n`,
-and have no L-line short check.
+and have no L-line short check. They are the first prototypes, `v4.0p1`
+(`CONFIG_APP_BOARD_L0DESTAR_V4_0P1=y`), which is v4.0's pin map under a board id of its own. A unit
+that was published as `v4.0` changes to it with one bridge release, see
+[Changing a unit's board id](../../firmware/FOTA.md#changing-a-units-board-id).
 
 The receiver's EXTINT, LNA_EN, RESET_N, VCC_RF and I2C pins are unconnected; RESET_N has an
 internal pull-up. SAFEBOOT_N goes to a test point, S16TP2, as does TIMEPULSE (S16TP3) and the

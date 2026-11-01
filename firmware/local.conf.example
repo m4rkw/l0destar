@@ -8,6 +8,7 @@
 # the bench profile.
 # CONFIG_APP_BOARD_BENCH=y
 # CONFIG_APP_BOARD_L0DESTAR_V4_0=y      (v3.4 + external u-blox MAX-M10S GNSS)
+# CONFIG_APP_BOARD_L0DESTAR_V4_0P1=y    (first v4.0 prototype)
 # CONFIG_APP_BOARD_L0DESTAR_V3_4=y      (default)
 # CONFIG_APP_BOARD_L0DESTAR_V3_3=y
 # CONFIG_APP_BOARD_L0DESTAR_V3_2=y

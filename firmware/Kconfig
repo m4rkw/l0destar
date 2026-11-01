@@ -87,7 +87,7 @@ config APP_L_SENSE_TEST
 config APP_OBD_MODE
 	int "OBD interface mode (0=none, 1=CAN, 2=K-line, 3=both on v4.0)"
 	default 0
-	range 0 3 if APP_BOARD_L0DESTAR_V4_0
+	range 0 3 if APP_BOARD_V4_0_FAMILY
 	range 0 2
 	help
 	  Which OBD interface is populated on a v3.1/v3.2/v3.3/v3.4/v4.0 board.

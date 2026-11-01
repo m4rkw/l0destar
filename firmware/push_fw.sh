@@ -8,6 +8,10 @@
 #   ./push_fw.sh --force            allow re-publishing a version <= the live one
 #   ./push_fw.sh --list             show what remote.conf describes, push nothing
 #   ./push_fw.sh --patch <n>        pin the patch number instead of deriving it
+#   ./push_fw.sh --device <imei> --as-board <id>
+#                                   publish that unit's image under board id <id>:
+#                                   the one release that moves a unit from one
+#                                   board id to another (FOTA.md)
 #
 # VERSIONING
 # ----------
@@ -61,6 +65,7 @@ FORCE=0
 LIST=0
 ONLY=""
 PIN_PATCH=""
+AS_BOARD=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --no-build) BUILD=0 ;;
@@ -70,10 +75,18 @@ while [[ $# -gt 0 ]]; do
                     [[ -n $ONLY ]] || { echo "--device needs an IMEI" >&2; exit 1; } ;;
         --patch)    PIN_PATCH="${2:-}"; shift
                     [[ $PIN_PATCH =~ ^[0-9]+$ ]] || { echo "--patch needs a number" >&2; exit 1; } ;;
+        --as-board) AS_BOARD="${2:-}"; shift
+                    [[ $AS_BOARD =~ ^[A-Za-z0-9._+-]{1,31}$ ]] || { echo "--as-board needs a board id, such as v4.0+kline" >&2; exit 1; } ;;
         *) echo "unknown option: $1" >&2; exit 1 ;;
     esac
     shift
 done
+
+# The id is one unit's, so it cannot be applied across the fleet.
+if [[ -n $AS_BOARD && -z $ONLY ]]; then
+    echo "error: --as-board names one unit's board id — add --device <imei>" >&2
+    exit 1
+fi
 
 # Publishing copies over ssh, so it has to know where to; --list only reads.
 if [[ $LIST -eq 0 && -z $SERVER ]]; then
@@ -354,8 +367,9 @@ for imei in "${DEVICES[@]}"; do
 
     # Devices only install strictly-newer versions, so pushing <= what this
     # unit is already offered would be a silent no-op.
-    LIVE=$(fw_curl "$VERIFY_URL/fw/manifest.txt?imei=$imei&v=0.0.0" \
-           | sed -n 's/^version=//p' || true)
+    LIVE_MANIFEST=$(fw_curl "$VERIFY_URL/fw/manifest.txt?imei=$imei&v=0.0.0") || LIVE_MANIFEST=""
+    LIVE=$(sed -n 's/^version=//p' <<<"$LIVE_MANIFEST")
+    LIVE_BID=$(sed -n 's/^board=//p' <<<"$LIVE_MANIFEST")
     if [[ -n $LIVE && $FORCE -eq 0 ]]; then
         if [[ $(ver_num "$VER") -le $(ver_num "$LIVE") ]]; then
             echo "error: $imei is already offered $LIVE, this build is $VER —" >&2
@@ -364,15 +378,43 @@ for imei in "${DEVICES[@]}"; do
         fi
     fi
 
+    # What the manifest says the image is for.  A device refuses a manifest
+    # that names a board other than its own (fota.c), and the board it checks
+    # is the running image's, so a unit whose image has a different id from this
+    # build's -- a board profile split in two, as v4.0 into v4.0 and v4.0p1 --
+    # would refuse the very release that moves it.  That one release is
+    # published under the id the unit knows; the image itself, and so the unit
+    # from then on, has the build's own.  Nothing remembers the option: the
+    # release after it goes out under the build's id as usual.
+    PUB_BID=$BID
+    if [[ -n $AS_BOARD ]]; then
+        if [[ $AS_BOARD == "$BID" ]]; then
+            echo "error: --as-board $AS_BOARD is this build's own board id — drop the option." >&2
+            exit 1
+        fi
+        if [[ -n $LIVE_BID && $LIVE_BID != "$AS_BOARD" && $FORCE -eq 0 ]]; then
+            echo "error: $imei was last offered board=$LIVE_BID, not $AS_BOARD —" >&2
+            echo "       the id to publish under is the one its running image carries" >&2
+            echo "       (--force if you know better)." >&2
+            exit 1
+        fi
+        PUB_BID=$AS_BOARD
+    elif [[ -n $LIVE_BID && $LIVE_BID != "$BID" ]]; then
+        echo "warning: $imei is offered board=$LIVE_BID and this build is board=$BID." >&2
+        echo "         A unit still running the $LIVE_BID image refuses it (fota.c).  If it" >&2
+        echo "         has not moved yet, publish with --as-board $LIVE_BID first; if the" >&2
+        echo "         last release was that bridge, this is the release after it." >&2
+    fi
+
     FILE="l0destar-$VER-$imei.bin"
     SIZE=$(wc -c < "$IMG" | tr -d ' ')
-    echo "publishing $VER board=$BID ($FILE, $SIZE bytes) -> $SERVER:$FW_DIR"
+    echo "publishing $VER board=$PUB_BID${AS_BOARD:+ (bridge: the image is board=$BID)} ($FILE, $SIZE bytes) -> $SERVER:$FW_DIR"
     scp -q "$IMG" "$SERVER:$FW_DIR/$FILE"
 
     # Manifest last, atomically: mv within the same directory, so a device
     # fetching mid-push sees either the old release or the new one, never a
     # manifest naming a half-uploaded image.
-    ssh "$SERVER" "printf 'version=%s\nfile=fw/%s\nboard=%s\n' '$VER' '$FILE' '$BID' \
+    ssh "$SERVER" "printf 'version=%s\nfile=fw/%s\nboard=%s\n' '$VER' '$FILE' '$PUB_BID' \
                    > $FW_DIR/.manifest-$imei.tmp \
                    && mv $FW_DIR/.manifest-$imei.tmp $FW_DIR/manifest-$imei.txt"
 
@@ -385,10 +427,10 @@ for imei in "${DEVICES[@]}"; do
     GOT_VER=$(sed -n 's/^version=//p' <<<"$GOT")
     GOT_FILE=$(sed -n 's/^file=//p' <<<"$GOT")
     GOT_BID=$(sed -n 's/^board=//p' <<<"$GOT")
-    if [[ $GOT_VER != "$VER" || $GOT_FILE != "fw/$FILE" || $GOT_BID != "$BID" ]]; then
+    if [[ $GOT_VER != "$VER" || $GOT_FILE != "fw/$FILE" || $GOT_BID != "$PUB_BID" ]]; then
         echo "error: manifest for $imei served as:" >&2
         sed 's/^/         /' <<<"$GOT" >&2
-        echo "       expected version=$VER file=fw/$FILE board=$BID" >&2
+        echo "       expected version=$VER file=fw/$FILE board=$PUB_BID" >&2
         echo "       (does the server resolve manifest.txt?imei= per device?)" >&2
         exit 1
     fi
@@ -399,6 +441,10 @@ for imei in "${DEVICES[@]}"; do
         exit 1
     fi
     echo "verified: manifest live for $imei, CA trusted, range requests OK"
+    if [[ -n $AS_BOARD ]]; then
+        echo "bridge: $imei installs this as board=$AS_BOARD and runs it as board=$BID;"
+        echo "        publish its next release without --as-board."
+    fi
 done
 
 echo
