@@ -51,11 +51,11 @@ not been built or tested, and none of the figures here are measured on it.
   was only the bias tee.
 - **Backup supply.** V_BCKP has a switched rail of its own, `PP3V3_GNSS_BCKP`, enabled by
   `GNSS_BCKP_EN` (load switch S7U1, a 100K pulldown, no sense line, test point S12TP4). Held on
-  while the main rail is off, it keeps the receiver's ephemeris and time, so a parked wake gets the
-  data sheet's 1 s hot start and not a cold start of 23 to 28 s. The data sheet gives 28µA typical
-  for the receiver in this state at 3.3V, which is a large addition to the sleep current expected of
-  v3.4, so the firmware can leave it off (`CONFIG_APP_GNSS_BACKUP_SUPPLY`). Not measured on a v4.0
-  board.
+  while the main rail is off, it keeps the receiver's ephemeris and time, so a parked wake gets a hot
+  start and not a cold start of 23 to 28 s or more. The data sheet gives 28µA typical for the
+  receiver in this state at 3.3V, and about 30µA was measured on a v4.0 board, a large addition to the
+  sleep current expected of v3.4, so the firmware can leave it off (`CONFIG_APP_GNSS_BACKUP_SUPPLY`)
+  or drop it for the night (`CONFIG_APP_GNSS_BACKUP_OFF_UTC_HOUR`).
 - **Antenna.** The GNSS SMA feeds the receiver's RF input through the same 47pF DC block. The U.FL
   that fed the Connect Kit's own GNSS input (S15J1) and the two unfitted ESD diodes are gone, so the
   Connect Kit's GNSS input is unused, and the firmware leaves GNSS out of the modem's system mode.
@@ -87,6 +87,11 @@ The receiver's signals, and the pins that moved to make room for them:
 | `GNSS_BCKP_EN` | 9 | P0.5 | Enables `PP3V3_GNSS_BCKP` (v3.4 has the `PP3V3_GPS_ST` sense here) |
 | `PP3V3_GNSS_ST` | 22 | P0.14 | Reads `PP3V3_GNSS` back, high when up |
 | `L_SENSE` | 21 | P0.13 | The L-line sense, read through the ADC (AIN0) as on v3.4, which has it on P0.14 |
+
+The boards fabricated from the earlier design have the nets of pins 9 and 21 the other way round:
+`GNSS_BCKP_EN` on pin 21 (P0.13) and `L_SENSE` on pin 9 (P0.5), which no ADC channel reaches. They
+need `CONFIG_APP_PIN_GNSS_BCKP_EN=13`, `CONFIG_APP_PIN_L_SENSE=5` and `CONFIG_APP_BOARD_HAS_L_SENSE=n`,
+and have no L-line short check.
 
 The receiver's EXTINT, LNA_EN, RESET_N, VCC_RF and I2C pins are unconnected; RESET_N has an
 internal pull-up. SAFEBOOT_N goes to a test point, S16TP2, as does TIMEPULSE (S16TP3) and the

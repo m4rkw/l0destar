@@ -220,6 +220,10 @@ bool ubx_utc_from_unix_ms(int64_t unix_ms, struct ubx_utc *out);
  * (reference "none"), the leap second count unknown.  0 if it does not fit. */
 size_t ubx_build_mga_ini_time_utc(uint8_t *out, size_t cap, const struct ubx_utc *t);
 
+/* The same for a Unix time in milliseconds, claimed good to tacc_s seconds.
+ * 0 for a clock that was never set (before 2020), or if it does not fit. */
+size_t ubx_build_mga_ini_time_unix(uint8_t *out, size_t cap, int64_t unix_ms, uint16_t tacc_s);
+
 /* UBX-MGA-INI-POS_LLH.  The accuracy is a standard deviation in centimetres
  * and must not be optimistic: a position wrong by more than it does harm. */
 size_t ubx_build_mga_ini_pos_llh(uint8_t *out, size_t cap, int32_t lat_e7,

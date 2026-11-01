@@ -491,6 +491,18 @@ size_t ubx_build_mga_ini_time_utc(uint8_t *out, size_t cap, const struct ubx_utc
     return ubx_build_frame(out, cap, UBX_CLS_MGA, UBX_ID_MGA_INI, pl, sizeof(pl));
 }
 
+size_t ubx_build_mga_ini_time_unix(uint8_t *out, size_t cap, int64_t unix_ms, uint16_t tacc_s)
+{
+    struct ubx_utc t;
+
+    if (!ubx_utc_from_unix_ms(unix_ms, &t)) {
+        return 0;
+    }
+    t.tacc_s = tacc_s;
+    t.tacc_ns = 0;
+    return ubx_build_mga_ini_time_utc(out, cap, &t);
+}
+
 size_t ubx_build_mga_ini_pos_llh(uint8_t *out, size_t cap, int32_t lat_e7,
                                  int32_t lon_e7, int32_t alt_cm, uint32_t pos_acc_cm)
 {

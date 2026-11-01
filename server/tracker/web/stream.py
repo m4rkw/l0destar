@@ -112,8 +112,10 @@ def carpos(ws):
                 last_send = time.time()
 
             # Track-mode records arrive twice a second; a quarter-second
-            # poll keeps the page within a frame of them.
-            time.sleep(TRACK_POLL_INTERVAL if track_mode else POLL_INTERVAL)
+            # poll keeps the page within a frame of them.  A streaming drive
+            # is the same: while rows are arriving, look again in a quarter
+            # of a second rather than a second.
+            time.sleep(TRACK_POLL_INTERVAL if track_mode or rows else POLL_INTERVAL)
     except Exception:
         logs.app.debug('websocket closed', exc_info=True)
     finally:

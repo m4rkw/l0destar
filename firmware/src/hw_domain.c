@@ -55,8 +55,10 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 #include <hal/nrf_gpio.h>
+#include <date_time.h>
 
 #include "app.h"
+#include "backup_cutoff.h"
 #include "hw_common.h"
 #include "hw_domain.h"
 #include "pins.h"
@@ -115,6 +117,28 @@ struct domain {
 };
 
 static struct domain s_dom[HW_DOMAIN_COUNT];
+
+/* v4.0: the receiver's backup supply (V_BCKP) is a switched rail of its own, with
+ * a pulldown on its enable and no signal pins or sense line, so it is not a
+ * domain.  s_bckp_on is what the enable is driven to. */
+#if IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY)
+#define BCKP_OFF_HOUR CONFIG_APP_GNSS_BACKUP_OFF_UTC_HOUR
+#else
+#define BCKP_OFF_HOUR (-1)
+#endif
+static bool s_bckp_on;
+
+static void bckp_set(bool on)
+{
+	if (!IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY) || PIN_GNSS_BCKP_EN < 0 ||
+	    on == s_bckp_on) {
+		return;
+	}
+	gpio_pin_configure(hw_gpio0, PIN_GNSS_BCKP_EN,
+			   on ? GPIO_OUTPUT_HIGH : GPIO_OUTPUT_LOW);
+	s_bckp_on = on;
+}
+
 static hw_domain_notify_t s_notify[HW_DOMAIN_COUNT];
 
 static const char *dom_name(enum hw_domain d);
@@ -316,14 +340,15 @@ int hw_domain_init(void)
 		}
 	}
 
-	/* v4.0: the receiver's backup supply is a switched rail of its own, with
-	 * a pulldown on its enable and no signal pins or sense line, so it is not
-	 * a domain.  It is meant to stay up through everything but a reset: it
-	 * is what lets the receiver hot-start (APP_GNSS_BACKUP_SUPPLY). */
+	/* v4.0: the backup supply is up from boot, through sleep, until
+	 * APP_GNSS_BACKUP_OFF_UTC_HOUR if that is set, and comes back with the
+	 * receiver's rail: it is what lets the receiver hot-start
+	 * (APP_GNSS_BACKUP_SUPPLY). */
 	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_GNSS) && PIN_GNSS_BCKP_EN >= 0) {
 		gpio_pin_configure(hw_gpio0, PIN_GNSS_BCKP_EN,
 				   IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY) ?
 				   GPIO_OUTPUT_HIGH : GPIO_OUTPUT_LOW);
+		s_bckp_on = IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY);
 	}
 
 	/* Rail-sense inputs (v3.1+): always-on status from the load switches.
@@ -381,6 +406,9 @@ int hw_domain_request(enum hw_domain dom, uint8_t user)
 		return 0;
 	}
 	if (d->users == 0) {
+		if (dom == HW_DOMAIN_AUX) {
+			bckp_set(true);	/* V_BCKP is up before the receiver's VCC */
+		}
 		dom_release_pins(d);
 		gpio_pin_configure(hw_gpio0, d->enable_pin, GPIO_OUTPUT_HIGH);
 		k_msleep(DOMAIN_SETTLE_MS);
@@ -469,5 +497,18 @@ void hw_domain_notify_set(enum hw_domain dom, hw_domain_notify_t cb)
 	s_notify[dom] = cb;
 	if (cb && s_dom[dom].enable_pin >= 0 && s_dom[dom].users != 0) {
 		cb(true);
+	}
+}
+
+void hw_gnss_backup_cutoff(int sleep_s)
+{
+	int64_t ms;
+
+	if (BCKP_OFF_HOUR < 0 || !s_bckp_on || hw_domain_is_on(HW_DOMAIN_AUX) ||
+	    date_time_now(&ms) != 0) {
+		return;		/* nothing to drop, or no clock to judge by */
+	}
+	if (backup_cutoff_due(ms / 1000, sleep_s, BCKP_OFF_HOUR)) {
+		bckp_set(false);
 	}
 }

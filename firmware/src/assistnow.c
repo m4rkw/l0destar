@@ -182,15 +182,7 @@ static int time_frame(uint8_t *f, size_t cap)
     if (err) {
         return 0;
     }
-
-    struct ubx_utc t;
-
-    if (!ubx_utc_from_unix_ms(ms, &t)) {
-        return 0;
-    }
-    t.tacc_s = CONFIG_APP_ASSISTNOW_TIME_ACC_S;
-    t.tacc_ns = 0;
-    return (int)ubx_build_mga_ini_time_utc(f, cap, &t);
+    return (int)ubx_build_mga_ini_time_unix(f, cap, ms, CONFIG_APP_ASSISTNOW_TIME_ACC_S);
 }
 
 /* The time, then what the server sent, into the receiver. */

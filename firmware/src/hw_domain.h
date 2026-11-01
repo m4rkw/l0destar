@@ -60,4 +60,11 @@ bool hw_domain_faulted(enum hw_domain d);
 typedef void (*hw_domain_notify_t)(bool up);
 void hw_domain_notify_set(enum hw_domain d, hw_domain_notify_t cb);
 
+/* v4.0, APP_GNSS_BACKUP_OFF_UTC_HOUR: call before each wait in the sleep loop
+ * with its length.  If that hour falls inside the wait the receiver's backup
+ * supply is dropped now, since the unit is not woken for it.  It comes back
+ * with the receiver's rail, the next time anything requests it.  Does nothing
+ * without the setting, or while the clock is not valid. */
+void hw_gnss_backup_cutoff(int sleep_s);
+
 #endif

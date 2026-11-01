@@ -68,6 +68,8 @@ def lib():
     L.ubx_utc_from_unix_ms.restype = C.c_bool
     L.ubx_build_mga_ini_time_utc.argtypes = [C.c_char_p, C.c_size_t, C.POINTER(Utc)]
     L.ubx_build_mga_ini_time_utc.restype = C.c_size_t
+    L.ubx_build_mga_ini_time_unix.argtypes = [C.c_char_p, C.c_size_t, C.c_int64, C.c_uint16]
+    L.ubx_build_mga_ini_time_unix.restype = C.c_size_t
     L.ubx_build_mga_ini_pos_llh.argtypes = [C.c_char_p, C.c_size_t, C.c_int32, C.c_int32, C.c_int32, C.c_uint32]
     L.ubx_build_mga_ini_pos_llh.restype = C.c_size_t
     L.ubx_frame_scan.argtypes = [C.c_char_p, C.c_size_t]
@@ -135,6 +137,21 @@ def test_time_utc_frame_layout(lib):
 def test_time_utc_frame_does_not_fit(lib):
     out = C.create_string_buffer(8)
     assert lib.ubx_build_mga_ini_time_utc(out, 31, C.byref(Utc(year=2026, month=1, day=1))) == 0
+
+
+def test_time_from_a_unix_clock_is_the_utc_frame_with_its_accuracy(lib):
+    ms = to_ms(datetime.datetime(2026, 10, 30, 18, 44, 3)) + 250
+    out = C.create_string_buffer(64)
+    n = lib.ubx_build_mga_ini_time_unix(out, 64, ms, 3)
+    assert n == 32
+    payload = struct.pack("<BBBbHBBBBBxIH2xI", 0x10, 0, 0, -128, 2026, 10, 30, 18, 44, 3, 250_000_000, 3, 0)
+    assert out.raw[:n] == frame(0x13, 0x40, payload)
+
+
+def test_time_from_a_clock_that_was_never_set_is_not_built(lib):
+    out = C.create_string_buffer(64)
+    for ms in (0, 86_400_000, -5):
+        assert lib.ubx_build_mga_ini_time_unix(out, 64, ms, 3) == 0
 
 
 def test_pos_llh_frame_layout(lib):

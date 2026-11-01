@@ -1281,10 +1281,10 @@ config APP_GNSS_BACKUP_SUPPLY
 	help
 	  Holds GNSS_BCKP_EN high from boot, through sleep, so the receiver
 	  keeps its ephemeris, almanac and time while its main rail is off
-	  between fixes.  With it a parked wake gets the data sheet's hot start
-	  (1 s); without, every wake is a cold start (23 to 28 s at best, much
-	  longer with a poor view of the sky), which costs far more in the
-	  receiver and the radio than the backup supply does.
+	  between fixes.  With it a parked wake gets a hot start, without it
+	  every wake is a cold start (23 to 28 s on the data sheet, much longer
+	  with a poor view of the sky), which has to be helped by AssistNow over
+	  the radio.  APP_GNSS_BACKUP_OFF_UTC_HOUR limits how long it is held.
 
 	  The price is the MAX-M10S's hardware-backup current, 28 uA typical
 	  at 3.3 V (UBX-20035208, table 17), against a tracker sleep current
@@ -1292,8 +1292,23 @@ config APP_GNSS_BACKUP_SUPPLY
 	  hours, so where the unit is not woken at least that often to report,
 	  the data it holds is stale by the next wake and the supply buys
 	  little but the time and almanac: consider turning this off for a
-	  unit that reports less often than every couple of hours.  The
-	  board's actual draw has not been measured against the data sheet.
+	  unit that reports less often than every couple of hours.
+
+config APP_GNSS_BACKUP_OFF_UTC_HOUR
+	int "Hour of the day (UTC) a parked unit drops the receiver's backup supply (-1 = never)"
+	depends on APP_GNSS_BACKUP_SUPPLY
+	range -1 23
+	default -1
+	help
+	  What the backup supply keeps is only good for the few hours the
+	  orbits stay valid, and holding it costs the same 30 uA through a
+	  night or a week away.  With an hour set (0 is midnight UTC, 23 is
+	  midnight in British Summer Time) a sleeping unit drops the supply at
+	  that hour, or before the sleep that would take it past the hour,
+	  since it is not woken for it.  The supply comes back with the
+	  receiver's rail, the next time the unit is driven (or boots), and
+	  stays until the hour comes round again.  -1 holds it for as long as
+	  the unit sleeps.  A unit with no valid clock holds it.
 
 config APP_ASSISTNOW
 	bool "u-blox AssistNow orbit assistance for the external receiver"
@@ -1317,6 +1332,12 @@ config APP_ASSISTNOW
 	  as the firmware manifest) for the data and passes it to the receiver
 	  with the time from the modem's clock.  The server has to be told to do
 	  its part: see the server's assistnow settings.
+
+	  Every power-up, whether or not it asks, a receiver that has found
+	  nothing yet is also given the modem's time and the position of the
+	  unit's last fix as soon as it is configured, so that it starts from a
+	  known time and place.  The position is kept in RAM, so a reset loses
+	  it.
 
 	  Costs about 14 KB of RAM (the download buffer and a thread) and, per
 	  power-up that asks, one HTTPS request of up to APP_ASSISTNOW_BUF_SIZE.

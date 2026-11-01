@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.4.95
+
+### The receiver is told the time and the last position at power-up
+Each time its rail comes up, a receiver that has found nothing yet is given the
+modem's clock and the position of the unit's last fix (UBX-MGA-INI) as soon as
+it is configured, whether or not it goes on to ask for orbits, so it does not
+start from its own clock, which drifts while the rail is off.
+
+- The time is claimed good to `APP_ASSISTNOW_TIME_ACC_S`; the position, kept in
+  RAM so a reset loses it, to 20 km.  Part of `APP_ASSISTNOW`.
+- **A fix from the last power-up could be handed out at the next.**  One whose
+  DOP had not arrived when the rail dropped went to the next `gnss_collect()`
+  about 40 ms after the rail rose, with the old time and position.  Fixed.
+- Run on the bench: the receiver took both messages at every power-up, and the
+  stale fix, forced, no longer comes.  Whether the hints shorten a start is not
+  measured.
+
+### The GNSS backup supply can be dropped overnight
+`APP_GNSS_BACKUP_OFF_UTC_HOUR` (default -1, never) drops the receiver's backup
+supply at that hour of the day, UTC, while the unit is parked, or before the
+sleep that would take it past the hour, since the unit is not woken for it.
+
+- The supply comes back with the receiver's rail, the next time the unit is
+  driven or boots, and stays until the hour comes round again.  A unit with no
+  valid clock holds it.
+- v4.0 boards fabricated with `GNSS_BCKP_EN` on P0.13 and `L_SENSE` on P0.5, the
+  other way round from the design, set `APP_PIN_GNSS_BCKP_EN=13`,
+  `APP_PIN_L_SENSE=5` and `APP_BOARD_HAS_L_SENSE=n`.
+- Run on the bench: the supply dropped at the last wake before the hour and
+  came back at a key-on.
+
 ## 0.4.94
 
 ### The board test shows the sky while it waits for a fix, and waits 10 minutes

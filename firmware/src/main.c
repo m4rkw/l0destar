@@ -1409,6 +1409,7 @@ static void do_sleep(void)
         if (resend_owed && sleep_secs > RESEND_POLL_S)
             sleep_secs = RESEND_POLL_S;   /* notice the registration */
         if (sleep_secs < 1) sleep_secs = 1;
+        hw_gnss_backup_cutoff(sleep_secs);
 
         k_sem_reset(&s_wake_sem);
         /* Re-arm the ignition wake after the reset, never before it: the

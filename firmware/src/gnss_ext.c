@@ -22,8 +22,10 @@
  *    held it for the bias tee, so none of them changed.
  *
  *  - It keeps its ephemeris and time on V_BCKP (GNSS_BCKP_EN, hw_domain.c), so
- *    a parked wake gets the data sheet's 1 s hot start and not a 25 s cold
- *    one.  Cycling VCC does not lose them.
+ *    a wake while they are fresh gets a hot start and not a 25 s cold one.
+ *    Cycling VCC does not lose them.  Its clock drifts while it is off, so each
+ *    bring-up also gives it the modem's time and the last position
+ *    (give_hints).
  *
  *  - What the backup supply cannot keep is orbits for a unit that has sat for
  *    days, or a receiver that lost it.  For that there is u-blox AssistNow
@@ -72,6 +74,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/ring_buffer.h>
+#include <date_time.h>
 #include <hal/nrf_gpio.h>
 #include <hal/nrf_timer.h>
 #include <helpers/nrfx_gppi.h>
@@ -111,6 +114,7 @@ LOG_MODULE_REGISTER(gnss, CONFIG_APP_LOG_LEVEL);
 #define ASSIST_WINDOW       16       /* assistance messages sent between looks at the acknowledgements */
 #define ASSIST_LAG          4        /* ... unacknowledged messages allowed to be in flight */
 #define ASSIST_ACK_MS       1500     /* how long the last acknowledgements are waited for */
+#define HINT_POS_ACC_CM     2000000  /* the position given at power-up is claimed good to 20 km (1 sigma) */
 
 #define THREAD_STACK        3072
 #define THREAD_PRIO         K_PRIO_PREEMPT(8)
@@ -491,6 +495,14 @@ static bool s_give_pending;
 static int64_t s_give_at_ms;
 static bool s_log_fix;
 
+/* Where the last fix was, kept across power-ups (not across a reset) to tell
+ * the receiver at the next.  A parked car has not moved, and the claimed
+ * accuracy is loose enough for a short tow.  s_fixed_this_up is whether the
+ * receiver has found a position since its rail rose, and so needs no telling. */
+static bool s_pos_known;
+static int32_t s_pos_lat_e7, s_pos_lon_e7, s_pos_alt_cm;
+static bool s_fixed_this_up;
+
 static int s_tracked_sv;
 static int s_best_cno;
 static int s_search_epochs;
@@ -596,6 +608,11 @@ static void publish_pvt(const struct ubx_pvt *v, uint32_t epoch, int64_t now)
     ubx_fmt_time(v, f.time_iso, sizeof(f.time_iso));
     s_pub_itow = epoch;
     s_search_epochs = 0;
+    s_pos_lat_e7 = v->lat_e7;
+    s_pos_lon_e7 = v->lon_e7;
+    s_pos_alt_cm = v->height_mm / 10;
+    s_pos_known = true;
+    s_fixed_this_up = true;
     publish(&f, now);
 }
 
@@ -1048,6 +1065,37 @@ static void start_nmea_mode(void)
             "(is the nRF's TX reaching it?)", (unsigned)s_baud);
 }
 
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+/* Tell a receiver that has just been configured, and has found nothing yet,
+ * the time from the modem's clock and the place the unit last had a fix, so it
+ * does not start from its own clock, which drifts while its rail is off.
+ * Nothing is waited for or logged: a receiver that took neither starts as it
+ * would have, and the orbits are asked for as before. */
+static void give_hints(void)
+{
+    uint8_t f[40];
+    int64_t ms;
+    size_t n;
+
+    if (s_fixed_this_up) {
+        return;
+    }
+    if (date_time_now(&ms) == 0) {
+        n = ubx_build_mga_ini_time_unix(f, sizeof(f), ms, CONFIG_APP_ASSISTNOW_TIME_ACC_S);
+        if (n) {
+            (void)uart_send(f, n);
+        }
+    }
+    if (s_pos_known) {
+        n = ubx_build_mga_ini_pos_llh(f, sizeof(f), s_pos_lat_e7, s_pos_lon_e7,
+                                      s_pos_alt_cm, HINT_POS_ACC_CM);
+        if (n) {
+            (void)uart_send(f, n);
+        }
+    }
+}
+#endif
+
 static int bring_up(uint32_t gen)
 {
     int err = -ETIMEDOUT;
@@ -1093,6 +1141,9 @@ static int bring_up(uint32_t gen)
     }
     LOG_INF("receiver configured: %u baud, NAV-PVT/DOP/SAT every second",
             (unsigned)s_baud);
+#if IS_ENABLED(CONFIG_APP_ASSISTNOW)
+    give_hints();
+#endif
     /* What it is, for the log and the board test.  The reply is read with the
      * positions; the receiver is configured whether or not it comes. */
     (void)send_poll(UBX_CLS_MON, UBX_ID_MON_VER);
@@ -1182,6 +1233,11 @@ static void rail_notify(bool up)
         s_gen++;
         s_fails = 0;
         s_dead = false;
+        /* Nothing of the last power-up is still to be handed out: a fix whose
+         * DOP had not come when the rail dropped would otherwise go to the
+         * next caller, about 40 ms in. */
+        s_give_pending = false;
+        s_fixed_this_up = false;
         s_nmea_mode = false;
         s_tracked_sv = 0;
         s_best_cno = 0;
@@ -1240,6 +1296,7 @@ int gnss_start(void)
 {
     s_have_fix = false;
     s_handed = false;
+    s_give_pending = false;
     s_start_ms = k_uptime_get();
     k_sem_reset(&s_fix_sem);
     if (!s_rail_up) {

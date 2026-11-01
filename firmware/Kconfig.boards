@@ -94,7 +94,10 @@
 #              still an analog input (AIN0), so the L-line sense reads as on
 #              v3.3/v3.4 — while P0.5 became the backup-supply enable.  (The
 #              2026-10-18 design had L_SENSE on P0.5, which no ADC channel
-#              reaches, and GNSS_BCKP_EN on P0.13; the two nets were swapped.)
+#              reaches, and GNSS_BCKP_EN on P0.13; the two nets were swapped.
+#              Boards fabricated from it need APP_PIN_GNSS_BCKP_EN=13,
+#              APP_PIN_L_SENSE=5 and APP_BOARD_HAS_L_SENSE=n: no L-line short
+#              check.)
 #              CAN and K-wire have their own connector pins (no
 #              interface-select pads), so both can be fitted at once:
 #              APP_OBD_MODE is used as on v3.4, plus 3 for both.
@@ -377,7 +380,9 @@ config APP_PIN_L_SENSE
 	  the sense reporting unavailable.
 
 	  v4.0 puts L_SENSE on P0.13 (AIN0) and the PP3V3_GNSS rail sense on
-	  P0.14, so the L-line short check works there as it does on v3.3.
+	  P0.14, so the L-line short check works there as it does on v3.3.  The
+	  boards fabricated before L_SENSE moved have it on P0.5, which cannot
+	  be read: 5 here, and APP_BOARD_HAS_L_SENSE off.
 
 config APP_PIN_L_RECV
 	int "K-wire L-line receive pin"
@@ -760,4 +765,5 @@ config APP_PIN_GNSS_BCKP_EN
 	default -1
 	help
 	  Enables PP3V3_GNSS_BCKP through its own load switch.  It has a 100K
-	  pulldown and no sense line.  See APP_GNSS_BACKUP_SUPPLY.
+	  pulldown and no sense line.  See APP_GNSS_BACKUP_SUPPLY.  The v4.0
+	  boards fabricated before L_SENSE moved to P0.13 have it on P0.13.
