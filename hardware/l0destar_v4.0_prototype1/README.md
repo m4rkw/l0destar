@@ -32,29 +32,34 @@ yourself rather than taking them on trust.
 
 | Item | Test | Result | Notes |
 |---------|------|--------|-------|
-| Input stage | 12V input reverse polarity | NOT TESTED | |
-| Input stage | 12V ignition input reverse polarity | NOT TESTED | |
-| INA238 | Voltage reading function | NOT TESTED | |
-| Ignition presence | Ignition sense 3.3v signal | NOT TESTED | |
-| LT8609 | 4.2V output | NOT TESTED | |
-| LT8609 | UVLO thresholds | NOT TESTED | |
-| MCU OVP | 4.2V passes through at nominal voltage | NOT TESTED | S11Q1 on, S12TP2 ≈ the buck output at S6C5 |
-| MCU OVP | Cuts off when the buck output (S6C5) is driven above ~5V | NOT TESTED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
-| MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | NOT TESTED | |
-| GPS auxiliary 3.3V rail | Switches on enable signal | NOT TESTED | |
-| CAN auxiliary 3.3V rail | Switches on CAN-enable signal | NOT TESTED | |
-| K-line auxiliary 3.3V rail | Switches on K-enable signal | NOT TESTED | |
-| K-line auxiliary 12V rail | Switches on K-enable signal | NOT TESTED | |
-| Accelerometer | Operates while awake | NOT TESTED | |
-| Accelerometer | Wake on motion | NOT TESTED | |
-| GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
-| K-wire | K wire connectivity | NOT TESTED | |
-| K-wire | L-line pulldown | NOT TESTED | |
-| K-wire | L-line external short to 12V while L\_SEND high | NOT TESTED | |
-| K-wire | L-line sensing via L_SENSE | NOT TESTED | |
-| CAN | Connectivity | NOT TESTED | |
-| CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
-| Board | Quiescent current | | Unknown, could be ~50uA higher if the module is left in standby mode |
+| Input stage | 12V input reverse polarity | PASSED | |
+| Input stage | 12V ignition input reverse polarity | PASSED | |
+| INA238 | Voltage reading function | PASSED | |
+| Ignition presence | Ignition sense 3.3v signal | PASSED | |
+| LT8609 | 4.2V output | PASSED | |
+| LT8609 | UVLO thresholds | PASSED | |
+| MCU OVP | 4.2V passes through at nominal voltage | PASSED | S11Q1 on, S12TP2 ≈ the buck output at S6C5 |
+| MCU OVP | Cuts off when the buck output (S6C5) is driven above ~5V | PASSED | Trip ≈ 4.95V, release ≈ 4.80V (calculated, see below) |
+| MCU OVP | Scope trigger on VBAT rail, should never peak above abs max (~5.5V) during overvoltage condition | PASSED | |
+| GPS auxiliary 3.3V rail | Switches on enable signal | PASSED | |
+| CAN auxiliary 3.3V rail | Switches on CAN-enable signal | PASSED | |
+| K-line auxiliary 3.3V rail | Switches on K-enable signal | PASSED | |
+| K-line auxiliary 12V rail | Switches on K-enable signal | PASSED | |
+| Accelerometer | Operates while awake | PASSED | |
+| Accelerometer | Wake on motion | PASSED | |
+| GPS antenna bias tee | Obtains GPS signal | PASSED | |
+| K-wire | K wire connectivity | PASSED | |
+| K-wire | L-line pulldown | PASSED | |
+| K-wire | L-line external short to 12V while L\_SEND high | PASSED | |
+| K-wire | L-line sensing via L\_SENSE | PASSED | |
+| CAN | Connectivity | PASSED | |
+| CAN standby via XSTBY signal | Low standby current | PASSED | |
+| Board | Quiescent current, GNSS backup supply off | 35 µA | |
+| Board | Quiescent current, GNSS backup supply on | 65 µA | Reduces the TTFF from 17s to around 3s |
+
+Note: the GNSS backup supply can be configured to enable on the first drive of a
+day and then disable after a specific time (eg midnight) in order to conserve
+power.
 
 ## Features
 
