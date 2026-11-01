@@ -1,0 +1,221 @@
+
+(kicad_symbol_lib (version 20211014) (generator kicad_symbol_editor)
+  (symbol "IM41GR" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
+    (property "Reference" "K" (id 0) (at -5.08 11.43 0)
+      (effects (font (size 1.27 1.27)) (justify bottom left))
+    )
+    (property "Value" "IM41GR" (id 1) (at -5.08 -12.7 0)
+      (effects (font (size 1.27 1.27)) (justify bottom left))
+    )
+    (property "Footprint" "IM41GR:RELAY_IM41GR" (id 2) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MF" "TE Connectivity / P&B" (id 4) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MAXIMUM_PACKAGE_HEIGHT" "5.65 mm" (id 5) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Package" "None" (id 6) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Price" "None" (id 7) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Check_prices" "https://www.snapeda.com/parts/IM41GR/TE+Connectivity+%252F+P%2526B/view-part/?ref=eda" (id 8) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "STANDARD" "Manufacturer Recommendations" (id 9) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "PARTREV" "08/24" (id 10) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "SnapEDA_Link" "https://www.snapeda.com/parts/IM41GR/TE+Connectivity+%252F+P%2526B/view-part/?ref=snap" (id 11) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MP" "IM41GR" (id 12) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Description" "\n                        \n                            Signal Relay 3VDC 2A DPDT (( 10mm 7.5mm 5.65mm)) Surface Mount Automotive\n                        \n" (id 13) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "Availability" "In Stock" (id 14) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (property "MANUFACTURER" "TE Connectivity" (id 15) (at 0 0 0)
+      (effects (font (size 1.27 1.27)) (justify bottom) hide)
+    )
+    (symbol "IM41GR_0_0"
+      (polyline
+        (pts (xy -5.08 5.08) (xy -2.54 5.08)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy -3.81 0.635) (xy -2.54 0.635)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy -2.54 0.635) (xy -1.27 0.635)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy -1.27 0.635) (xy -1.27 -0.635)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy -1.27 -0.635) (xy -2.54 -0.635)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy -2.54 -0.635) (xy -3.81 -0.635)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy -3.81 -0.635) (xy -3.81 0.635)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy -5.08 -5.08) (xy -2.54 -5.08)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy -2.54 5.08) (xy -2.54 0.635)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy -2.54 -0.635) (xy -2.54 -5.08)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 5.08 -5.08) (xy 3.556 -5.08)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 2.286 -2.54) (xy 2.286 -3.556)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts
+          (xy 2.667 -3.302)
+          (xy 1.905 -3.302)
+          (xy 2.286 -4.064)
+          (xy 2.667 -3.302)
+        )
+        (stroke (width 0.1524)) (fill (type outline))
+      )
+      (polyline
+        (pts (xy 2.286 -2.54) (xy 5.08 -2.54)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 3.556 -5.08) (xy 1.778 -3.937)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 2.286 -7.62) (xy 2.286 -6.604)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts
+          (xy 2.667 -6.858)
+          (xy 1.905 -6.858)
+          (xy 2.286 -6.096)
+          (xy 2.667 -6.858)
+        )
+        (stroke (width 0.1524)) (fill (type outline))
+      )
+      (polyline
+        (pts (xy 2.286 -7.62) (xy 5.08 -7.62)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 5.08 5.08) (xy 3.556 5.08)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 2.286 7.62) (xy 2.286 6.604)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts
+          (xy 2.667 6.858)
+          (xy 1.905 6.858)
+          (xy 2.286 6.096)
+          (xy 2.667 6.858)
+        )
+        (stroke (width 0.1524)) (fill (type outline))
+      )
+      (polyline
+        (pts (xy 2.286 7.62) (xy 5.08 7.62)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 3.556 5.08) (xy 1.778 6.223)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts (xy 2.286 2.54) (xy 2.286 3.556)) (stroke (width 0.1524))
+      )
+      (polyline
+        (pts
+          (xy 2.667 3.302)
+          (xy 1.905 3.302)
+          (xy 2.286 4.064)
+          (xy 2.667 3.302)
+        )
+        (stroke (width 0.1524)) (fill (type outline))
+      )
+      (polyline
+        (pts (xy 2.286 2.54) (xy 5.08 2.54)) (stroke (width 0.1524))
+      )
+      (rectangle (start -5.08 -10.16) (end 5.08 10.16)
+        (stroke (width 0.254)) (fill (type background))
+      )
+      (pin passive line (at 10.16 5.08 180.0) (length 5.08)
+        (name "~"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "3"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at 10.16 2.54 180.0) (length 5.08)
+        (name "~"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "4"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at -10.16 5.08 0) (length 5.08)
+        (name "~"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "1"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at -10.16 -5.08 0) (length 5.08)
+        (name "~"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "8"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at 10.16 7.62 180.0) (length 5.08)
+        (name "~"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "2"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at 10.16 -5.08 180.0) (length 5.08)
+        (name "~"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "6"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at 10.16 -7.62 180.0) (length 5.08)
+        (name "~"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "5"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+      (pin passive line (at 10.16 -2.54 180.0) (length 5.08)
+        (name "~"
+          (effects (font (size 1.016 1.016)))
+        )
+        (number "7"
+          (effects (font (size 1.016 1.016)))
+        )
+      )
+    )
+  )
+)

@@ -1,4 +1,4 @@
-# l0destar v4.0
+# l0destar v4.0p1
 
 ## Overview
 
@@ -86,6 +86,8 @@ power.
 ## Changes from v3.4
 
 - Dedicated U-blox GPS module supporting BeiDou, Galileo, GLONASS, GPS / QZSS
+- 8-pin Molex connector allows the use of both the CAN bus and K-wire
+  simultaneously
 
 ## Power supply
 
@@ -192,7 +194,7 @@ separate load switches.
 | Item | Description | Specification | Example | Notes |
 |------|-------------|---------------|---------|-------|
 | MCU | MCU and GSM/GPS 40pin board | nRF9151 Connect Kit | [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) | |
-| S1J1 | Molex Micro-fit 3.0 2x03 PCB connector | 43045-0600 | [43045-0600](https://uk.farnell.com/molex/43045-0600/conn-r-a-pcb-hdr-6pos-2row-3mm/dp/1012252) | |
+| S1J1 | Molex Micro-fit 3.0 2x04 PCB connector | 43045-0800 | 43045-0800 (Molex) | 8-pin, matches the PCB footprint; verify stock before ordering |
 | S1J2 | Makerdiary header 1 | 20-pin 2.54mm header | [20-pin pcb header](https://www.aliexpress.com/item/1005003610333849.html) | |
 | S1J3 | Makerdiary header 2 | 20-pin 2.54mm header | [20-pin pcb header](https://www.aliexpress.com/item/1005003610333849.html) | |
 | S1R1 | I2C pull-up resistor | 0402 1.8K 1% | [MCMR04X1801FTL](https://uk.farnell.com/multicomp-pro/mcmr04x1801ftl/res-1k8-1-0-0625w-0402-ceramic/dp/2072709) | |
@@ -282,7 +284,7 @@ separate load switches.
 | S15D2 | DNP - ESD protection diode (GPS path) | DNP - not necessary | | |
 | S15R1 | Bias tee feed resistor | 0508 15R 5% 1W | [3430A2F15RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f15rtdf/res-15r-1w-thick-film-0508-wide/dp/4206818) | |
 | S16U1 | Reverse-blocking load switch | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://www.ebay.co.uk/itm/178539837620) | |
-| S16U2 | U-blox MAX10S GPS Module | U-blox MAX10S GPS Module | [MAX-M10S-00B](https://www.digikey.co.uk/en/products/detail/u-blox/MAX-M10S-00B/15712906) | |
+| S16U2 | U-blox MAX-M10S GPS Module | U-blox MAX-M10S GPS Module | [MAX-M10S-00B](https://www.digikey.co.uk/en/products/detail/u-blox/MAX-M10S-00B/15712906) | |
 | S16C1 | 2.2uF capacitor | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |
 | S16C2 | 100nF capacitor | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | S16C3 | 2.2uF capacitor | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |
@@ -412,7 +414,7 @@ buck enable divider. Quantities are per board.
 | Build | Item | Quantity | Specification | Example | Notes |
 |-------|------|----------|---------------|---------|-------|
 | All | MCU and GSM/GPS 40pin board | 1 | nRF9151 Connect Kit | [Makerdiary nRF9151 Connect Kit](https://makerdiary.com/products/nrf9151-connectkit) | |
-| All | Molex Micro-fit 3.0 2x03 PCB connector | 1 | 43045-0600 | [43045-0600](https://uk.farnell.com/molex/43045-0600/conn-r-a-pcb-hdr-6pos-2row-3mm/dp/1012252) | |
+| All | Molex Micro-fit 3.0 2x04 PCB connector | 1 | 43045-0800 | 43045-0800 (Molex) | 8-pin, matches the PCB footprint; verify stock before ordering |
 | All | 20-pin 2.54mm header | 2 | 20-pin 2.54mm header | [20-pin pcb header](https://www.aliexpress.com/item/1005003610333849.html) | |
 | All | 0R 0402 jumper | 1 | 0402 0R | Any 0402 0R jumper | S6R4, the buck enable jumper |
 | All | 15R 0508 resistor | 1 | 0508 15R 5% 1W | [3430A2F15RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f15rtdf/res-15r-1w-thick-film-0508-wide/dp/4206818) | |
@@ -464,9 +466,8 @@ buck enable divider. Quantities are per board.
 | All | u.FL PCB connector | 2 | 50 ohm | [U.FL-R-SMT(01)](https://www.ebay.co.uk/itm/178540053901) | |
 | All | SMA PCB connector | 2 | 50 ohm | [SMA-J-P-H-RA-TH1](https://www.ebay.co.uk/itm/178540028662) | |
 | All | u.FL cable | 2 | 50 ohm 35mm | [U.FL-2LPHF6-04N1TV-A-35](https://uk.farnell.com/hirose-hrs/u-fl-2lphf6-04n1tv-a-35/cbl-assy-u-fl-r-a-plug-r-a-plug/dp/4294251) | 1x LTE, 1x GPS |
+| All | U-blox MAX-M10S GPS Module | 1 | U-blox MAX-M10S GPS Module | [MAX-M10S-00B](https://www.digikey.co.uk/en/products/detail/u-blox/MAX-M10S-00B/15712906) | |
 | All | JST power cable | 1 | Ultra-thin MX1.25 51146 | [10PCS MX1.25 51146 Cable](https://www.ebay.co.uk/itm/178550497683) | |
-
-| All | U-blox MAX10S GPS Module | U-blox MAX10S GPS Module | [MAX-M10S-00B](https://www.digikey.co.uk/en/products/detail/u-blox/MAX-M10S-00B/15712906) | |
 | CAN | 120R 0805 resistor | 1 | 0805 120R 5% 0.5W | [MCPAS05W2J0121T5E](https://uk.farnell.com/multicomp-pro/mcpas05w2j0121t5e/res-120r-5-0-5w-thick-film-0805/dp/4069078) | |
 | CAN | 220R 0402 resistor | 2 | 0402 220R 5% | [MC00625W04021220R](https://uk.farnell.com/multicomp/mc00625w04021220r/res-220r-1-0-0625w-0402-thick/dp/1358024) | |
 | CAN | 1K 0402 resistor | 1 | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |

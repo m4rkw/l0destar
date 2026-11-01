@@ -1,0 +1,113 @@
+(footprint "Makerdiary_power_header"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "Through hole straight pin header, 1x02, 1.27mm pitch, single row")
+	(tags "Through hole pin header THT 1x02 1.27mm single row")
+	(property "Reference" "S1J4"
+		(at 0 -1.745 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "fa4547cf-acfc-4600-b2d6-512e90b94243")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "3e7f4e88-a272-41b1-96fd-00a368214c80")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Description" "Generic connector, single row, 01x02, script generated"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "ce57f849-6922-48a6-940a-f84e559efd73")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Value" "+"
+		(at -0.9 0 0)
+		(layer "F.SilkS")
+		(uuid "268ab883-cd66-43ea-9138-b430d88a9dd2")
+		(effects
+			(font
+				(size 0.8 0.8)
+				(thickness 0.15)
+				(bold yes)
+			)
+		)
+	)
+	(property ki_fp_filters "Connector*:*_1x??_*")
+	(sheetname "/")
+	(sheetfile "l0destar.kicad_sch")
+	(attr through_hole)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_rect
+		(start -1.21 -1.19)
+		(end 1.18 2.16)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "7340e60e-ffc5-4694-a93a-77ef26c06156")
+	)
+	(fp_text user "⏚"
+		(at -1.5 0.7 270)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "8f137323-51b2-4d1a-8ea4-05b24026d996")
+		(effects
+			(font
+				(size 0.8 0.8)
+				(thickness 0.15)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+	)
+	(pad "1" thru_hole rect
+		(at 0 0)
+		(size 1 1)
+		(drill 0.65)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "2b884e43-3e4c-46c9-9036-9e3587f42168")
+	)
+	(pad "2" thru_hole circle
+		(at 0 1.27)
+		(size 1 1)
+		(drill 0.65)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "608e42c1-7ee1-4304-977a-4f0b2db54034")
+	)
+	(embedded_fonts no)
+	(model "${KICAD10_3DMODEL_DIR}/Connector_PinHeader_1.27mm.3dshapes/PinHeader_1x02_P1.27mm_Vertical.step"
+		(hide yes)
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)
