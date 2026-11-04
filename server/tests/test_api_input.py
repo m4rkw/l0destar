@@ -13,10 +13,11 @@ IMEI = '350000000000000'
 
 
 @pytest.mark.parametrize('body, message', [
-    ({'int': 3.7}, 'int must be a whole number from 0 to 4294967295'),
-    ({'int': -1}, 'int must be a whole number from 0 to 4294967295'),
-    ({'backup': -1}, 'backup must be a whole number from 0 to 4294967295'),
-    ({'backup': 'soon'}, 'backup must be a whole number from 0 to 4294967295'),
+    ({'int': 3.7}, 'int must be 0 or a whole number from 10 to 4294967295'),
+    ({'int': 5}, 'int must be 0 or a whole number from 10 to 4294967295'),
+    ({'backup': -1}, 'backup must be 0 or a whole number from 10 to 4294967295'),
+    ({'backup': 'soon'}, 'backup must be 0 or a whole number from 10 to 4294967295'),
+    ({'backup': 9}, 'backup must be 0 or a whole number from 10 to 4294967295'),
     ({'al': True}, 'al must be a whole number from 0 to 1'),
     ({'oaf': 24}, 'oaf must be a whole number from 0 to 23'),
 ])
@@ -27,6 +28,19 @@ def test_config_refuses_values_it_cannot_store(client, bearer, device, database,
     row = database.one('SELECT `int`, `alarm`, `overnight_alarm_hour_from` FROM `device` '
                        'WHERE `imei` = %s', (IMEI,))
     assert row == {'int': 3600, 'alarm': 0, 'overnight_alarm_hour_from': 23}
+
+
+def test_config_refuses_a_setting_it_does_not_know(client, bearer, device):
+    response = client.post('/api/1.0/config', headers=bearer, json={'imei': IMEI, 'inte': 60})
+    assert response.status_code == 400
+    assert response.get_json()['message'] == 'unknown setting: inte'
+
+
+def test_an_interval_command_below_ten_is_refused(client, bearer, device, database):
+    response = client.post('/api/1.0/command', headers=bearer,
+                           json={'imei': IMEI, 'command': 'int=5'})
+    assert response.status_code == 400
+    assert database.one('SELECT COUNT(*) c FROM `command`')['c'] == 0
 
 
 def test_config_takes_a_whole_number_given_as_a_string(client, bearer, device, database):
@@ -48,7 +62,7 @@ def test_backup_interval_in_a_command_is_checked(client, bearer, device, databas
                            json={'imei': IMEI, 'command': 'backup_interval=' + value})
     assert response.status_code == 400
     assert response.get_json()['message'] == \
-        'backup_interval must be a whole number from 0 to 4294967295'
+        'backup_interval must be 0 or a whole number from 10 to 4294967295'
     assert database.one('SELECT `backup_int` FROM `device` WHERE `imei` = %s',
                         (IMEI,))['backup_int'] == 0
     assert database.one('SELECT COUNT(*) c FROM `command`')['c'] == 0
@@ -69,3 +83,22 @@ def test_zero_leaves_a_flag_off(client, bearer, device):
     assert client.get(url + '&google=0&return=1', headers=bearer).get_json()['url'].startswith('maps:')
     assert client.get(url + '&google=1&return=1', headers=bearer).get_json()['url'].startswith('https://maps.google.com/')
     assert client.get(url + '&return=0', headers=bearer).status_code == 302
+
+
+def test_cancel_removes_only_the_named_queued_command(client, bearer, device, database):
+    for command in ('backlog=flush', 'int=600,locate', 'status'):
+        client.post('/api/1.0/command', headers=bearer, json={'imei': IMEI, 'command': command})
+
+    response = client.post('/api/1.0/command/cancel', headers=bearer,
+                           json={'imei': IMEI, 'command': 'backlog'})
+    assert response.get_json() == {'status': 'ok', 'success': True, 'cancelled': 1}
+
+    response = client.post('/api/1.0/command/cancel', headers=bearer,
+                           json={'imei': IMEI, 'command': 'locate'})
+    assert response.get_json()['cancelled'] == 1
+    left = sorted(r['command'] for r in database.all('SELECT `command` FROM `command`'))
+    assert left == ['int=600', 'status']
+
+    response = client.post('/api/1.0/command/cancel', headers=bearer,
+                           json={'imei': IMEI, 'command': 'backlog'})
+    assert response.get_json()['cancelled'] == 0

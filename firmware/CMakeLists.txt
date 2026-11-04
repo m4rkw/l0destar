@@ -31,6 +31,7 @@ target_sources(app PRIVATE
     src/data.c
     src/alert.c
     src/commands.c
+    src/reports.c
     src/fota.c
     src/led.c
     src/watchdog.c

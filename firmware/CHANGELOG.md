@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.4.112
+
+### Network scan command
+
+- `netscan` makes the unit sweep every band (GCI extended-complete search) and send one `F,scan,` line: operator, TAC, cell, EARFCN, RSRP and RSRQ of every cell heard, other operators included, cells it heard but could not identify (weak ones, e.g. O2 B20 at home) are listed as `?:0:<PCI>:<earfcn>:...`, strongest first. `APP_NETSCAN` (default y), `APP_NETSCAN_TIMEOUT_S` (180).
+- Server: kept on the device row (`net_scan`, `net_scan_at`; migration `2026-11-04_device_net_scan.sql`) and returned by `GET /api/1.0/devices` as `net_scan`.
+- A sweep holds the radio for tens of seconds to minutes and can drop the connection.
+- Status: built, not run on hardware.
+
+### Report commands
+
+- `selftest`, `status`, `gnssstat`, `backlog` (`backlog=flush` also sends the stored records) and `logdump` each answer with one `F,rep,<name>,<text>` line; `sleep=<s>` (10-86400) sets the next timed wait once.
+- `selftest` is light: battery, accelerometer, modem, GNSS receiver (no fix awaited), backlog flash where fitted. Each switched rail (aux, obd, can, k) that is off is turned on, checked and turned off again; one in use is only checked. A failure raises an alert.
+- Server: newest answer per device and name in `device_report` (migration `2026-11-04_device_report.sql`), returned as `reports` by `GET /api/1.0/devices`.
+- Status: built, not run on hardware.
+
+### GNSS backup supply held by the server
+The supply no longer survives a reboot from RAM (which moved with every image,
+so an update brought it back on).  The server keeps the state and sends it.
+
+- **Wire.**  `gb=<0|1>` on every reply once known.  The first after a boot is
+  applied silently; a later change alerts, reports `ak=gnssbk`, and turning it
+  on makes the next wake search for a fresh fix.  Off is held until the
+  ignition comes on.  The API's `gnssbk=<0|1>` only sets the server's value.
+- **Server.**  `device.gnss_backup` / `gnss_backup_at` replace the `gnss_backup`
+  history table (`migrations/2026-11-04_device_gnss_backup.sql`, which drops it).
+  `GET /api/1.0/devices` gains `gnss_backup`.
+- A gb= that matches what the unit already does (the supply the ignition turned on) is not announced.
+- Boot is no longer reported as a change: 0.4.102's came-up-on note overrode the
+  server's "off".
+- **`gpsfix` command.**  The next wake with a network searches for a fresh fix,
+  without touching the backup supply (`ak=gpsfix`).  The answer is an alert "apple: <lat>,<lon>" with an Apple Maps link once the search is done, "gps fix: none found" otherwise.
+- Status: built, not run on hardware.
+
+### Applied settings and command acks
+The unit now says what it is running and which commands it has run, so the app
+can show a change as landed.
+
+- **Wire.**  `ap=<int>:<ma>:<backup>:<track>` on the first record after a boot
+  and whenever one changes; `ak=<name>|...` for the commands run since the last
+  record (`int`, `movealarm`, `track`, `movereset`, `locate[now]`,
+  `tomtom[now]`, `fota`, `config`).  No new Pushover alerts.
+- **Server.**  Both sit on the `device` row (`ap_*`, `ack_cmd`, `ack_at`;
+  `migrations/2026-11-04_device_applied.sql`).  A restart with `rst=sw` and the
+  same `fw=` is filed as a `reboot` ack.  `GET /api/1.0/devices` gains
+  `applied`, `last_ack`, `pending` and `uptime`.
+- `POST /config` refuses unknown keys and `int` / `backup` of 1 to 9 (0 or 10+);
+  so does an `int=` command.  Commands queued for more than 6 hours are dropped.
+- Host tests pass; the firmware builds and has not been run on hardware.
+
 ## 0.4.100
 
 ### GNSS backup supply changes reported

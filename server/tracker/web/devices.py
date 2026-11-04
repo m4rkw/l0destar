@@ -12,6 +12,7 @@ import datetime
 from flask import request
 
 from .. import config, db
+from ..telemetry import COMMAND_MAX_AGE_HOURS
 
 
 def _named(value):
@@ -307,6 +308,70 @@ def engine_running(device, log, database=None):
     return False
 
 
+def _stamp(value):
+    return value.strftime('%Y-%m-%d %H:%M:%S') if value else None
+
+
+def config_state(device, database=None):
+    """What the device says it is running and what it has not yet been told.
+
+    ``applied`` is the settings the unit reported (null before it first has),
+    ``last_ack`` the command(s) it last reported running, and ``pending`` the
+    commands queued for its next check-in, oldest first.  Compare ``applied``
+    with the wanted settings to see a change that has not landed yet."""
+    database = database or db.web
+    applied = None
+    if device.get('ap_at'):
+        applied = {
+            'int': device.get('ap_int'),
+            'ma': device.get('ap_ma'),
+            'backup': device.get('ap_backup'),
+            'track': device.get('ap_track'),
+            'at': _stamp(device['ap_at']),
+        }
+    last_ack = None
+    if device.get('ack_at'):
+        last_ack = {'cmd': (device.get('ack_cmd') or '').split('|'),
+                    'at': _stamp(device['ack_at'])}
+    pending = [row['command'] for row in database.all(
+        'SELECT `command` FROM `command` WHERE `device_id` = %s '
+        'AND `timestamp` >= NOW(6) - INTERVAL %s HOUR ORDER BY `id`',
+        (device['id'], COMMAND_MAX_AGE_HOURS))]
+    return {'applied': applied, 'last_ack': last_ack, 'pending': pending,
+            'gnss_backup': device.get('gnss_backup'),
+            'net_scan': _net_scan(device),
+            'reports': _reports(device, database)}
+
+
+def _reports(device, database):
+    """The newest answer to each reporting command: {name: {'text', 'at'}}."""
+    if database is None:
+        return {}
+    return {row['name']: {'text': row['text'], 'at': _stamp(row['at'])}
+            for row in database.all(
+                'SELECT `name`, `text`, `at` FROM `device_report` '
+                'WHERE `device_id` = %s', (device['id'],))}
+
+
+def _net_scan(device):
+    """The last network scan: {'at', 'cells': [{plmn, tac, cell, earfcn,
+    rsrp (dBm), rsrq (dB)}]}, strongest first; None if never run."""
+    if not device.get('net_scan_at'):
+        return None
+    cells = []
+    for item in (device.get('net_scan') or '').split('|'):
+        f = item.split(':')
+        if len(f) != 6:
+            continue
+        try:
+            cells.append({'plmn': f[0], 'tac': int(f[1]), 'cell': int(f[2]),
+                          'earfcn': int(f[3]), 'rsrp': int(f[4]),
+                          'rsrq': int(f[5]) / 10})
+        except ValueError:
+            continue
+    return {'at': _stamp(device['net_scan_at']), 'cells': cells}
+
+
 def summary(device, database=None, log=None):
     """A device and its latest record, as the device list shows them.
 
@@ -334,4 +399,6 @@ def summary(device, database=None, log=None):
         'operator': db.lookup_operator(log.get('mcc'), log.get('mnc'),
                                        database=database) or '',
         'track_mode': 1 if device.get('track_mode') else 0,
+        'uptime': _nullable_float(log.get('uptime')),
+        **config_state(device, database),
     }

@@ -39,6 +39,7 @@ enum hw_domain {
 #define HW_DOMAIN_USER_KLINE  0x02
 #define HW_DOMAIN_USER_CAN    0x04
 #define HW_DOMAIN_USER_GNSS   0x08   /* GPS bias tee during sleep-state fixes */
+#define HW_DOMAIN_USER_TEST   0x10   /* the self-test power-cycling a rail */
 
 int  hw_domain_init(void);
 
@@ -52,6 +53,8 @@ int  hw_domain_request(enum hw_domain d, uint8_t user);
 void hw_domain_release(enum hw_domain d, uint8_t user);
 bool hw_domain_is_on(enum hw_domain d);
 bool hw_domain_faulted(enum hw_domain d);
+bool hw_domain_fitted(enum hw_domain d);   /* has an enable pin on this board */
+const char *hw_domain_name(enum hw_domain d);
 
 /* For a driver that owns a peripheral on pins inside a domain (v4.0's GNSS
  * UART).  The callback runs with true once the domain's first user has it up
@@ -71,14 +74,18 @@ void hw_domain_notify_set(enum hw_domain d, hw_domain_notify_t cb);
 void hw_gnss_backup_cutoff(int sleep_s);
 
 /* The changes of the receiver's backup supply the server has not been told of
- * (the state it came up in, each cut-off and return), as the text of a bk=
+ * (each cut-off and return, not the state at boot), as the text of a bk=
  * field: "<state>:<age_s>|..." oldest first (backup_log.h).  Returns its
  * length, 0 when there is nothing (also on a board with no switched supply),
  * and in *count how many changes it holds.  Once that text is in a record,
  * call hw_gnss_backup_reported(*count); until then the changes stay queued. */
-/* A reset that finds the backup supply dropped keeps it so: the startup fix
- * brings it up, and hw_gnss_backup_cutoff() drops it again after, until the
- * ignition comes on.  Call this when it does. */
+/* The server wants the supply on (gb=1) or dropped (gb=0, held until the
+ * ignition comes on).  True when that changed what the unit does. */
+bool hw_gnss_backup_want(bool on);
+/* What the unit last was told: false while the supply is held down. */
+bool hw_gnss_backup_wanted(void);
+
+/* The ignition is on: the supply is no longer held down. */
 void hw_gnss_backup_hold_clear(void);
 
 int hw_gnss_backup_report(char *buf, size_t size, int *count);

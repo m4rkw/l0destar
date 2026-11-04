@@ -47,6 +47,29 @@ CREATE TABLE `device` (
   `fw`            VARCHAR(16)  DEFAULT NULL COMMENT 'firmware version the newest live record reported',
   `board`         VARCHAR(32)  DEFAULT NULL COMMENT 'board that build is for (bd=); empty when not known',
 
+  -- What the unit says it is running (ap=) and the last command(s) it ran
+  -- (ak=), with the time; see migrations/2026-11-04_device_applied.sql.
+  `ap_int`        INT          DEFAULT NULL,
+  `ap_ma`         TINYINT      DEFAULT NULL,
+  `ap_backup`     INT          DEFAULT NULL,
+  `ap_track`      TINYINT      DEFAULT NULL,
+  `ap_at`         DATETIME     DEFAULT NULL,
+  `ack_cmd`       VARCHAR(48)  DEFAULT NULL,
+  `ack_at`        DATETIME     DEFAULT NULL,
+
+  -- Whether the GNSS receiver's backup supply (V_BCKP) is meant to be on
+  -- (1) or dropped (0); NULL until known.  Follows the unit's bk= reports
+  -- and the API's switch, whichever is newer (gnss_backup_at), and is sent
+  -- back in every reply as gb=.
+  `gnss_backup`   TINYINT      DEFAULT NULL,
+  `gnss_backup_at` DATETIME    DEFAULT NULL,
+
+  -- The last network scan the unit reported (the netscan command): the raw
+  -- cell list, "<mcc>-<mnc>:<tac>:<cell>:<earfcn>:<rsrp dBm>:<rsrq dB x10>"
+  -- joined by |, strongest first, and when it arrived.
+  `net_scan`      VARCHAR(600) DEFAULT NULL,
+  `net_scan_at`   DATETIME     DEFAULT NULL,
+
   -- A wake figure (wt=) that arrived before the record it belongs to, which
   -- happens whenever the wake's own send failed: that record goes to the
   -- device's backlog and is flushed behind the record describing it.  Held
@@ -247,23 +270,6 @@ CREATE TABLE `dtc` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
--- Each change of the GNSS receiver's backup supply (V_BCKP) on a board that
--- switches it: held from boot, dropped overnight by the cut-off, back with the
--- receiver's rail.  `at` is when the device changed it, not when it said so:
--- the change is reported on the next record, hours later after an overnight
--- cut-off.  The first row after a boot is the state it came up in.
-CREATE TABLE `gnss_backup` (
-  `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `device_id`     INT UNSIGNED NOT NULL,
-  `at`            DATETIME(6)  NOT NULL,
-  `on`            TINYINT(1)   NOT NULL COMMENT '1 = V_BCKP supplied, 0 = dropped',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `device_at` (`device_id`, `at`),
-  CONSTRAINT `gnss_backup_device` FOREIGN KEY (`device_id`) REFERENCES `device` (`id`)
-    ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-
 -- Ignition-on to ignition-off, with the log id range it covers.
 CREATE TABLE `journey` (
   `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -416,4 +422,15 @@ CREATE TABLE `api_token` (
   `created_at`    INT UNSIGNED NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `token` (`token`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- The newest answer to each reporting command (selftest, status, gnssstat,
+-- backlog, logdump), one row per device and name: the text the unit sent in
+-- its "F,rep,<name>,<text>" line and when it arrived.
+CREATE TABLE IF NOT EXISTS `device_report` (
+  `device_id` INT          NOT NULL,
+  `name`      VARCHAR(16)  NOT NULL,
+  `text`      VARCHAR(600) NOT NULL,
+  `at`        DATETIME     NOT NULL,
+  PRIMARY KEY (`device_id`, `name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

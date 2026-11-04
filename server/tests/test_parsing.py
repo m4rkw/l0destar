@@ -350,8 +350,9 @@ class _NoCommands:
     def all(self, *args):
         return []
 
-    def query(self, *args):
-        raise AssertionError('nothing to delete')
+    def query(self, sql, *args):
+        # only the sweep of commands queued too long ago
+        assert 'AND `timestamp` <' in sql, 'nothing to delete'
 
 
 class _Quiet:
@@ -379,6 +380,8 @@ class _Commands:
         return [{'id': 7, 'command': self.command}]
 
     def query(self, sql, params):
+        if 'AND `timestamp` <' in sql:     # the sweep of stale commands
+            return
         assert sql.startswith('DELETE FROM `command`') and params == [7]
         self.deleted = True
 
@@ -472,3 +475,34 @@ def test_backup_changes_are_kept_whole_and_not_a_column():
     assert d['backup_changes'] == '0:41000|1:12'
     assert d['rec_id'] == '7'
     assert 'bk' not in d
+
+
+def test_applied_settings_and_acks_are_kept_whole_and_not_columns():
+    d = telemetry.parse_csv_line(FULL + ',ap=3600:1:900:0,ak=locatenow|track,rid=7')
+    assert d['applied'] == '3600:1:900:0'
+    assert d['acks'] == 'locatenow|track'
+    assert d['rec_id'] == '7'
+    assert 'ap' not in d and 'ak' not in d
+
+
+def test_a_setting_between_one_and_nine_is_refused_but_zero_is_not():
+    from tracker.web import api
+
+    assert api._setting('int', 0) == 0
+    assert api._setting('int', 10) == 10
+    assert api._setting('int', 5) is None
+    assert api._setting('backup_int', '9') is None
+    assert api._setting('movement_alarm', 1) == 1
+
+
+def test_net_scan_list_decoded():
+    import datetime
+    from tracker.web.devices import _net_scan
+
+    assert _net_scan({'net_scan_at': None}) is None
+    scan = _net_scan({
+        'net_scan_at': datetime.datetime(2026, 11, 4, 16, 0, 0),
+        'net_scan': '234-30:24501:3167234:1617:-110:-120|bad|234-10:4096:1:6400:-102:-170',
+    })
+    assert [c['plmn'] for c in scan['cells']] == ['234-30', '234-10']
+    assert scan['cells'][0]['rsrp'] == -110 and scan['cells'][0]['rsrq'] == -12.0

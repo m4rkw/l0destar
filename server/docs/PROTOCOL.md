@@ -74,7 +74,9 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `snr` | serving cell SNR, dB (−24…+24) | per-packet |
 | `band` | LTE band in use | per-packet |
 | `wt` | `<rid>:<ms>[:<attach_ms>]` — how long the device was awake for the send of record `<rid>`, and how much of that was the LTE attach | retrospective |
-| `bk` | `<state>:<age_s>[\|<state>:<age_s>...]` — each change of the GNSS receiver's backup supply (V_BCKP) on a board that switches it, oldest first: 1 supplied, 0 dropped, and how long before this record was built it changed. The first after a boot is the state it came up in; a cut-off during the night is told by the next record. Filed in `gnss_backup` at record time minus age | retrospective |
+| `bk` | `<state>:<age_s>[\|<state>:<age_s>...]` — each change of the GNSS receiver's backup supply (V_BCKP) on a board that switches it, oldest first: 1 supplied, 0 dropped, and how long before this record was built it changed. Boot is not a change and is not reported (the server holds the state and answers `gb=`); a cut-off during the night is told by the next record. The newest is kept on the device row (`gnss_backup`, dated record time minus age) unless the API set it later | retrospective |
+| `ap` | `<int>:<ma>:<backup>:<track>` — the settings the unit is running, sent on the first record after a boot and whenever one changes (a setting the server sent shows as applied). Kept on the device row (`ap_*`) | live |
+| `ak` | `<name>\|<name>...` — commands the unit has run since the last record that said so (`int`, `movealarm`, `track`, `movereset`, `locate`, `locatenow`, `tomtom`, `tomtomnow`, `gpsfix`, `netscan`, `selftest`, `status`, `gnssstat`, `backlog`, `sleep`, `logdump`, `gnssbk`, `fota`, `config`). Kept as `ack_cmd` / `ack_at`; a restart with `rst=sw` and an unchanged `fw=` is filed as `reboot` | live |
 | `mv` | `<gap>:<v0>:<steps>:<end>` — the motion through the gap between the previous record's fix and this one's (0.4.68): ECU speed and gyro heading change for each second of it | per-packet, stored as sent |
 
 "Carried forward" means the device sends the field only when it changes or on
@@ -235,6 +237,40 @@ stored codes" and clears everything. Rows are never deleted, so the table is a
 history of when each fault appeared and disappeared. One notification goes out
 per report, not per code.
 
+### Network scan
+
+The `netscan` command makes the unit sweep every band and report each cell it
+hears, other operators' included, as one line of its own:
+
+```
+F,scan,3,234-30:24501:3167234:1617:-110:-120|234-10:4096:135829634:6400:-102:-170
+```
+
+Per cell: `mcc-mnc:tac:cell:earfcn:rsrp (dBm):rsrq (dB x 10)`, strongest first,
+at most 16. The server keeps the newest list on the device row (`net_scan`,
+`net_scan_at`) and `GET /api/1.0/devices` returns it as `net_scan`
+(`{at, cells: [{plmn, tac, cell, earfcn, rsrp, rsrq}]}`, `null` before the
+first). A sweep takes tens of seconds to minutes and can drop the connection.
+
+### Report commands
+
+`selftest`, `status`, `gnssstat`, `backlog` (`backlog=flush` also sends what
+is stored) and `logdump` each make the unit answer with one line:
+
+```
+F,rep,<name>,<text>
+```
+
+The text is `key=value` pairs, spaces between. The server keeps the newest per
+device and name in `device_report`, and `GET /api/1.0/devices` returns them as
+`reports` (`{name: {text, at}}`). `selftest` is deliberately light: it reads
+the battery, accelerometer, modem, GNSS receiver (no fix awaited), GNSS rail
+and, where fitted, the backlog flash, and raises an alert for anything that
+fails. `logdump` sends the captured WARN/ERR lines at once as `L,` lines.
+
+`sleep=<s>` (10-86400) sets the next timed wait once, then the normal
+interval resumes.
+
 ### Captured log lines
 
 A datagram may carry, after the record, lines beginning `L,`:
@@ -282,7 +318,7 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>]
+1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>]
 ```
 
 Every datagram is answered, and the reply is the receipt: it is bound to the
@@ -299,6 +335,12 @@ missed a reply converges on it. The firmware applies it as it reads the reply
 and takes it out of the commands, and uses it only while the module is carrying
 the tracker; firmware from before 0.4.79 passes over it. Unlike the interval it
 is never reported back, since nothing on the device changes it.
+
+`gb=` is the GNSS receiver's backup supply (`device`.`gnss_backup`), sent once
+known, on every reply. The unit follows it. The first after a boot is applied
+silently; a later change alerts, is acked (`ak=gnssbk`) and, turned on, makes
+the next wake search for a fresh fix. Off is held until the ignition comes on.
+The API sets it (`gnssbk=<0|1>` in POST /api/1.0/command, not queued).
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is

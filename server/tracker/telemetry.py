@@ -284,8 +284,18 @@ def parse_csv_line(line):
                 # <state>:<age_s>[|<state>:<age_s>...], oldest first: each
                 # change of the GNSS backup supply and how long before this
                 # record was built it happened.  Not a column: each change
-                # is a row in `gnss_backup`.
+                # is kept on the device row (`gnss_backup`).
                 data['backup_changes'] = value
+                continue
+            if key == 'ap':
+                # <int>:<ma>:<backup>:<track> -- the settings the unit is
+                # running now, sent after a boot and whenever one changes.
+                data['applied'] = value
+                continue
+            if key == 'ak':
+                # <name>|<name>... -- commands the unit has run since the last
+                # record that said so.
+                data['acks'] = value
                 continue
             if key == 'ws':
                 # <rid>:<rsrp>:<snr>:<band> -- the serving cell as the wake
@@ -809,16 +819,18 @@ BACKUP_AGE_MAX = RECORD_AGE_MAX
 
 
 def _store_backup_changes(database, device, data, built):
-    """File the GNSS backup supply changes a record reports (``bk=``).
+    """Keep the GNSS backup supply state a record reports (``bk=``) on the
+    device row.
 
-    Each is ``state:age``: on or off, and the seconds before the record was
-    built that it changed, so a midnight cut-off that a key-on reports hours
-    later is still filed at midnight.  A change is stored once whichever
-    record repeats it (the unique key makes a resend harmless); an unusable
-    one is skipped on its own."""
+    Each item is ``state:age``: on or off, and the seconds before the record
+    was built that it changed, so a midnight cut-off that a key-on reports
+    hours later still counts from midnight.  Only the newest change matters:
+    it becomes the state the replies hand back (``gb=``), unless a newer one
+    was set from the API since.  An unusable item is skipped on its own."""
     raw = data.get('backup_changes')
     if not raw:
         return
+    newest = None
     for item in raw.split('|'):
         try:
             state, age = item.split(':')
@@ -832,10 +844,64 @@ def _store_backup_changes(database, device, data, built):
                              device.get('imei', '?'))
             continue
         at = built - datetime.timedelta(seconds=age)
+        if newest is None or at >= newest[0]:
+            newest = (at, state)
+    if newest is None:
+        return
+    at, state = newest
+    when = at.strftime('%Y-%m-%d %H:%M:%S')
+    database.query(
+        'UPDATE `device` SET `gnss_backup` = %s, `gnss_backup_at` = %s '
+        'WHERE `id` = %s AND (`gnss_backup_at` IS NULL OR `gnss_backup_at` < %s)',
+        (state, when, device['id'], when),
+    )
+    held = device.get('gnss_backup_at')
+    if held is None or held < at.replace(microsecond=0):
+        device['gnss_backup'] = state
+        device['gnss_backup_at'] = at.replace(microsecond=0)
+
+
+# Commands not delivered within this long are dropped: a "locate now" from the
+# morning is no use to a unit that wakes up in the evening.
+COMMAND_MAX_AGE_HOURS = 6
+
+
+def _store_applied(database, device, data, entry):
+    """Keep what a live record says the unit is running (``ap=``) and which
+    commands it has run (``ak=``) on its row, with the time.
+
+    A restart that did not change the build is also taken as the acknowledgement
+    of a ``reboot``: the unit cannot report one before it goes.  Not called for
+    history, which can carry settings since changed."""
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    assignments, values = [], []
+
+    raw = data.get('applied')
+    if raw:
+        try:
+            ints = [int(part) for part in raw.split(':')]
+            if len(ints) != 4:
+                raise ValueError(raw)
+        except ValueError:
+            logs.app.warning('unparsable ap=%r from %s', raw,
+                             device.get('imei', '?'))
+        else:
+            assignments += ['`ap_int` = %s', '`ap_ma` = %s', '`ap_backup` = %s',
+                            '`ap_track` = %s', '`ap_at` = %s']
+            values += ints + [now]
+
+    acks = [name for name in (data.get('acks') or '').split('|') if name]
+    if entry.get('rst') == 'sw' and \
+            entry.get('fw') in (None, device.get('fw')):
+        acks.append('reboot')
+    if acks:
+        assignments += ['`ack_cmd` = %s', '`ack_at` = %s']
+        values += ['|'.join(acks)[:48], now]
+
+    if assignments:
         database.query(
-            'INSERT IGNORE INTO `gnss_backup` (`device_id`, `at`, `on`) '
-            'VALUES (%s, %s, %s)',
-            (device['id'], at.strftime('%Y-%m-%d %H:%M:%S.%f'), state),
+            'UPDATE `device` SET %s WHERE `id` = %%s' % ', '.join(assignments),
+            values + [device['id']],
         )
 
 
@@ -948,6 +1014,13 @@ def process_record(data, device, ip, database=None):
         _store_backup_changes(database, device, data, built)
     except Exception:
         logs.app.exception('gnss backup update failed for %s', device.get('imei'))
+
+    if not history:
+        try:
+            _store_applied(database, device, data, entry)
+        except Exception:
+            logs.app.exception('applied settings update failed for %s',
+                               device.get('imei'))
 
     _store_wake_figure(database, device, data, entry.get('rec_id'))
     _store_wake_signal(database, device, data, entry.get('rec_id'))
@@ -1176,6 +1249,26 @@ def _handle_alert(line, device, database, log):
         notify.device_alert(device['name'], message, priority)
 
 
+_REPORT_TITLES = {'selftest': 'self test', 'status': 'status',
+                  'gnssstat': 'GNSS status', 'backlog': 'backlog'}
+
+
+def _scan_summary(cells):
+    """The strongest three cells of an F,scan, list as 'plmn rsrp dBm' lines."""
+    out = []
+    for cell in cells.split('|')[:3]:
+        f = cell.split(':')
+        if len(f) >= 5:
+            out.append('%s  %s dBm  (tac %s, earfcn %s)' % (f[0], f[4], f[1], f[3]))
+    return '\n'.join(out) or 'no cells found'
+
+
+def _notify_report(device, title, body):
+    """Tell the user a command's answer has arrived (the app has no push)."""
+    name = (device.get('name') or device.get('imei') or '?').strip()
+    notify.send(body[:1000], title='%s: %s' % (name, title))
+
+
 # -- response ----------------------------------------------------------------
 
 def build_response(device, database, log, firmware_version=None):
@@ -1193,6 +1286,11 @@ def build_response(device, database, log, firmware_version=None):
     settings = device_config(device)
     response = '1,%s,%s' % (settings['int'], settings['ma'])
 
+    database.query(
+        'DELETE FROM `command` WHERE `device_id` = %s '
+        'AND `timestamp` < NOW(6) - INTERVAL %s HOUR',
+        (device['id'], COMMAND_MAX_AGE_HOURS),
+    )
     commands = database.all(
         'SELECT `id`, `command` FROM `command` WHERE `device_id` = %s ORDER BY `id`',
         (device['id'],),
@@ -1222,6 +1320,27 @@ def build_response(device, database, log, firmware_version=None):
     # rebooted or missed a reply converges on the setting.  The firmware
     # acts only on a change, so the repeat costs nothing but the bytes.
     response += ',track=%d' % (1 if device.get('track_mode') else 0)
+
+    # The GNSS backup supply state, once known (the unit reported it or the
+    # API set it), on every reply like track=.  The unit follows it; a change
+    # after the first one it sees is announced with an alert and an ack.
+    if device.get('gnss_backup') in (0, 1):
+        response += ',gb=%d' % device['gnss_backup']
+
+    # The unit that is answered applies what it is told, so the settings in
+    # this reply are what it runs from now: filed as applied, ahead of its
+    # own ap= (which describes it before it read this reply, and so reads
+    # stale after a boot).  Only the settings it adopts as sent; a reply lost
+    # on the way is put right by the unit's next ap=.
+    try:
+        database.query(
+            'UPDATE `device` SET `ap_int` = %s, `ap_ma` = %s, `ap_backup` = %s, '
+            '`ap_track` = %s, `ap_at` = NOW() WHERE `id` = %s',
+            (settings['int'], settings['ma'], settings['backup'],
+             1 if device.get('track_mode') else 0, device['id']),
+        )
+    except Exception:
+        logs.app.exception('applied settings update failed for %s', device.get('imei'))
 
     return response
 
@@ -1336,6 +1455,32 @@ def process_lines(device, lines, ip, database, log):
                 else:
                     log.warning('unparsed fota line from %s: %r',
                                 device['imei'], line)
+            elif line.startswith('F,rep,'):
+                # Answer to a reporting command (selftest, status, gnssstat,
+                # backlog, logdump):  F,rep,<name>,<text>
+                parts = line.split(',', 3)
+                if len(parts) == 4 and parts[2].isalnum():
+                    database.query(
+                        "INSERT INTO `device_report` (`device_id`, `name`, "
+                        "`text`, `at`) VALUES (%s, %s, %s, NOW()) "
+                        "ON DUPLICATE KEY UPDATE `text` = VALUES(`text`), "
+                        "`at` = VALUES(`at`)",
+                        (device['id'], parts[2][:16], parts[3][:600]))
+                    logs.device.info('%s report %s %s', device['imei'],
+                                     parts[2], parts[3])
+                    if parts[2] in _REPORT_TITLES:
+                        _notify_report(device, _REPORT_TITLES[parts[2]],
+                                       parts[3])
+            elif line.startswith('F,scan,'):
+                # Network scan (netscan command):
+                #   F,scan,<n>,<mcc>-<mnc>:<tac>:<cell>:<earfcn>:<rsrp>:<rsrq10>|...
+                parts = line.split(',', 3)
+                cells = parts[3] if len(parts) == 4 else ''
+                database.query(
+                    "UPDATE `device` SET `net_scan` = %s, `net_scan_at` = NOW() "
+                    "WHERE `id` = %s", (cells[:600], device['id']))
+                logs.device.info('%s netscan %s', device['imei'], line[7:])
+                _notify_report(device, 'network scan', _scan_summary(cells))
             elif line.startswith('L,'):
                 # A warning or error the firmware logged since its last
                 # successful send.  File it; nothing to store or act on.

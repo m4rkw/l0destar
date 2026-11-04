@@ -309,6 +309,11 @@ static void sleep_report(const struct lte_lc_evt *evt, bool entering)
 static void ncell_report(const struct lte_lc_cells_info *info);
 #endif
 
+#if IS_ENABLED(CONFIG_APP_NETSCAN)
+/* Defined with the scan (netscan_run, further down). */
+static bool netscan_collect(const struct lte_lc_cells_info *info);
+#endif
+
 static void lte_handler(const struct lte_lc_evt *evt)
 {
     switch (evt->type) {
@@ -378,9 +383,16 @@ static void lte_handler(const struct lte_lc_evt *evt)
                 evt->rrc_mode == LTE_LC_RRC_MODE_CONNECTED
                     ? "Connected" : "Idle");
         break;
-#if IS_ENABLED(CONFIG_APP_NCELLMEAS)
+#if IS_ENABLED(CONFIG_APP_NCELLMEAS) || IS_ENABLED(CONFIG_APP_NETSCAN)
     case LTE_LC_EVT_NEIGHBOR_CELL_MEAS:
+#if IS_ENABLED(CONFIG_APP_NETSCAN)
+        if (netscan_collect(&evt->cells_info)) {
+            break;
+        }
+#endif
+#if IS_ENABLED(CONFIG_APP_NCELLMEAS)
         ncell_report(&evt->cells_info);
+#endif
         break;
 #endif
 #if IS_ENABLED(CONFIG_APP_PSM_PROBE)
@@ -1470,6 +1482,156 @@ static void read_neighbours(void)
     LOG_WRN("neighbour scan did not report in %ds",
             CONFIG_APP_NCELLMEAS_TIMEOUT_S);
     (void)lte_lc_neighbor_cell_measurement_cancel();
+}
+#endif
+
+#if IS_ENABLED(CONFIG_APP_NETSCAN)
+/* One-off sweep of every cell the modem can hear, whoever runs it (the
+ * `netscan` command).  A GCI search reports each cell with its PLMN, TAC and
+ * level, so other operators' cells show up with their strength, which
+ * AT+COPS=? does not give.  The result is one line for the server:
+ *   F,scan,<n>,<mcc>-<mnc>:<tac>:<cell>:<earfcn>:<rsrp dBm>:<rsrq dB x10>|...
+ * strongest first, the serving cell included.  Asynchronous like
+ * read_neighbours(): armed here, filled by the event handler. */
+static K_SEM_DEFINE(s_netscan_sem, 0, 1);
+static volatile bool s_netscan_armed;
+/* Cells gathered over both passes. */
+static struct lte_lc_cell s_ns_cells[16];
+static int s_ns_n;
+
+/* A cell the search heard but could not read the identity of has no PLMN
+ * (mcc 0): only its physical ID, frequency and level.  A weak cell (O2's
+ * B20 at home, SNR -4) is often heard like that and never decoded. */
+static void netscan_add(const struct lte_lc_cell *c)
+{
+    if (c->rsrp == LTE_LC_CELL_RSRP_INVALID) {
+        return;
+    }
+    for (int i = 0; i < s_ns_n; i++) {
+        const struct lte_lc_cell *k = &s_ns_cells[i];
+
+        if (k->earfcn != c->earfcn) {
+            continue;
+        }
+        if (c->mcc != 0 && k->mcc == c->mcc && k->mnc == c->mnc &&
+            k->id == c->id) {
+            return;                 /* the same cell reported twice */
+        }
+        if (c->mcc == 0 && k->phys_cell_id == c->phys_cell_id) {
+            return;                 /* already known, decoded or not */
+        }
+    }
+    if (s_ns_n < 16) {
+        s_ns_cells[s_ns_n++] = *c;
+    }
+}
+
+static bool netscan_collect(const struct lte_lc_cells_info *info)
+{
+    if (!s_netscan_armed) {
+        return false;
+    }
+    if (info->current_cell.mcc != 0) {
+        netscan_add(&info->current_cell);
+    }
+    for (int i = 0; i < info->gci_cells_count && info->gci_cells; i++) {
+        if (info->gci_cells[i].mcc != 0) {
+            netscan_add(&info->gci_cells[i]);
+        }
+    }
+    /* the undecoded ones: after the decoded, so a decoded copy wins */
+    for (int i = 0; i < info->ncells_count && info->neighbor_cells; i++) {
+        const struct lte_lc_ncell *nc = &info->neighbor_cells[i];
+        struct lte_lc_cell c = {
+            .earfcn = nc->earfcn,
+            .phys_cell_id = nc->phys_cell_id,
+            .rsrp = nc->rsrp,
+            .rsrq = nc->rsrq,
+        };
+
+        netscan_add(&c);
+    }
+    s_netscan_armed = false;
+    k_sem_give(&s_netscan_sem);
+    return true;
+}
+
+/* One search; 0 on a result, -ETIMEDOUT when the modem did not report in time. */
+static int netscan_pass(enum lte_lc_neighbor_search_type type)
+{
+    struct lte_lc_ncellmeas_params params = {
+        .search_type = type,
+        .gci_count = 15,
+    };
+
+    k_sem_reset(&s_netscan_sem);
+    s_netscan_armed = true;
+
+    int err = lte_lc_neighbor_cell_measurement(&params);
+
+    if (err) {
+        s_netscan_armed = false;
+        return err;
+    }
+    for (int left = CONFIG_APP_NETSCAN_TIMEOUT_S; left > 0; left--) {
+        if (k_sem_take(&s_netscan_sem, K_SECONDS(1)) == 0) {
+            return 0;
+        }
+        watchdog_kick();
+    }
+    s_netscan_armed = false;
+    (void)lte_lc_neighbor_cell_measurement_cancel();
+    return -ETIMEDOUT;
+}
+
+/* Runs the sweep and leaves the line in out.  A GCI search first (identities
+ * of the cells it can decode), then a plain complete search for the ones it
+ * could only hear.  0 on success; the first search failing is the error, the
+ * second failing just leaves its cells out. */
+int modem_net_scan(char *out, size_t cap)
+{
+    s_ns_n = 0;
+    out[0] = '\0';
+
+    int err = netscan_pass(LTE_LC_NEIGHBOR_SEARCH_TYPE_GCI_EXTENDED_COMPLETE);
+
+    if (err) {
+        return err;
+    }
+    (void)netscan_pass(LTE_LC_NEIGHBOR_SEARCH_TYPE_EXTENDED_COMPLETE);
+
+    struct lte_lc_cell *cells = s_ns_cells;
+    int n = s_ns_n;
+
+    /* strongest first (insertion sort; n is tiny) */
+    for (int i = 1; i < n; i++) {
+        struct lte_lc_cell t = cells[i];
+        int j = i - 1;
+
+        while (j >= 0 && cells[j].rsrp < t.rsrp) {
+            cells[j + 1] = cells[j];
+            j--;
+        }
+        cells[j + 1] = t;
+    }
+    int len = snprintf(out, cap, "F,scan,%d,", n);
+
+    for (int i = 0; i < n && len > 0 && (size_t)len < cap; i++) {
+        const struct lte_lc_cell *c = &cells[i];
+        int rsrq = c->rsrq == LTE_LC_CELL_RSRQ_INVALID ? 0 : c->rsrq * 5 - 195;
+
+        if (c->mcc == 0) {      /* heard, not decoded: "?", tac 0, cell = PCI */
+            len += snprintf(out + len, cap - len, "%s?:0:%u:%u:%d:%d",
+                            i ? "|" : "", (unsigned)c->phys_cell_id,
+                            (unsigned)c->earfcn, c->rsrp - 140, rsrq);
+        } else {
+            len += snprintf(out + len, cap - len, "%s%d-%02d:%u:%u:%u:%d:%d",
+                            i ? "|" : "", c->mcc, c->mnc, (unsigned)c->tac,
+                            (unsigned)c->id, (unsigned)c->earfcn,
+                            c->rsrp - 140, rsrq);
+        }
+    }
+    return 0;
 }
 #endif
 

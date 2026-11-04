@@ -47,6 +47,7 @@ LOG_MODULE_REGISTER(main, CONFIG_APP_LOG_LEVEL);
 char     pending_server_cmd[128];
 bool     read_udp_response;
 bool     power_reboot;
+
 int      gsm_send_failures;
 bool     network_ready;
 bool     use_cached_gps;
@@ -669,6 +670,23 @@ static int telemetry_interval(void)
     return MIN(iv, NO_SIGNAL_MAX_INTERVAL);
 }
 
+/* sleep=<s>: the next wait is this long, once (0 = none pending).  Taken
+ * where a wait starts, not where the interval is merely compared. */
+static int s_sleep_once_s;
+
+void sleep_once_request(int secs) { s_sleep_once_s = secs; }
+
+static int telemetry_interval_once(void)
+{
+    if (s_sleep_once_s > 0) {
+        int v = s_sleep_once_s;
+
+        s_sleep_once_s = 0;
+        return v;
+    }
+    return telemetry_interval();
+}
+
 /* Whether a pass of the sleep loop may power the modem off at its end.
  * Something must have brought it up (or it is registered), and no timed
  * report may be owed on a search that is still inside its window: that
@@ -694,6 +712,16 @@ static bool sleep_modem_release(bool raised, bool owed)
         return false;
     }
     return true;
+}
+
+/* A fix someone asked for (gpsfix, or the backup supply turned on) is
+ * answered with its position once the search is done. */
+static bool s_fix_answer_due;
+
+void request_gps_fix(void)
+{
+    s_move_needs_gps = true;
+    s_fix_answer_due = true;
 }
 
 void movement_reset(void)
@@ -1366,7 +1394,7 @@ static void do_sleep(void)
         s_saved_loop_interval = g_settings.loop_interval;
     }
 
-    int telemetry_remaining = telemetry_interval();
+    int telemetry_remaining = telemetry_interval_once();
 
     /* Uptime at which the timed report now in progress woke the unit, 0 when
      * none is.  The wake is not over when the send is: one that could not
@@ -1963,7 +1991,7 @@ static void do_sleep(void)
             if (!on_backup && !forced && v > 0 && v < SLEEP_SAFETY_VOLTAGE) {
                 LOG_WRN("battery %.2fV, skipping send", (double)v);
                 hw_power_shutdown();
-                telemetry_remaining = telemetry_interval();
+                telemetry_remaining = telemetry_interval_once();
                 continue;
             }
 
@@ -2015,6 +2043,8 @@ static void do_sleep(void)
                             : "no position and no network to search for one");
             }
 
+            int64_t search_started_ms = k_uptime_get();
+
             if (search_gps) {
                 /* the GPS antenna bias tee lives on the AUX domain */
                 hw_domain_request(HW_DOMAIN_AUX, HW_DOMAIN_USER_GNSS);
@@ -2047,6 +2077,14 @@ static void do_sleep(void)
                     pending_server_cmd[0] = '\0';
                     if (alert_count > 0) alert_send();
                 }
+                /* Commands that answer with a report, and a reboot, ran
+                 * nowhere on a parked wake: do_sleep() loops from wake to
+                 * wake without passing the main loop's safe points.  The
+                 * link that carried the reply is still up for the answer. */
+                jobs_service();
+                if (power_reboot) {
+                    reboot_now();
+                }
                 if (!last_send_ok) {
                     modem_recover();
                 }
@@ -2074,6 +2112,24 @@ static void do_sleep(void)
                 gnss_stop();
                 hw_domain_release(HW_DOMAIN_AUX, HW_DOMAIN_USER_GNSS);
                 s_move_needs_gps = false;
+                if (s_fix_answer_due) {
+                    /* Answer a requested fix with where it is, while the
+                     * radio is still up to carry it. */
+                    s_fix_answer_due = false;
+                    if (g_gnss.valid &&
+                        g_gnss.fix_uptime_ms >= search_started_ms) {
+                        char msg[80];
+
+                        snprintf(msg, sizeof(msg), "apple: %s,%s",
+                                 g_gnss.lat_str, g_gnss.lon_str);
+                        alert_enqueue(msg, 0);
+                    } else {
+                        alert_enqueue("gps fix: none found", 0);
+                    }
+                    if (alert_count > 0 && modem_is_registered()) {
+                        alert_send();
+                    }
+                }
             }
             use_cached_gps = false;
             /* What the wake still has to deliver goes while the radio is up
@@ -2125,7 +2181,7 @@ static void do_sleep(void)
             fota_check(FOTA_CTX_ASLEEP);
 
             hw_power_shutdown();
-            telemetry_remaining = telemetry_interval();
+            telemetry_remaining = telemetry_interval_once();
             if (s_nosignal_wakes > 0) {
                 LOG_WRN("no network on %d consecutive wake%s — next timed "
                         "report in %ds", s_nosignal_wakes,
@@ -2382,6 +2438,7 @@ static void do_track(void)
 #if IS_ENABLED(CONFIG_APP_KLINE_OBD)
         obd_service();
 #endif
+        jobs_service();
         if (power_reboot) {
             reboot_now();
         }
@@ -2841,6 +2898,7 @@ int main(void)
         obd_service();
 #endif
 
+        jobs_service();
         if (power_reboot) {
             reboot_now();
         }

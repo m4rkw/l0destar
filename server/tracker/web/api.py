@@ -64,6 +64,10 @@ CONFIG_FIELDS = {
     'oat': 'overnight_alarm_hour_to',
 }
 
+# Intervals the unit would raise to this anyway (the cell behind them is
+# finite): 0 means off, anything from 1 to 9 is refused.
+NONZERO_MINIMUM = {'int': 10, 'backup_int': 10}
+
 # The values each setting's column can hold.
 SETTING_RANGES = {
     'int': (0, 4294967295),
@@ -89,11 +93,16 @@ def _setting(column, value):
     if not isinstance(value, int):
         return None
     low, high = SETTING_RANGES[column]
+    if column in NONZERO_MINIMUM and 0 < value < NONZERO_MINIMUM[column]:
+        return None
     return value if low <= value <= high else None
 
 
 def _setting_error(key, column):
     low, high = SETTING_RANGES[column]
+    if column in NONZERO_MINIMUM:
+        return error('%s must be 0 or a whole number from %d to %d'
+                     % (key, NONZERO_MINIMUM[column], high))
     return error('%s must be a whole number from %d to %d' % (key, low, high))
 
 
@@ -381,6 +390,10 @@ def update_config():
     if failure:
         return failure
 
+    unknown = sorted(set(data) - set(CONFIG_FIELDS) - {'imei', 'device_id'})
+    if unknown:
+        return error('unknown setting: %s' % ', '.join(str(k) for k in unknown))
+
     updates = []
     for key, column in CONFIG_FIELDS.items():
         if key in data:
@@ -450,6 +463,19 @@ def queue_command():
         if '=' in part and part.split('=', 1)[0] in SERVER_SIDE_SETTINGS:
             server_side.append(part)
         elif part:
+            if part.startswith('int=') and _setting('int', part[4:]) is None:
+                return _setting_error('int', 'int')
+            if part.startswith('gnssbk='):
+                if part[7:] not in ('0', '1'):
+                    return error('gnssbk must be 0 or 1')
+                # Not queued: the state is on the device row and every reply
+                # carries it (gb=); the unit announces a change it sees there.
+                db.web.query(
+                    'UPDATE `device` SET `gnss_backup` = %s, '
+                    '`gnss_backup_at` = NOW() WHERE `id` = %s',
+                    (int(part[7:]), device['id']),
+                )
+                continue
             for_device.append(part)
 
     if server_side:
@@ -478,6 +504,50 @@ def queue_command():
         )
 
     return ok()
+
+
+def _cancel_queued(device_id, name):
+    """Drop `name` from the device's queued commands; returns how many went.
+
+    A row can hold several commands ('int=60,locate'); only the matching parts
+    are removed and a row left empty is deleted.
+    """
+    cancelled = 0
+    for row in db.web.all(
+        'SELECT `id`, `command` FROM `command` WHERE `device_id` = %s',
+        (device_id,),
+    ):
+        parts = [p.strip() for p in row['command'].split(',') if p.strip()]
+        keep = [p for p in parts if p.split('=', 1)[0] != name]
+        if len(keep) == len(parts):
+            continue
+        cancelled += len(parts) - len(keep)
+        if keep:
+            db.web.query('UPDATE `command` SET `command` = %s WHERE `id` = %s',
+                         (','.join(keep), row['id']))
+        else:
+            db.web.query('DELETE FROM `command` WHERE `id` = %s', (row['id'],))
+    return cancelled
+
+
+@bp.route('/command/cancel', methods=['POST'])
+def cancel_command():
+    """Remove a still-queued command (by name, any value) before the device
+    collects it.  0 cancelled is not an error: it may already have gone."""
+    if not bearer_ok():
+        return unauthorised()
+
+    data = request.get_json(silent=True)
+    name = data.get('command') if isinstance(data, dict) else None
+    if not isinstance(name, str) or not name.strip():
+        return error('command required')
+
+    device, failure = _device(allow_default=False)
+    if failure:
+        return failure
+
+    return ok({'success': True,
+                'cancelled': _cancel_queued(device['id'], name.strip())})
 
 
 @bp.route('/devices', methods=['GET'])

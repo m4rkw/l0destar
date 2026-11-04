@@ -911,27 +911,54 @@ def test_map_page_survives_a_device_with_no_records(client, device, database, lo
 
 # -- GNSS backup supply changes (bk=) -----------------------------------------
 
-def backup_rows(database):
-    return database.all('SELECT * FROM `gnss_backup` ORDER BY `at`')
+def backup_state(database, device):
+    return database.one('SELECT `gnss_backup`, `gnss_backup_at` FROM `device` '
+                        'WHERE `id` = %s', (device['id'],))
 
 
-def test_backup_changes_are_filed_when_they_happened(device, database):
-    # A midnight cut-off is reported by the key-on hours later: the row is
-    # dated by the record's own time minus the age, not the arrival.
+def test_newest_backup_change_is_kept_on_the_device(device, database):
+    # A midnight cut-off is reported by the key-on hours later: the newest
+    # change wins, dated by the record's own time minus the age.
     send(device, record(0, 51.5, -0.1, 0, extras=',rid=100,bk=0:30600|1:5'))
-    rows = backup_rows(database)
-    assert [r['on'] for r in rows] == [0, 1]
-    gap = rows[1]['at'] - rows[0]['at']
-    assert gap.total_seconds() == 30595
+    row = backup_state(database, device)
+    assert row['gnss_backup'] == 1 and row['gnss_backup_at']
 
 
-def test_single_backup_change_is_filed(device, database):
-    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100,bk=1:0'))
-    assert len(backup_rows(database)) == 1
+def test_the_reply_carries_the_backup_state_once_known(device, database):
+    from tracker import db, logs, telemetry
+
+    reply = telemetry.process_lines(device, [record(0, 51.5, -0.1, 0)],
+                                    '203.0.113.7', db.web, logs.udp)
+    assert 'gb=' not in reply
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100,bk=0:5'))
+    row = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
+    assert telemetry.build_response(row, db.web, logs.udp).endswith(',gb=0')
 
 
 def test_unusable_backup_change_is_skipped_on_its_own(device, database):
     send(device, record(0, 51.5, -0.1, 0,
                         extras=',rid=100,bk=2:5|x:y|1:-3|0:60'))
-    assert [r['on'] for r in backup_rows(database)] == [0]
+    assert backup_state(database, device)['gnss_backup'] == 0
     assert last_log(database)['rec_id'] == 100
+
+
+def test_applied_settings_and_acks_are_kept_on_the_device_row(device, database):
+    from tracker import db, logs, telemetry
+
+    line = record(0, 51.5, -0.1, 0) + ',ap=3600:1:900:0,ak=locatenow'
+    telemetry.process_lines(device, [line], '203.0.113.7', db.web, logs.udp)
+    row = database.one('SELECT `ap_int`, `ap_ma`, `ap_backup`, `ap_track`, `ap_at`, '
+                       '`ack_cmd`, `ack_at` FROM `device` WHERE `id` = %s', (device['id'],))
+    assert (row['ap_int'], row['ap_ma'], row['ap_backup'], row['ap_track']) == (3600, 1, 900, 0)
+    assert row['ap_at'] and row['ack_at']
+    assert row['ack_cmd'] == 'locatenow'
+
+
+def test_a_command_queued_too_long_ago_is_not_delivered(device, database):
+    from tracker import db, logs, telemetry
+
+    database.query('INSERT INTO `command` (`device_id`, `timestamp`, `command`) VALUES '
+                   '(%s, NOW(6) - INTERVAL 7 HOUR, %s), (%s, NOW(6), %s)',
+                   (device['id'], 'locatenow', device['id'], 'fota'))
+    reply = telemetry.process_lines(device, [record(0, 51.5, -0.1, 0)], '203.0.113.7', db.web, logs.udp)
+    assert 'fota' in reply and 'locatenow' not in reply

@@ -160,46 +160,16 @@ void hw_gnss_backup_reported(int count)
 	k_spin_unlock(&s_bklog_lock, key);
 }
 
-/* What survives a warm reset (a software or watchdog reset, the reboot that
- * applies an update).  __noinit like fota.c's record: a power-on leaves RAM
- * undefined, which the magic catches, and a unit that lost its power has lost
- * the receiver's backup anyway.
- *   off   the supply was dropped when the unit went down
- *   hold  a reset found it dropped: it stays down, and is dropped again each
- *         time the receiver's rail lets go, until the next ignition on.  The
- *         startup fix would otherwise bring it back for the rest of the day. */
-#define BCKP_KEEP_MAGIC 0xB0C4DA7Bu
-static __noinit struct {
-	uint32_t magic;
-	uint32_t off;
-	uint32_t hold;
-} s_bckp_keep;
-
+/* hold: the server wants the supply dropped (gb=0).  It stays down, and is
+ * dropped again each time the receiver's rail lets go, until the next ignition
+ * on or the server says otherwise.  The startup fix would otherwise bring it
+ * back for the rest of the day.  Not kept across a reset: the server holds
+ * the state and says it on every reply. */
 static bool s_bckp_hold;
-
-static void bckp_keep(bool on)
-{
-	s_bckp_keep.off = on ? 0 : 1;
-	s_bckp_keep.hold = s_bckp_hold;
-	s_bckp_keep.magic = BCKP_KEEP_MAGIC;
-}
-
-/* At boot: should the supply start dropped, and held so? */
-static bool bckp_kept_off(void)
-{
-	if (s_bckp_keep.magic != BCKP_KEEP_MAGIC) {
-		return false;
-	}
-	s_bckp_hold = s_bckp_keep.hold == 1 || s_bckp_keep.off == 1;
-	return s_bckp_hold;
-}
 
 void hw_gnss_backup_hold_clear(void)
 {
-	if (s_bckp_hold) {
-		s_bckp_hold = false;
-		bckp_keep(s_bckp_on);
-	}
+	s_bckp_hold = false;
 }
 
 static void bckp_set(bool on)
@@ -211,7 +181,6 @@ static void bckp_set(bool on)
 	gpio_pin_configure(hw_gpio0, PIN_GNSS_BCKP_EN,
 			   on ? GPIO_OUTPUT_HIGH : GPIO_OUTPUT_LOW);
 	s_bckp_on = on;
-	bckp_keep(on);
 	bklog_note(on);
 }
 
@@ -421,15 +390,14 @@ int hw_domain_init(void)
 	 * receiver's rail: it is what lets the receiver hot-start
 	 * (APP_GNSS_BACKUP_SUPPLY). */
 	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_GNSS) && PIN_GNSS_BCKP_EN >= 0) {
-		/* A reset does not bring a dropped supply back.  The startup
-		 * fix will raise it with the receiver's rail; it is dropped
-		 * again after, until the ignition comes on (bckp_kept_off()). */
-		s_bckp_on = IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY) &&
-			    !bckp_kept_off();
+		/* Up from boot; a server that wants it dropped says so in its
+		 * first reply (hw_gnss_backup_want()). */
+		s_bckp_on = IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY);
 		gpio_pin_configure(hw_gpio0, PIN_GNSS_BCKP_EN,
 				   s_bckp_on ? GPIO_OUTPUT_HIGH : GPIO_OUTPUT_LOW);
-		bckp_keep(s_bckp_on);
-		bklog_note(s_bckp_on);	/* the state it came up in */
+		/* Not noted: coming up is not a change, and the server holds the
+		 * state.  A note here read as "it is on" and overrode a server
+		 * that wanted it off. */
 	}
 
 	/* Rail-sense inputs (v3.1+): always-on status from the load switches.
@@ -568,6 +536,16 @@ bool hw_domain_is_on(enum hw_domain dom)
 	return s_dom[dom].enable_pin >= 0 && s_dom[dom].users != 0;
 }
 
+bool hw_domain_fitted(enum hw_domain dom)
+{
+	return s_dom[dom].enable_pin >= 0;
+}
+
+const char *hw_domain_name(enum hw_domain dom)
+{
+	return dom_name(dom);
+}
+
 bool hw_domain_faulted(enum hw_domain dom)
 {
 	return s_dom[dom].enable_pin >= 0 && s_dom[dom].faulted;
@@ -596,4 +574,28 @@ void hw_gnss_backup_cutoff(int sleep_s)
 	if (backup_cutoff_due(ms / 1000, sleep_s, BCKP_OFF_HOUR)) {
 		bckp_set(false);
 	}
+}
+
+/* The server's word on the supply.  True when it changed what the unit does:
+ * dropped now (or as soon as the receiver is done), or supplied again. */
+bool hw_gnss_backup_want(bool on)
+{
+	bool was_on = s_bckp_on;
+	bool was_hold = s_bckp_hold;
+
+	if (!IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY) || PIN_GNSS_BCKP_EN < 0) {
+		return false;
+	}
+	s_bckp_hold = !on;
+	if (on) {
+		bckp_set(true);
+	} else if (!hw_domain_is_on(HW_DOMAIN_AUX)) {
+		bckp_set(false);
+	}
+	return was_on != s_bckp_on || was_hold != s_bckp_hold;
+}
+
+bool hw_gnss_backup_wanted(void)
+{
+	return !s_bckp_hold;
 }

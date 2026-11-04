@@ -253,6 +253,15 @@ uint32_t modem_reg_losses(void);
 const char *modem_rat(void);           /* "CATM1" / "NBIOT" / "UNKNOWN" */
 bool modem_is_nbiot(void);
 int  modem_rescan_plmn(int timeout_s); /* force cell/PLMN reselection */
+int  modem_net_scan(char *out, size_t cap); /* sweep for cells -> "F,scan,..." */
+/* Commands that answer with a report (reports.c): requested from cmd_run(),
+ * run by jobs_service() at the main loop's safe point, each result sent as
+ * its own "F,rep,<name>,<text>" datagram (netscan: "F,scan,"). */
+enum job { JOB_NETSCAN, JOB_SELFTEST, JOB_STATUS, JOB_GNSSSTAT, JOB_BACKLOG,
+           JOB_BACKLOG_FLUSH, JOB_LOGDUMP };
+void job_request(enum job j);
+void jobs_service(void);
+void sleep_once_request(int secs);   /* sleep=<s>: the next wait, once */
 /* Allow NB-IoT (LTE-M preferred) or go back to LTE-M only.  With the radio
  * up this is CFUN=4, the mode, then a full bring-up; with it down it only
  * takes effect at the next one. */
@@ -449,6 +458,15 @@ static inline const char *dbglog_reset_cause(void) { return NULL; }
 #endif
 
 void cmd_run(char *cmd);
+
+/* Commands run since the last record that told the server, as the text of an
+ * ak= field: names joined by '|', each once.  Returns its length (0 when
+ * there are none); call cmd_ack_taken() once it is in a record. */
+int  cmd_ack_text(char *buf, size_t size);
+void cmd_ack_taken(void);
+
+/* The next timed wake with a network searches for a fresh GNSS fix. */
+void request_gps_fix(void);
 
 /* -- over-the-air update (fota.c) ------------------------------------------ */
 /* Whether the caller is holding GNSS up, which decides if fota_check() has to

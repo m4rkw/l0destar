@@ -136,6 +136,8 @@ def send(message, title='Tracker', priority=0, url=None, url_title=None):
 _DEEP_LINKS = {
     'google: ': (lambda c: 'https://www.google.com/maps/search/?api=1&query=%s' % c,
                  'Open in Google Maps'),
+    'apple: ': (lambda c: 'https://maps.apple.com/?ll=%s&q=Tracker' % c,
+                'Open in Apple Maps'),
     'tomtom: ': (lambda c: 'tomtomgo://x-callback-url/navigate?destination=%s' % c,
                  'Open in TomTom'),
 }

@@ -277,6 +277,17 @@ static int read_vbat_lean(int *mv)
 
 /* -- data collection ------------------------------------------------------ */
 
+/* The settings the unit runs, "<int>:<ma>:<backup>:<track>" (ap=), and the
+ * text last sent. */
+static char s_ap_sent[40];
+
+static void ap_string(char *ap, size_t size)
+{
+    snprintf(ap, size, "%d:%d:%d:%d", g_settings.loop_interval,
+             (int)g_settings.movement_alarm, g_settings.backup_interval,
+             (int)g_settings.track_mode);
+}
+
 /* The fields every record type ends with. */
 static void append_sync_fields(void)
 {
@@ -315,6 +326,37 @@ static void append_sync_fields(void)
                  DATA_LIMIT - data_index - 1,
                  ",rid=%u", s_last_rec_id);
     if (n > 0) data_index += n;
+
+    /* The settings the unit is running, "ap=<int>:<ma>:<backup>:<track>": on
+     * the first record after a boot and whenever one changes, so a setting
+     * the server sent shows as applied.  Sent again until it fits. */
+    {
+        char ap[40];
+
+        ap_string(ap, sizeof(ap));
+        if (s_fw_pending || strcmp(ap, s_ap_sent) != 0) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1, ",ap=%s", ap);
+            if (n > 0 && n < DATA_LIMIT - data_index - 1) {
+                data_index += n;
+                strcpy(s_ap_sent, ap);
+            }
+        }
+    }
+
+    /* Commands run since the last record that said so (ak=). */
+    {
+        char ak[48];
+
+        if (cmd_ack_text(ak, sizeof(ak)) > 0) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1, ",ak=%s", ak);
+            if (n > 0 && n < DATA_LIMIT - data_index - 1) {
+                data_index += n;
+                cmd_ack_taken();
+            }
+        }
+    }
 
     /* Changes of the GNSS receiver's backup supply since the last record
      * that carried them, each with its age: a cut-off happens in the night
@@ -1046,7 +1088,8 @@ static void pending_cmd_add(const char *cmd)
         const char *comma = strchr(p, ',');
         size_t len = comma ? (size_t)(comma - p) : strlen(p);
         bool routine = (len >= 5 && strncmp(p, "fota=", 5) == 0) ||
-                       (len >= 6 && strncmp(p, "track=", 6) == 0);
+                       (len >= 6 && strncmp(p, "track=", 6) == 0) ||
+                       (len >= 3 && strncmp(p, "gb=", 3) == 0);
 
         if (len > 0 && !routine) {
             if (used + 1 + len < sizeof(merged)) {
@@ -1147,6 +1190,9 @@ static void reply_apply(const char *resp)
         if (matched == 3 && cmd[0]) {
             pending_cmd_add(cmd);
         }
+        /* No confirming record: the server takes a unit that reported in as
+         * having picked up the settings in its reply, and ap= rides the next
+         * record anyway. */
     }
 }
 

@@ -1100,6 +1100,28 @@ config APP_NCELLMEAS_TIMEOUT_S
 	  modem off underneath it.  The watchdog is fed while waiting; a scan
 	  that has not reported by then is abandoned and the wake carries on.
 
+config APP_NETSCAN
+	bool "Network scan command (netscan)"
+	default y
+	select LTE_LC_NEIGHBOR_CELL_MEAS_MODULE
+	help
+	  The `netscan` command makes the unit sweep every band for cells and
+	  send what it heard -- operator, tracking area, cell, EARFCN, RSRP,
+	  RSRQ, strongest first -- to the server as one "F,scan," line.  Other
+	  operators' cells are included, which is the point: it shows who
+	  could be reached from where the unit sits.
+
+	  A complete sweep takes the radio for tens of seconds to minutes and
+	  can drop the connection, so it only runs when asked.
+
+config APP_NETSCAN_TIMEOUT_S
+	int "Seconds to wait for the network scan to report"
+	default 180
+	depends on APP_NETSCAN
+	help
+	  The watchdog is fed while waiting; a sweep that has not reported by
+	  then is abandoned.
+
 config APP_PSM_PROBE
 	bool "Ask the network for PSM and report what it grants (diagnostic)"
 	default n
