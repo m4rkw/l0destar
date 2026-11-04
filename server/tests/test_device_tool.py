@@ -5,6 +5,7 @@ Skipped unless ``TRACKER_TEST_DB`` is set; see conftest.py.
 
 import importlib.util
 import os
+import re
 import sys
 
 import pytest
@@ -50,6 +51,18 @@ def test_list_shows_every_device(tool, capsys, device, second_device):
     assert device['imei'] in out and second_device['imei'] in out
     assert '0.4.12' in out and 'v4.0p1+kline' in out and '12.40V' in out
     assert 'never' in out           # the second device has not reported
+
+
+def test_the_versions_are_read_from_the_device_row(tool, capsys, device, database):
+    database.query("UPDATE `device` SET `fw` = '0.4.77', `board` = 'v3.4+kline' "
+                   "WHERE `id` = %s", (device['id'],))
+
+    out = run(tool, capsys, 'list')[1]
+    assert '0.4.77' in out and 'v3.4+kline' in out
+
+    out = run(tool, capsys, 'show', device['imei'])[1]
+    assert re.search(r'firmware\s+0\.4\.77', out)
+    assert re.search(r'board\s+v3\.4\+kline', out)
 
 
 def test_show_prints_settings_but_never_the_key(tool, capsys, device, database):

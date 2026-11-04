@@ -2,7 +2,10 @@
 #define HW_DOMAIN_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+
+#include <zephyr/sys/util.h>
 
 /* Switched power domains and the GPIO sequencing they require.
  *
@@ -66,5 +69,33 @@ void hw_domain_notify_set(enum hw_domain d, hw_domain_notify_t cb);
  * with the receiver's rail, the next time anything requests it.  Does nothing
  * without the setting, or while the clock is not valid. */
 void hw_gnss_backup_cutoff(int sleep_s);
+
+/* The changes of the receiver's backup supply the server has not been told of
+ * (the state it came up in, each cut-off and return), as the text of a bk=
+ * field: "<state>:<age_s>|..." oldest first (backup_log.h).  Returns its
+ * length, 0 when there is nothing (also on a board with no switched supply),
+ * and in *count how many changes it holds.  Once that text is in a record,
+ * call hw_gnss_backup_reported(*count); until then the changes stay queued. */
+/* A reset that finds the backup supply dropped keeps it so: the startup fix
+ * brings it up, and hw_gnss_backup_cutoff() drops it again after, until the
+ * ignition comes on.  Call this when it does. */
+void hw_gnss_backup_hold_clear(void);
+
+int hw_gnss_backup_report(char *buf, size_t size, int *count);
+void hw_gnss_backup_reported(int count);
+
+/* The domain the CAN controller (MCP2518FD) is powered from on this board.
+ * Anything else wired to its SPI bus has to wait for that rail: with it down
+ * the controller's pins are clamp diodes into a dead supply (see the parking
+ * rules at the top of hw_domain.c), and whatever drives the bus pushes current
+ * into it.  hw_can.c and extflash.c both ask here. */
+static inline enum hw_domain hw_can_domain(void)
+{
+	if (IS_ENABLED(CONFIG_APP_BOARD_SPLIT_OBD_DOMAIN)) {
+		return HW_DOMAIN_CAN;   /* v3.1+: CAN_EN gates PP3V3_CAN */
+	}
+	return IS_ENABLED(CONFIG_APP_BOARD_OBD_DOMAIN) ? HW_DOMAIN_OBD
+						       : HW_DOMAIN_AUX;
+}
 
 #endif

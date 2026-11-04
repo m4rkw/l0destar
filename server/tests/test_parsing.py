@@ -465,3 +465,10 @@ def test_track_mode_expiry_leaves_an_off_switch_alone():
     stale = _SwitchDB(datetime.datetime.now() - datetime.timedelta(hours=2))
     telemetry.expire_track_mode(device, stale)
     assert not stale.updates
+
+
+def test_backup_changes_are_kept_whole_and_not_a_column():
+    d = telemetry.parse_csv_line(FULL + ',bk=0:41000|1:12,rid=7')
+    assert d['backup_changes'] == '0:41000|1:12'
+    assert d['rec_id'] == '7'
+    assert 'bk' not in d

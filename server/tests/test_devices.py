@@ -39,14 +39,31 @@ def no_default(monkeypatch):
 
 def test_device_list_shows_every_device(client, logged_in, device, second_device):
     send(device, record(0, 51.5, -0.1, 1, speed=48.0,
-                        extras=',mcc=234;mnc=10;rat=CATM1,fw=0.4.12'))
+                        extras=',mcc=234;mnc=10;rat=CATM1,fw=0.4.12,bd=v4.0p1+kline'))
     page = client.get('/devices').get_data(as_text=True)
 
     assert 'AB12CDE' in page and 'XY34ZZZ' in page
+    assert 'v4.0p1+kline' in page
     assert 'href="/track?imei=%s"' % CAR in page
     assert 'href="/track?imei=%s"' % VAN in page
     assert '0.4.12' in page and 'Test Network' in page and 'CATM1' in page
     assert 'never' in page          # the van has not reported
+
+
+def test_the_versions_are_read_from_the_device_row(client, logged_in, device, database):
+    # No record has arrived: what the row holds is what is shown, wherever
+    # it came from.
+    database.query("UPDATE `device` SET `fw` = '0.4.77', `board` = 'v3.4+kline' "
+                   "WHERE `id` = %s", (device['id'],))
+
+    page = client.get('/devices').get_data(as_text=True)
+    assert '0.4.77' in page and 'v3.4+kline' in page
+
+    listed = client.get('/api/1.0/devices').get_json()['devices'][0]
+    assert (listed['fw'], listed['board']) == ('0.4.77', 'v3.4+kline')
+
+    status = client.get('/api/1.0/status?imei=%s' % CAR).get_json()
+    assert (status['firmware'], status['board']) == ('0.4.77', 'v3.4+kline')
 
 
 def test_device_list_says_how_to_enrol_when_empty(client, logged_in, database):

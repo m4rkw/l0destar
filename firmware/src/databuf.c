@@ -50,6 +50,20 @@
  * The backlog must never delay live telemetry, so it is drained a datagram or
  * two per cycle alongside the current record rather than in one burst, and
  * each datagram is packed to stay inside the transport's packet limit.
+ *
+ * FLASH
+ * -----
+ * With CONFIG_APP_FLASH_BACKLOG the ring above is the front of a longer queue.
+ * When it is full the oldest records are moved to the external flash instead of
+ * being thinned away, so a long outage keeps every record the stream's spacing
+ * asks for (an hour of it is about 1 MB of flash; the chip holds five to eight
+ * hours).  Draining takes the flash first, oldest first, and then the ring, so
+ * the order holds.  The queue in the flash lasts one boot (see flashlog.h for
+ * why, and for how the chip is kept from wearing out).
+ *
+ * Anything that goes wrong with the flash leaves the backlog as it is without
+ * one: a push that cannot be spilled thins the ring, and records already in
+ * the flash are sent for as long as they can be read.
  */
 
 #include <stdio.h>
@@ -59,6 +73,11 @@
 
 #include "app.h"
 #include "config.h"
+
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+#include "extflash.h"
+#include "flashlog.h"
+#endif
 
 LOG_MODULE_REGISTER(databuf, CONFIG_APP_LOG_LEVEL);
 
@@ -242,7 +261,317 @@ int databuf_stamp(const char *in, size_t len, char *out, size_t cap)
     return (int)used;
 }
 
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+
+/* -- the flash tier ---------------------------------------------------------
+ *
+ * Opened the first time the ring is full: a boot that never has an outage long
+ * enough to need it reads nothing from the chip (it was parked at boot), and a
+ * chip that is not there is found out about when it matters. */
+
+#define FL_SECTORS       CONFIG_APP_FLASH_BACKLOG_SECTORS
+/* Records moved in one go when the ring is full.  A session has a wake from
+ * deep power-down and a pin set-up around it, so it is worth a handful. */
+#define FL_SPILL_BATCH   MAX(1, SLOTS / 4)
+#define FL_WARN_EVERY_MS 60000
+
+enum fl_state {
+    FL_NEW,                 /* not used yet this boot */
+    FL_UP,                  /* the log is open */
+    FL_NO,                  /* not usable this boot; said why when found out */
+};
+
+static enum fl_state   s_fl_state;
+static bool            s_fl_noappend;   /* nothing more goes in; what is there comes out */
+static bool            s_fl_unreachable;/* the last try found the bus not free */
+static bool            s_fl_unreach_said;
+static int64_t         s_fl_warn_ms = -FL_WARN_EVERY_MS;
+static struct flashlog s_fl;
+static uint16_t        s_fl_cnt[FL_SECTORS];
+static char            s_fl_rec[REC_MAX];
+
+/* What the last pack took from the flash, for the drop after its send. */
+static struct flashlog_cur s_fl_cur;
+static bool                s_fl_cur_valid;
+static int                 s_fl_packed;
+
+static int fl_pending(void)
+{
+    return s_fl_state == FL_UP ? (int)flashlog_pending(&s_fl) : 0;
+}
+
+/* The same complaint at most once a minute: an outage can be hours. */
+static bool fl_warn_due(void)
+{
+    int64_t now = k_uptime_get();
+
+    if (now - s_fl_warn_ms < FL_WARN_EVERY_MS) {
+        return false;
+    }
+    s_fl_warn_ms = now;
+    return true;
+}
+
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+/* The spacing the backlog keeps records at while streaming: the flash's, while
+ * there is a flash to hold them, and the ring's own when there is not. */
+static int stream_gap_now(void)
+{
+    const bool flash = s_fl_state != FL_NO && !s_fl_noappend && !s_fl_unreachable;
+
+    return flash ? CONFIG_APP_FLASH_BACKLOG_GAP_S : STREAM_GAP_S;
+}
+#define GAP_NOW stream_gap_now()
+#endif
+
+/* Inside a session, the first time: finds the chip and the place the ring has
+ * got to.  False if the flash is not to be used this boot. */
+static bool fl_open(void)
+{
+    uint32_t sectors = 0;
+    int err = extflash_probe(&sectors);
+
+    if (!err) {
+        const struct flashlog_cfg cfg = {
+            .max_cycles = CONFIG_APP_FLASH_BACKLOG_MAX_CYCLES,
+            .max_opens_per_hour = CONFIG_APP_FLASH_BACKLOG_MAX_OPENS_PER_HOUR,
+        };
+
+        err = flashlog_init(&s_fl, extflash_dev(sectors), s_fl_cnt, &cfg);
+    }
+    if (err) {
+        s_fl_state = FL_NO;
+        LOG_WRN("flash backlog unavailable (%d), RAM only", err);
+        return false;
+    }
+    s_fl_state = FL_UP;
+    /* The one line that says the feature works end to end. */
+    LOG_INF("flash backlog: %u sectors, %u erase cycles used so far",
+            (unsigned)sectors, (unsigned)flashlog_cycles(&s_fl));
+    return true;
+}
+
+/* Starts a session on the flash, opening the log the first time.  False, and
+ * the chip untouched, when it is not to be used or cannot be reached just now
+ * (a bus shared with the CAN controller whose rail is down).  Not reaching it
+ * is no verdict on it: it is asked again next time. */
+static bool fl_session(void)
+{
+    if (s_fl_state == FL_NO) {
+        return false;
+    }
+
+    int err = extflash_begin();
+
+    if (err) {
+        s_fl_unreachable = true;
+        if (!s_fl_unreach_said) {
+            s_fl_unreach_said = true;
+            LOG_WRN("flash backlog: the flash cannot be reached now (%d), RAM "
+                    "only until it can; on a bus shared with the CAN "
+                    "controller that means the CAN rail is down", err);
+        }
+        return false;
+    }
+    s_fl_unreachable = false;
+    if (s_fl_state == FL_NEW && !fl_open()) {
+        extflash_end();
+        return false;
+    }
+    return true;
+}
+
+static void fl_error(int err)
+{
+    switch (err) {
+    case FLASHLOG_ERR_RATE:
+        if (fl_warn_due()) {
+            LOG_WRN("flash backlog: hourly limit on sectors opened reached, "
+                    "keeping to RAM until it is up");
+        }
+        break;
+    case FLASHLOG_ERR_WORN:
+        s_fl_noappend = true;
+        LOG_WRN("flash backlog: erase cycle limit reached, no more written");
+        break;
+    case FLASHLOG_ERR_DEAD:
+        s_fl_noappend = true;
+        LOG_WRN("flash backlog: writing stopped after repeated failures");
+        break;
+    default:
+        if (fl_warn_due()) {
+            LOG_WRN("flash backlog: write failed (%d)", err);
+        }
+        break;
+    }
+}
+
+/* Moves the oldest records of the ring into the flash to make room.  True if
+ * at least one slot is free; false leaves the caller to thin the ring. */
+static bool fl_spill(void)
+{
+    if (s_fl_noappend || !fl_session()) {
+        return false;
+    }
+
+    const uint32_t now_s = (uint32_t)(k_uptime_get() / 1000);
+    const uint32_t dropped0 = s_fl.st.dropped;
+    int moved = 0;
+    int err = 0;
+
+    while (moved < FL_SPILL_BATCH && s_count > 0) {
+        err = flashlog_append(&s_fl, s_rec[s_head], s_len[s_head], now_s);
+        if (err) {
+            break;
+        }
+        s_head = (s_head + 1) % SLOTS;
+        s_count--;
+        moved++;
+        watchdog_kick();
+    }
+    extflash_end();
+
+    if (s_fl.st.dropped != dropped0) {
+        /* The ring of sectors is full: the oldest were overwritten unsent. */
+        s_dropped += s_fl.st.dropped - dropped0;
+        if (fl_warn_due()) {
+            LOG_WRN("flash backlog full: %u oldest records overwritten",
+                    (unsigned)(s_fl.st.dropped - dropped0));
+        }
+    }
+    if (err) {
+        fl_error(err);
+    }
+    return moved > 0;
+}
+
+/* The oldest records in the flash into out, as databuf_pack() does for the
+ * ring.  *drained is whether they are all taken: false when the datagram is
+ * full, and the ring's records then wait their turn so that the order holds.
+ * A flash that cannot be read just now (the CAN rail it shares a bus with is
+ * down) is left for later and counts as drained: the server files a record by
+ * its age, so a late one is no worse than one held back behind it. */
+static size_t fl_pack(char *out, size_t max, int64_t now_s, int *packed_out,
+                      bool *drained)
+{
+    struct flashlog_cur cur;
+    size_t used = 0;
+    int packed = 0;
+
+    *packed_out = 0;
+    *drained = true;
+    s_fl_cur_valid = false;
+    s_fl_packed = 0;
+
+    if (s_fl_state != FL_UP || flashlog_pending(&s_fl) == 0) {
+        return 0;
+    }
+    if (!fl_session()) {
+        return 0;
+    }
+
+    flashlog_cursor(&s_fl, &cur);
+    for (;;) {
+        struct flashlog_cur next = cur;
+        int n = flashlog_next(&s_fl, &next, s_fl_rec, sizeof(s_fl_rec));
+
+        if (n == FLASHLOG_ERR_CRC) {
+            cur = next;                     /* unreadable: passed over, counted at commit */
+            continue;
+        }
+        if (n <= 0) {
+            break;                          /* none left, or not readable */
+        }
+
+        size_t sep = packed ? 1 : 0;
+
+        if (used + sep >= max) {
+            *drained = false;
+            break;
+        }
+
+        int m = stamp_record(s_fl_rec, (size_t)n, &out[used + sep],
+                             max - used - sep - 1, now_s, true);
+
+        if (m < 0) {
+            *drained = false;
+            break;
+        }
+        if (sep) {
+            out[used] = '\n';
+        }
+        used += sep + (size_t)m;
+        packed++;
+        cur = next;
+    }
+    extflash_end();
+
+    if (packed == 0 && cur.n > 0) {
+        /* Only records that could not be read: nothing to send, so nothing
+         * for a send to commit.  Take them out now or they are read again for
+         * ever. */
+        const uint32_t lost0 = s_fl.st.lost;
+
+        (void)flashlog_commit(&s_fl, &cur);
+        s_dropped += s_fl.st.lost - lost0;
+        if (fl_warn_due()) {
+            LOG_WRN("flash backlog: %u records could not be read back",
+                    (unsigned)(s_fl.st.lost - lost0));
+        }
+        return 0;
+    }
+
+    s_fl_cur = cur;
+    s_fl_cur_valid = true;
+    s_fl_packed = packed;
+    *packed_out = packed;
+    return used;
+}
+
+/* The records the last pack took from the flash have been sent: out of the
+ * queue.  Returns how many of the sent records they were.  A commit that is
+ * refused (the ring overwrote the place meanwhile) leaves them to go again,
+ * which the server tolerates. */
+static int fl_commit(void)
+{
+    const int sent = s_fl_packed;
+
+    if (s_fl_cur_valid) {
+        const uint32_t lost0 = s_fl.st.lost;
+
+        (void)flashlog_commit(&s_fl, &s_fl_cur);
+        if (s_fl.st.lost != lost0) {
+            s_dropped += s_fl.st.lost - lost0;
+            if (fl_warn_due()) {
+                LOG_WRN("flash backlog: %u records could not be read back",
+                        (unsigned)(s_fl.st.lost - lost0));
+            }
+        }
+        s_fl_cur_valid = false;
+    }
+    s_fl_packed = 0;
+    return sent;
+}
+
+/* Everything waiting to be sent: the ring and the flash. */
+#define BACKLOG_COUNT() (s_count + fl_pending())
+
+#else
+
+#define BACKLOG_COUNT() s_count
+
+#endif /* CONFIG_APP_FLASH_BACKLOG */
+
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM) && !IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+#define GAP_NOW STREAM_GAP_S
+#endif
+
 int databuf_count(void)
+{
+    return BACKLOG_COUNT();
+}
+
+int databuf_ring_count(void)
 {
     return s_count;
 }
@@ -308,8 +637,8 @@ int databuf_push(const char *rec, size_t len)
     /* Streaming: records come every few hundred milliseconds, so they are kept
      * a gap apart by when they were built, the gap doubling with each thinning.
      * Not counted in s_push_seq, which is for pushes at a steady rate. */
-    if (s_stream && STREAM_GAP_S > 0 && up >= 0) {
-        if (near_held(up, STREAM_GAP_S * s_interval_mult)) {
+    if (s_stream && GAP_NOW > 0 && up >= 0) {
+        if (near_held(up, GAP_NOW * s_interval_mult)) {
             s_dropped++;
             return 1;                   /* left out, which is not stored */
         }
@@ -324,7 +653,14 @@ int databuf_push(const char *rec, size_t len)
     }
 
     if (s_count == SLOTS) {
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+        /* The flash takes the oldest; the ring is thinned only if it cannot. */
+        if (!fl_spill()) {
+            databuf_decimate();
+        }
+#else
         databuf_decimate();
+#endif
     }
 
     int slot = (s_head + s_count) % SLOTS;
@@ -362,7 +698,7 @@ int databuf_push_lines(const char *buf, size_t len)
      * most of them. */
     if (stored > 0 || !STREAMING) {
         LOG_INF("backlog: +%d record%s (%d held, %u dropped)",
-                stored, stored == 1 ? "" : "s", s_count, s_dropped);
+                stored, stored == 1 ? "" : "s", BACKLOG_COUNT(), s_dropped);
     }
     return stored;
 }
@@ -375,14 +711,32 @@ static int databuf_pack(char *out, size_t max, int *n_recs)
     size_t used = 0;
     int packed = 0;
     int64_t now_s = k_uptime_get() / 1000;
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+    int fl_packed = 0;
+    bool fl_drained = true;
+#endif
 
     if (max > BATCH_MAX) {
         max = BATCH_MAX;
     }
 
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+    /* What the flash holds is older than anything in the ring: it goes first,
+     * and the ring's records only once it has been taken whole. */
+    used = fl_pack(out, max, now_s, &fl_packed, &fl_drained);
+    if (!fl_drained) {
+        *n_recs = fl_packed;
+        return (int)used;
+    }
+#endif
+
     while (packed < s_count) {
         int slot = (s_head + packed) % SLOTS;
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+        size_t sep = (packed || fl_packed) ? 1 : 0;   /* newline separator */
+#else
         size_t sep = packed ? 1 : 0;           /* newline separator */
+#endif
 
         if (used + sep >= max) {
             break;
@@ -401,12 +755,20 @@ static int databuf_pack(char *out, size_t max, int *n_recs)
         packed++;
     }
 
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+    *n_recs = packed + fl_packed;
+#else
     *n_recs = packed;
+#endif
     return (int)used;
 }
 
 static void databuf_drop(int n)
 {
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+    /* The flash's records were first in the datagram. */
+    n -= fl_commit();
+#endif
     if (n >= s_count) {
         databuf_reset();
         return;
@@ -750,7 +1112,7 @@ void databuf_deliver(int timeout_ms)
 {
     databuf_settle(timeout_ms);
 
-    for (int round = 0; round < DELIVER_ROUNDS && s_count > 0; round++) {
+    for (int round = 0; round < DELIVER_ROUNDS && BACKLOG_COUNT() > 0; round++) {
         watchdog_kick();
         if (databuf_flush(CONFIG_APP_DATABUF_FLUSH_PER_CYCLE) == 0) {
             break;
@@ -768,11 +1130,11 @@ int databuf_flush(int max_datagrams)
     static char batch[BATCH_MAX];
     int sent = 0;
 
-    if (s_count == 0 || !modem_is_registered()) {
+    if (BACKLOG_COUNT() == 0 || !modem_is_registered()) {
         return 0;
     }
 
-    for (int i = 0; i < max_datagrams && s_count > 0; i++) {
+    for (int i = 0; i < max_datagrams && BACKLOG_COUNT() > 0; i++) {
 #ifdef FLOW_CONTROL
         /* The window is for the stream's own records first. */
         if (s_stream && databuf_unacked() >= UNANSWERED) {
@@ -788,7 +1150,8 @@ int databuf_flush(int max_datagrams)
 
         watchdog_kick();
         if (transport_send((const uint8_t *)batch, (size_t)len) != 0) {
-            LOG_WRN("backlog flush failed — %d records still held", s_count);
+            LOG_WRN("backlog flush failed — %d records still held",
+                    BACKLOG_COUNT());
             break;
         }
         /* Out of the ring before they are held: holding can push an
@@ -801,8 +1164,8 @@ int databuf_flush(int max_datagrams)
 
     if (sent) {
         LOG_INF("backlog: sent %d record%s, %d still held",
-                sent, sent == 1 ? "" : "s", s_count);
-        if (s_count == 0 && s_dropped) {
+                sent, sent == 1 ? "" : "s", BACKLOG_COUNT());
+        if (BACKLOG_COUNT() == 0 && s_dropped) {
             LOG_INF("backlog drained (%u thinned away during the outage)",
                     s_dropped);
             s_dropped = 0;

@@ -24,6 +24,9 @@
 #include "hw_common.h"
 #include "hw_domain.h"
 #include "pins.h"
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+#include "extflash.h"
+#endif
 #if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
 #include "holdbreak.h"
 #endif
@@ -709,6 +712,9 @@ void movement_reset(void)
 static void handle_ignition_state(void)
 {
     ignition = (char)ignition_read();
+    if (ignition == 0) {                /* 0 = on (active low) */
+        hw_gnss_backup_hold_clear();
+    }
 }
 
 static bool should_send_data(void)
@@ -847,14 +853,17 @@ static bool hold_break_driving(void)
 /* Something that cannot wait for LTE, or that a cut would put in doubt: an
  * alert to send, an impact the loop has not looked at yet, a setting to
  * report, a send that failed, an ignition change the server has not been
- * told, a backlog with no room left to park in. */
+ * told, a backlog with no room left to park in.  The room is the RAM ring's:
+ * records already in the flash (APP_FLASH_BACKLOG) are not what a cut parks
+ * into, and counting them would keep the breaker off for as long as an
+ * outage's backlog took to drain. */
 static bool hold_break_urgent(void)
 {
     return alert_count > 0 || atomic_get(&s_accel_int_flag) ||
            send_int_to_server || !last_send_ok ||
            previous_ignition != ignition ||
-           databuf_count() >= CONFIG_APP_DATABUF_SLOTS *
-                              HOLD_BREAK_BACKLOG_PCT / 100;
+           databuf_ring_count() >= CONFIG_APP_DATABUF_SLOTS *
+                                   HOLD_BREAK_BACKLOG_PCT / 100;
 }
 
 static void hold_break_facts(struct hb_now *n)
@@ -2566,6 +2575,11 @@ int main(void)
     }
 
     hw_domain_init();
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+    /* The flash into deep power-down, where it stays until the backlog needs
+     * it: in standby it would draw 5 to 24 uA for as long as the unit is up. */
+    extflash_init();
+#endif
     hw_aux_power_on();
     k_msleep(10);
 

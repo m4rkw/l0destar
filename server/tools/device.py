@@ -77,8 +77,8 @@ def list_devices(args):
             device['name'] or '-',
             device['registration'] or '-',
             _when(log.get('timestamp')),
-            log.get('fw') or '-',
-            log.get('board') or '-',
+            device.get('fw') or '-',
+            device.get('board') or '-',
             _volts(log.get('battery_level')),
             _ignition(log),
         ))
@@ -112,6 +112,8 @@ def show(args):
         ('overnight alarm', '%s, %s:00 to %s:00' % (
             device['overnight_alarm'], device['overnight_alarm_hour_from'],
             device['overnight_alarm_hour_to'])),
+        ('firmware', device.get('fw') or '-'),
+        ('board', device.get('board') or '-'),
         ('published firmware', firmware.latest_version(device['imei']) or '-'),
         ('staged update', device['fw_staged'] or '-'),
         ('withheld update', '%s, after %d failed attempt(s)' % (
@@ -126,8 +128,6 @@ def show(args):
             ('position', '%s, %s' % (log.get('latitude'), log.get('longitude'))),
             ('battery', _volts(log.get('battery_level'))),
             ('ignition', _ignition(log)),
-            ('firmware', log.get('fw') or '-'),
-            ('board', log.get('board') or '-'),
             ('network', ' '.join(v for v in network if v) or '-'),
         ]
     else:

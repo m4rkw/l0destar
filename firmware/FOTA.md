@@ -281,7 +281,7 @@ A unit reports its running version to the server as `fw=`, and the board the
 build is for as `bd=`, on the first telemetry record after each boot, on any
 settings-sync record, and in the reply to the `config` command (`fw=` and
 `board=`). The server stores both on every `log` row, carrying the last values
-forward while the version is the same; for firmware that predates `bd=` it reads
+forward while the version is the same, and on the device's own row (`device.fw`, `device.board`) when either changes; for firmware that predates `bd=` it reads
 the board from the image it published at that version, and
 `server/tools/backfill_board.py` does the same for rows from before. The
 manifest's `board=` is not that record: it names the board of the unit the

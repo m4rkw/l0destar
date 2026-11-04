@@ -280,6 +280,13 @@ def parse_csv_line(line):
                     if len(bits) >= 3 and bits[2]:
                         data['wake_attach_ms'] = bits[2]
                 continue
+            if key == 'bk':
+                # <state>:<age_s>[|<state>:<age_s>...], oldest first: each
+                # change of the GNSS backup supply and how long before this
+                # record was built it happened.  Not a column: each change
+                # is a row in `gnss_backup`.
+                data['backup_changes'] = value
+                continue
             if key == 'ws':
                 # <rid>:<rsrp>:<snr>:<band> -- the serving cell as the wake
                 # that sent record <rid> left it.  A wake from PSM builds its
@@ -773,6 +780,65 @@ def _is_copy(database, device, data):
     ) is not None
 
 
+def _note_versions(database, device, entry):
+    """Keep the device row's firmware and board at what its newest live
+    record says: the version the unit is running now and the board that
+    build is for.  Written when either changes - a restart into an update,
+    mostly - and not otherwise.  A record that carries no version, because
+    the unit has never reported one, leaves the row as it is.  So does a
+    build that names no board: the row holds the last board the unit
+    reported, where the log row for that record is left empty."""
+    fw, board = entry.get('fw'), entry.get('board')
+    if fw is None:
+        return
+    if fw == device.get('fw') and (board is None or board == device.get('board')):
+        return
+    database.query(
+        'UPDATE `device` SET `fw` = %s, `board` = COALESCE(%s, `board`) '
+        'WHERE `id` = %s',
+        (fw, board, device['id']),
+    )
+    device['fw'] = fw
+    if board is not None:
+        device['board'] = board
+
+
+# A change older than a week was lost in a backlog; the record's own age is
+# bounded the same way.
+BACKUP_AGE_MAX = RECORD_AGE_MAX
+
+
+def _store_backup_changes(database, device, data, built):
+    """File the GNSS backup supply changes a record reports (``bk=``).
+
+    Each is ``state:age``: on or off, and the seconds before the record was
+    built that it changed, so a midnight cut-off that a key-on reports hours
+    later is still filed at midnight.  A change is stored once whichever
+    record repeats it (the unique key makes a resend harmless); an unusable
+    one is skipped on its own."""
+    raw = data.get('backup_changes')
+    if not raw:
+        return
+    for item in raw.split('|'):
+        try:
+            state, age = item.split(':')
+            state, age = int(state), int(age)
+        except ValueError:
+            logs.app.warning('unparsable bk=%r from %s', item,
+                             device.get('imei', '?'))
+            continue
+        if state not in (0, 1) or age < 0 or age > BACKUP_AGE_MAX:
+            logs.app.warning('implausible bk=%r from %s', item,
+                             device.get('imei', '?'))
+            continue
+        at = built - datetime.timedelta(seconds=age)
+        database.query(
+            'INSERT IGNORE INTO `gnss_backup` (`device_id`, `at`, `on`) '
+            'VALUES (%s, %s, %s)',
+            (device['id'], at.strftime('%Y-%m-%d %H:%M:%S.%f'), state),
+        )
+
+
 def process_record(data, device, ip, database=None):
     """Store one telemetry record.
 
@@ -878,6 +944,11 @@ def process_record(data, device, ip, database=None):
         device['wake_pending_ms'] = None
         device['wake_pending_attach_ms'] = None
 
+    try:
+        _store_backup_changes(database, device, data, built)
+    except Exception:
+        logs.app.exception('gnss backup update failed for %s', device.get('imei'))
+
     _store_wake_figure(database, device, data, entry.get('rec_id'))
     _store_wake_signal(database, device, data, entry.get('rec_id'))
 
@@ -897,6 +968,14 @@ def process_record(data, device, ip, database=None):
             'UPDATE `device` SET %s WHERE `id` = %%s' % assignments,
             [value for _, value in updates] + [device['id']],
         )
+
+    # And the version it is running, on the same terms: a late record can
+    # carry the one before an update.
+    if not history:
+        try:
+            _note_versions(database, device, entry)
+        except Exception:
+            logs.app.exception('version update failed for %s', device.get('imei'))
 
     if 'request_int' in data:
         return device_config(device)

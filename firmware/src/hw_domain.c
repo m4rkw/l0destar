@@ -59,6 +59,7 @@
 
 #include "app.h"
 #include "backup_cutoff.h"
+#include "backup_log.h"
 #include "hw_common.h"
 #include "hw_domain.h"
 #include "pins.h"
@@ -128,6 +129,79 @@ static struct domain s_dom[HW_DOMAIN_COUNT];
 #endif
 static bool s_bckp_on;
 
+/* Changes of s_bckp_on the server has not been told about yet.  Taken from
+ * the record builder's thread, written from the sleep loop and the rail
+ * requests, so behind a lock. */
+static struct bklog s_bklog;
+static struct k_spinlock s_bklog_lock;
+
+static void bklog_note(bool on)
+{
+	k_spinlock_key_t key = k_spin_lock(&s_bklog_lock);
+
+	bklog_add(&s_bklog, on, k_uptime_get());
+	k_spin_unlock(&s_bklog_lock, key);
+}
+
+int hw_gnss_backup_report(char *buf, size_t size, int *count)
+{
+	k_spinlock_key_t key = k_spin_lock(&s_bklog_lock);
+
+	*count = bklog_format(&s_bklog, k_uptime_get(), buf, size);
+	k_spin_unlock(&s_bklog_lock, key);
+	return *count > 0 ? (int)strlen(buf) : 0;
+}
+
+void hw_gnss_backup_reported(int count)
+{
+	k_spinlock_key_t key = k_spin_lock(&s_bklog_lock);
+
+	bklog_drop(&s_bklog, count);
+	k_spin_unlock(&s_bklog_lock, key);
+}
+
+/* What survives a warm reset (a software or watchdog reset, the reboot that
+ * applies an update).  __noinit like fota.c's record: a power-on leaves RAM
+ * undefined, which the magic catches, and a unit that lost its power has lost
+ * the receiver's backup anyway.
+ *   off   the supply was dropped when the unit went down
+ *   hold  a reset found it dropped: it stays down, and is dropped again each
+ *         time the receiver's rail lets go, until the next ignition on.  The
+ *         startup fix would otherwise bring it back for the rest of the day. */
+#define BCKP_KEEP_MAGIC 0xB0C4DA7Bu
+static __noinit struct {
+	uint32_t magic;
+	uint32_t off;
+	uint32_t hold;
+} s_bckp_keep;
+
+static bool s_bckp_hold;
+
+static void bckp_keep(bool on)
+{
+	s_bckp_keep.off = on ? 0 : 1;
+	s_bckp_keep.hold = s_bckp_hold;
+	s_bckp_keep.magic = BCKP_KEEP_MAGIC;
+}
+
+/* At boot: should the supply start dropped, and held so? */
+static bool bckp_kept_off(void)
+{
+	if (s_bckp_keep.magic != BCKP_KEEP_MAGIC) {
+		return false;
+	}
+	s_bckp_hold = s_bckp_keep.hold == 1 || s_bckp_keep.off == 1;
+	return s_bckp_hold;
+}
+
+void hw_gnss_backup_hold_clear(void)
+{
+	if (s_bckp_hold) {
+		s_bckp_hold = false;
+		bckp_keep(s_bckp_on);
+	}
+}
+
 static void bckp_set(bool on)
 {
 	if (!IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY) || PIN_GNSS_BCKP_EN < 0 ||
@@ -137,6 +211,8 @@ static void bckp_set(bool on)
 	gpio_pin_configure(hw_gpio0, PIN_GNSS_BCKP_EN,
 			   on ? GPIO_OUTPUT_HIGH : GPIO_OUTPUT_LOW);
 	s_bckp_on = on;
+	bckp_keep(on);
+	bklog_note(on);
 }
 
 static hw_domain_notify_t s_notify[HW_DOMAIN_COUNT];
@@ -345,10 +421,15 @@ int hw_domain_init(void)
 	 * receiver's rail: it is what lets the receiver hot-start
 	 * (APP_GNSS_BACKUP_SUPPLY). */
 	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_GNSS) && PIN_GNSS_BCKP_EN >= 0) {
+		/* A reset does not bring a dropped supply back.  The startup
+		 * fix will raise it with the receiver's rail; it is dropped
+		 * again after, until the ignition comes on (bckp_kept_off()). */
+		s_bckp_on = IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY) &&
+			    !bckp_kept_off();
 		gpio_pin_configure(hw_gpio0, PIN_GNSS_BCKP_EN,
-				   IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY) ?
-				   GPIO_OUTPUT_HIGH : GPIO_OUTPUT_LOW);
-		s_bckp_on = IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY);
+				   s_bckp_on ? GPIO_OUTPUT_HIGH : GPIO_OUTPUT_LOW);
+		bckp_keep(s_bckp_on);
+		bklog_note(s_bckp_on);	/* the state it came up in */
 	}
 
 	/* Rail-sense inputs (v3.1+): always-on status from the load switches.
@@ -504,6 +585,10 @@ void hw_gnss_backup_cutoff(int sleep_s)
 {
 	int64_t ms;
 
+	if (s_bckp_hold && s_bckp_on && !hw_domain_is_on(HW_DOMAIN_AUX)) {
+		bckp_set(false);	/* the startup fix is done */
+		return;
+	}
 	if (BCKP_OFF_HOUR < 0 || !s_bckp_on || hw_domain_is_on(HW_DOMAIN_AUX) ||
 	    date_time_now(&ms) != 0) {
 		return;		/* nothing to drop, or no clock to judge by */

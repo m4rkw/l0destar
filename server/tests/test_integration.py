@@ -394,6 +394,143 @@ def test_unusable_board_is_dropped_and_the_record_still_stores(device, database)
     assert [(r['fw'], r['board']) for r in rows] == [('0.4.97', 'v4.0p1+kline')] * 2
 
 
+# -- the version on the device row -------------------------------------------
+
+def fresh(device):
+    """The device as the next request reads it, not the dict the last one
+    left behind."""
+    return db.lookup_device(imei=device['imei'])
+
+
+def stored(device):
+    row = fresh(device)
+    return row['fw'], row['board']
+
+
+@pytest.fixture
+def version_writes(monkeypatch):
+    """The UPDATEs of the device row's version, as they are issued."""
+    issued = []
+    real = db.web.query
+
+    def spy(sql, *args, **kwargs):
+        if sql.startswith('UPDATE `device` SET `fw`'):
+            issued.append(args[0] if args else None)
+        return real(sql, *args, **kwargs)
+
+    monkeypatch.setattr(db.web, 'query', spy)
+    return issued
+
+
+def test_the_device_row_takes_the_version_a_record_reports(device, database):
+    assert stored(device) == (None, None)
+    send(fresh(device), record(0, 51.5, -0.1, 0, extras=',fw=0.4.98,bd=v4.0p1+kline'))
+    assert stored(device) == ('0.4.98', 'v4.0p1+kline')
+
+
+def test_the_device_row_follows_the_unit_to_a_new_version(device, database):
+    send(fresh(device), record(0, 51.5, -0.1, 0, extras=',fw=0.4.96,bd=v4.0+kline'))
+    send(fresh(device), record(1, 51.5, -0.1, 0, extras=',fw=0.4.98,bd=v4.0p1+kline'))
+    assert stored(device) == ('0.4.98', 'v4.0p1+kline')
+
+
+def test_the_device_row_follows_the_board_alone_changing(device, database):
+    send(fresh(device), record(0, 51.5, -0.1, 0, extras=',fw=0.4.96,bd=v4.0+kline'))
+    send(fresh(device), record(1, 51.5, -0.1, 0, extras=',fw=0.4.96,bd=v4.0p1+kline'))
+    assert stored(device) == ('0.4.96', 'v4.0p1+kline')
+
+
+def test_the_device_row_is_written_only_when_the_version_changes(device, database, version_writes):
+    send(fresh(device), record(0, 51.5, -0.1, 0, extras=',fw=0.4.96,bd=v4.0p1+kline'))
+    assert len(version_writes) == 1
+
+    # Carried forward on the rows after it, and repeated by a settings sync.
+    send(fresh(device), record(1, 51.5, -0.1, 0), record(2, 51.5, -0.1, 0))
+    send(fresh(device), record(3, 51.5, -0.1, 0, extras=',fw=0.4.96,bd=v4.0p1+kline'))
+    assert len(version_writes) == 1
+
+    send(fresh(device), record(4, 51.5, -0.1, 0, extras=',fw=0.4.98,bd=v4.0p1+kline'))
+    assert len(version_writes) == 2
+    assert stored(device) == ('0.4.98', 'v4.0p1+kline')
+
+
+def test_a_batch_writes_the_device_row_once(device, database, version_writes):
+    send(fresh(device), record(0, 51.5, -0.1, 0, extras=',fw=0.4.96,bd=v4.0p1+kline'),
+         record(1, 51.5, -0.1, 0), record(2, 51.5, -0.1, 0))
+    assert len(version_writes) == 1
+
+
+def test_a_version_with_no_known_board_keeps_the_last_board(device, database, fw_dir):
+    # The device row holds the last board the unit named; it is the log row,
+    # kept per record, that is left empty for a build that names none.
+    send(fresh(device), record(0, 51.5, -0.1, 0, extras=',fw=0.4.96,bd=v4.0p1+kline'))
+    send(fresh(device), record(1, 51.5, -0.1, 0, extras=',fw=0.4.97'))
+
+    assert stored(device) == ('0.4.97', 'v4.0p1+kline')
+    assert last_log(database)['board'] is None
+
+
+def test_a_board_set_by_hand_survives_a_unit_that_reports_none(device, database, fw_dir, version_writes):
+    database.query("UPDATE `device` SET `board` = 'v4.0+kline' WHERE `id` = %s", (device['id'],))
+    send(fresh(device), record(0, 51.5, -0.1, 0, extras=',fw=0.4.0'))
+    send(fresh(device), record(1, 51.5, -0.1, 0), record(2, 51.5, -0.1, 0))
+
+    assert stored(device) == ('0.4.0', 'v4.0+kline')
+    assert len(version_writes) == 1         # not rewritten for want of a board to compare
+
+
+def test_the_device_row_takes_the_board_from_the_published_image(device, database, fw_dir):
+    with open(os.path.join(fw_dir, 'l0destar-0.4.97-%s.bin' % device['imei']), 'wb') as f:
+        f.write(b'\x00v4.3\x00v4.0p1+kline\x00')
+    send(fresh(device), record(0, 51.5, -0.1, 0, extras=',fw=0.4.97'))
+    assert stored(device) == ('0.4.97', 'v4.0p1+kline')
+
+
+def test_a_unit_that_reports_no_version_leaves_the_row_empty(device, database, version_writes):
+    send(fresh(device), record(0, 51.5, -0.1, 0), record(1, 51.5, -0.1, 0))
+    assert stored(device) == (None, None)
+    assert version_writes == []
+
+
+def test_a_late_record_does_not_move_the_device_row(device, database):
+    # A backlog flushed behind the live record can carry the version from
+    # before an update.  The row it makes is still the one that ran then.
+    send(fresh(device), record(1, 51.5, -0.1, 0, extras=',rid=101,fw=0.4.98,bd=v4.0p1+kline'))
+    send(fresh(device), record(0, 51.5, -0.1, 0, extras=',rid=100,fw=0.4.96,bd=v4.0+kline,age=35'))
+
+    assert stored(device) == ('0.4.98', 'v4.0p1+kline')
+    late = database.one('SELECT `fw`, `board` FROM `log` WHERE `rec_id` = 100')
+    assert (late['fw'], late['board']) == ('0.4.96', 'v4.0+kline')
+
+
+def test_a_record_with_no_version_never_blanks_the_row(device, database):
+    # Nothing to carry forward from, as after the log was emptied.
+    database.query("UPDATE `device` SET `fw` = '0.4.98', `board` = 'v4.0p1+kline' WHERE `id` = %s",
+                   (device['id'],))
+    send(fresh(device), record(0, 51.5, -0.1, 0))
+    assert stored(device) == ('0.4.98', 'v4.0p1+kline')
+
+
+def test_a_failed_version_write_does_not_stop_the_update_being_confirmed(device, database, monkeypatch):
+    # The write is bookkeeping: what comes after the record, here the update
+    # being seen running, must still happen.
+    database.query("UPDATE `device` SET `fw_staged` = '0.4.98', `fw_staged_at` = NOW() WHERE `id` = %s",
+                   (device['id'],))
+    real = db.web.query
+
+    def refuse(sql, *args, **kwargs):
+        if sql.startswith('UPDATE `device` SET `fw`'):
+            raise RuntimeError('database went away')
+        return real(sql, *args, **kwargs)
+
+    monkeypatch.setattr(db.web, 'query', refuse)
+    response = send(fresh(device), record(0, 51.5, -0.1, 0, extras=',fw=0.4.98,bd=v4.0p1+kline'))
+
+    assert response.startswith('1,')
+    assert last_log(database)['fw'] == '0.4.98'
+    assert fresh(device)['fw_staged'] is None
+
+
 def test_per_packet_fields_do_not_carry_forward(device, database):
     # A stale accelerometer reading copied onto a later row would be
     # indistinguishable from a real one.
@@ -770,3 +907,31 @@ def test_map_page_survives_a_device_with_no_records(client, device, database, lo
     # This is the first thing a new deployment sees.
     database.query("INSERT INTO `device` (`imei`, `name`) VALUES ('350000000000001', 'New')")
     assert client.get('/track?imei=350000000000001').status_code == 200
+
+
+# -- GNSS backup supply changes (bk=) -----------------------------------------
+
+def backup_rows(database):
+    return database.all('SELECT * FROM `gnss_backup` ORDER BY `at`')
+
+
+def test_backup_changes_are_filed_when_they_happened(device, database):
+    # A midnight cut-off is reported by the key-on hours later: the row is
+    # dated by the record's own time minus the age, not the arrival.
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100,bk=0:30600|1:5'))
+    rows = backup_rows(database)
+    assert [r['on'] for r in rows] == [0, 1]
+    gap = rows[1]['at'] - rows[0]['at']
+    assert gap.total_seconds() == 30595
+
+
+def test_single_backup_change_is_filed(device, database):
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100,bk=1:0'))
+    assert len(backup_rows(database)) == 1
+
+
+def test_unusable_backup_change_is_skipped_on_its_own(device, database):
+    send(device, record(0, 51.5, -0.1, 0,
+                        extras=',rid=100,bk=2:5|x:y|1:-3|0:60'))
+    assert [r['on'] for r in backup_rows(database)] == [0]
+    assert last_log(database)['rec_id'] == 100

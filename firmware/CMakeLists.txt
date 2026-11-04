@@ -57,6 +57,9 @@ target_sources_ifdef(CONFIG_APP_LTE_POWER_TEST app PRIVATE src/lte_power_test.c)
 
 # Backlog buffer for records that could not be sent.
 target_sources(app PRIVATE src/databuf.c)
+# Its overflow on an external flash: the wear-levelled log (host-tested in
+# tests/test_flashlog.py) and the MX25R6435F driver under it.
+target_sources_ifdef(CONFIG_APP_FLASH_BACKLOG app PRIVATE src/flashlog.c src/extflash.c)
 # Warnings/errors captured for the server (see src/dbglog.c).
 target_sources_ifdef(CONFIG_APP_DEBUG_LOG app PRIVATE src/dbglog.c)
 

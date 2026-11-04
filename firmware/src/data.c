@@ -11,6 +11,8 @@
 #include <zephyr/logging/log.h>
 
 #include "app.h"
+#include "backup_log.h"
+#include "hw_domain.h"
 
 LOG_MODULE_REGISTER(data, CONFIG_APP_LOG_LEVEL);
 
@@ -313,6 +315,24 @@ static void append_sync_fields(void)
                  DATA_LIMIT - data_index - 1,
                  ",rid=%u", s_last_rec_id);
     if (n > 0) data_index += n;
+
+    /* Changes of the GNSS receiver's backup supply since the last record
+     * that carried them, each with its age: a cut-off happens in the night
+     * and is told at the next record.  Stays queued until it is in the
+     * buffer. */
+    {
+        char bk[BKLOG_BUF];
+        int count;
+
+        if (hw_gnss_backup_report(bk, sizeof(bk), &count) > 0) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1, ",bk=%s", bk);
+            if (n > 0 && n < DATA_LIMIT - data_index - 1) {
+                data_index += n;
+                hw_gnss_backup_reported(count);
+            }
+        }
+    }
 
     /* How long the previous engine-off wake took, in milliseconds, and the
      * record it belongs to.  A wake cannot report its own duration, so the

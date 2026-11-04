@@ -207,11 +207,14 @@ def test_the_tool_fills_the_rows_and_can_be_run_again(tool, device, database, tm
 @needs_db
 def test_the_tool_wants_the_column_before_it_writes(tool, device, database, tmp_path, capsys):
     (tmp_path / ('l0destar-0.4.60-%s.bin' % device['imei'])).write_bytes(blob('v3.3+kline'))
-    database.query('ALTER TABLE `log` DROP COLUMN `board`')
+    # Rebuilt each way: an instant drop and add leaves the dropped column
+    # counted against the row size, and a database that has run this enough
+    # times refuses the add.
+    database.query('ALTER TABLE `log` DROP COLUMN `board`, ALGORITHM=COPY')
     try:
         code = tool.main(['--config', os.environ['TRACKER_CONFIG'], '--fw-dir', str(tmp_path), '--apply'])
     finally:
-        database.query("ALTER TABLE `log` ADD COLUMN `board` VARCHAR(32) DEFAULT NULL")
+        database.query("ALTER TABLE `log` ADD COLUMN `board` VARCHAR(32) DEFAULT NULL, ALGORITHM=COPY")
 
     assert code == 1
     assert 'migrations/2026-11-01_log_board.sql' in capsys.readouterr().out

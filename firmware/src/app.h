@@ -395,7 +395,8 @@ int  collect_track_data(void);
  * back at coarser resolution instead of stopping partway. */
 int      databuf_push_lines(const char *buf, size_t len);
 int      databuf_flush(int max_datagrams);   /* returns records sent */
-int      databuf_count(void);
+int      databuf_count(void);                /* everything waiting: RAM and flash */
+int      databuf_ring_count(void);           /* of it, the part held in RAM */
 uint32_t databuf_dropped(void);
 void     databuf_reset(void);
 /* The drive stream is running (true) or not.  While it is, the backlog keeps

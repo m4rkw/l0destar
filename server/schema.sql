@@ -40,6 +40,13 @@ CREATE TABLE `device` (
   `fw_blocked`    VARCHAR(16)  DEFAULT NULL COMMENT 'version withheld from this device after it failed to boot here',
   `fw_fail_count` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'consecutive failed attempts at fw_blocked',
 
+  -- What the device is running, from its newest live record: the version and
+  -- the board that build is for.  Every `log` row carries the same two
+  -- figures; here they are one lookup away.  Written when either changes,
+  -- not on every record (telemetry._note_versions).
+  `fw`            VARCHAR(16)  DEFAULT NULL COMMENT 'firmware version the newest live record reported',
+  `board`         VARCHAR(32)  DEFAULT NULL COMMENT 'board that build is for (bd=); empty when not known',
+
   -- A wake figure (wt=) that arrived before the record it belongs to, which
   -- happens whenever the wake's own send failed: that record goes to the
   -- device's backlog and is flushed behind the record describing it.  Held
@@ -236,6 +243,23 @@ CREATE TABLE `dtc` (
   PRIMARY KEY (`id`),
   KEY `device_active` (`device_id`, `active`),
   CONSTRAINT `dtc_device` FOREIGN KEY (`device_id`) REFERENCES `device` (`id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- Each change of the GNSS receiver's backup supply (V_BCKP) on a board that
+-- switches it: held from boot, dropped overnight by the cut-off, back with the
+-- receiver's rail.  `at` is when the device changed it, not when it said so:
+-- the change is reported on the next record, hours later after an overnight
+-- cut-off.  The first row after a boot is the state it came up in.
+CREATE TABLE `gnss_backup` (
+  `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `device_id`     INT UNSIGNED NOT NULL,
+  `at`            DATETIME(6)  NOT NULL,
+  `on`            TINYINT(1)   NOT NULL COMMENT '1 = V_BCKP supplied, 0 = dropped',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `device_at` (`device_id`, `at`),
+  CONSTRAINT `gnss_backup_device` FOREIGN KEY (`device_id`) REFERENCES `device` (`id`)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

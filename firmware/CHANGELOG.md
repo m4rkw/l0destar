@@ -1,5 +1,67 @@
 # Changelog
 
+## 0.4.100
+
+### GNSS backup supply changes reported
+The receiver's backup supply (V_BCKP) is switched by the unit, at boot, by the
+overnight cut-off and with the receiver's rail.  Each change now reaches the
+server, so how long it was held can be read back.
+
+- **Wire.**  `bk=<state>:<age_s>|...` on the next record, oldest first: the age
+  is how long before the record was built the change happened, so a midnight
+  cut-off told by a morning key-on is still dated midnight.  The first record
+  after a boot reports the state it came up in.  Boards with no switched
+  supply send nothing.
+- **Server.**  New table `gnss_backup` (`device_id`, `at`, `on`), created by
+  `migrations/2026-11-03_gnss_backup.sql`; apply it before the server that
+  writes it starts.
+- Up to six changes wait for a record; a full list loses its oldest.
+- **Reboots keep it.**  A supply that was dropped when a warm reset hit (an
+  update's reboot, a watchdog reset) stays down: the startup fix raises it with
+  the receiver's rail and it is dropped again once the rail lets go, and
+  after every later fix, until the ignition comes on.  A power loss comes up on.
+- Host tests pass (`tests/test_backup_log.py`, `test_parsing.py`); the database
+  tests were not run, and the firmware has not been run on hardware.
+
+### The version on the device row
+The server keeps each device's firmware and board on its `device` row (`fw`,
+`board`), written when either changes, so they no longer need a look through
+`log`.
+
+- **Server.**  `migrations/2026-11-01_device_fw_board.sql` adds the columns and
+  `tools/backfill_device_versions.py` fills devices that have not reported
+  since (only empty values, shows its plan unless told `--apply`).  The device
+  list, the API's device list and status, and `tools/device.py` read them from
+  the row.
+- A build that names no board leaves the row's board as it was.
+- Server only, no firmware change.  The server tests pass, and the migration
+  and backfill ran on a copy of the live schema.
+
+### Flash backlog
+A long outage thins the 32-slot RAM backlog to a coarse track.  With an
+MX25R6435F fitted, the overflow goes to the flash instead and is sent first when
+the link is back: five to eight hours at a record a second.
+
+- **Options.**  `APP_BOARD_HAS_EXT_FLASH` and `APP_PIN_FLASH_SCK/SDI/SDO/CS` say
+  the part is there (no board profile does: the v4.1.x designs are not in the
+  repository).  `APP_FLASH_BACKLOG` (`y` once it is), `_SECTORS` 2048, `_GAP_S` 1,
+  `_MAX_CYCLES` 100000, `_MAX_OPENS_PER_HOUR` 2400.
+- **Wear.**  The chip is rated for 100,000 erases a sector.  The log only
+  appends, erases a sector only to write it again, goes round in order and
+  carries on where it was after a reset, so wear is level: 56 years of a record
+  a second round the clock, centuries at the car's real driving.  Nothing is
+  rewritten in place (no pointer, no sent flag).  A cycle limit and an hourly
+  limit stop a fault going further, and three failures in a row stop writes.
+- **Chip.**  Deep power-down at boot and between uses.  Sends only read, page
+  program, sector erase, write enable, status reads, ID and power-down; refuses a
+  protected chip or another part.
+- **Limits.**  The queue lasts one boot.  A flash on the CAN controller's bus
+  pins (v4.1.2) is only touched while the CAN rail is up, which nothing raises
+  after boot, so there it only parks the chip.  `databuf_count()` includes the
+  flash; the hold breaker's "backlog nearly full" test uses the RAM part.
+- Host-tested (the log, the driver against a model of the chip, the backlog) and
+  built with and without it.  Not run on hardware.
+
 ## 0.4.98
 
 ### The board in the telemetry

@@ -1891,6 +1891,96 @@ config APP_ACK_TIMEOUT_S
 	  While driving, the copy waits in the backlog until a reply shows
 	  the link is delivering again, rather than joining the stall.
 
+# --- flash backlog -----------------------------------------------------------
+
+config APP_FLASH_BACKLOG
+	bool "Hold the backlog's overflow on the external flash"
+	depends on APP_BOARD_HAS_EXT_FLASH && APP_DATABUF_SLOTS > 0
+	default y
+	help
+	  The RAM backlog (APP_DATABUF_SLOTS) covers an outage of a minute or so
+	  and thins itself after that.  With this, the oldest records go to the
+	  flash instead, in order, and are sent first when the link is back, so
+	  a long outage keeps every record the spacing below asks for: five to
+	  eight hours at a record a second, until the flash is full.  Only then
+	  are the oldest sector's records overwritten, and the log says so.
+
+	  The queue lasts one boot.  What a previous boot left in the flash is not
+	  sent: a record's age is worked out from its uptime, which means nothing
+	  after a reset, and one sent without it would be filed as live.
+
+	  If the flash cannot be used (not the chip expected, block-protected,
+	  the CAN rail it shares a bus with is down, the wear limits below) the
+	  backlog behaves as it does without it.
+
+	  A flash on the CAN controller's SCK, SDI and SDO (the v4.1.x designs) is
+	  only touched while the CAN rail is up, because the controller's pins are
+	  clamp diodes into that rail.  Nothing in production raises it after
+	  boot, so on such a board this does nothing but park the flash in deep
+	  power-down at boot.  Give the flash pins of its own, or set the
+	  APP_PIN_CAN_* pins to -1 where no controller is fitted.  See
+	  src/extflash.h.
+
+	  The flash is put into deep power-down at boot and after every use (0.007
+	  uA typical; standby is 5 to 24 uA).
+
+	  Wear: see src/flashlog.h.  The
+	  chip is rated for 100,000 erases a sector.  Records are only appended,
+	  each sector is erased once per lap of the ring and the ring carries on
+	  where it was after a reset, so a record a second round the clock is 56
+	  years and the car's real driving (about 0.8 h a day) is many centuries.
+
+config APP_FLASH_BACKLOG_SECTORS
+	int "4 KiB sectors of the flash the backlog may use"
+	depends on APP_FLASH_BACKLOG
+	default 2048
+	range 8 2048
+	help
+	  From the start of the chip.  2 bytes of RAM each.  The 8 MiB part has
+	  2048.  Fewer keeps the rest of the chip untouched.  Leave it alone once
+	  a unit is in service: the number of erase cycles the chip has had is
+	  worked out from this and the sequence numbers in the sector headers.
+
+config APP_FLASH_BACKLOG_GAP_S
+	int "Seconds between the records kept while streaming, flash in use (0 = every one)"
+	depends on APP_FLASH_BACKLOG && APP_DRIVE_STREAM
+	default 1
+	range 0 60
+	help
+	  APP_DATABUF_STREAM_GAP_S for when the flash is there to hold them: while
+	  the drive stream runs, a record is kept only if none held was built
+	  within this many seconds of it (by its up=).  1 is a record a second,
+	  which is the floor for a track that has been through an outage.  0 keeps
+	  every record the stream builds, which is 3 to 5 times as many and wears
+	  the flash that much faster.
+
+config APP_FLASH_BACKLOG_MAX_CYCLES
+	int "Erase cycles a sector may be taken to"
+	depends on APP_FLASH_BACKLOG
+	default 100000
+	range 1000 100000
+	help
+	  The log counts the laps of the ring it has done in its sector headers (so
+	  it needs no storage of its own) and opens no more sectors once this many
+	  are done.  100,000 is the datasheet's minimum endurance: the figure the
+	  maker guarantees, not one to plan on exceeding.  Not reachable in
+	  practice (see APP_FLASH_BACKLOG), but it is the line that means the chip
+	  is not worn out by this code whatever else is wrong.
+
+config APP_FLASH_BACKLOG_MAX_OPENS_PER_HOUR
+	int "Most sectors the log may open in an hour"
+	depends on APP_FLASH_BACKLOG
+	default 2400
+	range 60 20000
+	help
+	  Every sector opened is an erase.  A record a second is about 270 an hour
+	  and every record the stream builds about 1,300; a bug that appended in a
+	  loop would be far more, and this stops it: at 2,400 an hour the
+	  8 MiB part would take over nine years of it to reach its rating.  A
+	  record that would open one more is held in RAM (and thinned there) until
+	  the hour is up.  Counted from boot, so it limits a runaway and not a
+	  reset loop; the cycle limit above is the stop for that.
+
 # --- captured warnings/errors ----------------------------------------------
 
 config APP_DEBUG_LOG

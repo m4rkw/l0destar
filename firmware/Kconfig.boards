@@ -783,3 +783,46 @@ config APP_PIN_GNSS_BCKP_EN
 	  Enables PP3V3_GNSS_BCKP through its own load switch.  It has a 100K
 	  pulldown and no sense line.  See APP_GNSS_BACKUP_SUPPLY.  The v4.0
 	  boards fabricated before L_SENSE moved to P0.13 have it on P0.13.
+
+# --- external SPI NOR flash ------------------------------------------------
+# A Macronix MX25R6435F (8 MiB) the backlog overflows into (APP_FLASH_BACKLOG,
+# src/extflash.c).  No design in the repository carries it yet: the v4.1.x
+# boards do, on the CAN controller's SCK/SDI/SDO with a chip select of its
+# own.  So nothing defaults it on, and a unit that has one names the pins in
+# its conf (a fabricated unit's difference from a profile is its overrides).
+
+config APP_BOARD_HAS_EXT_FLASH
+	bool "External SPI NOR flash fitted (MX25R6435F)"
+	default n
+	help
+	  An MX25R6435F on PP3V3 (it must stay powered whenever the nRF9151 is)
+	  with its WP# and RESET# pulled high, on the four pins below.  Says only
+	  that the part is there; APP_FLASH_BACKLOG decides whether it is used.
+
+	  If any of the pins is the CAN controller's, the flash is only touched
+	  while the CAN rail is up (extflash.c): the MCP2518FD is on a switched
+	  rail and clamps its I/O to it, and nothing in production raises that
+	  rail after boot.  Where no controller is fitted, set APP_PIN_CAN_SCK,
+	  _SDI and _SDO to -1 and the bus is the flash's own.
+
+# Named as the flash sees them, like the CAN controller's: SDI is data into
+# the flash, SDO data out of it.
+
+config APP_PIN_FLASH_SCK
+	int "External flash SPI clock pin (-1 = not fitted)"
+	default -1
+
+config APP_PIN_FLASH_SDI
+	int "External flash SPI data-in pin (nRF to flash; -1 = not fitted)"
+	default -1
+
+config APP_PIN_FLASH_SDO
+	int "External flash SPI data-out pin (flash to nRF; -1 = not fitted)"
+	default -1
+
+config APP_PIN_FLASH_CS
+	int "External flash chip select pin (-1 = not fitted)"
+	default -1
+	help
+	  Driven high between uses.  The board has a 10K pull-up on it, which is
+	  what keeps the flash deselected until the firmware has started.

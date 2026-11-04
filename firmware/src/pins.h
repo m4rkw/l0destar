@@ -62,6 +62,15 @@
 #define PIN_GNSS_TIMEPULSE CONFIG_APP_PIN_GNSS_TIMEPULSE
 #define PIN_GNSS_BCKP_EN   CONFIG_APP_PIN_GNSS_BCKP_EN
 
+/* External SPI NOR flash (MX25R6435F, src/extflash.c), bit-banged.  -1 where
+ * there is none.  Named as the flash sees them, like the CAN controller's:
+ * SDI is data into the flash.  On the v4.1.x designs they are the CAN
+ * controller's bus pins, and only FLASH_CS is its own. */
+#define PIN_FLASH_SCK  CONFIG_APP_PIN_FLASH_SCK
+#define PIN_FLASH_SDI  CONFIG_APP_PIN_FLASH_SDI
+#define PIN_FLASH_SDO  CONFIG_APP_PIN_FLASH_SDO
+#define PIN_FLASH_CS   CONFIG_APP_PIN_FLASH_CS
+
 /* 0-30V AIO inputs (v2.1 only) */
 #define PIN_AIO1       CONFIG_APP_PIN_AIO1
 #define PIN_AIO2       CONFIG_APP_PIN_AIO2

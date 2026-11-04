@@ -46,8 +46,8 @@ Anything after the twelve fixed fields is a comma-separated group of
 |---|---|---|
 | `ri` | request config in the response | per-packet |
 | `int`, `ma` | settings the device believes it has | per-packet |
-| `fw` | running firmware version | **carried forward** |
-| `bd` | board the running build is for, for example `v4.0p1+kline`; stored as `board` | **carried forward** while `fw` is the same; from firmware without it, read from the image published at that version |
+| `fw` | running firmware version; also kept on the device row (`device.fw`), written when it changes | **carried forward** |
+| `bd` | board the running build is for, for example `v4.0p1+kline`; stored as `board` | **carried forward** while `fw` is the same; from firmware without it, read from the image published at that version; also kept on the device row (`device.board`), which a build that names none leaves as it was |
 | `mcc`, `mnc`, `lac`, `cid` | serving cell | **carried forward** |
 | `rat` | `CATM1` or `NBIOT` | **carried forward** |
 | `cl` | position is cell-derived, not GNSS | per-packet |
@@ -74,6 +74,7 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `snr` | serving cell SNR, dB (−24…+24) | per-packet |
 | `band` | LTE band in use | per-packet |
 | `wt` | `<rid>:<ms>[:<attach_ms>]` — how long the device was awake for the send of record `<rid>`, and how much of that was the LTE attach | retrospective |
+| `bk` | `<state>:<age_s>[\|<state>:<age_s>...]` — each change of the GNSS receiver's backup supply (V_BCKP) on a board that switches it, oldest first: 1 supplied, 0 dropped, and how long before this record was built it changed. The first after a boot is the state it came up in; a cut-off during the night is told by the next record. Filed in `gnss_backup` at record time minus age | retrospective |
 | `mv` | `<gap>:<v0>:<steps>:<end>` — the motion through the gap between the previous record's fix and this one's (0.4.68): ECU speed and gyro heading change for each second of it | per-packet, stored as sent |
 
 "Carried forward" means the device sends the field only when it changes or on
