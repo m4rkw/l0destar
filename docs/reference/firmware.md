@@ -276,6 +276,10 @@ P0.11 or P0.12, which carry the Connect Kit's console.
 | `APP_PIN_GNSS_RX` | External GNSS UART receive, from the receiver's TXD | -1 | 8 | -1 | -1 | -1 | -1 |
 | `APP_PIN_GNSS_TIMEPULSE` | External GNSS 1PPS input, not read yet | -1 | 7 | -1 | -1 | -1 | -1 |
 | `APP_PIN_GNSS_BCKP_EN` | External GNSS backup supply switch | -1 | 5 | -1 | -1 | -1 | -1 |
+| `APP_PIN_FLASH_SCK` | External SPI flash clock | -1 | -1 | -1 | -1 | -1 | -1 |
+| `APP_PIN_FLASH_SDI` | External SPI flash data in | -1 | -1 | -1 | -1 | -1 | -1 |
+| `APP_PIN_FLASH_SDO` | External SPI flash data out | -1 | -1 | -1 | -1 | -1 | -1 |
+| `APP_PIN_FLASH_CS` | External SPI flash chip select | -1 | -1 | -1 | -1 | -1 | -1 |
 
 The remaining pin symbols only apply to older or bench hardware: `APP_PIN_K2_TX` and
 `APP_PIN_K2_RX`, a second K-line transceiver on the bench (24 and 23, `-1` on every PCB);
@@ -457,8 +461,24 @@ Discovery, run once per vehicle with the ignition on (see
 | `APP_DATABUF_STREAM_GAP_S` | int, 0-60 | `3` | Depends on `APP_DRIVE_STREAM`. While the stream runs, the backlog keeps a record only if none it holds was built within this many seconds of it (by its `up=`), and the gap doubles with each thinning; 32 slots at 3 s hold 96 s before any thinning, where a record every few hundred ms fills them in seconds. `0` keeps every record |
 | `APP_DATABUF_REC_MAX` | int, 128-1024 | `512` | Longest record the backlog holds, in bytes; a longer one is dropped with an error. Records are around 300 bytes, about 470 with every OBD-II field |
 | `APP_DATABUF_FLUSH_PER_CYCLE` | int, 1-16 | `2` | Backlog datagrams sent alongside each live send, so a backlog never delays the current position |
+| `APP_BOARD_HAS_EXT_FLASH` | bool | `n` | An MX25R6435F SPI NOR flash is fitted, on the `APP_PIN_FLASH_*` pins. No board profile sets it. Where any of its SCK, SDI or SDO is the CAN controller's, it is only touched while the CAN rail is up, which nothing raises after boot: give it pins of its own, or set the `APP_PIN_CAN_*` pins to `-1` where no controller is fitted |
+| `APP_FLASH_BACKLOG` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_FLASH` and `APP_DATABUF_SLOTS > 0`. When the RAM backlog is full its oldest records go to the flash instead of being thinned, and are sent first when the link is back: five to eight hours at a record a second. The queue lasts one boot. The flash is in deep power-down at boot and between uses |
+| `APP_FLASH_BACKLOG_SECTORS` | int, 8-2048 | `2048` | 4 KiB sectors from the start of the chip the log may use. Leave it alone once a unit is in service: the chip's erase count is worked out from it |
+| `APP_FLASH_BACKLOG_GAP_S` | int, 0-60 | `1` | Depends on `APP_DRIVE_STREAM`. `APP_DATABUF_STREAM_GAP_S` for when the flash holds the overflow: a record a second. `0` keeps every record the stream builds, which wears the flash 3 to 5 times as fast |
+| `APP_FLASH_BACKLOG_MAX_CYCLES` | int, 1000-100000 | `100000` | Erase cycles a sector may be taken to, counted from the sector headers. 100,000 is the datasheet minimum; nothing more is written once it is reached |
+| `APP_FLASH_BACKLOG_MAX_OPENS_PER_HOUR` | int, 60-20000 | `2400` | Most sectors (erases) opened in an hour. A runaway at this rate takes over nine years to get through the rating; a record that would open one more waits in RAM |
 | `APP_COAST_STOP_SPEED_KMH_X10` | int | `50` | When the ignition goes off with the vehicle still moving faster than this (km/h × 10, so 5km/h by default), keep sending until it slows below it |
 | `APP_COAST_MAX_ITERATIONS` | int | `60` | Most send cycles that coasting can add |
+
+**Flash backlog and wear.** The MX25R6435F is rated for 100,000 erases a sector (datasheet
+Rev. 1.6). The log (`src/flashlog.c`) only appends, erases a sector only to write it again, goes
+round the sectors in order and carries on where it was after a reset, so every sector has had the
+same number of erases to within one: a 470-byte record a second round the clock is 56 years, and the
+car's real driving, about 0.8 hours a day, centuries. The cycle limit and the hourly limit above stop
+a fault from going further, and the driver sends the chip nothing that writes its status or security
+registers or erases more than a sector. Host-tested against a model of the chip
+(`tests/test_flashlog.py`, `tests/test_extflash.py`, `tests/test_databuf_flash.py`); not run on
+hardware.
 
 ### Captured warnings and errors
 

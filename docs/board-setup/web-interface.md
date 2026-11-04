@@ -30,7 +30,7 @@ Things to know:
 
 Signing in lands on the map for your default vehicle - `default_device` in the server's configuration, or the only enrolled device if there is just one. Otherwise it lands on the device list at `/devices`.
 
-The device list shows every enrolled device by name, with its registration, IMEI, when it was last heard from, ignition or engine state, battery voltage, speed, firmware version and network. Choose one to open its map at `/track?imei=<imei>`. With no devices enrolled it says so and points at `tools/adddevice.py`.
+The device list shows every enrolled device by name, with its registration, IMEI, when it was last heard from, ignition or engine state, battery voltage, speed, firmware version and board, and network. Choose one to open its map at `/track?imei=<imei>`. With no devices enrolled it says so and points at `tools/adddevice.py`.
 
 ## The map page
 

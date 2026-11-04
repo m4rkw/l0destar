@@ -179,7 +179,7 @@ device.py remove <imei> --yes
 | Command | What it does |
 |---|---|
 | `list` | Lists every enrolled device. |
-| `show` | Shows one device's settings, update state, last record and queued commands. |
+| `show` | Shows one device's firmware and board, settings, update state, last record and queued commands. |
 | `rename` | Changes the name used in alerts and the web interface, and optionally the registration. |
 | `rekey` | Replaces the device's key with a new random one, or with the one given, and prints it once. The tracker then needs firmware built with the new key. |
 | `remove` | Deletes the device and all of its history. |
@@ -225,6 +225,14 @@ backfill_board.py [--apply] [--config config.yaml] [--fw-dir fw]
 
 Fills `log.board` for rows from before a unit reported its board (`bd=`), from the images in `fw_dir`: every image carries the board it was built for, so a row's `fw` says which board it was running. Rows from a build that has no image (a build flashed over USB reports `0.4.0` whatever it was made from) are filled only when the nearest rows either side agree on a board, and the rest stay empty. It shows what it would do and writes nothing without `--apply`, writes only empty boards, and can be run again. It needs `migrations/2026-11-01_log_board.sql` first. A unit whose firmware does not send `bd=` gets its board from the image as its records arrive, so this is for the history.
 
+### `backfill_device_versions.py`
+
+```text
+backfill_device_versions.py [--apply] [--config config.yaml]
+```
+
+Fills `device.fw` and `device.board` for devices that reported a version before the device row kept one, from each device's newest record (the one built last among its last few rows). A device with a version on its row is left alone, a board already on the row stays when the records name none, and one that never reported a version stays empty. It shows what it would do and writes nothing without `--apply`, and can be run again. It needs `migrations/2026-11-01_device_fw_board.sql` first, and `backfill_board.py` before it so the rows it reads have their boards. A device that is reporting needs none of this: the server writes both as its records arrive.
+
 ## Log files
 
 All in `/srv/l0destar/logs` (`log_dir`):
@@ -244,7 +252,7 @@ All in `/srv/l0destar/logs` (`log_dir`):
 
 | Table | Contents |
 |---|---|
-| `device` | One row per tracker: IMEI, name, registration, key, settings and update state. |
+| `device` | One row per tracker: IMEI, name, registration, key, settings, update state, and the firmware version and board it is running. |
 | `log` | Every telemetry record. Grows without limit. |
 | `journey` | Each ignition-on to ignition-off period, with the range of `log` rows it covers and its distance. |
 | `dtc` | Fault codes reported over the K wire, with when each was raised and cleared. |
@@ -267,6 +275,7 @@ Deleting a `device` row deletes its `log`, `journey`, `dtc`, `command` and `devi
 | `2026-09-12_fota_state.sql` | per-device update state, so a failing image is not downloaded over and over |
 | `2026-09-14_device_nonce.sql` | replay protection that survives a restart |
 | `2026-11-01_log_board.sql` | the board a build is for (`log.board`), beside the firmware version |
+| `2026-11-01_device_fw_board.sql` | the firmware version and board a device is running, on its own row (`device.fw`, `device.board`) |
 
 ## HTTP endpoints
 
