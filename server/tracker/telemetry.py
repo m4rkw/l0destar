@@ -448,6 +448,25 @@ def _build_entry(data, device, ip, previous):
     return entry
 
 
+def gnss_off_window_token(device, now=None):
+    """The gw= value for ``device``: the GNSS backup off window as UTC whole
+    hours, ``<from>-<to>`` (it may wrap midnight, 23-6), or ``off`` when it is
+    disabled (``gnss_off_window`` 0, or both hours equal).  The settings are
+    server local hours; the offset used is the one in force at ``now``."""
+    if not device.get('gnss_off_window'):
+        return 'off'
+    hour_from = device.get('gnss_off_hour_from')
+    hour_to = device.get('gnss_off_hour_to')
+    hour_from = 0 if hour_from is None else int(hour_from)
+    hour_to = 7 if hour_to is None else int(hour_to)
+    if hour_from == hour_to:
+        return 'off'
+    now = (now or datetime.datetime.now()).astimezone()
+    offset = now.utcoffset()
+    shift = int(offset.total_seconds() // 3600) if offset else 0
+    return '%d-%d' % ((hour_from - shift) % 24, (hour_to - shift) % 24)
+
+
 def _ignition_alerts(device, entry, now):
     """Alerts raised by an ignition-off to ignition-on transition."""
     # `garage` marks a vehicle that is somewhere its ignition coming on is
@@ -1466,6 +1485,11 @@ def build_response(device, database, log, firmware_version=None):
     # after the first one it sees is announced with an alert and an ack.
     if device.get('gnss_backup') in (0, 1):
         response += ',gb=%d' % device['gnss_backup']
+
+    # The GNSS backup off window, on every reply after gb=: the unit works in
+    # UTC, the setting is in the server's local hours, so it is converted
+    # with the offset in force now (BST/GMT) as "<from>-<to>", or "off".
+    response += ',gw=%s' % gnss_off_window_token(device)
 
     # The unit that is answered applies what it is told, so the settings in
     # this reply are what it runs from now: filed as applied, ahead of its

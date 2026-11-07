@@ -172,6 +172,34 @@ void hw_gnss_backup_hold_clear(void)
 	s_bckp_hold = false;
 }
 
+/* The server's off window (UTC hours), -1 when there is none.  Not kept
+ * across a reset: every reply says it. */
+static int s_win_from = -1;
+static int s_win_to = -1;
+
+void hw_gnss_backup_window(int from_utc, int to_utc)
+{
+	if (from_utc < 0 || to_utc < 0) {
+		from_utc = to_utc = -1;
+	}
+	s_win_from = from_utc;
+	s_win_to = to_utc;
+}
+
+/* In the window now; false without a clock, which holds the supply. */
+static bool bckp_window_now(void)
+{
+	int64_t ms;
+
+	return s_win_from >= 0 && date_time_now(&ms) == 0 &&
+	       backup_window_contains(ms / 1000, s_win_from, s_win_to);
+}
+
+bool hw_gnss_backup_is_on(void)
+{
+	return s_bckp_on;
+}
+
 static void bckp_set(bool on)
 {
 	if (!IS_ENABLED(CONFIG_APP_GNSS_BACKUP_SUPPLY) || PIN_GNSS_BCKP_EN < 0 ||
@@ -456,7 +484,9 @@ int hw_domain_request(enum hw_domain dom, uint8_t user)
 	}
 	if (d->users == 0) {
 		if (dom == HW_DOMAIN_AUX) {
-			bckp_set(true);	/* V_BCKP is up before the receiver's VCC */
+			if (!bckp_window_now()) {
+				bckp_set(true);	/* V_BCKP is up before the receiver's VCC */
+			}
 		}
 		dom_release_pins(d);
 		gpio_pin_configure(hw_gpio0, d->enable_pin, GPIO_OUTPUT_HIGH);
@@ -567,11 +597,15 @@ void hw_gnss_backup_cutoff(int sleep_s)
 		bckp_set(false);	/* the startup fix is done */
 		return;
 	}
-	if (BCKP_OFF_HOUR < 0 || !s_bckp_on || hw_domain_is_on(HW_DOMAIN_AUX) ||
-	    date_time_now(&ms) != 0) {
+	if ((BCKP_OFF_HOUR < 0 && s_win_from < 0) || !s_bckp_on ||
+	    hw_domain_is_on(HW_DOMAIN_AUX) || date_time_now(&ms) != 0) {
 		return;		/* nothing to drop, or no clock to judge by */
 	}
-	if (backup_cutoff_due(ms / 1000, sleep_s, BCKP_OFF_HOUR)) {
+	/* In the window, or about to enter it (the unit is not woken for the
+	 * start), or at the fixed hour. */
+	if (backup_window_contains(ms / 1000, s_win_from, s_win_to) ||
+	    (s_win_from >= 0 && backup_cutoff_due(ms / 1000, sleep_s, s_win_from)) ||
+	    backup_cutoff_due(ms / 1000, sleep_s, BCKP_OFF_HOUR)) {
 		bckp_set(false);
 	}
 }

@@ -73,6 +73,13 @@ void hw_domain_notify_set(enum hw_domain d, hw_domain_notify_t cb);
  * without the setting, or while the clock is not valid. */
 void hw_gnss_backup_cutoff(int sleep_s);
 
+/* The server's window, in UTC hours, in which the supply is kept off even
+ * when the unit is driven (gw=).  -1 for either hour clears it. */
+void hw_gnss_backup_window(int from_utc, int to_utc);
+
+/* True while the enable is driven high. */
+bool hw_gnss_backup_is_on(void);
+
 /* The changes of the receiver's backup supply the server has not been told of
  * (each cut-off and return, not the state at boot), as the text of a bk=
  * field: "<state>:<age_s>|..." oldest first (backup_log.h).  Returns its

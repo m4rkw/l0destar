@@ -399,6 +399,10 @@ def summary(device, database=None, log=None):
         'operator': db.lookup_operator(log.get('mcc'), log.get('mnc'),
                                        database=database) or '',
         'track_mode': 1 if device.get('track_mode') else 0,
+        'gnss_off_window': device.get('gnss_off_window') or 0,
+        'gnss_off_hour_from': device.get('gnss_off_hour_from') or 0,
+        'gnss_off_hour_to': (7 if device.get('gnss_off_hour_to') is None
+                             else device['gnss_off_hour_to']),
         'uptime': _nullable_float(log.get('uptime')),
         **config_state(device, database),
     }

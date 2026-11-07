@@ -318,7 +318,7 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>]
+1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off]
 ```
 
 Every datagram is answered, and the reply is the receipt: it is bound to the
@@ -341,6 +341,13 @@ known, on every reply. The unit follows it. The first after a boot is applied
 silently; a later change alerts, is acked (`ak=gnssbk`) and, turned on, makes
 the next wake search for a fresh fix. Off is held until the ignition comes on.
 The API sets it (`gnssbk=<0|1>` in POST /api/1.0/command, not queued).
+
+`gw=` is the GNSS backup off window (`device`.`gnss_off_window`,
+`gnss_off_hour_from`, `gnss_off_hour_to`), sent on every reply straight after
+`gb=`: `gw=<from>-<to>` in whole UTC hours, converted from the server's local
+hours with the offset in force when the reply is built (local 00-07 in BST is
+`gw=23-6`), the span possibly wrapping midnight; or `gw=off` when it is
+disabled (switch off, or both hours equal).
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is

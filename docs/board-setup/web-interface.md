@@ -115,8 +115,8 @@ A token is not limited to particular devices or actions: anything holding one ca
 | Endpoint | What it does |
 |---|---|
 | `GET /api/1.0/track` | Redirects to a map at the device's last position: an Apple Maps link by default, Google Maps with `google=1`. With `return=1` it returns `{"url": ...}` instead of redirecting. |
-| `GET /api/1.0/config` | The device's settings: `int`, `backup` (interval on backup power), `ma`, `al` (alarm), `ga` (garage), `oa` (overnight alarm), `oaf` and `oat` (overnight window hours). |
-| `POST /api/1.0/config` | Sets any of those fields. Values must be whole numbers: 0 or 1 for the switches, 0-23 for the hours. |
+| `GET /api/1.0/config` | The device's settings: `int`, `backup` (interval on backup power), `ma`, `al` (alarm), `ga` (garage), `oa` (overnight alarm), `oaf` and `oat` (overnight window hours), `gw` (GNSS backup off window), `gwf` and `gwt` (its start and end hours, server local time). |
+| `POST /api/1.0/config` | Sets any of those fields. Values must be whole numbers: 0 or 1 for the switches, 0-23 for the hours. `GET /api/1.0/devices` also lists `gnss_off_window`, `gnss_off_hour_from` and `gnss_off_hour_to` for each device. |
 | `POST /api/1.0/command` | Queues a command for the device, or applies a server-side setting. |
 | `POST /api/1.0/home` | The home check (below). |
 

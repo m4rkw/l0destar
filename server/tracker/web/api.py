@@ -50,6 +50,9 @@ SERVER_SIDE_SETTINGS = {
     'overnightalarm': 'overnight_alarm',
     'overnight_alarm_hour_from': 'overnight_alarm_hour_from',
     'overnight_alarm_hour_to': 'overnight_alarm_hour_to',
+    'gnss_off_window': 'gnss_off_window',
+    'gnss_off_hour_from': 'gnss_off_hour_from',
+    'gnss_off_hour_to': 'gnss_off_hour_to',
     'backup_interval': 'backup_int',
 }
 
@@ -62,6 +65,9 @@ CONFIG_FIELDS = {
     'oa': 'overnight_alarm',
     'oaf': 'overnight_alarm_hour_from',
     'oat': 'overnight_alarm_hour_to',
+    'gw': 'gnss_off_window',
+    'gwf': 'gnss_off_hour_from',
+    'gwt': 'gnss_off_hour_to',
 }
 
 # Intervals the unit would raise to this anyway (the cell behind them is
@@ -78,6 +84,9 @@ SETTING_RANGES = {
     'overnight_alarm': (0, 1),
     'overnight_alarm_hour_from': (0, 23),
     'overnight_alarm_hour_to': (0, 23),
+    'gnss_off_window': (0, 1),
+    'gnss_off_hour_from': (0, 23),
+    'gnss_off_hour_to': (0, 23),
 }
 
 
@@ -372,7 +381,7 @@ def get_config():
     if failure:
         return failure
 
-    defaults = {'ma': 1, 'oaf': 23, 'oat': 6}
+    defaults = {'ma': 1, 'oaf': 23, 'oat': 6, 'gwt': 7}
     result = {}
     for key, column in CONFIG_FIELDS.items():
         value = device.get(column)

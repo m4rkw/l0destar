@@ -145,6 +145,9 @@ Each device's settings live in its `device` row. The first four are sent to the 
 | `overnight_alarm` | `0` | `overnightalarm=0` or `overnightalarm=1`, or `oa` | Notify when the ignition comes on inside the overnight window. |
 | `overnight_alarm_hour_from` | `23` | `overnight_alarm_hour_from=<hour>`, or `oaf` | Start of the window, as an hour in the server's local time. |
 | `overnight_alarm_hour_to` | `6` | `overnight_alarm_hour_to=<hour>`, or `oat` | End of the window. |
+| `gnss_off_window` | `0` | `gnss_off_window=0` or `gnss_off_window=1`, or `gw` | Drop the GNSS backup supply during the daily GNSS backup off window. Sent on every reply as `gw=`. |
+| `gnss_off_hour_from` | `0` | `gnss_off_hour_from=<hour>`, or `gwf` | Start of the window, as a whole hour (0-23) in the server's local time. The window may wrap midnight (22 to 6). |
+| `gnss_off_hour_to` | `7` | `gnss_off_hour_to=<hour>`, or `gwt` | End of the window (0-23). The window is disabled when `gnss_off_window` is 0 or the two hours are equal. |
 
 An `int=` or `movealarm=` command is queued for the tracker, which applies it and reports the new value; `POST /api/1.0/config` changes the column directly and the next reply carries it. Either way the `int` and `movement_alarm` columns follow what the tracker reports. The server-side settings take effect immediately, and so does `backup_interval=`: it is written to the column rather than queued, because every reply carries it and a queued copy would be undone by the next one. The tracker never reports it back. What each setting does on the tracker, and every command, is in [Device settings and commands](device-settings.md#commands).
 
@@ -191,7 +194,7 @@ command.py <imei> <command> [command ...]
 command.py <imei> fota-retry
 ```
 
-Queues a command for the tracker's next reply, through the HTTP API at `api_base`, using the first token in `api_token` (create one with `gentoken.py` first). Several commands given together are sent together. The server-side settings - `alarm=`, `garage=`, `overnightalarm=`, `overnight_alarm_hour_from=` and `overnight_alarm_hour_to=` - and `backup_interval=` are applied straight away instead of being queued. `fota-retry` clears a firmware version withheld from the device after a failed update and queues `fota`. The commands the firmware understands are listed in [Device settings and commands](device-settings.md#commands).
+Queues a command for the tracker's next reply, through the HTTP API at `api_base`, using the first token in `api_token` (create one with `gentoken.py` first). Several commands given together are sent together. The server-side settings - `alarm=`, `garage=`, `overnightalarm=`, `overnight_alarm_hour_from=`, `overnight_alarm_hour_to=`, `gnss_off_window=`, `gnss_off_hour_from=` and `gnss_off_hour_to=` - and `backup_interval=` are applied straight away instead of being queued. `fota-retry` clears a firmware version withheld from the device after a failed update and queues `fota`. The commands the firmware understands are listed in [Device settings and commands](device-settings.md#commands).
 
 ### `gentoken.py`
 

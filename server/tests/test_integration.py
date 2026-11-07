@@ -932,7 +932,70 @@ def test_the_reply_carries_the_backup_state_once_known(device, database):
     assert 'gb=' not in reply
     send(device, record(0, 51.5, -0.1, 0, extras=',rid=100,bk=0:5'))
     row = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
-    assert telemetry.build_response(row, db.web, logs.udp).endswith(',gb=0')
+    assert telemetry.build_response(row, db.web, logs.udp).endswith(',gb=0,gw=off')
+
+
+def test_gnss_off_window_api_round_trip(client, device, database, bearer):
+    base = '/api/1.0/config?imei=%s' % device['imei']
+    got = client.get(base, headers=bearer).get_json()
+    assert (got['gw'], got['gwf'], got['gwt']) == (0, 0, 7)
+
+    posted = client.post('/api/1.0/config', headers=bearer,
+                         json={'imei': device['imei'], 'gw': 1, 'gwf': 22, 'gwt': 6})
+    assert posted.get_json()['status'] == 'ok'
+    row = db.lookup_device(imei=device['imei'])
+    assert (row['gnss_off_window'], row['gnss_off_hour_from'],
+            row['gnss_off_hour_to']) == (1, 22, 6)
+    got = client.get(base, headers=bearer).get_json()
+    assert (got['gw'], got['gwf'], got['gwt']) == (1, 22, 6)
+    events = [r['text'] for r in database.all('SELECT `text` FROM `device_event`')]
+    assert 'GNSS backup off window on' in events
+    assert 'GNSS backup off window starts at 22:00' in events
+    assert 'GNSS backup off window ends at 06:00' in events
+
+    listed = client.get('/api/1.0/devices', headers=bearer)
+    if listed.status_code == 200:
+        mine = [d for d in listed.get_json()['devices'] if d['imei'] == device['imei']]
+        assert mine[0]['gnss_off_hour_from'] == 22
+
+
+def test_gnss_off_window_command_sets_columns_and_is_not_queued(
+        client, device, database, bearer):
+    response = client.post('/api/1.0/command', headers=bearer, json={
+        'imei': device['imei'],
+        'command': 'gnss_off_window=1,gnss_off_hour_from=1,gnss_off_hour_to=5,locate'})
+    assert response.get_json()['status'] == 'ok'
+    row = db.lookup_device(imei=device['imei'])
+    assert (row['gnss_off_window'], row['gnss_off_hour_from'],
+            row['gnss_off_hour_to']) == (1, 1, 5)
+    assert [r['command'] for r in database.all('SELECT `command` FROM `command`')] == ['locate']
+
+
+@pytest.mark.parametrize('body, message', [
+    ({'gw': 2}, 'gw must be a whole number from 0 to 1'),
+    ({'gwf': 24}, 'gwf must be a whole number from 0 to 23'),
+    ({'gwt': -1}, 'gwt must be a whole number from 0 to 23'),
+])
+def test_gnss_off_window_config_range_errors(client, device, bearer, body, message):
+    response = client.post('/api/1.0/config', headers=bearer,
+                           json=dict(body, imei=device['imei']))
+    assert response.status_code == 400
+    assert response.get_json()['message'] == message
+
+
+def test_gnss_off_window_command_range_error(client, device, bearer):
+    response = client.post('/api/1.0/command', headers=bearer, json={
+        'imei': device['imei'], 'command': 'gnss_off_hour_to=24'})
+    assert response.status_code == 400
+
+
+def test_the_reply_carries_the_off_window_after_gb(device, database):
+    database.query('UPDATE `device` SET `gnss_backup` = 1, `gnss_off_window` = 1, '
+                   '`gnss_off_hour_from` = 3, `gnss_off_hour_to` = 5 WHERE `id` = %s',
+                   (device['id'],))
+    row = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
+    reply = telemetry.build_response(row, db.web, logs.udp)
+    assert reply.endswith(',gb=1,gw=%s' % telemetry.gnss_off_window_token(row))
 
 
 def test_unusable_backup_change_is_skipped_on_its_own(device, database):

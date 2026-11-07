@@ -1,7 +1,8 @@
 /*
- * When a parked unit drops the GNSS receiver's backup supply
- * (APP_GNSS_BACKUP_OFF_UTC_HOUR).  Pure arithmetic, so it is checked on the
- * host: tests/test_backup_cutoff.py.
+ * When a unit drops the GNSS receiver's backup supply: at a fixed hour while
+ * parked (APP_GNSS_BACKUP_OFF_UTC_HOUR), and for the whole of a window the
+ * server sets (gw=).  Pure arithmetic, so it is checked on the host:
+ * tests/test_backup_cutoff.py.
  */
 #ifndef BACKUP_CUTOFF_H
 #define BACKUP_CUTOFF_H
@@ -25,6 +26,22 @@ static inline bool backup_cutoff_due(int64_t now_s, int64_t wake_s, int hour_utc
 		cut += 86400;
 	}
 	return now_s + wake_s >= cut;
+}
+
+/* True if now falls inside the window from_utc:00 up to (not including)
+ * to_utc:00 UTC, which may wrap midnight (22 to 6).  An hour outside 0..23,
+ * or from == to, is no window. */
+static inline bool backup_window_contains(int64_t now_s, int from_utc, int to_utc)
+{
+	if (from_utc < 0 || from_utc > 23 || to_utc < 0 || to_utc > 23 ||
+	    from_utc == to_utc || now_s < 0) {
+		return false;
+	}
+
+	int hour = (int)(now_s % 86400 / 3600);
+
+	return from_utc < to_utc ? (hour >= from_utc && hour < to_utc)
+				 : (hour >= from_utc || hour < to_utc);
 }
 
 #endif

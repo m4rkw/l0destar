@@ -366,8 +366,8 @@ def test_response_carries_track_switch():
     on = telemetry.build_response({'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1,
                                    'track_mode': 1}, _NoCommands(), _Quiet(),
                                   firmware_version='0.4.22')
-    assert off.endswith(',track=0')
-    assert on.endswith(',fota=0.4.22,track=1')
+    assert off.endswith(',track=0,gw=off')
+    assert on.endswith(',fota=0.4.22,track=1,gw=off')
 
 
 class _Commands:
@@ -390,15 +390,15 @@ def test_response_carries_the_backup_interval_on_every_reply():
     device = {'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1, 'backup_int': 1800}
 
     assert telemetry.build_response(device, _NoCommands(), _Quiet()) == \
-        '1,60,1,backup=1800,track=0'
+        '1,60,1,backup=1800,track=0,gw=off'
     # After the commands, ahead of the advert and the track switch, which stay last.
     assert telemetry.build_response(dict(device, track_mode=1), _NoCommands(), _Quiet(),
                                     firmware_version='0.4.79') == \
-        '1,60,1,backup=1800,fota=0.4.79,track=1'
+        '1,60,1,backup=1800,fota=0.4.79,track=1,gw=off'
 
     queue = _Commands('locate')
     assert telemetry.build_response(device, queue, _Quiet()) == \
-        '1,60,1,locate,backup=1800,track=0'
+        '1,60,1,locate,backup=1800,track=0,gw=off'
     assert queue.deleted
 
 
@@ -408,9 +408,9 @@ def test_response_says_so_when_there_is_no_backup_interval():
     unset = {'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1}
 
     assert telemetry.build_response(unset, _NoCommands(), _Quiet()) == \
-        '1,60,1,backup=0,track=0'
+        '1,60,1,backup=0,track=0,gw=off'
     assert telemetry.build_response(dict(unset, backup_int=None), _NoCommands(),
-                                    _Quiet()) == '1,60,1,backup=0,track=0'
+                                    _Quiet()) == '1,60,1,backup=0,track=0,gw=off'
 
 
 def test_backup_interval_cannot_be_mistaken_for_a_command_by_the_firmware():

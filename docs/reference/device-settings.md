@@ -140,6 +140,9 @@ Values must be whole numbers. The alerts themselves are described in [Configure 
 | `oa` | `overnight_alarm` |
 | `oaf` | `overnight_alarm_hour_from` |
 | `oat` | `overnight_alarm_hour_to` |
+| `gw` | `gnss_off_window` |
+| `gwf` | `gnss_off_hour_from` |
+| `gwt` | `gnss_off_hour_to` |
 
 A `POST` must name the device, and every value must be an integer:
 

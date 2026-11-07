@@ -264,6 +264,12 @@ def setting_text(column, value):
         return 'Overnight alarm starts at %02d:00' % value
     if column == 'overnight_alarm_hour_to':
         return 'Overnight alarm ends at %02d:00' % value
+    if column == 'gnss_off_window':
+        return 'GNSS backup off window ' + on
+    if column == 'gnss_off_hour_from':
+        return 'GNSS backup off window starts at %02d:00' % value
+    if column == 'gnss_off_hour_to':
+        return 'GNSS backup off window ends at %02d:00' % value
     if column == 'gnss_backup':
         return 'GNSS backup supply set to ' + on
     return 'Setting changed: %s=%s' % (column, value)

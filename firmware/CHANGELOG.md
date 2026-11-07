@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.115
+
+### GNSS backup off window
+The server can set a daily window (for example 00:00 to 07:00) in which the receiver's backup supply stays off, even when the car is driven.
+
+- The window is sent on every reply as `gw=<from>-<to>` (UTC hours, may wrap midnight) or `gw=off`, and is not kept across a reset. A parked unit drops the supply before the sleep that would reach the start, and a key-on inside the window does not bring it back; the next key-on after the window does.
+- With no clock the supply is held, as with `APP_GNSS_BACKUP_OFF_UTC_HOUR`, which still applies on top.
+- An explicit `gnssbk=1` inside the window lasts only until the unit next sleeps.
+- Status: host tests pass; built; not run on hardware.
+
+### No alert when the unit drops the GNSS backup supply itself
+The "gnss backup supply OFF" alert is now sent only when a server command switched off a supply that was up, not when the cut-off hour or the off window did it and the server's mirror of that came back.
+
 ## 0.4.113
 
 ### Backlog drains have a time budget

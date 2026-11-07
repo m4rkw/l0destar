@@ -39,8 +39,10 @@ static bool track_echo(const char *cmd)
     if (cmd[7] == '\0') {
         return true;
     }
+    /* ",gb=<0|1>", then the off window (",gw=...") if the server sends one. */
     return strncmp(cmd + 7, ",gb=", 4) == 0 &&
-           (cmd[11] == '0' || cmd[11] == '1') && cmd[12] == '\0' &&
+           (cmd[11] == '0' || cmd[11] == '1') &&
+           (cmd[12] == '\0' || strncmp(cmd + 12, ",gw=", 4) == 0) &&
            (cmd[11] == '1') == hw_gnss_backup_wanted();
 }
 
@@ -155,6 +157,7 @@ void cmd_run(char *cmd)
         (tmp[3] == '0' || tmp[3] == '1')) {
         static int8_t last = -1;
         int8_t want = tmp[3] == '1';
+        bool was_on = hw_gnss_backup_is_on();
         bool changed = hw_gnss_backup_want(want);
 
         if (last < 0) {
@@ -168,11 +171,32 @@ void cmd_run(char *cmd)
             if (want) {
                 request_gps_fix();
             }
-            alert_enqueue(want ? "gnss backup supply ON"
-                               : "gnss backup supply OFF", 0);
+            /* An OFF is the user's only if it dropped a supply that was
+             * up: when the unit let it go itself (the cut-off hour, the
+             * off window) the server's mirror of that arrives as gb=0 and
+             * is not worth an alert. */
+            if (want || was_on) {
+                alert_enqueue(want ? "gnss backup supply ON"
+                                   : "gnss backup supply OFF", 0);
+            }
             ack_add("gnssbk");
         }
         last = want;
+    }
+
+    /* The off window, gw=<from>-<to> in UTC hours or gw=off: the supply is
+     * kept off through it even when the unit is driven.  Sent on every reply
+     * like gb=, applied silently. */
+    tmp = strstr(cmd, "gw=");
+    if (tmp && (tmp == cmd || tmp[-1] == ',')) {
+        int from, to;
+
+        if (strncmp(tmp + 3, "off", 3) == 0) {
+            hw_gnss_backup_window(-1, -1);
+        } else if (sscanf(tmp + 3, "%d-%d", &from, &to) == 2 &&
+                   from >= 0 && from <= 23 && to >= 0 && to <= 23) {
+            hw_gnss_backup_window(from, to);
+        }
     }
 
     /* "gpsfix": search for a fresh fix at the next wake that has a network,

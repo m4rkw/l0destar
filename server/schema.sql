@@ -87,6 +87,14 @@ CREATE TABLE `device` (
   `overnight_alarm_hour_from` TINYINT UNSIGNED DEFAULT 23,
   `overnight_alarm_hour_to`   TINYINT UNSIGNED DEFAULT 6,
 
+  -- A daily window (whole hours, server local time, may wrap midnight) in
+  -- which the unit is told to drop the GNSS backup supply.  Off when
+  -- gnss_off_window = 0 or from = to.  Sent in every reply as gw=<from>-<to>
+  -- in UTC hours, or gw=off.
+  `gnss_off_window`    TINYINT(1)       NOT NULL DEFAULT 0,
+  `gnss_off_hour_from` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `gnss_off_hour_to`   TINYINT UNSIGNED NOT NULL DEFAULT 7,
+
   `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `imei` (`imei`)

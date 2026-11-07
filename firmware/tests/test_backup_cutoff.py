@@ -19,6 +19,7 @@ SRC = os.environ.get("GNSS_SRC", os.path.join(os.path.dirname(os.path.abspath(__
 WRAPPER = """
 #include "backup_cutoff.h"
 int due(long long now_s, long long wake_s, int hour) { return backup_cutoff_due(now_s, wake_s, hour); }
+int win(long long now_s, int from, int to) { return backup_window_contains(now_s, from, to); }
 """
 
 
@@ -31,10 +32,16 @@ def due():
         f.write(WRAPPER)
     subprocess.run(["cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-shared", "-fPIC", "-o", so, c,
                     "-I", SRC], check=True)
-    fn = C.CDLL(so).due
+    lib = C.CDLL(so)
+    fn = lib.due
     fn.argtypes = [C.c_longlong, C.c_longlong, C.c_int]
     fn.restype = C.c_int
-    return lambda t, wake, hour: bool(fn(int(t.timestamp()), wake, hour))
+    w = lib.win
+    w.argtypes = [C.c_longlong, C.c_int, C.c_int]
+    w.restype = C.c_int
+    due_fn = lambda t, wake, hour: bool(fn(int(t.timestamp()), wake, hour))
+    due_fn.window = lambda t, a, b: bool(w(int(t.timestamp()), a, b))
+    return due_fn
 
 
 def utc(h, m=0, s=0, day=1):
@@ -84,3 +91,32 @@ def test_an_hour_outside_the_day_means_never(due, hour):
 def test_a_clock_that_was_never_set_or_a_negative_sleep_does_nothing(due):
     assert not due(datetime.datetime(1969, 12, 31, 23, 0, tzinfo=datetime.timezone.utc), 7200, 0)
     assert not due(utc(23, 30), -1, 0)
+
+
+def test_a_window_holds_from_its_start_hour_up_to_its_end_hour(due):
+    assert not due.window(utc(6, 59, 59), 7, 12)
+    assert due.window(utc(7, 0), 7, 12)
+    assert due.window(utc(11, 59, 59), 7, 12)
+    assert not due.window(utc(12, 0), 7, 12)
+
+
+def test_a_window_may_wrap_midnight(due):
+    assert due.window(utc(23, 0), 22, 6)
+    assert due.window(utc(0, 0), 22, 6)
+    assert due.window(utc(5, 59, 59), 22, 6)
+    assert not due.window(utc(6, 0), 22, 6)
+    assert not due.window(utc(21, 59, 59), 22, 6)
+
+
+def test_midnight_to_seven_is_not_a_wrap(due):
+    assert due.window(utc(0, 0), 0, 7)
+    assert due.window(utc(6, 59, 59), 0, 7)
+    assert not due.window(utc(7, 0), 0, 7)
+    assert not due.window(utc(23, 59, 59), 0, 7)
+
+
+def test_no_window_for_equal_or_out_of_range_hours(due):
+    assert not due.window(utc(3), 3, 3)
+    assert not due.window(utc(3), -1, -1)
+    assert not due.window(utc(3), 0, 24)
+    assert not due.window(utc(3), 24, 6)

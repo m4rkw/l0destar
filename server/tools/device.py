@@ -112,6 +112,9 @@ def show(args):
         ('overnight alarm', '%s, %s:00 to %s:00' % (
             device['overnight_alarm'], device['overnight_alarm_hour_from'],
             device['overnight_alarm_hour_to'])),
+        ('GNSS backup off window', '%s, %s:00 to %s:00' % (
+            device.get('gnss_off_window', 0), device.get('gnss_off_hour_from', 0),
+            device.get('gnss_off_hour_to', 7))),
         ('firmware', device.get('fw') or '-'),
         ('board', device.get('board') or '-'),
         ('published firmware', firmware.latest_version(device['imei']) or '-'),
