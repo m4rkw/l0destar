@@ -2,7 +2,7 @@
 
 The real extflash.c and flashlog.c are compiled with the host compiler.  Their GPIO
 calls land in a bit-level model of the part, written from the Macronix datasheet
-(Rev. 1.6): it clocks bits in on SCK's rising edge and out on its falling edge,
+(checked against Rev. 1.2): it clocks bits in on SCK's rising edge and out on its falling edge,
 takes a command only at a byte boundary, honours write-enable, busy time, deep
 power-down and the wake-up pulse, ANDs bits on program, wraps a page program inside
 its page, and sets the program and erase fail flags.  Anything the part would
@@ -397,6 +397,8 @@ void m_fault(int kind, long long v)
     switch (kind) {
     case 1: absent = (int)v; break;
     case 2: id[2] = (unsigned)v; break;
+    case 8: id[0] = (unsigned)v; break;
+    case 9: id[1] = (unsigned)v; break;
     case 3: bp = (int)v; break;
     case 4: prog_budget = (int)v; break;
     case 5: fail_erase = (uint64_t)v; break;
@@ -418,6 +420,7 @@ int  m_begin(void) { return extflash_begin(); }
 void m_end(void) { extflash_end(); }
 void m_park(void) { extflash_park(); }
 int  m_probe(uint32_t *sectors) { return extflash_probe(sectors); }
+int  m_check(void) { return extflash_check(); }
 
 int m_dev_read(uint32_t a, void *b, size_t n) { const struct flashlog_dev *d = extflash_dev(8); return d->read(d->ctx, a, b, n); }
 int m_dev_prog(uint32_t a, const void *b, size_t n) { const struct flashlog_dev *d = extflash_dev(8); return d->prog(d->ctx, a, b, n); }
@@ -444,8 +447,7 @@ int m_log_dead(void) { return fl.dead; }
 FLASH_PINS = ["-DCONFIG_APP_PIN_FLASH_SCK=21", "-DCONFIG_APP_PIN_FLASH_SDI=20",
               "-DCONFIG_APP_PIN_FLASH_SDO=22", "-DCONFIG_APP_PIN_FLASH_CS=26"]
 COMMON = ["-std=gnu11", "-Wall", "-Wextra", "-Wno-unused-parameter", "-shared", "-fPIC", "-O1",
-          "-DCONFIG_APP_LOG_LEVEL=3", "-DCONFIG_APP_FLASH_BACKLOG_SECTORS=8",
-          "-DCONFIG_APP_BOARD_SPLIT_OBD_DOMAIN=1"]
+          "-DCONFIG_APP_LOG_LEVEL=3", "-DCONFIG_APP_BOARD_SPLIT_OBD_DOMAIN=1"]
 VARIANTS = {
     # the flash on bus pins of its own
     "own": ["-DCONFIG_APP_PIN_CAN_SCK=17", "-DCONFIG_APP_PIN_CAN_SDI=16", "-DCONFIG_APP_PIN_CAN_SDO=18"],
@@ -458,7 +460,7 @@ VARIANTS = {
 }
 
 
-def build(variant):
+def build(variant, sectors=8, out=None):
     d = tempfile.mkdtemp()
     for rel, text in (("zephyr/sys/util.h", STUB_UTIL_H), ("zephyr/kernel.h", STUB_KERNEL_H),
                       ("zephyr/drivers/gpio.h", STUB_GPIO_H), ("zephyr/device.h", STUB_DEVICE_H),
@@ -468,9 +470,15 @@ def build(variant):
         with open(path, "w") as f:
             f.write(text)
     so = os.path.join(d, f"libef_{variant}.so")
-    subprocess.run(["cc", *COMMON, *FLASH_PINS, *VARIANTS[variant], "-o", so, "-I", d, "-I", SRC,
-                    os.path.join(d, "h.c"), os.path.join(SRC, "extflash.c"),
-                    os.path.join(SRC, "flashlog.c")], check=True)
+    r = subprocess.run(["cc", *COMMON, f"-DCONFIG_APP_FLASH_BACKLOG_SECTORS={sectors}",
+                        *FLASH_PINS, *VARIANTS[variant], "-o", so, "-I", d, "-I", SRC,
+                        os.path.join(d, "h.c"), os.path.join(SRC, "extflash.c"),
+                        os.path.join(SRC, "flashlog.c")], capture_output=True, text=True)
+    if out is not None:
+        out.append(r)
+    else:
+        assert r.returncode == 0, r.stderr
+        assert r.stderr == "", r.stderr                  # no warnings
     return so
 
 
@@ -478,12 +486,13 @@ _built = {}
 _copies = [0]
 
 
-def load(variant):
-    if variant not in _built:
-        _built[variant] = build(variant)
+def load(variant, sectors=8):
+    if (variant, sectors) not in _built:
+        _built[(variant, sectors)] = build(variant, sectors)
+    so = _built[(variant, sectors)]
     _copies[0] += 1                      # a fresh copy per test: the model is all statics
-    fresh = os.path.join(os.path.dirname(_built[variant]), f"c{_copies[0]}.so")
-    shutil.copyfile(_built[variant], fresh)
+    fresh = os.path.join(os.path.dirname(so), f"c{_copies[0]}.so")
+    shutil.copyfile(so, fresh)
     L = C.CDLL(fresh)
     L.m_viol.restype = C.c_char_p
     L.m_log.restype = C.c_char_p
@@ -499,6 +508,7 @@ def load(variant):
     L.m_cmd.restype = C.c_uint32
     L.m_cmd.argtypes = [C.c_int]
     L.m_probe.argtypes = [C.POINTER(C.c_uint32)]
+    L.m_check.argtypes = []
     L.m_dev_read.argtypes = [C.c_uint32, C.c_void_p, C.c_size_t]
     L.m_dev_prog.argtypes = [C.c_uint32, C.c_char_p, C.c_size_t]
     L.m_dev_erase.argtypes = [C.c_uint32]
@@ -515,8 +525,8 @@ def load(variant):
 
 
 class Chip:
-    def __init__(self, variant="own", rail=True, controller=False):
-        self.L = load(variant)
+    def __init__(self, variant="own", rail=True, controller=False, sectors=8):
+        self.L = load(variant, sectors)
         self.L.m_reset(1 if rail else 0, 1 if controller else 0)
         self.buf = C.create_string_buffer(2048)
 
@@ -581,6 +591,60 @@ def test_the_chip_is_identified_over_the_bus(chip_factory):
     assert c.L.m_probe(C.byref(n)) == 0 and n.value == 8
     assert c.L.m_cmd(0x9F) == 1
     c.L.m_end()
+
+
+def test_the_backlog_may_use_the_first_2016_sectors_and_not_the_32_kept_for_log_lines(chip_factory):
+    c = chip_factory(sectors=2016)
+    assert c.L.m_begin() == 0
+    n = C.c_uint32()
+    assert c.L.m_probe(C.byref(n)) == 0 and n.value == 2016
+    c.L.m_end()
+
+
+def test_a_build_that_asks_for_more_than_2016_sectors_does_not_compile():
+    out = []
+    build("own", sectors=2017, out=out)
+    assert out[0].returncode != 0 and "kept for log lines" in out[0].stderr
+
+
+def test_the_chip_check_passes_for_the_right_chip(chip_factory):
+    c = chip_factory()
+    assert c.L.m_begin() == 0
+    assert c.L.m_check() == 0
+    c.L.m_end()
+
+
+@pytest.mark.parametrize("fault", [(2, 0x16), (8, 0xEF), (9, 0x40), (1, 1), (1, 2)],
+                         ids=["density", "maker", "type", "all ones", "all zeros"])
+def test_the_chip_check_says_no_device_for_a_chip_that_answers_wrongly_or_not_at_all(chip_factory, fault):
+    c = chip_factory()
+    c.L.m_fault(*fault)
+    assert c.L.m_begin() == 0
+    assert c.L.m_check() == -ENODEV
+    c.L.m_end()
+    assert c.logs() == []                          # the caller says what it found
+
+
+def test_the_chip_check_sends_only_the_id_read_and_writes_nothing(chip_factory):
+    c = chip_factory()
+    assert c.L.m_begin() == 0
+    for _ in range(3):
+        assert c.L.m_check() == 0
+    assert c.L.m_cmd(0x9F) == 3
+    assert {cmd for cmd in range(256) if c.L.m_cmd(cmd)} == {0x9F}
+    assert sum(c.erases(2048)) == 0 and c.L.m_pin_events() > 0
+    c.L.m_end()
+
+
+def test_the_chip_check_works_right_after_a_session_starts_from_deep_power_down(chip_factory):
+    c = chip_factory()
+    c.L.m_begin()
+    c.L.m_end()
+    assert c.L.m_dp() == 1
+    for _ in range(5):
+        assert c.L.m_begin() == 0
+        assert c.L.m_check() == 0                  # a command before tRDP would be a violation
+        c.L.m_end()
 
 
 def test_a_record_written_through_the_driver_reads_back_through_it(chip_factory):

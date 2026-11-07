@@ -89,6 +89,10 @@ const char *h_log_line(int i) { return g_log[i]; }
 /* -- transport, modem, watchdog, alerts ------------------------------------ */
 static int      g_registered = 1;
 static int      g_send_fail;
+static int      g_answer;          /* a poll brings the replies in */
+static int      g_send_cost_ms;    /* what one datagram takes to send */
+static int      g_stop_after = -1;
+static int      g_stop_calls;
 static uint32_t g_sent_id;
 #define DGMAX 20000
 static char    *g_dg[DGMAX];
@@ -104,15 +108,48 @@ int transport_send(const uint8_t *p, size_t n)
     g_dg[g_ndg][n] = 0;
     g_dglen[g_ndg++] = n;
     g_sent_id++;
+    g_ms += g_send_cost_ms;
     return 0;
 }
 uint32_t transport_sent_id(void) { return g_sent_id; }
-int transport_poll(void) { return 0; }
+int transport_poll(void)
+{
+    if (g_answer) for (uint32_t i = 1; i <= g_sent_id; i++) databuf_ack(i);
+    return 0;
+}
 uint32_t transport_generation(void) { return 1; }
 void watchdog_kick(void) { g_kicks++; }
 void alert_ack(uint32_t id) { (void)id; }
 int alert_unanswered(void) { return 0; }
 void alert_settle(void) {}
+/* dbglog.c is not compiled here: only that databuf.c calls into it is checked. */
+static uint32_t g_dbg_answered[16];
+static int      g_dbg_answered_n;
+static int      g_dbg_unanswered;
+static int      g_dbg_settles;
+void dbglog_answered(uint32_t id)
+{
+    if (g_dbg_answered_n < 16) g_dbg_answered[g_dbg_answered_n++] = id;
+}
+int dbglog_unanswered(void) { return g_dbg_unanswered; }
+void dbglog_settle(void) { g_dbg_settles++; g_dbg_unanswered = 0; }
+void h_dbg_set_unanswered(int v) { g_dbg_unanswered = v; }
+int h_dbg_answered_n(void) { return g_dbg_answered_n; }
+uint32_t h_dbg_answered(int i) { return g_dbg_answered[i]; }
+int h_dbg_settles(void) { return g_dbg_settles; }
+#define ALERTS 16
+static char g_alert_msg[ALERTS][200];
+static int  g_alert_prio[ALERTS];
+static int  g_nalert;
+void alert_enqueue(const char *msg, int priority)
+{
+    if (g_nalert >= ALERTS) return;
+    snprintf(g_alert_msg[g_nalert], sizeof(g_alert_msg[0]), "%s", msg);
+    g_alert_prio[g_nalert++] = priority;
+}
+int h_alert_n(void) { return g_nalert; }
+const char *h_alert_msg(int i) { return g_alert_msg[i]; }
+int h_alert_prio(int i) { return g_alert_prio[i]; }
 void h_set_registered(int v) { g_registered = v; }
 void h_set_send_fail(int v) { g_send_fail = v; }
 int h_ndg(void) { return g_ndg; }
@@ -129,6 +166,7 @@ int h_sim_sessions(void) { return 0; }
 uint32_t h_sim_erases(int i) { (void)i; return 0; }
 void h_sim_corrupt(uint32_t addr) { (void)addr; }
 int h_sim_progs(void) { return 0; }
+void h_sim_set_id_ok(int ok) { (void)ok; }
 #else
 #define SIM_SECTORS 32
 static uint8_t  sim_mem[SIM_SECTORS * 4096];
@@ -141,6 +179,7 @@ static int      sim_busy;
 static int      sim_fail_prog_after = -1;
 static int      sim_progs;
 static int      sim_unreadable;
+static int      sim_id_ok = 1;      /* what RDID answers, for the check after the first session */
 static struct flashlog_dev sim_dev;
 
 static int sim_read(void *c, uint32_t a, void *b, size_t n)
@@ -185,6 +224,11 @@ void extflash_end(void)
     if (!sim_in_session) sim_violations++;
     sim_in_session = 0;
 }
+int extflash_check(void)
+{
+    if (!sim_in_session) sim_violations++;
+    return sim_id_ok ? 0 : -ENODEV;
+}
 int extflash_probe(uint32_t *sectors)
 {
     if (!sim_in_session) sim_violations++;
@@ -203,8 +247,9 @@ void h_sim_reset(void)
     memset(sim_mem, 0xFF, sizeof(sim_mem));
     memset(sim_erases, 0, sizeof(sim_erases));
     sim_violations = sim_in_session = sim_sessions = sim_busy = sim_progs = sim_unreadable = 0;
-    sim_present = 1; sim_fail_prog_after = -1;
+    sim_present = 1; sim_fail_prog_after = -1; sim_id_ok = 1;
 }
+void h_sim_set_id_ok(int ok) { sim_id_ok = ok; }
 void h_sim_set(int present, int busy, int fail_prog_after, int unreadable)
 {
     sim_present = present; sim_busy = busy; sim_fail_prog_after = fail_prog_after;
@@ -227,13 +272,25 @@ void h_stream(int on) { databuf_stream(on); }
 void h_ack_all(void) { for (uint32_t i = 1; i <= g_sent_id; i++) databuf_ack(i); }
 int h_unacked(void) { return databuf_unacked(); }
 int h_expire(void) { return databuf_expire(); }
+void h_set_answer(int v) { g_answer = v; }
+void h_set_send_cost(int ms) { g_send_cost_ms = ms; }
+static bool h_stop(void) { return ++g_stop_calls > g_stop_after; }
+/* stop_after < 0: no stop test; else it says stop on the call after that many */
+void h_deliver(int timeout_ms, int budget_ms, int stop_after)
+{
+    g_stop_calls = 0;
+    g_stop_after = stop_after;
+    databuf_deliver(timeout_ms, budget_ms, stop_after < 0 ? NULL : h_stop);
+}
+int h_stop_calls(void) { return g_stop_calls; }
+int64_t h_ms(void) { return g_ms; }
 """
 
 CFLAGS = [
     "-std=gnu11", "-Wall", "-Wextra", "-Wno-unused-parameter", "-shared", "-fPIC", "-O1",
     "-DCONFIG_APP_DATABUF_SLOTS=32", "-DCONFIG_APP_DATABUF_REC_MAX=768",
     "-DCONFIG_APP_DATABUF_FLUSH_PER_CYCLE=2", "-DCONFIG_APP_DATABUF_UNACKED_SLOTS=6",
-    "-DCONFIG_APP_ACK_TIMEOUT_S=30", "-DCONFIG_APP_LOG_LEVEL=3",
+    "-DCONFIG_APP_ACK_TIMEOUT_S=30", "-DCONFIG_APP_LOG_LEVEL=3", "-DCONFIG_APP_DEBUG_LOG=1",
     "-DCONFIG_APP_DRIVE_STREAM=1", "-DCONFIG_APP_DATABUF_STREAM_GAP_S=3",
     "-DCONFIG_APP_DRIVE_STREAM_WINDOW_MS=0",
     "-DCONFIG_APP_FLASH_BACKLOG=1", "-DCONFIG_APP_FLASH_BACKLOG_SECTORS=32",
@@ -273,11 +330,22 @@ def load(so):
     L.h_dg.restype = C.c_char_p
     L.h_dropped.restype = C.c_uint32
     L.h_set_ms.argtypes = [C.c_int64]
+    L.h_ms.restype = C.c_int64
+    L.h_set_answer.argtypes = [C.c_int]
+    L.h_set_send_cost.argtypes = [C.c_int]
+    L.h_deliver.argtypes = [C.c_int] * 3
     L.h_push.argtypes = [C.c_char_p]
     L.h_sim_erases.restype = C.c_uint32
     L.h_log_level.argtypes = [C.c_int]
     L.h_log_line.argtypes = [C.c_int]
+    L.h_alert_msg.restype = C.c_char_p
+    L.h_alert_msg.argtypes = [C.c_int]
+    L.h_alert_prio.argtypes = [C.c_int]
+    L.h_sim_set_id_ok.argtypes = [C.c_int]
     L.h_dg.argtypes = [C.c_int]
+    L.h_dbg_set_unanswered.argtypes = [C.c_int]
+    L.h_dbg_answered.restype = C.c_uint32
+    L.h_dbg_answered.argtypes = [C.c_int]
     L.h_sim_set.argtypes = [C.c_int] * 4
     L.h_sim_erases.argtypes = [C.c_int]
     L.h_sim_corrupt.argtypes = [C.c_uint32]
@@ -345,6 +413,10 @@ class DB:
             if level is None or self.L.h_log_level(i) == level:
                 out.append(self.L.h_log_line(i).decode())
         return out
+
+    def alerts(self):
+        return [(self.L.h_alert_msg(i).decode(), self.L.h_alert_prio(i))
+                for i in range(self.L.h_alert_n())]
 
     def check_flash_discipline(self):
         assert self.L.h_sim_violations() == 0
@@ -610,3 +682,220 @@ def test_a_stream_holds_no_more_than_the_ring_while_the_flash_cannot_be_reached(
     assert d.count() <= 32                              # nothing but the ring held them
     assert d.L.h_dropped() > 150
     d.check_flash_discipline()
+
+
+# --------------------------------------------------------------------------- the drain
+
+@pytest.fixture
+def link(so_flash):
+    """A link that answers every datagram when polled, and a backlog built in an outage."""
+    d = DB(so_flash)
+    d.L.h_set_answer(1)
+    d.L.h_set_ms(1_000)
+    yield d
+    d.check_flash_discipline()
+
+
+def outage(d, n):
+    d.L.h_set_registered(0)
+    d.push(n)
+    d.L.h_set_registered(1)
+
+
+def test_a_drain_starts_no_round_after_its_budget_and_leaves_the_rest(link):
+    outage(link, 300)
+    link.L.h_set_send_cost(500)                       # two datagrams: a second a round
+    t0 = link.L.h_ms()
+    link.L.h_deliver(4000, 10_000, -1)
+    spent = link.L.h_ms() - t0
+    assert 9_000 <= spent <= 11_000                   # the budget, plus a round that had begun
+    assert 0 < link.count() < 300                     # some went, the rest waits
+    assert link.L.h_unacked() == 0
+
+
+def test_the_rest_goes_on_the_next_drain_in_order_and_whole(link):
+    outage(link, 300)                                 # fits the ring and the flash
+    link.L.h_set_send_cost(500)
+    drains = 0
+    while link.count() > 0 and drains < 100:
+        link.L.h_deliver(4000, 10_000, -1)
+        drains += 1
+    assert 1 < drains < 100                           # it took several, each capped
+    assert link.delivered() == list(range(300))
+
+
+def test_a_drain_with_nothing_waiting_returns_at_once(link):
+    t0 = link.L.h_ms()
+    link.L.h_deliver(4000, 60_000, -1)
+    assert link.L.h_ms() == t0 and link.L.h_ndg() == 0
+
+
+def test_a_drain_with_no_registration_sends_nothing_and_does_not_wait(link):
+    link.L.h_set_registered(0)
+    link.push(50)
+    t0 = link.L.h_ms()
+    link.L.h_deliver(4000, 60_000, -1)
+    assert link.L.h_ms() == t0 and link.L.h_ndg() == 0 and link.count() == 50
+
+
+def test_a_round_that_goes_unanswered_ends_the_drain_and_its_records_stay_queued(link):
+    outage(link, 100)
+    link.L.h_set_answer(0)                            # the server says nothing
+    t0 = link.L.h_ms()
+    link.L.h_deliver(4000, 60_000, -1)
+    assert 4_000 <= link.L.h_ms() - t0 <= 4_500       # one wait, not a minute of them
+    assert link.L.h_ndg() == 2                        # one round
+    assert link.count() == 100                        # nothing lost, nothing held as sent
+
+
+def test_a_budget_of_nothing_collects_the_replies_owed_and_sends_no_more(link):
+    outage(link, 100)
+    link.L.h_flush(2)                                 # out, not yet answered
+    sent = link.L.h_ndg()
+    link.L.h_deliver(4000, 0, -1)
+    assert link.L.h_unacked() == 0 and link.L.h_ndg() == sent
+
+
+def test_a_stop_test_that_fires_ends_the_drain_before_the_next_round(link):
+    outage(link, 300)
+    kicks = link.L.h_kicks()
+    link.L.h_deliver(4000, 60_000, 3)                 # three rounds, then "stop"
+    assert link.L.h_ndg() == 6                        # two datagrams a round
+    assert link.L.h_stop_calls() == 4
+    assert link.L.h_kicks() - kicks >= 3              # the watchdog fed at least once a round
+    assert 0 < link.count() < 300
+
+
+def test_a_stop_test_that_is_true_at_the_start_still_collects_the_replies_owed(link):
+    outage(link, 100)
+    link.L.h_flush(2)
+    sent = link.L.h_ndg()
+    link.L.h_deliver(4000, 60_000, 0)
+    assert link.L.h_unacked() == 0 and link.L.h_ndg() == sent
+
+
+# --------------------------------------------------------------------------- telling the operator, once
+
+def only_alert(d):
+    (msg, prio), = d.alerts()
+    assert prio == 0
+    assert msg.startswith("flash backlog:") and "RAM backlog only" in msg
+    assert len(msg) < 120
+    return msg
+
+
+def test_a_chip_that_works_spills_a_long_outage_without_an_alert_or_a_warning(db):
+    db.push(300)
+    assert db.L.h_sim_sessions() > 0
+    assert db.alerts() == [] and db.logs(2) == []
+
+
+def test_a_chip_that_is_not_the_one_expected_raises_one_alert_and_not_a_second_on_a_later_outage(so_flash):
+    d = DB(so_flash)
+    d.L.h_sim_set(0, 0, -1, 0)
+    d.L.h_set_registered(0)
+    d.push(300)
+    assert sum("unavailable" in l for l in d.logs(2)) == 1
+    assert "chip not usable (" in only_alert(d)
+    d.L.h_set_registered(1)
+    d.drain()
+    d.L.h_set_registered(0)
+    d.push(300)
+    assert len(d.alerts()) == 1
+    assert sum("unavailable" in l for l in d.logs(2)) == 1
+    d.check_flash_discipline()
+
+
+def test_a_chip_that_goes_away_mid_outage_falls_back_to_thinning_with_one_warning_and_one_alert_and_comes_back_whole(so_flash):
+    d = DB(so_flash)
+    d.L.h_set_registered(0)
+    d.push(100)                                         # the first spill worked: records are in the flash
+    assert d.alerts() == [] and d.logs(2) == []
+    in_flash = d.count() - d.L.h_ring_count()
+    assert in_flash > 0
+    d.L.h_sim_set_id_ok(0)                              # RDID now answers wrongly
+    dropped0 = d.L.h_dropped()
+    d.push(300)                                         # the ring thins itself
+    assert d.L.h_dropped() > dropped0
+    assert d.count() - d.L.h_ring_count() == in_flash   # the flash was not touched
+    assert sum("does not answer" in l for l in d.logs(2)) == 1
+    assert sum(l.startswith("flash backlog") for l in d.logs(2)) == 1   # the rest is the ring thinning
+    assert "chip stopped answering" in only_alert(d)
+    d.L.h_sim_set_id_ok(1)                              # back
+    sessions = d.L.h_sim_sessions()
+    d.push(200)
+    assert d.L.h_sim_sessions() > sessions              # spills work again
+    assert len(d.alerts()) == 1
+    assert sum(l.startswith("flash backlog") for l in d.logs(2)) == 1
+    d.L.h_set_registered(1)
+    got = d.drain()
+    assert got == sorted(got) and len(set(got)) == len(got)
+    assert got[:in_flash] == list(range(in_flash))      # what was in the chip comes out first, in order
+    d.check_flash_discipline()
+
+
+def test_a_chip_that_stops_programming_raises_one_alert(so_flash):
+    d = DB(so_flash)
+    d.L.h_set_registered(0)
+    d.push(120)
+    d.L.h_sim_set(1, 0, 0, 0)                           # no program succeeds from here
+    d.push(400)
+    assert any("stopped" in l for l in d.logs(2))
+    assert "writes stopped" in only_alert(d)
+    d.push(400)
+    assert len(d.alerts()) == 1
+    d.check_flash_discipline()
+
+
+def test_a_bus_that_is_not_free_raises_no_alert(so_flash):
+    d = DB(so_flash)
+    d.L.h_sim_set(1, 1, -1, 0)
+    d.L.h_set_registered(0)
+    d.push(300)
+    assert sum("cannot be reached" in l for l in d.logs(2)) == 1
+    assert d.alerts() == []
+    d.check_flash_discipline()
+
+
+def test_a_full_flash_overwriting_its_oldest_raises_no_alert(so_flash):
+    d = DB(so_flash)
+    d.L.h_set_registered(0)
+    d.push(1500)
+    assert any("oldest records overwritten" in l for l in d.logs(2))
+    assert d.alerts() == []
+    d.check_flash_discipline()
+
+
+def test_records_that_cannot_be_read_back_raise_no_alert(so_flash):
+    d = DB(so_flash)
+    d.L.h_set_registered(0)
+    d.push(200)
+    d.L.h_sim_corrupt(16 + 5 + 50)
+    d.L.h_set_registered(1)
+    d.drain()
+    assert any("could not be read back" in l for l in d.logs(2))
+    assert d.alerts() == []
+    d.check_flash_discipline()
+
+
+# --------------------------------------------------------------------------- held log lines
+
+def test_every_reply_reaches_the_log_lines_held_under_that_datagram_id(link):
+    link.L.databuf_ack(7)
+    link.L.databuf_ack(9)
+    assert [link.L.h_dbg_answered(i) for i in range(link.L.h_dbg_answered_n())] == [7, 9]
+
+
+def test_closing_the_socket_waits_for_a_held_log_batch_and_then_drops_the_hold(link):
+    link.L.h_dbg_set_unanswered(1)
+    t0 = link.L.h_ms()
+    link.L.databuf_settle(1000)                       # no reply comes in
+    assert link.L.h_ms() - t0 >= 1000                 # it waited the whole time for it
+    assert link.L.h_dbg_settles() == 1
+
+
+def test_closing_the_socket_with_no_log_batch_held_does_not_wait(link):
+    t0 = link.L.h_ms()
+    link.L.databuf_settle(1000)
+    assert link.L.h_ms() == t0
+    assert link.L.h_dbg_settles() == 1

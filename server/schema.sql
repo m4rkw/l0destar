@@ -434,3 +434,19 @@ CREATE TABLE IF NOT EXISTS `device_report` (
   `at`        DATETIME     NOT NULL,
   PRIMARY KEY (`device_id`, `name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- The device event log, read back by GET /api/1.0/devices/events: a line for
+-- each thing that happened to a unit (ignition, firmware, commands, reboots,
+-- settings, results).  `ref` keys an event derived from a stored record, so it
+-- is recorded once however often the record is looked at.
+CREATE TABLE IF NOT EXISTS `device_event` (
+  `id`        INT          NOT NULL AUTO_INCREMENT,
+  `device_id` INT          NOT NULL,
+  `at`        DATETIME     NOT NULL,
+  `type`      VARCHAR(16)  NOT NULL,
+  `text`      VARCHAR(200) NOT NULL,
+  `ref`       VARCHAR(96)  DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `device_ref` (`device_id`, `ref`),
+  KEY `device_at` (`device_id`, `at`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

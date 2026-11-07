@@ -461,9 +461,11 @@ Discovery, run once per vehicle with the ignition on (see
 | `APP_DATABUF_STREAM_GAP_S` | int, 0-60 | `3` | Depends on `APP_DRIVE_STREAM`. While the stream runs, the backlog keeps a record only if none it holds was built within this many seconds of it (by its `up=`), and the gap doubles with each thinning; 32 slots at 3 s hold 96 s before any thinning, where a record every few hundred ms fills them in seconds. `0` keeps every record |
 | `APP_DATABUF_REC_MAX` | int, 128-1024 | `512` | Longest record the backlog holds, in bytes; a longer one is dropped with an error. Records are around 300 bytes, about 470 with every OBD-II field |
 | `APP_DATABUF_FLUSH_PER_CYCLE` | int, 1-16 | `2` | Backlog datagrams sent alongside each live send, so a backlog never delays the current position |
+| `APP_DATABUF_DRAIN_S` | int, 1-600 | `60` | Longest a parked wake spends sending the backlog. It sends round after round (about fifteen records a second) until the backlog is empty, the link stops answering, the ignition comes on or the car moves, or this many seconds are up; the rest waits for the next wake. A round already begun finishes. The cap on what a backlog costs the battery on one wake |
+| `APP_DATABUF_REBOOT_DRAIN_S` | int, 0-120 | `20` | Longest a planned reboot (a reboot command, a firmware update) waits to send the backlog first, since the RAM it sits in does not survive the restart. A watchdog or fault reset does not wait. `0` restarts at once |
 | `APP_BOARD_HAS_EXT_FLASH` | bool | `n` | An MX25R6435F SPI NOR flash is fitted, on the `APP_PIN_FLASH_*` pins. No board profile sets it. Where any of its SCK, SDI or SDO is the CAN controller's, it is only touched while the CAN rail is up, which nothing raises after boot: give it pins of its own, or set the `APP_PIN_CAN_*` pins to `-1` where no controller is fitted |
-| `APP_FLASH_BACKLOG` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_FLASH` and `APP_DATABUF_SLOTS > 0`. When the RAM backlog is full its oldest records go to the flash instead of being thinned, and are sent first when the link is back: five to eight hours at a record a second. The queue lasts one boot. The flash is in deep power-down at boot and between uses |
-| `APP_FLASH_BACKLOG_SECTORS` | int, 8-2048 | `2048` | 4 KiB sectors from the start of the chip the log may use. Leave it alone once a unit is in service: the chip's erase count is worked out from it |
+| `APP_FLASH_BACKLOG` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_FLASH` and `APP_DATABUF_SLOTS > 0`. When the RAM backlog is full its oldest records go to the flash instead of being thinned, and are sent first when the link is back: four and a half to twelve hours at a record a second. The queue lasts one boot. The flash is in deep power-down at boot and between uses. Every use after the first reads the chip's ID first; a chip that is not the one expected, has stopped answering, or has stopped writing after repeated failures raises one alert a boot, and the tracker carries on with the RAM backlog |
+| `APP_FLASH_BACKLOG_SECTORS` | int, 8-2016 | `2016` | 4 KiB sectors from the start of the chip the backlog may use. The last 32 (128 KiB) are kept for log lines and not used yet. Leave it alone once a unit is in service: the chip's erase count is worked out from it |
 | `APP_FLASH_BACKLOG_GAP_S` | int, 0-60 | `1` | Depends on `APP_DRIVE_STREAM`. `APP_DATABUF_STREAM_GAP_S` for when the flash holds the overflow: a record a second. `0` keeps every record the stream builds, which wears the flash 3 to 5 times as fast |
 | `APP_FLASH_BACKLOG_MAX_CYCLES` | int, 1000-100000 | `100000` | Erase cycles a sector may be taken to, counted from the sector headers. 100,000 is the datasheet minimum; nothing more is written once it is reached |
 | `APP_FLASH_BACKLOG_MAX_OPENS_PER_HOUR` | int, 60-20000 | `2400` | Most sectors (erases) opened in an hour. A runaway at this rate takes over nine years to get through the rating; a record that would open one more waits in RAM |
@@ -471,9 +473,9 @@ Discovery, run once per vehicle with the ignition on (see
 | `APP_COAST_MAX_ITERATIONS` | int | `60` | Most send cycles that coasting can add |
 
 **Flash backlog and wear.** The MX25R6435F is rated for 100,000 erases a sector (datasheet
-Rev. 1.6). The log (`src/flashlog.c`) only appends, erases a sector only to write it again, goes
+Rev. 1.2). The log (`src/flashlog.c`) only appends, erases a sector only to write it again, goes
 round the sectors in order and carries on where it was after a reset, so every sector has had the
-same number of erases to within one: a 470-byte record a second round the clock is 56 years, and the
+same number of erases to within one: a 470-byte record a second round the clock is about 50 years, and the
 car's real driving, about 0.8 hours a day, centuries. The cycle limit and the hourly limit above stop
 a fault from going further, and the driver sends the chip nothing that writes its status or security
 registers or erases more than a sector. Host-tested against a model of the chip
@@ -484,7 +486,7 @@ hardware.
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_DEBUG_LOG` | bool | `y` | Depends on `LOG`. Keep warnings and errors in RAM and send them with the next record that gets through, as `L,` lines the server writes to `device.log`, and report the reset cause (`rst=`) after each boot. Off in the provisioning build, which disables logging |
+| `APP_DEBUG_LOG` | bool | `y` | Depends on `LOG`. Keep warnings and errors in RAM and send them with the next record that gets through, as `L,` lines the server writes to `device.log`, and report the reset cause (`rst=`) after each boot. A line is kept until the server has answered the datagram it went in, and survives a warm reset (watchdog, fault, reboot; not a power cut or a pin reset), sent after the restart with an uptime of 0, so the server shows `up=0.000`; a planned restart sends what is pending first. Off in the provisioning build, which disables logging |
 | `APP_DEBUG_LOG_HEAD` | int, 256-8192 | `1024` | Bytes kept from the start of an incident |
 | `APP_DEBUG_LOG_TAIL` | int, 256-16384 | `3072` | Bytes kept from the most recent lines, as a ring in which a repeated line collapses into a count |
 | `APP_DEBUG_LOG_LINE_MAX` | int, 64-255 | `160` | Longest line kept, including about 20 bytes of prefix |

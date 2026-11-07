@@ -1,12 +1,13 @@
 /*
  * MX25R6435F on bit-banged SPI.  See extflash.h; the commands, bit positions
- * and timings are from the Macronix datasheet, Rev. 1.6 (August 2022).
+ * and timings are from the Macronix datasheet and were checked against its
+ * Rev. 1.2 (October 2015) on 2026-11-05.
  *
  * Bit-banged, like the CAN controller's bus and for the same reason: pins come
  * from Kconfig, no serial peripheral instance is spoken for, and nothing about
  * the bus depends on devicetree.  At a hundred kilobytes a second it moves a
- * 300-byte record in a few milliseconds, and the chip's own program time (3 to
- * 10 ms a page) is longer than that.
+ * 300-byte record in a few milliseconds, and the chip's own program time
+ * (0.85 to 10 ms a page, by power mode) is longer than that.
  *
  * WHAT THIS WILL AND WILL NOT SEND THE CHIP
  * -----------------------------------------
@@ -75,12 +76,21 @@ BUILD_ASSERT(PIN_FLASH_SCK >= 0 && PIN_FLASH_SDI >= 0 &&
 #define ID_DENSITY  0x17        /* 64 Mbit */
 
 #define CHIP_SECTORS 2048u
+/* The last sectors of the chip, kept for log lines (not used yet).  The
+ * wear counter is worked out from the sector count, so the split is fixed
+ * before any unit ships. */
+#define LOG_SECTORS  32u
+#define POS_SECTORS  (CHIP_SECTORS - LOG_SECTORS)
 #define SECTOR_BYTES FLASHLOG_SECTOR_SIZE
 #define PAGE_BYTES   FLASHLOG_PAGE_SIZE
 #define CHIP_BYTES   (CHIP_SECTORS * SECTOR_BYTES)
 
-/* Waits.  The datasheet's maxima are 10 ms for a page program and 240 ms for a
- * sector erase (either power mode); these allow a generous multiple. */
+BUILD_ASSERT(CONFIG_APP_FLASH_BACKLOG_SECTORS <= POS_SECTORS,
+	     "APP_FLASH_BACKLOG_SECTORS leaves out the sectors kept for log lines");
+
+/* Waits.  The datasheet's maxima are 10 ms for a page program (ultra-low-power
+ * mode; 4 ms in high-performance mode) and 240 ms for a sector erase (both);
+ * these allow a generous multiple. */
 #define PROG_TIMEOUT_MS   40
 #define ERASE_TIMEOUT_MS  1000
 #define BUSY_TIMEOUT_MS   1000
@@ -306,12 +316,9 @@ void extflash_init(void)
 	extflash_park();
 }
 
-int extflash_probe(uint32_t *sectors)
+/* RDID, and whether the three bytes are this chip's. */
+static bool read_id(uint8_t id[3])
 {
-	uint8_t id[3];
-	uint8_t sr;
-	int err;
-
 	cs(0);
 	spi_write_byte(CMD_RDID);
 	sdi(0);
@@ -319,7 +326,23 @@ int extflash_probe(uint32_t *sectors)
 		id[i] = spi_read_byte();
 	}
 	cs(1);
-	if (id[0] != ID_MANUF || id[1] != ID_TYPE || id[2] != ID_DENSITY) {
+	return id[0] == ID_MANUF && id[1] == ID_TYPE && id[2] == ID_DENSITY;
+}
+
+int extflash_check(void)
+{
+	uint8_t id[3];
+
+	return read_id(id) ? 0 : -ENODEV;
+}
+
+int extflash_probe(uint32_t *sectors)
+{
+	uint8_t id[3];
+	uint8_t sr;
+	int err;
+
+	if (!read_id(id)) {
 		LOG_ERR("flash id %02x %02x %02x, expected %02x %02x %02x "
 			"(MX25R6435F)", id[0], id[1], id[2],
 			ID_MANUF, ID_TYPE, ID_DENSITY);
@@ -337,6 +360,6 @@ int extflash_probe(uint32_t *sectors)
 		return -EACCES;
 	}
 
-	*sectors = MIN((uint32_t)CONFIG_APP_FLASH_BACKLOG_SECTORS, CHIP_SECTORS);
+	*sectors = MIN((uint32_t)CONFIG_APP_FLASH_BACKLOG_SECTORS, POS_SECTORS);
 	return 0;
 }

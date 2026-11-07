@@ -94,6 +94,7 @@ These use the signed-in session, and are what the web page itself calls. Without
 | Endpoint | Returns |
 |---|---|
 | `GET /api/1.0/devices` | Every device: `id`, `imei`, `name`, `registration`, `last_seen`, `latitude`, `longitude`, `speed`, `battery_level`, `ignition_state`, `fw`, `board`, `rat`, `operator`, `track_mode`. |
+| `GET /api/1.0/devices/events` | The device's event log, newest first, as `events` (below): `limit` (default 200, at most 500) and `before` (the `id` of the oldest event you already have). |
 | `GET /api/1.0/carpos` | The latest `position`, the resting accelerometer reading (`accel_baseline`) and the `track_mode` switch. |
 | `GET /api/1.0/status` | The device's IMEI, name, synced settings (`int`, `ma`), firmware version, board and last-seen time. |
 | `GET /api/1.0/journeys` | Completed journeys, newest first: `page` (from 0) and `per_page` (default 50, at most 200). |
@@ -148,6 +149,21 @@ A command waits on the server until the device next reads a reply, and is handed
 ```sh
 sudo docker exec l0destar python tools/command.py 350000000000000 locate
 ```
+
+### Event log
+
+`GET /api/1.0/devices/events` lists what has happened to a device, newest first:
+
+```json
+{"status": "ok", "events": [
+  {"id": 412, "at": "2026-11-06 14:02:11", "type": "ignition", "text": "Ignition on"},
+  {"id": 411, "at": "2026-11-06 13:58:40", "type": "firmware", "text": "Firmware 0.4.112 applied"}
+]}
+```
+
+`at` is the server's local time. `type` is `firmware`, `ignition`, `command`, `reboot`, `result`, `setting` or `other`, and `text` is a short line for people. `limit` sets the page size (default 200, at most 500); to read further back, pass `before` with the `id` of the oldest event you have. A bad value fails with `limit must be a whole number from 1 to 500` or `before must be an event id`.
+
+The log has an event for ignition on and off; a firmware update staged, applied or failed; a command queued, collected by the device, answered, cancelled, replaced or expired; a reboot, with the reset cause; a setting changed (reporting interval, alarms, garage mode, GNSS backup supply, track mode); a result arriving (network scan, self test, status, location and so on); a fault code raised or cleared; and an alert the device sent. The device waking, and a setting merely being applied by the device, are not logged. Events are never pruned. `tools/backfill_device_events.py` fills in the time before the server kept the log, as far as the `log` table and the app log go (see [server reference](../reference/server.md)).
 
 ### Live stream
 

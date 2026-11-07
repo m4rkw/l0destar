@@ -105,12 +105,17 @@ static void do_logdump(void)
     int n = dbglog_take(buf, sizeof(buf));
 
     if (n <= 0) {
-        report("logdump", "empty");
+        report("logdump",
+               dbglog_unanswered() ? "waiting for a reply" : "empty");
         return;
     }
     /* the captured lines are "L," lines already, one per row */
     buf[n < (int)sizeof(buf) ? n : (int)sizeof(buf) - 1] = '\0';
-    dbglog_ack(data_send_line(buf) == 0);
+    if (data_send_line(buf) == 0) {
+        dbglog_sent(transport_sent_id());
+    } else {
+        dbglog_ack(false);
+    }
 #else
     report("logdump", "log capture off");
 #endif
@@ -194,12 +199,19 @@ static void do_selftest(void)
     uint32_t sectors = 0;
     int ferr = extflash_begin();
 
-    if (ferr == 0) {
-        ferr = extflash_probe(&sectors);
-        extflash_end();
+    if (ferr == -EBUSY) {
+        /* On the CAN controller's bus with its rail down: out of reach, not
+         * broken, and the self-test is not to raise that rail for it. */
+        len += snprintf(t + len, sizeof(t) - len, "%sflash=n.a.",
+                        len ? " " : "");
+    } else {
+        if (ferr == 0) {
+            ferr = extflash_probe(&sectors);
+            extflash_end();
+        }
+        ITEM("flash", ferr == 0,
+             len += snprintf(t + len, sizeof(t) - len, "(%d)", ferr));
     }
-    ITEM("flash", ferr == 0,
-         len += snprintf(t + len, sizeof(t) - len, "(%d)", ferr));
 #endif
 
     report("selftest", t);

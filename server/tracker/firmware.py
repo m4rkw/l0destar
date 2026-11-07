@@ -39,7 +39,7 @@ import datetime
 import os
 import re
 
-from . import assistnow, config, db, logs, notify
+from . import assistnow, config, db, device_events, logs, notify
 
 VERSION_RE = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}$')
 IMAGE_RE = re.compile(r'^l0destar-(\d{1,3}\.\d{1,3}\.\d{1,3})-\d+\.bin$')
@@ -140,6 +140,18 @@ def _version_ok(version):
     return bool(version) and bool(VERSION_RE.match(str(version).strip()))
 
 
+def _is_new_stage(database, device, version):
+    """Whether a staged report is for a version other than the one stored; the
+    device repeats the report until a send lands, and only the first counts."""
+    try:
+        row = database.one('SELECT `fw_staged` FROM `device` WHERE `id` = %s',
+                           (device['id'],)) or {}
+        return row.get('fw_staged') != str(version).strip()
+    except Exception:
+        logs.app.exception('device event failed for %s', device.get('imei'))
+        return False
+
+
 def note_staged(device, version, database, log=None):
     """The device says it has staged `version` and is rebooting into it."""
     log = log or logs.udp
@@ -147,11 +159,15 @@ def note_staged(device, version, database, log=None):
         log.warning('fota staged report with bad version %r from %s',
                     version, device['imei'])
         return
+    is_new = _is_new_stage(database, device, version)
     database.query(
         'UPDATE `device` SET `fw_staged` = %s, `fw_staged_at` = NOW() '
         'WHERE `id` = %s',
         (str(version).strip(), device['id']),
     )
+    if is_new:
+        device_events.record(database, device['id'], 'firmware',
+                             device_events.firmware_text('staged', str(version).strip()))
     log.info('%s staged %s', device['imei'], version)
 
 
@@ -185,6 +201,8 @@ def note_failed(device, staged, running, database, log=None):
     # On the transition into blocked only.  The device repeats its report
     # until one gets through, and a notification per repeat is noise.
     if not already:
+        device_events.record(database, device['id'], 'firmware',
+                             device_events.firmware_text('failed', staged, running))
         try:
             notify.device_alert(
                 device['name'],

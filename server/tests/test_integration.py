@@ -962,3 +962,130 @@ def test_a_command_queued_too_long_ago_is_not_delivered(device, database):
                    (device['id'], 'locatenow', device['id'], 'fota'))
     reply = telemetry.process_lines(device, [record(0, 51.5, -0.1, 0)], '203.0.113.7', db.web, logs.udp)
     assert 'fota' in reply and 'locatenow' not in reply
+
+
+# -- the device event log --------------------------------------------------------
+
+def events(database, device, kind=None):
+    """(type, text) of the device's events, oldest first."""
+    rows = database.all('SELECT `type`, `text` FROM `device_event` WHERE `device_id` = %s '
+                        'ORDER BY `at`, `id`', (device['id'],))
+    return [(r['type'], r['text']) for r in rows if kind in (None, r['type'])]
+
+
+def test_ignition_changes_are_events(device, database):
+    send(device, record(0, 51.5, -0.1, 0), record(1, 51.5, -0.1, 1),
+         record(2, 51.5, -0.1, 1), record(3, 51.5, -0.1, 0))
+    assert events(database, device) == [('ignition', 'Ignition on'), ('ignition', 'Ignition off')]
+
+
+def test_a_late_ignition_record_moves_the_event_back_rather_than_adding_one(device, database):
+    # The live record says on; the backlog then delivers the record, built
+    # earlier, where it actually came on.
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100'))
+    send(device, record(2, 51.5, -0.1, 1, extras=',rid=102'))
+    send(device, record(1, 51.5, -0.1, 1, extras=',rid=101,age=30'))
+    assert events(database, device, 'ignition') == [('ignition', 'Ignition on')]
+
+
+def test_a_reboot_is_an_event_once(device, database):
+    line = record(0, 51.5, -0.1, 0, extras=',rid=100,rst=pin+sw')
+    send(device, line)
+    send(device, line)                                    # the reply was lost: sent again
+    assert events(database, device) == [('reboot', 'Rebooted (software)')]
+
+
+def test_a_new_version_is_an_applied_event(device, database):
+    send(device, record(0, 51.5, -0.1, 0, extras=',fw=0.4.96'))
+    assert events(database, device) == []
+    send(device, record(1, 51.5, -0.1, 0, extras=',fw=0.4.97'))
+    assert events(database, device) == [('firmware', 'Firmware 0.4.97 applied')]
+    send(device, record(2, 51.5, -0.1, 0, extras=',fw=0.4.96'))
+    assert events(database, device)[-1] == ('firmware', 'Firmware 0.4.96 restored')
+
+
+def test_staged_and_failed_updates_are_events_once(device, database):
+    for _ in range(2):
+        send(device, 'F,fota,staged,0.4.13,0.4.12')
+    for _ in range(2):
+        send(device, 'F,fota,failed,0.4.13,0.4.12')
+    assert events(database, device) == [('firmware', 'Firmware 0.4.13 staged'),
+                                        ('firmware', 'Firmware 0.4.13 failed, still on 0.4.12')]
+
+
+def test_alerts_results_and_faults_are_events(device, database):
+    send(device, 'A,0,tilt 12deg - possible tow/jack', 'A,0,google: 51.50,-0.12',
+         'F,scan,0,', 'F,rep,status,ok', 'D,P0301', 'D,')
+    assert events(database, device) == [
+        ('other', 'Alert: tilt 12deg - possible tow/jack'), ('result', 'Location received'),
+        ('result', 'Network scan result received'), ('result', 'Status result received'),
+        ('other', 'Fault code P0301 raised'), ('other', 'Fault code P0301 cleared')]
+
+
+def test_a_copy_of_an_alert_is_one_event(device, database):
+    telemetry._alert_seen.clear()
+    send(device, 'A,1,backup power: 9.03V,aid=8627')
+    send(device, 'A,1,backup power: 9.03V,aid=8627')
+    assert events(database, device) == [('other', 'Alert: backup power: 9.03V')]
+
+
+def test_commands_collected_expired_and_acknowledged_are_events(device, database):
+    database.query('INSERT INTO `command` (`device_id`, `timestamp`, `command`) VALUES '
+                   '(%s, NOW(6) - INTERVAL 7 HOUR, %s), (%s, NOW(6), %s)',
+                   (device['id'], 'locatenow', device['id'], 'status,fota'))
+    send(device, record(0, 51.5, -0.1, 0, extras=',ak=locatenow'))
+    assert sorted(events(database, device)) == sorted([
+        ('command', 'Command expired: locatenow'), ('command', 'Command collected: status'),
+        ('command', 'Command collected: fota'), ('command', 'Command acknowledged: locatenow')])
+
+
+def test_backup_supply_changes_are_events_in_the_order_they_happened(device, database):
+    send(device, record(0, 51.5, -0.1, 0, extras=',rid=100,bk=0:30|1:60'))
+    assert events(database, device) == [('setting', 'GNSS backup supply on'),
+                                        ('setting', 'GNSS backup supply off')]
+    device = db.lookup_device(imei=device['imei'])             # as the next datagram finds it
+    send(device, record(1, 51.5, -0.1, 0, extras=',rid=101,bk=0:30|1:60'))      # nothing new
+    assert len(events(database, device)) == 2
+
+
+def test_the_api_writes_events_and_the_endpoint_reads_them(client, device, database, bearer, logged_in):
+    base = '/api/1.0'
+    client.post(base + '/command', headers=bearer, json={'imei': device['imei'], 'command': 'locate'})
+    client.post(base + '/command', headers=bearer, json={'imei': device['imei'], 'command': 'locatenow'})
+    client.post(base + '/command', headers=bearer,
+                json={'imei': device['imei'], 'command': 'alarm=1,garage=0,gnssbk=1'})
+    client.post(base + '/command/cancel', headers=bearer,
+                json={'imei': device['imei'], 'command': 'locatenow'})
+    client.post(base + '/config', headers=bearer,
+                json={'imei': device['imei'], 'int': 900, 'ma': 1})
+    client.post(base + '/trackmode', json={'imei': device['imei'], 'on': 1})
+    client.post(base + '/trackmode', json={'imei': device['imei'], 'on': 1})
+    assert events(database, device) == [
+        ('command', 'Command queued: locate'), ('command', 'Command replaced: locate'),
+        ('command', 'Command queued: locatenow'), ('setting', 'GNSS backup supply set to on'),
+        ('setting', 'Ignition alarm on'), ('command', 'Command cancelled: locatenow'),
+        ('setting', 'Report interval set to 900 s'), ('setting', 'Track mode on')]
+
+    response = client.get(base + '/devices/events?device_id=%d&limit=3' % device['id'])
+    body = response.get_json()
+    assert response.status_code == 200 and body['status'] == 'ok'
+    assert [e['text'] for e in body['events']] == [
+        'Track mode on', 'Report interval set to 900 s', 'Command cancelled: locatenow']
+    assert set(body['events'][0]) == {'id', 'at', 'type', 'text'}
+
+    older = client.get(base + '/devices/events?device_id=%d&limit=2&before=%d'
+                       % (device['id'], body['events'][-1]['id'])).get_json()
+    assert [e['text'] for e in older['events']] == [
+        'Ignition alarm on', 'GNSS backup supply set to on']
+
+
+def test_track_mode_ending_with_the_ignition_is_an_event(device, database):
+    database.query('UPDATE `device` SET `track_mode` = 1 WHERE `id` = %s', (device['id'],))
+    device = db.lookup_device(imei=device['imei'])
+    send(device, record(0, 51.5, -0.1, 0))
+    assert events(database, device, 'setting') == [('setting', 'Track mode off (ignition off)')]
+
+
+def test_the_event_endpoint_refuses_what_it_cannot_use(client, device, logged_in):
+    assert client.get('/api/1.0/devices/events?device_id=%d&limit=0' % device['id']).status_code == 400
+    assert client.get('/api/1.0/devices/events?device_id=999999').get_json()['message'] == 'device not found'

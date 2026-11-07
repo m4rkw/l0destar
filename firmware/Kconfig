@@ -1872,6 +1872,30 @@ config APP_DATABUF_FLUSH_PER_CYCLE
 	  the current record rather than in one burst.  Two datagrams a cycle
 	  clears a full buffer in about a minute at a 5 s cadence.
 
+config APP_DATABUF_DRAIN_S
+	int "Longest a parked wake spends sending the backlog (seconds)"
+	default 60
+	range 1 600
+	help
+	  A wake that finds a backlog (a gap in coverage, or records the flash
+	  holds) keeps the radio up and sends it round after round, about
+	  fifteen records a second, until it is empty, the link stops
+	  answering, the ignition comes on or the car moves, or this many
+	  seconds are up.  No round starts after that; the rest goes out with
+	  the next wake.  This is the cap on what a backlog can cost the
+	  battery on one wake, and a round already begun still finishes (a few
+	  seconds at most).
+
+config APP_DATABUF_REBOOT_DRAIN_S
+	int "Longest a planned reboot waits to send the backlog (seconds)"
+	default 20
+	range 0 120
+	help
+	  A restart the firmware chose (a reboot command, a firmware update)
+	  sends what the backlog holds first, since the RAM it sits in does not
+	  survive.  A watchdog or fault reset cannot wait and does not.  0
+	  restarts at once.
+
 config APP_DATABUF_UNACKED_SLOTS
 	int "Sent datagrams whose records are held until the server answers"
 	default 0 if APP_TRACCAR
@@ -1923,9 +1947,10 @@ config APP_FLASH_BACKLOG
 	  The RAM backlog (APP_DATABUF_SLOTS) covers an outage of a minute or so
 	  and thins itself after that.  With this, the oldest records go to the
 	  flash instead, in order, and are sent first when the link is back, so
-	  a long outage keeps every record the spacing below asks for: five to
-	  eight hours at a record a second, until the flash is full.  Only then
-	  are the oldest sector's records overwritten, and the log says so.
+	  a long outage keeps every record the spacing below asks for: four and
+	  a half to twelve hours at a record a second (records of 470 down to
+	  188 bytes), until the flash is full.  Only then are the oldest
+	  sector's records overwritten, and the log says so.
 
 	  The queue lasts one boot.  What a previous boot left in the flash is not
 	  sent: a record's age is worked out from its uptime, which means nothing
@@ -1949,19 +1974,22 @@ config APP_FLASH_BACKLOG
 	  Wear: see src/flashlog.h.  The
 	  chip is rated for 100,000 erases a sector.  Records are only appended,
 	  each sector is erased once per lap of the ring and the ring carries on
-	  where it was after a reset, so a record a second round the clock is 56
-	  years and the car's real driving (about 0.8 h a day) is many centuries.
+	  where it was after a reset, so a record a second round the clock is
+	  about 50 years and the car's real driving (about 0.8 h a day) is many
+	  centuries.
 
 config APP_FLASH_BACKLOG_SECTORS
 	int "4 KiB sectors of the flash the backlog may use"
 	depends on APP_FLASH_BACKLOG
-	default 2048
-	range 8 2048
+	default 2016
+	range 8 2016
 	help
 	  From the start of the chip.  2 bytes of RAM each.  The 8 MiB part has
-	  2048.  Fewer keeps the rest of the chip untouched.  Leave it alone once
-	  a unit is in service: the number of erase cycles the chip has had is
-	  worked out from this and the sequence numbers in the sector headers.
+	  2048; the last 32 (128 KiB) are kept for log lines, not used yet, so
+	  2016 is the most.  Fewer keeps the rest of the chip untouched.  Leave
+	  it alone once a unit is in service: the number of erase cycles the
+	  chip has had is worked out from this and the sequence numbers in the
+	  sector headers.
 
 config APP_FLASH_BACKLOG_GAP_S
 	int "Seconds between the records kept while streaming, flash in use (0 = every one)"
@@ -2017,8 +2045,14 @@ config APP_DEBUG_LOG
 	  how an outage or a stall is read back afterwards.  Also reports the
 	  cause of each reset (rst=) on the first record after boot.
 
-	  Costs APP_DEBUG_LOG_HEAD + APP_DEBUG_LOG_TAIL bytes of BSS and
-	  nothing on the air while the log is quiet.
+	  A line is kept until the server has answered the datagram it went
+	  in, as the records are, and it survives a warm reset (watchdog,
+	  fatal error, reboot; a power cut or a pin reset clears RAM): it is
+	  then sent after the restart with an uptime of 0.  A planned restart
+	  sends what is pending first.
+
+	  Costs APP_DEBUG_LOG_HEAD + APP_DEBUG_LOG_TAIL bytes of retained
+	  RAM and nothing on the air while the log is quiet.
 
 config APP_DEBUG_LOG_HEAD
 	int "Bytes kept from the start of an incident"

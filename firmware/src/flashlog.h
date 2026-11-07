@@ -10,8 +10,9 @@
  * WEAR POLICY
  * -----------
  * The part this was written for (MX25R6435F, 8 MiB in 4 KiB sectors) is rated
- * for 100,000 erase cycles per sector.  Spent evenly, that is 56 years of one
- * 470-byte record a second, round the clock.  Spent unevenly it is a day: one
+ * for 100,000 erase cycles per sector.  Spent evenly, that is about 50 years of
+ * one 470-byte record a second, round the clock (eight to a sector, since a
+ * record does not cross one).  Spent unevenly it is a day: one
  * sector erased per record reaches the rating in 28 hours.  So the rules are
  * about unevenness, and they are what this module is for:
  *

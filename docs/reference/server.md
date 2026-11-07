@@ -233,6 +233,14 @@ backfill_device_versions.py [--apply] [--config config.yaml]
 
 Fills `device.fw` and `device.board` for devices that reported a version before the device row kept one, from each device's newest record (the one built last among its last few rows). A device with a version on its row is left alone, a board already on the row stays when the records name none, and one that never reported a version stays empty. It shows what it would do and writes nothing without `--apply`, and can be run again. It needs `migrations/2026-11-01_device_fw_board.sql` first, and `backfill_board.py` before it so the rows it reads have their boards. A device that is reporting needs none of this: the server writes both as its records arrive.
 
+### `backfill_device_events.py`
+
+```text
+backfill_device_events.py [--apply --before 'YYYY-MM-DD HH:MM:SS'] [--device ID ...] [--app-log /var/log/tracker/app.log] [--config config.yaml]
+```
+
+Fills `device_event`, the event log behind `GET /api/1.0/devices/events`, for the time before the server recorded events itself. From the `log` table it takes ignition changes, reboots (`rst=`) and firmware changes, each under a key that is the record's own time, so the server's live entry for the same record is never doubled. From the app log it takes updates staged, commands delivered and alerts; from `device_report` and `net_scan_at` the latest result of each kind. The server's own entries for those carry no matching key, so `--before` is required with `--apply`: give it the time the server started recording events itself, and nothing newer than that is taken. Command queueing, settings, track mode and fault codes were never recorded anywhere, so nothing is restored for them. It shows what it would do and writes nothing without `--apply`, and can be run again. It needs `migrations/2026-11-06_device_event.sql` first.
+
 ## Log files
 
 All in `/srv/l0destar/logs` (`log_dir`):
@@ -257,6 +265,7 @@ All in `/srv/l0destar/logs` (`log_dir`):
 | `journey` | Each ignition-on to ignition-off period, with the range of `log` rows it covers and its distance. |
 | `dtc` | Fault codes reported over the K wire, with when each was raised and cleared. |
 | `command` | Commands waiting for a tracker's next reply. Deleted as they are delivered. |
+| `device_event` | The event log: one line for each ignition change, firmware update, command, reboot, setting change and result of a device, newest read first by `GET /api/1.0/devices/events`. Grows slowly; never pruned, and not deleted with the device. |
 | `device_nonce` | Every nonce each tracker has used in the last 30 days, for replay protection. Prunes itself. |
 | `plmn` | Mobile network operator names. Optional. |
 | `user` | Web interface users and their passkey public keys. |
@@ -276,6 +285,7 @@ Deleting a `device` row deletes its `log`, `journey`, `dtc`, `command` and `devi
 | `2026-09-14_device_nonce.sql` | replay protection that survives a restart |
 | `2026-11-01_log_board.sql` | the board a build is for (`log.board`), beside the firmware version |
 | `2026-11-01_device_fw_board.sql` | the firmware version and board a device is running, on its own row (`device.fw`, `device.board`) |
+| `2026-11-06_device_event.sql` | the device event log (`device_event`) |
 
 ## HTTP endpoints
 
@@ -300,6 +310,7 @@ For a logged-in browser. Read endpoints choose the device from `imei` or `device
 | Method and path | Purpose |
 |---|---|
 | `GET /api/1.0/devices` | Every device with its last position, battery, ignition, firmware and network. |
+| `GET /api/1.0/devices/events` | A device's event log, newest first (`limit`, default 200 and at most 500; `before`, the id of the oldest event already held). |
 | `GET /api/1.0/carpos` | The latest position and live values for a device. |
 | `GET /api/1.0/status` | A device's settings, firmware version and last contact. |
 | `GET /api/1.0/journeys` | Completed journeys, newest first (`page`, and `per_page` up to 200). |

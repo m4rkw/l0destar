@@ -27,6 +27,12 @@
  * paid when a reply is actually late or lost, and only on the sends that
  * ask for one (transitions, standstill, and every APP_RESP_POLL_S). */
 #define RESPONSE_TIMEOUT_MS 4000
+
+/* What databuf_deliver() may spend sending the backlog: a parked wake and a
+ * planned reboot are set in Kconfig; the hold breaker's is a drive's, so short. */
+#define DRAIN_PARKED_MS     (CONFIG_APP_DATABUF_DRAIN_S * 1000)
+#define DRAIN_REBOOT_MS     (CONFIG_APP_DATABUF_REBOOT_DRAIN_S * 1000)
+#define DRAIN_DRIVING_MS    10000
 #define TLS_SEC_TAG         1
 
 /* Fallback PSK, an all-zero placeholder: the tracker still sends with it, and

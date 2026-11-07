@@ -1375,7 +1375,7 @@ int send_data(void)
     gsm_send_failures = 0;
     modem_send_ok();
     powered_on = false;
-    dbglog_ack(true);
+    dbglog_sent(transport_sent_id());
 
     /* The modem has the datagram; the records are held until the server
      * answers for them, and go again if it does not.  Not in track mode:
@@ -1412,4 +1412,52 @@ int send_data(void)
     send_int_to_server = false;
     alert_send();
     return 1;
+}
+
+/* The log lines on their own, for before a planned restart.  Reuses s_tx:
+ * only the main thread builds datagrams, and not from inside send_data(). */
+int data_send_logs(int timeout_ms, int max_datagrams)
+{
+    int sent = 0;
+
+    /* A batch from the last send_data() may still be on its way: give its
+     * reply the chance first, since nothing new is handed out while it is
+     * held.  If that frees nothing the link is not answering. */
+    if (dbglog_unanswered() > 0) {
+        size_t before = dbglog_pending();
+
+        databuf_settle(timeout_ms);
+        if (dbglog_pending() >= before) {
+            return 0;
+        }
+    }
+
+    while (sent < max_datagrams && dbglog_pending() > 0 &&
+           modem_is_registered()) {
+        watchdog_kick();
+
+        int n = dbglog_take(s_tx, UDP_PACKET_SIZE - 64);
+
+        if (n <= 1) {
+            break;
+        }
+
+        size_t before = dbglog_pending();
+
+        /* The lines start with a newline; as a datagram of their own they
+         * do not need it. */
+        if (transport_send((const uint8_t *)s_tx + 1, (size_t)n - 1) != 0) {
+            dbglog_ack(false);
+            break;
+        }
+        dbglog_sent(transport_sent_id());
+        sent++;
+
+        /* Reverts the hold if no reply came. */
+        databuf_settle(timeout_ms);
+        if (dbglog_pending() >= before) {
+            break;
+        }
+    }
+    return sent;
 }

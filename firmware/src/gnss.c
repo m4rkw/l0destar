@@ -79,6 +79,12 @@ int32_t gnss_last_wait_ms(void)
     return s_last_wait_ms;
 }
 
+/* The SiP's own GNSS has no module to identify. */
+const char *gnss_module_version(void)
+{
+    return "";
+}
+
 static void pvt_to_fix(const struct nrf_modem_gnss_pvt_data_frame *pvt,
                        struct gnss_fix *out)
 {

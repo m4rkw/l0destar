@@ -21,9 +21,10 @@
  * Give the flash pins of its own (or set APP_PIN_CAN_* to -1 where no CAN
  * controller is fitted) and the restriction goes away.
  *
- * Not run on hardware.  Written from the datasheet (Rev. 1.6) for the board
- * designs that carry it (hardware/l0destar_v4.1.x, not in the repository yet),
- * and exercised on the host against a model of the chip (tests/test_extflash.py).
+ * Not run on hardware.  Written from the datasheet (checked against Rev. 1.2)
+ * for the board designs that carry it (hardware/l0destar_v4.1.x, not in the
+ * repository yet), and exercised on the host against a model of the chip
+ * (tests/test_extflash.py).
  */
 
 #ifndef APP_EXTFLASH_H_
@@ -50,10 +51,17 @@ void extflash_end(void);
 void extflash_park(void);
 
 /* Inside a session: checks the chip is the one this was written for and
- * writable, and says how many sectors the backlog may use.  0, -ENODEV for
+ * writable, and says how many sectors the backlog may use (at most the chip's
+ * first 2016: the last 32 are kept for log lines).  0, -ENODEV for
  * another chip, -EACCES if its block protection is set, -ETIMEDOUT if it is
  * stuck busy. */
 int  extflash_probe(uint32_t *sectors);
+
+/* Inside a session: reads the chip's ID and nothing else (about 0.2 ms; no
+ * status read, no write).  0 if it is the expected chip, -ENODEV if not.  For
+ * the start of every session after the first, to notice a chip that has gone
+ * away; the caller says what it found. */
+int  extflash_check(void);
 
 /* The operations for flashlog, valid inside a session. */
 const struct flashlog_dev *extflash_dev(uint32_t sectors);

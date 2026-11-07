@@ -19,7 +19,7 @@ import re
 
 from flask import Blueprint, redirect, request
 
-from .. import config, db, deadreckon, notify, telemetry
+from .. import config, db, deadreckon, device_events, notify, telemetry
 from . import audit, devices, error, ok, unauthorised
 from .auth import login_required
 
@@ -173,6 +173,9 @@ def trackmode():
         on = 1 if data.get('on') else 0
         db.web.query('UPDATE `device` SET `track_mode` = %s WHERE `id` = %s',
                      (on, device['id']))
+        if bool(device.get('track_mode')) != bool(on):
+            device_events.record(db.web, device['id'], 'setting',
+                                 device_events.track_mode_text(bool(on)))
         device['track_mode'] = on
         # Switching a vehicle's GNSS off is worth a line in the audit log.
         audit('trackmode', 'on=%d imei=%s' % (on, device['imei']))
@@ -408,6 +411,7 @@ def update_config():
             'UPDATE `device` SET %s WHERE `id` = %%s' % assignments,
             [value for _, value in updates] + [device['id']],
         )
+        telemetry.record_setting_changes(db.web, device, updates)
 
     return ok()
 
@@ -435,6 +439,8 @@ def _dedup(device_id, command):
     ):
         if _command_keys(row['command']) & conflicts:
             db.web.query('DELETE FROM `command` WHERE `id` = %s', (row['id'],))
+            telemetry.record_command_events(db.web, device_id, 'replaced',
+                                            [row['command']])
 
 
 @bp.route('/command', methods=['POST'])
@@ -475,6 +481,8 @@ def queue_command():
                     '`gnss_backup_at` = NOW() WHERE `id` = %s',
                     (int(part[7:]), device['id']),
                 )
+                telemetry.record_setting_changes(
+                    db.web, device, [('gnss_backup', int(part[7:]))])
                 continue
             for_device.append(part)
 
@@ -493,6 +501,10 @@ def queue_command():
             'UPDATE `device` SET %s WHERE `id` = %%s' % ', '.join(assignments),
             values,
         )
+        telemetry.record_setting_changes(
+            db.web, device,
+            [(SERVER_SIDE_SETTINGS[part.split('=', 1)[0]], value)
+             for part, value in zip(server_side, values)])
 
     if for_device:
         command = ','.join(for_device)
@@ -502,6 +514,7 @@ def queue_command():
             'VALUES (%s, NOW(6), %s)',
             (device['id'], command),
         )
+        telemetry.record_command_events(db.web, device['id'], 'queued', [command])
 
     return ok()
 
@@ -527,6 +540,9 @@ def _cancel_queued(device_id, name):
                          (','.join(keep), row['id']))
         else:
             db.web.query('DELETE FROM `command` WHERE `id` = %s', (row['id'],))
+        telemetry.record_command_events(
+            db.web, device_id, 'cancelled',
+            [p for p in parts if p.split('=', 1)[0] == name])
     return cancelled
 
 
@@ -556,6 +572,21 @@ def list_devices():
     """Every enrolled device with its latest record; see devices.summary()."""
     return ok({'devices': [devices.summary(device)
                            for device in devices.enrolled()]})
+
+
+@bp.route('/devices/events', methods=['GET'])
+@login_required
+def device_event_list():
+    """A device's event log, newest first; see device_events.page()."""
+    try:
+        limit, before = device_events.parse_query(request.args.get('limit'),
+                                                  request.args.get('before'))
+    except ValueError as e:
+        return error(str(e))
+    device, failure = _device()
+    if failure:
+        return failure
+    return ok({'events': device_events.page(db.web, device['id'], limit, before)})
 
 
 @bp.route('/status', methods=['GET'])

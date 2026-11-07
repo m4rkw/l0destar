@@ -912,6 +912,13 @@ int fota_check(enum fota_ctx ctx)
     alert_enqueue(msg, 0);
     alert_send_standalone();
 
+    /* The radio is still up: what the backlog holds goes now, since the RAM
+     * it is in does not survive the restart. */
+    if (CONFIG_APP_DATABUF_REBOOT_DRAIN_S > 0) {
+        data_send_logs(RESPONSE_TIMEOUT_MS, 4);
+        databuf_deliver(RESPONSE_TIMEOUT_MS, DRAIN_REBOOT_MS, NULL);
+    }
+
     led_all_off();
     modem_power_off();
     k_msleep(200);

@@ -979,7 +979,7 @@ static void hold_break_restore(void)
         LOG_INF("hold break: LTE off %d ms, registered again after %d ms",
                 off_ms, reg);
     }
-    databuf_deliver(RESPONSE_TIMEOUT_MS);
+    databuf_deliver(RESPONSE_TIMEOUT_MS, DRAIN_DRIVING_MS, NULL);
     if (alert_count > 0) {
         (void)alert_send();
     }
@@ -1208,6 +1208,22 @@ static bool ign_on_since_check(void)
     return ignition_read() == 0 || atomic_get(&s_ign_int_flag) != 0;
 }
 
+/* databuf_deliver()'s stop tests: no further backlog round once the key is
+ * on or the car moves, so the main loop gets the radio and the thread back
+ * within a round.  Entering sleep has neither interrupt armed yet, so only
+ * the ignition level can be read there. */
+static bool drain_key_on(void)
+{
+    return ignition_read() == 0;
+}
+
+/* In a parked wake the sleep-side interrupts are armed, and this pass took
+ * the flags they had latched before it got here, so one set now is new. */
+static bool drain_woken(void)
+{
+    return ign_on_since_check() || atomic_get(&s_accel_int_flag) != 0;
+}
+
 /* After a key-on, the line reading off can be the starter turning rather
  * than the key going off — see IGN_CRANK_MAX_MS.  Either inside the wake's
  * own window, with the key turned straight through, or by the time IDLE
@@ -1327,7 +1343,7 @@ static void do_sleep(void)
      * while the radio is still up rather than an hour from now.  Whatever
      * goes unanswered stays in the backlog for the next report. */
     LOG_INF("sleep: delivering what is still owed");
-    databuf_deliver(RESPONSE_TIMEOUT_MS);
+    databuf_deliver(RESPONSE_TIMEOUT_MS, DRAIN_PARKED_MS, drain_key_on);
     LOG_INF("sleep: transport close");
     transport_close();
     transport_teardown();   /* the connection does not survive the modem going off */
@@ -2135,7 +2151,7 @@ static void do_sleep(void)
             /* What the wake still has to deliver goes while the radio is up
              * for it — the replies to its sends, and any backlog — and what
              * goes unanswered is kept for the next one. */
-            databuf_deliver(RESPONSE_TIMEOUT_MS);
+            databuf_deliver(RESPONSE_TIMEOUT_MS, DRAIN_PARKED_MS, drain_woken);
             transport_close();
 
             /* An alert that went with the registration — the reject that

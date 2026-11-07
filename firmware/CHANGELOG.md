@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.4.113
+
+### Backlog drains have a time budget
+A wake sends the backlog for a set time instead of a fixed number of rounds, and a planned restart sends it first.
+
+- **Parked wakes** (after key-off, timed wake) send round after round for up to `APP_DATABUF_DRAIN_S` (60) seconds, about 800 to 1,500 records. A drain also ends when the backlog is empty or the link stops answering. A timed wake also stops at an ignition or movement; after key-off only the ignition stops it, so movement is noticed when the drain ends.
+- **Planned restarts** (the reboot command, a firmware update) send the backlog first, for up to `APP_DATABUF_REBOOT_DRAIN_S` (20) seconds, while the modem is still on. A watchdog or fault reset does not: the RAM is gone.
+- Status: host tests pass; built; not run on hardware. What a drain costs the battery is an estimate (under 1 mAh per 60 s), not a measurement.
+
+### Log lines are kept until the server has them
+Captured warnings and errors (`L,` lines) are no longer lost with a datagram, and survive a warm reset.
+
+- **Held until answered.** A sent line stays in its ring until the server's reply, as a record does; with no reply in `APP_ACK_TIMEOUT_S`, or when the socket closes, it is pending again. One batch is out at a time. A late reply can leave a line twice in `device.log`.
+- **Kept over a reset.** The rings sit in no-init RAM under a checksum, so a watchdog reset, a fault or a reboot keeps what had not gone out. It is sent after the restart with an uptime of 0 (`up=0.000` in `device.log`). A power cut or a pin reset (the debugger's `reset.sh`) still loses it, and a block that is not plainly intact starts empty.
+- **Planned restarts** send the pending lines first (up to 4 datagrams), then the backlog.
+- Status: host tests pass; built. On the bench a software reset kept the lines and they arrived as `up=0.000`; a pin reset wiped RAM and the block started empty, as designed. The planned-restart send was not run on hardware.
+
+### Flash backlog
+For boards with the chip; off in every conf.
+
+- Every flash session after the first reads the chip's ID first. A chip that is not the one expected, has stopped answering, or has stopped writing after repeated failures raises one alert a boot (priority 0, "flash backlog: ..., RAM backlog only") and the unit carries on with the RAM backlog. A bus that is not free (CAN rail down), the wear limits and unreadable records raise none.
+- The backlog gets the first 2016 sectors (`APP_FLASH_BACKLOG_SECTORS` 2016, was 2048); the last 32 (128 KiB) are set aside for log lines, which do not use them yet.
+- `selftest` reports the flash as n.a. when the bus is not free, not as a failure.
+- `gnss_module_version()` is declared on every board; the v3.x builds called it undeclared.
+- Status: host tests pass; built, and built with the tier on; not run on hardware (no chip yet).
+
 ## 0.4.112
 
 ### Network scan command

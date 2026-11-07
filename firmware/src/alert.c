@@ -20,6 +20,10 @@
  * previous boot's.  Only where there is a reply to wait for: Traccar's HTTP
  * 2xx is its own receipt, and its builds hold nothing (APP_DATABUF_UNACKED_
  * SLOTS = 0), so their alert lines are exactly what they were.
+ *
+ * Main thread only, like databuf.c: the queue is not locked.  A thread that has
+ * something to report sets a flag for the main thread to raise the alert from
+ * (gnss_ext.c does).
  */
 
 #include <string.h>

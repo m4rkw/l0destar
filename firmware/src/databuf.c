@@ -22,6 +22,12 @@
  * no allocation to fail in a tunnel, and no fragmentation.  Nothing here grows
  * at runtime and there is no path that can consume more than the array.
  *
+ * THREADS
+ * -------
+ * Main thread only.  Nothing here is locked, and no other thread calls it: a
+ * thread that has something to say sets a flag for the main thread to act on
+ * (gnss_ext.c does this for its alerts).
+ *
  * WHEN IT FILLS
  * -------------
  * Dropping the newest record loses the recovery, and dropping the oldest loses
@@ -56,10 +62,11 @@
  * With CONFIG_APP_FLASH_BACKLOG the ring above is the front of a longer queue.
  * When it is full the oldest records are moved to the external flash instead of
  * being thinned away, so a long outage keeps every record the stream's spacing
- * asks for (an hour of it is about 1 MB of flash; the chip holds five to eight
- * hours).  Draining takes the flash first, oldest first, and then the ring, so
- * the order holds.  The queue in the flash lasts one boot (see flashlog.h for
- * why, and for how the chip is kept from wearing out).
+ * asks for (an hour of it is about 1 MB of flash; the log's 2016 sectors hold
+ * four and a half to twelve hours).  Draining takes the flash first, oldest
+ * first, and then the ring, so the order holds.  The queue in the flash lasts
+ * one boot (see flashlog.h for why, and for how the chip is kept from wearing
+ * out).
  *
  * Anything that goes wrong with the flash leaves the backlog as it is without
  * one: a push that cannot be spilled thins the ring, and records already in
@@ -285,6 +292,8 @@ static enum fl_state   s_fl_state;
 static bool            s_fl_noappend;   /* nothing more goes in; what is there comes out */
 static bool            s_fl_unreachable;/* the last try found the bus not free */
 static bool            s_fl_unreach_said;
+static bool            s_fl_gone_said;  /* the chip stopped answering the ID check */
+static bool            s_fl_alerted;
 static int64_t         s_fl_warn_ms = -FL_WARN_EVERY_MS;
 static struct flashlog s_fl;
 static uint16_t        s_fl_cnt[FL_SECTORS];
@@ -324,6 +333,23 @@ static int stream_gap_now(void)
 #define GAP_NOW stream_gap_now()
 #endif
 
+/* alert.c's message size (private to it); a longer message is cut there. */
+#define FL_ALERT_MSG 120
+
+/* Tells the operator, once per boot, that the flash is not being used.  Not
+ * for a bus that is only busy, nor for limits that are working as designed. */
+static void fl_alert(const char *what)
+{
+    char msg[FL_ALERT_MSG];
+
+    if (s_fl_alerted) {
+        return;
+    }
+    s_fl_alerted = true;
+    snprintf(msg, sizeof(msg), "flash backlog: %s, RAM backlog only", what);
+    alert_enqueue(msg, 0);
+}
+
 /* Inside a session, the first time: finds the chip and the place the ring has
  * got to.  False if the flash is not to be used this boot. */
 static bool fl_open(void)
@@ -342,6 +368,11 @@ static bool fl_open(void)
     if (err) {
         s_fl_state = FL_NO;
         LOG_WRN("flash backlog unavailable (%d), RAM only", err);
+
+        char what[40];
+
+        snprintf(what, sizeof(what), "chip not usable (%d)", err);
+        fl_alert(what);
         return false;
     }
     s_fl_state = FL_UP;
@@ -373,11 +404,27 @@ static bool fl_session(void)
         }
         return false;
     }
-    s_fl_unreachable = false;
-    if (s_fl_state == FL_NEW && !fl_open()) {
+    if (s_fl_state == FL_NEW) {
+        s_fl_unreachable = false;
+        if (!fl_open()) {
+            extflash_end();
+            return false;
+        }
+        return true;
+    }
+    /* Not a verdict: the chip may be back next time, with its records. */
+    if (extflash_check() != 0) {
         extflash_end();
+        s_fl_unreachable = true;
+        if (!s_fl_gone_said) {
+            s_fl_gone_said = true;
+            LOG_WRN("flash backlog: the chip does not answer, RAM only until "
+                    "it does");
+        }
+        fl_alert("chip stopped answering");
         return false;
     }
+    s_fl_unreachable = false;
     return true;
 }
 
@@ -397,6 +444,7 @@ static void fl_error(int err)
     case FLASHLOG_ERR_DEAD:
         s_fl_noappend = true;
         LOG_WRN("flash backlog: writing stopped after repeated failures");
+        fl_alert("writes stopped after repeated failures");
         break;
     default:
         if (fl_warn_due()) {
@@ -796,9 +844,6 @@ static void databuf_drop(int n)
  * had counted every one of them as sent. */
 #define UNANSWERED       CONFIG_APP_DATABUF_UNACKED_SLOTS
 #define ACK_TIMEOUT_MS   ((int64_t)CONFIG_APP_ACK_TIMEOUT_S * 1000)
-/* Flush-and-settle rounds databuf_deliver() will go through before sleep:
- * enough for a full backlog at two datagrams a round. */
-#define DELIVER_ROUNDS   8
 
 /* -- FLOW CONTROL (drive stream) --------------------------------------------
  *
@@ -978,6 +1023,7 @@ void databuf_ack(uint32_t id)
     s_last_ack_ms = k_uptime_get();
     /* Every reply comes through here, and an alert may be what it answers. */
     alert_ack(id);
+    dbglog_answered(id);
 #ifdef FLOW_CONTROL
     if (id > s_acked_high) {
         s_acked_high = id;
@@ -1083,12 +1129,15 @@ int databuf_settle(int timeout_ms)
 #if UNANSWERED > 0
     int64_t deadline = k_uptime_get() + timeout_ms;
 
-    /* Alerts are held the same way (alert.c), so their replies are waited
-     * for too: one requeued here that had only been slow is sent again. */
-    while (databuf_unacked() > 0 || alert_unanswered() > 0) {
+    /* Alerts and log lines are held the same way (alert.c, dbglog.c), so
+     * their replies are waited for too: one requeued here that had only been
+     * slow is sent again. */
+    while (databuf_unacked() > 0 || alert_unanswered() > 0 ||
+           dbglog_unanswered() > 0) {
         /* No socket: nothing more can arrive. */
         if (transport_poll() < 0 ||
-            (databuf_unacked() == 0 && alert_unanswered() == 0) ||
+            (databuf_unacked() == 0 && alert_unanswered() == 0 &&
+             dbglog_unanswered() == 0) ||
             k_uptime_get() >= deadline) {
             break;
         }
@@ -1102,17 +1151,22 @@ int databuf_settle(int timeout_ms)
         n++;
     }
     alert_settle();
+    dbglog_settle();
 #else
     ARG_UNUSED(timeout_ms);
 #endif
     return n;
 }
 
-void databuf_deliver(int timeout_ms)
+void databuf_deliver(int timeout_ms, int budget_ms, bool (*stop)(void))
 {
+    int64_t end = k_uptime_get() + budget_ms;
+
+    /* The replies to what is already out are always waited for. */
     databuf_settle(timeout_ms);
 
-    for (int round = 0; round < DELIVER_ROUNDS && BACKLOG_COUNT() > 0; round++) {
+    while (BACKLOG_COUNT() > 0 && k_uptime_get() < end &&
+           !(stop && stop())) {
         watchdog_kick();
         if (databuf_flush(CONFIG_APP_DATABUF_FLUSH_PER_CYCLE) == 0) {
             break;

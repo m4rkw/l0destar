@@ -60,7 +60,7 @@ import re
 import threading
 import time
 
-from . import config, db, deadreckon, firmware, logs, notify
+from . import config, db, deadreckon, device_events, firmware, logs, notify
 
 # Fixed fields, in wire order, named for the columns they are stored in.  The
 # eleventh is seconds since boot on current firmware; its column kept the
@@ -790,6 +790,129 @@ def _is_copy(database, device, data):
     ) is not None
 
 
+# -- device events ------------------------------------------------------------
+#
+# What the phone app lists for a unit (device_events.py).  record() already
+# keeps its own errors in, so a hook that is one call is written in place; these
+# are the ones that need a loop or a read first.  Each keeps its whole body in
+# a try, so that a line missing from the event log can never cost a record or
+# a reply.
+
+def _note_log_events(database, device, previous, entry, built):
+    """The ignition change and the reboot a record just stored reports.
+    `previous` is the row it was measured against, as process_record read it."""
+    try:
+        gsm = entry['gsm_timestamp']
+        if (previous is not None
+                and int(previous['ignition_state']) != entry['ignition_state']):
+            device_events.record_ignition(
+                database, device['id'], bool(entry['ignition_state']), built,
+                device_events.ref('ign', gsm))
+        if entry.get('rst'):
+            device_events.record(
+                database, device['id'], 'reboot',
+                device_events.reset_text(entry['rst']), built,
+                device_events.ref('rst', gsm))
+    except Exception:
+        logs.app.exception('device event failed for %s', device.get('imei'))
+
+
+def _note_backup_events(database, device, raw, built):
+    """The GNSS backup supply changes a record's bk= reports, oldest first.
+    Called before the device dict takes the newest one, so the state the unit
+    was last known in, and when, is still in it."""
+    try:
+        changes = []
+        for item in raw.split('|'):
+            try:
+                state, age = item.split(':')
+                state, age = int(state), int(age)
+            except ValueError:
+                continue
+            if state not in (0, 1) or age < 0 or age > BACKUP_AGE_MAX:
+                continue
+            changes.append((built - datetime.timedelta(seconds=age), state))
+        held = device.get('gnss_backup')
+        guard = device.get('gnss_backup_at')
+        for at, state in sorted(changes, key=lambda change: change[0]):
+            if guard is not None and not at > guard:
+                continue
+            if state != held:
+                device_events.record(
+                    database, device['id'], 'setting',
+                    device_events.backup_supply_text(state), at,
+                    device_events.ref('bk', state, at.strftime('%Y-%m-%d %H:%M:%S')))
+            held = state
+    except Exception:
+        logs.app.exception('device event failed for %s', device.get('imei'))
+
+
+def record_command_events(database, device_id, what, commands, at=None):
+    """One command event for each command in `commands` (strings, which may
+    be comma-joined), `what` being how it went: queued, collected, ..."""
+    try:
+        for command in commands:
+            for part in device_events.command_parts(command):
+                device_events.record(database, device_id, 'command',
+                                     device_events.command_text(what, part), at)
+    except Exception:
+        logs.app.exception('device event failed for device %s', device_id)
+
+
+def record_setting_changes(database, device, changes):
+    """One setting event for each (device column, new value) in `changes` whose
+    value is not the one on `device`, the row as it was read before the write."""
+    try:
+        for column, value in dict(changes).items():
+            if device.get(column) != value:
+                device_events.record(database, device['id'], 'setting',
+                                     device_events.setting_text(column, value))
+    except Exception:
+        logs.app.exception('device event failed for %s', device.get('imei'))
+
+
+def _expiring_commands(database, device_id):
+    """[(command, when it expired)] for the queued commands the sweep in
+    build_response is about to drop; read before it, as they are gone after."""
+    try:
+        return [(row['command'],
+                 row['timestamp'] + datetime.timedelta(hours=COMMAND_MAX_AGE_HOURS))
+                for row in database.all(
+                    'SELECT `id`, `command`, `timestamp` FROM `command` '
+                    'WHERE `device_id` = %s '
+                    'AND `timestamp` < NOW(6) - INTERVAL %s HOUR',
+                    (device_id, COMMAND_MAX_AGE_HOURS)) or []]
+    except Exception:
+        logs.app.exception('device event failed for device %s', device_id)
+        return []
+
+
+def _note_expired(database, device_id, expired):
+    for command, at in expired:
+        record_command_events(database, device_id, 'expired', [command], at)
+
+
+def _note_alert(database, device, message):
+    try:
+        event = device_events.alert_event(message)
+        if event:
+            device_events.record(database, device['id'], event[0], event[1])
+    except Exception:
+        logs.app.exception('device event failed for %s', device.get('imei'))
+
+
+def _note_faults(database, device, raised, cleared):
+    try:
+        for code in raised:
+            device_events.record(database, device['id'], 'other',
+                                 device_events.fault_text(code, True))
+        for code in cleared:
+            device_events.record(database, device['id'], 'other',
+                                 device_events.fault_text(code, False))
+    except Exception:
+        logs.app.exception('device event failed for %s', device.get('imei'))
+
+
 def _note_versions(database, device, entry):
     """Keep the device row's firmware and board at what its newest live
     record says: the version the unit is running now and the board that
@@ -808,6 +931,12 @@ def _note_versions(database, device, entry):
         'WHERE `id` = %s',
         (fw, board, device['id']),
     )
+    if device.get('fw') not in (None, fw):
+        device_events.record(
+            database, device['id'], 'firmware',
+            device_events.firmware_text('applied', fw, device.get('fw')),
+            entry['timestamp'],
+            device_events.ref('fw', fw, entry['gsm_timestamp']))
     device['fw'] = fw
     if board is not None:
         device['board'] = board
@@ -855,6 +984,7 @@ def _store_backup_changes(database, device, data, built):
         'WHERE `id` = %s AND (`gnss_backup_at` IS NULL OR `gnss_backup_at` < %s)',
         (state, when, device['id'], when),
     )
+    _note_backup_events(database, device, raw, built)
     held = device.get('gnss_backup_at')
     if held is None or held < at.replace(microsecond=0):
         device['gnss_backup'] = state
@@ -903,6 +1033,7 @@ def _store_applied(database, device, data, entry):
             'UPDATE `device` SET %s WHERE `id` = %%s' % ', '.join(assignments),
             values + [device['id']],
         )
+    record_command_events(database, device['id'], 'acknowledged', acks)
 
 
 def process_record(data, device, ip, database=None):
@@ -989,6 +1120,7 @@ def process_record(data, device, ip, database=None):
     log_id = database.query(
         'INSERT INTO `log` (%s) VALUES (%s)' % (columns, placeholders), values
     )
+    _note_log_events(database, device, previous, entry, built)
 
     # History fills in a journey's track (its miles are summed in time
     # order) but opens and closes nothing: a late ignition-on record would
@@ -1059,6 +1191,9 @@ def process_record(data, device, ip, database=None):
 def clear_track_mode(device, database, why):
     database.query('UPDATE `device` SET `track_mode` = 0 WHERE `id` = %s',
                    (device['id'],))
+    if device.get('track_mode'):
+        device_events.record(database, device['id'], 'setting',
+                             device_events.track_mode_text(False, why))
     device['track_mode'] = 0
     logs.app.info('track mode off for %s: %s', device.get('imei'), why)
 
@@ -1146,6 +1281,7 @@ def process_dtc_report(device, codes, database, log):
             'WHERE `id` IN (%s)' % placeholders,
             [now] + ids,
         )
+    _note_faults(database, device, raised, [row['code'] for row in cleared])
 
     if raised or cleared:
         log.info('DTC %s: raised=%s cleared=%s', device['imei'],
@@ -1246,6 +1382,7 @@ def _handle_alert(line, device, database, log):
     log.info('alert from %s (pri=%d): %s%s', device['imei'], priority, message,
              ' [suppressed: engine running]' if suppress else '')
     if not suppress:
+        _note_alert(database, device, message)
         notify.device_alert(device['name'], message, priority)
 
 
@@ -1286,11 +1423,13 @@ def build_response(device, database, log, firmware_version=None):
     settings = device_config(device)
     response = '1,%s,%s' % (settings['int'], settings['ma'])
 
+    expired = _expiring_commands(database, device['id'])
     database.query(
         'DELETE FROM `command` WHERE `device_id` = %s '
         'AND `timestamp` < NOW(6) - INTERVAL %s HOUR',
         (device['id'], COMMAND_MAX_AGE_HOURS),
     )
+    _note_expired(database, device['id'], expired)
     commands = database.all(
         'SELECT `id`, `command` FROM `command` WHERE `device_id` = %s ORDER BY `id`',
         (device['id'],),
@@ -1303,6 +1442,7 @@ def build_response(device, database, log, firmware_version=None):
         database.query('DELETE FROM `command` WHERE `id` IN (%s)' % placeholders, ids)
         log.info('delivered %d commands to %s: %s',
                  len(commands), device['imei'], command_string)
+        record_command_events(database, device['id'], 'collected', [command_string])
 
     # The interval for a tracker running on the backup module rides the
     # command field too, on every response, so a device that rebooted or
@@ -1466,6 +1606,8 @@ def process_lines(device, lines, ip, database, log):
                         "ON DUPLICATE KEY UPDATE `text` = VALUES(`text`), "
                         "`at` = VALUES(`at`)",
                         (device['id'], parts[2][:16], parts[3][:600]))
+                    device_events.record(database, device['id'], 'result',
+                                         device_events.result_text(parts[2][:16]))
                     logs.device.info('%s report %s %s', device['imei'],
                                      parts[2], parts[3])
                     if parts[2] in _REPORT_TITLES:
@@ -1479,6 +1621,8 @@ def process_lines(device, lines, ip, database, log):
                 database.query(
                     "UPDATE `device` SET `net_scan` = %s, `net_scan_at` = NOW() "
                     "WHERE `id` = %s", (cells[:600], device['id']))
+                device_events.record(database, device['id'], 'result',
+                                     device_events.result_text('scan'))
                 logs.device.info('%s netscan %s', device['imei'], line[7:])
                 _notify_report(device, 'network scan', _scan_summary(cells))
             elif line.startswith('L,'):

@@ -313,13 +313,15 @@ uint32_t gnss_blocked_ms(void);
 uint32_t gnss_starved_epochs(void);
 int32_t  gnss_last_wait_ms(void);
 
-#ifdef CONFIG_APP_BOARD_HAS_EXT_GNSS
-/* What the external receiver (src/gnss_ext.c) said it is, e.g. "MAX-M10S SPG
- * 5.10", or "" before it has answered.  The built-in receiver has no such
- * thing.  With the external one gnss_blocked_ms() and gnss_starved_epochs()
- * are always 0: nothing takes its radio. */
+/* What the receiver said it is, e.g. "MAX-M10S SPG 5.10", or "" before it has
+ * answered.  The SiP's own receiver (gnss.c) has no such thing and gives "". */
 const char *gnss_module_version(void);
-/* Fixes per second the external receiver is asked for (1 to 10), from now and
+
+#ifdef CONFIG_APP_BOARD_HAS_EXT_GNSS
+/* With the external receiver (src/gnss_ext.c) gnss_blocked_ms() and
+ * gnss_starved_epochs() are always 0: nothing takes its radio.
+ *
+ * Fixes per second the external receiver is asked for (1 to 10), from now and
  * at every power-up until changed; the satellite list stays at about one a
  * second.  The receiver's thread applies it, so this returns at once.
  * -ENOTSUP when the receiver takes no commands (its NMEA is being read). */
@@ -393,6 +395,11 @@ int  collect_data(int ignition_state);
  * the record it has just built — see wake_pending.  0 before the first. */
 uint32_t data_last_rec_id(void);
 int  data_send_line(const char *line);   /* one raw line as its own datagram */
+/* Send the captured log lines that are pending, up to max_datagrams datagrams
+ * of their own, each waited for (timeout_ms) so what is answered is freed.
+ * Stops at the first round that frees nothing.  For before a planned restart,
+ * with the radio up.  Returns the datagrams sent. */
+int  data_send_logs(int timeout_ms, int max_datagrams);
 /* Track-mode record: no GNSS wait, last known position, the fast OBD poll and
  * an IMU burst (tm=1, acc=...).  Returns 1 with a record in data_current. */
 int  collect_track_data(void);
@@ -431,9 +438,13 @@ int64_t  databuf_last_ack_ms(void);          /* when an answer last came in */
 /* Wait up to timeout_ms for the answers still owed, then requeue what is
  * left; returns the datagrams requeued. */
 int      databuf_settle(int timeout_ms);
-/* The radio is about to go down: settle, then send as much of the backlog
- * as the link will take, a few datagrams at a time. */
-void     databuf_deliver(int timeout_ms);
+/* The radio is about to go down: settle, then send the backlog, a few
+ * datagrams at a time.  timeout_ms is how long each round waits for its
+ * replies.  No round starts once budget_ms is spent, or once stop() (may be
+ * NULL) says something wants the caller back; it ends sooner when the backlog
+ * is empty, a round sends nothing, or one goes unanswered.  A round already
+ * begun finishes, so it can overrun by one. */
+void     databuf_deliver(int timeout_ms, int budget_ms, bool (*stop)(void));
 /* Copy newline-separated records, adding age=<s> to any built long enough
  * ago that the server would otherwise file it at the wrong time.  Returns
  * the bytes written, or -1 if they do not fit. */
@@ -442,18 +453,35 @@ void data_reset(void);
 int  send_data(void);
 
 /* -- captured warnings/errors (src/dbglog.c) --------------------------------
- * A log backend keeps WRN/ERR lines in RAM; send_data() appends them to the
- * outgoing record as "L,<uptime_ms>,<E|W>,<module>: <text>" lines and frees
- * them only once the datagram has left.  See dbglog.c for the policy. */
+ * A log backend keeps WRN/ERR lines in RAM (kept across a warm reset);
+ * send_data() appends them to the outgoing record as
+ * "L,<uptime_ms>,<E|W>,<module>: <text>" lines and frees them only once the
+ * server has answered the datagram.  See dbglog.c for the policy. */
 #if IS_ENABLED(CONFIG_APP_DEBUG_LOG)
 size_t      dbglog_pending(void);              /* bytes waiting */
 int         dbglog_take(char *out, size_t max);/* append lines; bytes added */
 void        dbglog_ack(bool sent);             /* free (or keep) what was taken */
+/* What the last take handed out went in datagram `id` (transport_sent_id()):
+ * held until dbglog_answered(id).  Freed at once for id 0, or when nothing is
+ * held (APP_DATABUF_UNACKED_SLOTS = 0).  While a batch is held, dbglog_take()
+ * returns 0.  An unanswered hold is dropped by dbglog_expire() after
+ * APP_ACK_TIMEOUT_S, or by dbglog_settle() when the socket closes: the lines
+ * are then pending again. */
+void        dbglog_sent(uint32_t id);
+void        dbglog_answered(uint32_t id);      /* the reply to `id` is in */
+int         dbglog_unanswered(void);           /* 1 while a batch is held */
+void        dbglog_expire(void);
+void        dbglog_settle(void);
 const char *dbglog_reset_cause(void);          /* "wdt", "sw+pin", ... or NULL */
 #else
 static inline size_t      dbglog_pending(void) { return 0; }
 static inline int         dbglog_take(char *out, size_t max) { return 0; }
 static inline void        dbglog_ack(bool sent) { }
+static inline void        dbglog_sent(uint32_t id) { }
+static inline void        dbglog_answered(uint32_t id) { }
+static inline int         dbglog_unanswered(void) { return 0; }
+static inline void        dbglog_expire(void) { }
+static inline void        dbglog_settle(void) { }
 static inline const char *dbglog_reset_cause(void) { return NULL; }
 #endif
 
