@@ -53,6 +53,7 @@ SERVER_SIDE_SETTINGS = {
     'gnss_off_window': 'gnss_off_window',
     'gnss_off_hour_from': 'gnss_off_hour_from',
     'gnss_off_hour_to': 'gnss_off_hour_to',
+    'leds': 'leds',
     'backup_interval': 'backup_int',
 }
 
@@ -68,6 +69,7 @@ CONFIG_FIELDS = {
     'gw': 'gnss_off_window',
     'gwf': 'gnss_off_hour_from',
     'gwt': 'gnss_off_hour_to',
+    'le': 'leds',
 }
 
 # Intervals the unit would raise to this anyway (the cell behind them is
@@ -87,6 +89,7 @@ SETTING_RANGES = {
     'gnss_off_window': (0, 1),
     'gnss_off_hour_from': (0, 23),
     'gnss_off_hour_to': (0, 23),
+    'leds': (0, 1),
 }
 
 
@@ -381,7 +384,7 @@ def get_config():
     if failure:
         return failure
 
-    defaults = {'ma': 1, 'oaf': 23, 'oat': 6, 'gwt': 7}
+    defaults = {'ma': 1, 'oaf': 23, 'oat': 6, 'gwt': 7, 'le': 1}
     result = {}
     for key, column in CONFIG_FIELDS.items():
         value = device.get(column)

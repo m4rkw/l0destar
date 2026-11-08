@@ -95,6 +95,10 @@ CREATE TABLE `device` (
   `gnss_off_hour_from` TINYINT UNSIGNED NOT NULL DEFAULT 0,
   `gnss_off_hour_to`   TINYINT UNSIGNED NOT NULL DEFAULT 7,
 
+  -- Whether the unit's status LEDs may light: 1 = on (the default), 0 = all
+  -- dark.  Sent in every reply as le=<0|1>, straight after gw=.
+  `leds`               TINYINT(1)       NOT NULL DEFAULT 1,
+
   `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `imei` (`imei`)

@@ -1661,6 +1661,16 @@ config APP_ACCEL_ALERT_BACKOFF_PRIORITY
 	  Pushover's scale: -2 log only, -1 quiet, 0 normal, 1 high,
 	  2 emergency.  0 keeps the alert visible without a siren.
 
+config APP_LEDS
+	bool "Status LEDs on"
+	default y
+	help
+	  The global switch for the status LEDs: boot bounce, GNSS and send
+	  indicators, the sleep sweep and the accelerometer-wake patterns.
+	  This is the value a unit starts with; the server's le=<0|1> (the
+	  device's LEDs setting in the app) replaces it with the first reply
+	  and on every one after.  Off keeps every LED pin low.
+
 config APP_LED_ACCEL_WAKE
 	bool "Blink the status LEDs on accelerometer wakes"
 	default n

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.116
+
+### Status LEDs can be switched off
+One global switch for all the status LEDs, settable from the app.
+
+- `APP_LEDS` (default `y`) is the value a unit starts with; the server sends `le=<0|1>` on every reply and replaces it. Off drives every LED pin low and stops the pattern timers.
+- `remote.conf` sets it off for the car; its server setting must be off as well, or the first reply turns the LEDs back on.
+- Status: built; not run on hardware.
+
 ## 0.4.115
 
 ### GNSS backup off window

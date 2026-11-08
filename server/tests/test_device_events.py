@@ -414,6 +414,8 @@ def test_command_parts():
     ('gnss_off_hour_from', 0, 'GNSS backup off window starts at 00:00'),
     ('gnss_off_hour_from', 22, 'GNSS backup off window starts at 22:00'),
     ('gnss_off_hour_to', 7, 'GNSS backup off window ends at 07:00'),
+    ('leds', 1, 'LEDs on'),
+    ('leds', 0, 'LEDs off'),
     ('gnss_backup', 1, 'GNSS backup supply set to on'),
     ('gnss_backup', 0, 'GNSS backup supply set to off'),
     ('wake_ms', 5, 'Setting changed: wake_ms=5'),

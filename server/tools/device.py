@@ -115,6 +115,7 @@ def show(args):
         ('GNSS backup off window', '%s, %s:00 to %s:00' % (
             device.get('gnss_off_window', 0), device.get('gnss_off_hour_from', 0),
             device.get('gnss_off_hour_to', 7))),
+        ('device LEDs', 'on' if device.get('leds', 1) else 'off'),
         ('firmware', device.get('fw') or '-'),
         ('board', device.get('board') or '-'),
         ('published firmware', firmware.latest_version(device['imei']) or '-'),

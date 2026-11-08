@@ -318,7 +318,7 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off]
+1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off][,le=<0|1>]
 ```
 
 Every datagram is answered, and the reply is the receipt: it is bound to the
@@ -348,6 +348,11 @@ The API sets it (`gnssbk=<0|1>` in POST /api/1.0/command, not queued).
 hours with the offset in force when the reply is built (local 00-07 in BST is
 `gw=23-6`), the span possibly wrapping midnight; or `gw=off` when it is
 disabled (switch off, or both hours equal).
+
+`le=` is whether the unit's status LEDs may light (`device`.`leds`), sent on
+every reply straight after `gw=`: `le=1` (the default) lets them light, `le=0`
+keeps them all dark. The API sets it (`leds=<0|1>` in POST /api/1.0/command,
+not queued; `le` in /api/1.0/config).
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is

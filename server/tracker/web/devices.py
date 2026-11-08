@@ -403,6 +403,7 @@ def summary(device, database=None, log=None):
         'gnss_off_hour_from': device.get('gnss_off_hour_from') or 0,
         'gnss_off_hour_to': (7 if device.get('gnss_off_hour_to') is None
                              else device['gnss_off_hour_to']),
+        'leds': 0 if device.get('leds') == 0 else 1,
         'uptime': _nullable_float(log.get('uptime')),
         **config_state(device, database),
     }

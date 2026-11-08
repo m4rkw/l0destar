@@ -148,6 +148,7 @@ Each device's settings live in its `device` row. The first four are sent to the 
 | `gnss_off_window` | `0` | `gnss_off_window=0` or `gnss_off_window=1`, or `gw` | Drop the GNSS backup supply during the daily GNSS backup off window. Sent on every reply as `gw=`. |
 | `gnss_off_hour_from` | `0` | `gnss_off_hour_from=<hour>`, or `gwf` | Start of the window, as a whole hour (0-23) in the server's local time. The window may wrap midnight (22 to 6). |
 | `gnss_off_hour_to` | `7` | `gnss_off_hour_to=<hour>`, or `gwt` | End of the window (0-23). The window is disabled when `gnss_off_window` is 0 or the two hours are equal. |
+| `leds` | `1` | `leds=0` or `leds=1`, or `le` | Whether the tracker's status LEDs may light (1) or stay all dark (0). Sent on every reply as `le=`, after `gw=`. |
 
 An `int=` or `movealarm=` command is queued for the tracker, which applies it and reports the new value; `POST /api/1.0/config` changes the column directly and the next reply carries it. Either way the `int` and `movement_alarm` columns follow what the tracker reports. The server-side settings take effect immediately, and so does `backup_interval=`: it is written to the column rather than queued, because every reply carries it and a queued copy would be undone by the next one. The tracker never reports it back. What each setting does on the tracker, and every command, is in [Device settings and commands](device-settings.md#commands).
 

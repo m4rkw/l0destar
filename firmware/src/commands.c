@@ -187,6 +187,17 @@ void cmd_run(char *cmd)
     /* The off window, gw=<from>-<to> in UTC hours or gw=off: the supply is
      * kept off through it even when the unit is driven.  Sent on every reply
      * like gb=, applied silently. */
+    /* The LED switch, le=<0|1>, rides every reply like gb= and gw=.  Matched at
+     * the start of a token so that another key ending in "le" cannot trip it.
+     * Silent: it is a setting, not an event. */
+    tmp = strstr(cmd, "le=");
+    while (tmp && tmp != cmd && tmp[-1] != ',') {
+        tmp = strstr(tmp + 1, "le=");
+    }
+    if (tmp && (tmp[3] == '0' || tmp[3] == '1')) {
+        led_enable(tmp[3] == '1');
+    }
+
     tmp = strstr(cmd, "gw=");
     if (tmp && (tmp == cmd || tmp[-1] == ',')) {
         int from, to;

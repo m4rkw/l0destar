@@ -392,6 +392,7 @@ Set `APP_TRACCAR` to report to a [Traccar](https://www.traccar.org) server with 
 | `APP_MOVEMENT_CONFIRM_MS` | int | `10000` | Length of that confirmation window |
 | `APP_MOVEMENT_CONFIRM_HITS` | int | `6` | Polls above the threshold needed within the window, not necessarily consecutive. It must stay below `APP_MOVEMENT_CONFIRM_MS / 100` or the build fails |
 | `APP_MOVEMENT_INACTIVITY_RESET` | int | `1800` | Seconds without movement after which the movement alert cooldown, which grows from 5 to 15, 30 and 60 minutes, starts again at 5 |
+| `APP_LEDS` | bool | `y` | Starting value of the global LED switch until the first server reply (`le=<0|1>`, the LEDs setting) replaces it. Off keeps every status LED dark |
 | `APP_MOVEMENT_ALARM` | bool | `n` | Starting value of the movement alarm setting (`ma`) until the first server reply replaces it. Firmware 0.4.x reports this setting but does not act on it: movement, impact and tilt alerts are raised either way |
 | `APP_CRASH_THRESHOLD_MG` | int | `4000` | Impact alert threshold while awake, in milli-g, rounded down to 125mg steps. Around 1200 is useful on the bench, where a firm rap on the desk reaches 1.5-3g |
 | `APP_IMPACT_IMMEDIATE_MG` | int | `700` | While parked, a hit peaking at least this far from 1g is reported straight away instead of after the movement confirmation; `0` always waits. The IMU runs at ±2g while asleep, which limits how high this can usefully go |

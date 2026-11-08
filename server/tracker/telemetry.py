@@ -1491,6 +1491,10 @@ def build_response(device, database, log, firmware_version=None):
     # with the offset in force now (BST/GMT) as "<from>-<to>", or "off".
     response += ',gw=%s' % gnss_off_window_token(device)
 
+    # Whether the unit's status LEDs may light, on every reply after gw=:
+    # 1 unless the column says 0 (so a row without it reads as on).
+    response += ',le=%d' % (0 if device.get('leds') == 0 else 1)
+
     # The unit that is answered applies what it is told, so the settings in
     # this reply are what it runs from now: filed as applied, ahead of its
     # own ap= (which describes it before it read this reply, and so reads

@@ -540,6 +540,10 @@ void led_sent(void);
 void led_idle(void);
 void led_sleep_enter(void);
 void led_all_off(void);
+/* The global LED switch: off drives every LED low and keeps them there,
+ * whatever pattern asks.  Starts as CONFIG_APP_LEDS; the server's le= sets it. */
+void led_enable(bool on);
+bool led_enabled(void);
 /* Direct steady-state control: stop every pattern timer and drive LED1-3
  * from the mask.  On single-LED builds the LED1 bit drives led0. */
 #define LED_MASK_1  0x01

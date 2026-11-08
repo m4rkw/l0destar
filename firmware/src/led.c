@@ -38,6 +38,32 @@ static const struct gpio_dt_spec dt_led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct device *s_gpio;
 static bool s_multi;
 
+/* The global LED switch (APP_LEDS, then the server's le=).  Every pin write
+ * goes through these so that nothing lights while it is off, whatever
+ * pattern timer is still running. */
+static bool s_enabled = IS_ENABLED(CONFIG_APP_LEDS);
+
+static void lset(int pin, int v)
+{
+	gpio_pin_set(s_gpio, pin, s_enabled ? v : 0);
+}
+
+static void ltoggle(int pin)
+{
+	if (s_enabled) gpio_pin_toggle(s_gpio, pin);
+}
+#if HAS_DT_LED0
+static void lset_dt(const struct gpio_dt_spec *d, int v)
+{
+	gpio_pin_set_dt(d, s_enabled ? v : 0);
+}
+
+static void ltoggle_dt(const struct gpio_dt_spec *d)
+{
+	if (s_enabled) gpio_pin_toggle_dt(d);
+}
+#endif
+
 /* --- timer callbacks (ISR context) --------------------------------------- */
 
 /* Boot bounce: 1→2→3→2→1→… */
@@ -46,9 +72,9 @@ static void boot_anim_fn(struct k_timer *t)
 {
 	static const int seq[] = {0, 1, 2, 1};
 	int active = seq[s_bounce_step & 3];
-	gpio_pin_set(s_gpio, PIN_LED1, active == 0);
-	if (PIN_LED2 >= 0) gpio_pin_set(s_gpio, PIN_LED2, active == 1);
-	if (PIN_LED3 >= 0) gpio_pin_set(s_gpio, PIN_LED3, active == 2);
+	lset( PIN_LED1, active == 0);
+	if (PIN_LED2 >= 0) lset( PIN_LED2, active == 1);
+	if (PIN_LED3 >= 0) lset( PIN_LED3, active == 2);
 	s_bounce_step++;
 }
 K_TIMER_DEFINE(s_boot_timer, boot_anim_fn, NULL);
@@ -56,14 +82,14 @@ K_TIMER_DEFINE(s_boot_timer, boot_anim_fn, NULL);
 /* LED2 flash (GPS searching) */
 static void led2_flash_fn(struct k_timer *t)
 {
-	gpio_pin_toggle(s_gpio, PIN_LED2);
+	ltoggle( PIN_LED2);
 }
 K_TIMER_DEFINE(s_led2_timer, led2_flash_fn, NULL);
 
 /* LED3 flash (sending) */
 static void led3_flash_fn(struct k_timer *t)
 {
-	gpio_pin_toggle(s_gpio, PIN_LED3);
+	ltoggle( PIN_LED3);
 }
 K_TIMER_DEFINE(s_led3_timer, led3_flash_fn, NULL);
 
@@ -71,9 +97,9 @@ K_TIMER_DEFINE(s_led3_timer, led3_flash_fn, NULL);
 static int s_anim_step;
 static void sleep_anim_fn(struct k_timer *t)
 {
-	if (PIN_LED1 >= 0) gpio_pin_set(s_gpio, PIN_LED1, s_anim_step == 2);
-	if (PIN_LED2 >= 0) gpio_pin_set(s_gpio, PIN_LED2, s_anim_step == 1);
-	if (PIN_LED3 >= 0) gpio_pin_set(s_gpio, PIN_LED3, s_anim_step == 0);
+	if (PIN_LED1 >= 0) lset( PIN_LED1, s_anim_step == 2);
+	if (PIN_LED2 >= 0) lset( PIN_LED2, s_anim_step == 1);
+	if (PIN_LED3 >= 0) lset( PIN_LED3, s_anim_step == 0);
 	s_anim_step = (s_anim_step + 1) % 3;
 }
 K_TIMER_DEFINE(s_sleep_timer, sleep_anim_fn, NULL);
@@ -101,9 +127,9 @@ struct led_step {
 
 static void set_leds_mask(uint8_t m)
 {
-	gpio_pin_set(s_gpio, PIN_LED1, (m & LED_M1) != 0);
-	if (PIN_LED2 >= 0) gpio_pin_set(s_gpio, PIN_LED2, (m & LED_M2) != 0);
-	if (PIN_LED3 >= 0) gpio_pin_set(s_gpio, PIN_LED3, (m & LED_M3) != 0);
+	lset( PIN_LED1, (m & LED_M1) != 0);
+	if (PIN_LED2 >= 0) lset( PIN_LED2, (m & LED_M2) != 0);
+	if (PIN_LED3 >= 0) lset( PIN_LED3, (m & LED_M3) != 0);
 }
 
 /* Movement / tow-tilt: 1→2→3, hold on 3, 3→2→1, dark gap — twice. */
@@ -211,30 +237,30 @@ SYS_INIT(led_init_once, APPLICATION, 50);
 void led_on(void)
 {
 	if (s_multi)
-		gpio_pin_set(s_gpio, PIN_LED1, 1);
+		lset( PIN_LED1, 1);
 #if HAS_DT_LED0
 	else
-		gpio_pin_set_dt(&dt_led, 1);
+		lset_dt(&dt_led, 1);
 #endif
 }
 
 void led_off(void)
 {
 	if (s_multi)
-		gpio_pin_set(s_gpio, PIN_LED1, 0);
+		lset( PIN_LED1, 0);
 #if HAS_DT_LED0
 	else
-		gpio_pin_set_dt(&dt_led, 0);
+		lset_dt(&dt_led, 0);
 #endif
 }
 
 void led_toggle(void)
 {
 	if (s_multi)
-		gpio_pin_toggle(s_gpio, PIN_LED1);
+		ltoggle( PIN_LED1);
 #if HAS_DT_LED0
 	else
-		gpio_pin_toggle_dt(&dt_led);
+		ltoggle_dt(&dt_led);
 #endif
 }
 
@@ -244,6 +270,7 @@ void led_boot_animation(void)
 {
 	if (!s_multi) { led_on(); return; }
 	stop_all_timers();
+	if (!s_enabled) return;
 	s_bounce_step = 0;
 	k_timer_start(&s_boot_timer, K_NO_WAIT, K_MSEC(150));
 }
@@ -252,31 +279,31 @@ void led_gps_searching(void)
 {
 	if (!s_multi || PIN_LED2 < 0) return;
 	k_timer_stop(&s_boot_timer);
-	gpio_pin_set(s_gpio, PIN_LED1, 1);
-	if (PIN_LED3 >= 0) gpio_pin_set(s_gpio, PIN_LED3, 0);
-	gpio_pin_set(s_gpio, PIN_LED2, 0);
-	k_timer_start(&s_led2_timer, K_MSEC(250), K_MSEC(250));
+	lset( PIN_LED1, 1);
+	if (PIN_LED3 >= 0) lset( PIN_LED3, 0);
+	lset( PIN_LED2, 0);
+	if (s_enabled) k_timer_start(&s_led2_timer, K_MSEC(250), K_MSEC(250));
 }
 
 void led_gps_fixed(void)
 {
 	if (!s_multi || PIN_LED2 < 0) return;
 	k_timer_stop(&s_led2_timer);
-	gpio_pin_set(s_gpio, PIN_LED2, 1);
+	lset( PIN_LED2, 1);
 }
 
 void led_sending(void)
 {
 	if (!s_multi || PIN_LED3 < 0) return;
-	gpio_pin_set(s_gpio, PIN_LED3, 0);
-	k_timer_start(&s_led3_timer, K_MSEC(250), K_MSEC(250));
+	lset( PIN_LED3, 0);
+	if (s_enabled) k_timer_start(&s_led3_timer, K_MSEC(250), K_MSEC(250));
 }
 
 void led_sent(void)
 {
 	if (!s_multi || PIN_LED3 < 0) return;
 	k_timer_stop(&s_led3_timer);
-	gpio_pin_set(s_gpio, PIN_LED3, 1);
+	lset( PIN_LED3, 1);
 }
 
 void led_idle(void)
@@ -284,8 +311,8 @@ void led_idle(void)
 	if (!s_multi) return;
 	k_timer_stop(&s_led2_timer);
 	k_timer_stop(&s_led3_timer);
-	if (PIN_LED2 >= 0) gpio_pin_set(s_gpio, PIN_LED2, 0);
-	if (PIN_LED3 >= 0) gpio_pin_set(s_gpio, PIN_LED3, 0);
+	if (PIN_LED2 >= 0) lset( PIN_LED2, 0);
+	if (PIN_LED3 >= 0) lset( PIN_LED3, 0);
 }
 
 void led_sleep_enter(void)
@@ -293,7 +320,7 @@ void led_sleep_enter(void)
 	if (!s_multi) { led_off(); return; }
 	stop_all_timers();
 	s_anim_step = 0;
-	k_timer_start(&s_sleep_timer, K_MSEC(150), K_MSEC(150));
+	if (s_enabled) k_timer_start(&s_sleep_timer, K_MSEC(150), K_MSEC(150));
 }
 
 void led_mask(uint8_t mask)
@@ -304,7 +331,7 @@ void led_mask(uint8_t mask)
 	}
 #if HAS_DT_LED0
 	else {
-		gpio_pin_set_dt(&dt_led, (mask & LED_M1) != 0);
+		lset_dt(&dt_led, (mask & LED_M1) != 0);
 	}
 #endif
 }
@@ -313,15 +340,29 @@ void led_all_off(void)
 {
 	stop_all_timers();
 	if (s_multi) {
-		gpio_pin_set(s_gpio, PIN_LED1, 0);
-		if (PIN_LED2 >= 0) gpio_pin_set(s_gpio, PIN_LED2, 0);
-		if (PIN_LED3 >= 0) gpio_pin_set(s_gpio, PIN_LED3, 0);
+		lset( PIN_LED1, 0);
+		if (PIN_LED2 >= 0) lset( PIN_LED2, 0);
+		if (PIN_LED3 >= 0) lset( PIN_LED3, 0);
 	}
 #if HAS_DT_LED0
 	else {
-		gpio_pin_set_dt(&dt_led, 0);
+		lset_dt(&dt_led, 0);
 	}
 #endif
+}
+
+void led_enable(bool on)
+{
+	if (on == s_enabled) return;
+	if (!on) {
+		led_all_off();	/* while still enabled, so the pins are driven low */
+	}
+	s_enabled = on;
+}
+
+bool led_enabled(void)
+{
+	return s_enabled;
 }
 
 /* --- accelerometer wake indication --------------------------------------- */
@@ -334,14 +375,14 @@ void led_all_off(void)
 
 void led_accel_movement(void)
 {
-	if (!LED_ACCEL_WAKE || !s_multi) return;
+	if (!LED_ACCEL_WAKE || !s_multi || !s_enabled) return;
 	stop_all_timers();
 	accel_anim_start(s_move_seq, ARRAY_SIZE(s_move_seq), ACCEL_MOVE_REPS);
 }
 
 void led_accel_impact(void)
 {
-	if (!LED_ACCEL_WAKE || !s_multi) return;
+	if (!LED_ACCEL_WAKE || !s_multi || !s_enabled) return;
 	stop_all_timers();
 	accel_anim_start(s_impact_seq, ARRAY_SIZE(s_impact_seq),
 			 ACCEL_IMPACT_REPS);

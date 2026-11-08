@@ -1152,3 +1152,42 @@ def test_track_mode_ending_with_the_ignition_is_an_event(device, database):
 def test_the_event_endpoint_refuses_what_it_cannot_use(client, device, logged_in):
     assert client.get('/api/1.0/devices/events?device_id=%d&limit=0' % device['id']).status_code == 400
     assert client.get('/api/1.0/devices/events?device_id=999999').get_json()['message'] == 'device not found'
+
+
+def test_leds_api_round_trip(client, device, database, bearer):
+    base = '/api/1.0/config?imei=%s' % device['imei']
+    assert client.get(base, headers=bearer).get_json()['le'] == 1
+
+    posted = client.post('/api/1.0/config', headers=bearer,
+                         json={'imei': device['imei'], 'le': 0})
+    assert posted.get_json()['status'] == 'ok'
+    assert db.lookup_device(imei=device['imei'])['leds'] == 0
+    assert client.get(base, headers=bearer).get_json()['le'] == 0
+    events = [r['text'] for r in database.all('SELECT `text` FROM `device_event`')]
+    assert 'LEDs off' in events
+
+    row = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
+    assert telemetry.build_response(row, db.web, logs.udp).endswith(',gw=off,le=0')
+
+    listed = client.get('/api/1.0/devices', headers=bearer)
+    if listed.status_code == 200:
+        mine = [d for d in listed.get_json()['devices'] if d['imei'] == device['imei']]
+        assert mine[0]['leds'] == 0
+
+
+def test_leds_command_sets_column_and_is_not_queued(client, device, database, bearer):
+    response = client.post('/api/1.0/command', headers=bearer, json={
+        'imei': device['imei'], 'command': 'leds=0,locate'})
+    assert response.get_json()['status'] == 'ok'
+    assert db.lookup_device(imei=device['imei'])['leds'] == 0
+    assert [r['command'] for r in database.all('SELECT `command` FROM `command`')] == ['locate']
+
+
+def test_leds_range_errors(client, device, bearer):
+    response = client.post('/api/1.0/config', headers=bearer,
+                           json={'imei': device['imei'], 'le': 2})
+    assert response.status_code == 400
+    assert response.get_json()['message'] == 'le must be a whole number from 0 to 1'
+    response = client.post('/api/1.0/command', headers=bearer, json={
+        'imei': device['imei'], 'command': 'leds=2'})
+    assert response.status_code == 400

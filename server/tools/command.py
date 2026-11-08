@@ -35,6 +35,7 @@ Settings the server acts on, applied immediately and never sent to the device:
     gnss_off_window=0|1    GNSS backup off window on/off
     gnss_off_hour_from=0-23
     gnss_off_hour_to=0-23
+    leds=0|1               device status LEDs on/off
 
 Also applied immediately rather than queued, because every response carries it
 to the device (as track mode does) and a queued copy would be undone by the
