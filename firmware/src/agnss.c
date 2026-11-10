@@ -196,12 +196,6 @@ int agnss_fetch(void *agnss_request)
 {
 	struct nrf_modem_gnss_agnss_data_frame *request = agnss_request;
 
-	/* LTE is off for the hold breaker: nothing would get through, and the
-	 * wait for the clock below would only hold the receiver's thread. */
-	if (modem_lte_is_cut()) {
-		return -ENETDOWN;
-	}
-
 	/* JWT needs a valid modem clock for the expiry field.  The date_time
 	 * library auto-triggers on LTE connect: tries NITZ first, falls back
 	 * to NTP, and pushes the result to the modem via AT+CCLK. */

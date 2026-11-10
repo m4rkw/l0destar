@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.118
+
+### Settings changeable from the app
+Fifteen build-time settings can now be overridden per unit from the app; the Kconfig value is the start value.
+
+- Sent on every reply as `tu=<code>:<value>;...` (`tu=-` for none) and held in RAM: the unit's overrides always equal the pairs listed, so a key left out goes back to its built value, and a value out of range or an unknown code is ignored.
+- `xtt` tow tilt 0..30 deg, `xpi` parked impact 300..2500 mg, `xii` immediate impact 0..1200 mg, `xap` accel alert priority -2..2, `xab` alert backoff 0..86400 s.
+- `xoa` OBD alert rules (up to 120 chars, taken up at the next key-off), `xis` ignition-on sleep 10..600 s, `xbw` battery warning 11000..12500 mV, `xbp` power-off 10500..12200 mV (kept at least 100 mV under the warning level).
+- `xds` drive stream off (cannot switch on a build without it), `xdi` stream interval 0..900 s, 0 = as fast as possible (read when a stream starts; from 30 s the link is released between sends and PSM is allowed; replaces `xdh`/`APP_DRIVE_STREAM_HZ`), `xtp` track period 200..5000 ms, `xdd` backlog drain 1..600 s, `xns` network search 60..86400 s, `xrp` reply poll 5..600 s, `xlw` LED on accel wake.
+- NULL on the server = the built value. One log line per change ("tu: xtt 6 -> 8"). Reply buffers grew to 512 bytes so the token is not cut.
+- The unit also reports its built values once per boot as `tb=` (with `fw=`/`bd=`, same grammar, `xoa` commas as `|`) so the app shows the real value instead of "default".
+- Status: host tests pass; built; not run on hardware.
+
+### Hold breaker removed
+The hold breaker (`AT+CFUN=20/21` cycling to break an LTE RRC hold) is gone; it was never any use.
+
+- `APP_HOLD_BREAK` and its `_PROBE_S`, `_WINDOW_S`, `_REG_S`, `_MIN_KMH` and `_STICKY` options are removed, with `holdbreak.c`, `crumb.c` (the breaker's reset note) and their host tests. A `remote.conf` that still sets them fails the build.
+- The car was built without it, so the image does the same as before.
+
 ## 0.4.116
 
 ### Status LEDs can be switched off

@@ -880,139 +880,6 @@ config APP_NBIOT_OFFLINE_CAP_S
 	  next AT command blocks until the watchdog resets the unit, which
 	  comes back on LTE-M only.
 
-config APP_HOLD_BREAK
-	bool "Take LTE away from a network that will not release the radio (AT+CFUN=20/21)"
-	depends on !APP_TRACCAR && APP_DATABUF_SLOTS > 0
-	default n
-	help
-	  GNSS gets nothing while an RRC connection is up, and some cells keep
-	  it up long after a send: on the drive to Cornwall on 2026-10-24 the
-	  EE cells around Launceston held it for 5 to 347 s a time, which was
-	  71 % of all the blind time on the trip and 86 % of it on those cells.
-	  Release assistance does not move them, and GNSS priority mode cannot
-	  either: Nordic's header says it will not stop LTE connections.
-
-	  With this on, a vehicle on the move whose RRC connection is still up
-	  APP_HOLD_BREAK_PROBE_S after it began gets LTE switched off
-	  (AT+CFUN=20, which leaves the receiver running).  Records are built
-	  as usual and parked in the backlog.  After APP_HOLD_BREAK_WINDOW_S,
-	  or at once for anything that cannot wait (an alert, an ignition
-	  change, a stop, a filling backlog), LTE comes back (CFUN=21),
-	  registers, sends the batch and the backlog in a burst, and the next
-	  hold is cut straight after that send rather than waited for.  On the
-	  bench a whole cycle left the receiver blind for 3.3-6.5 s, against
-	  14-20 s per send when the network releases the connection itself.
-	  Where it releases within the probe nothing is ever cut.
-
-	  The price is a registration per cycle (2.8-5 s on the bench, 33 s
-	  once across an operator change) and a track that reaches the server
-	  in bursts every 20-odd seconds rather than every three.  If LTE does
-	  not register again within APP_HOLD_BREAK_REG_S the radio is left to
-	  the ordinary outage handling and the feature is off until the modem
-	  has registered again by itself, and for five minutes after that
-	  (parking clears it).  What the modem says about the search is logged
-	  meanwhile (function mode, registration status and cause, RRC state,
-	  signal), so the next one can be told from a cell that is not there.
-	  Never in track mode, and not while the vehicle is stopped or the
-	  engine is off.
-
-	  A watchdog reset, a CPU lockup or a crash with this built in also
-	  says where the breaker was: rst= on the next boot carries
-	  hb:<phase><s since the cut>/<s since the phase began>, e.g.
-	  wdt+hb:Q98/0, from a note kept in RAM that outlives the reset
-	  (crumb.c; holdbreak.h has the phases).  The car's reset on
-	  2026-10-26, 130 s after a cut, left no log and no stall address.
-
-	  Do not turn this on without a cap.  Its first real test was the car's
-	  drives from 2026-10-25, and it failed them: four times the modem did
-	  not register again after a restore and searched for 5, 43, 54 and 66
-	  minutes at most (the 5 minute one ended on a new tracking area, the
-	  rest at the next key-on), hearing a cell and reaching nothing.  The
-	  bench reproduced it on 2026-10-27 with no vehicle and no cell
-	  changes, on O2, doing nothing but the breaker's own cut and restore
-	  every 25 s: 29 clean cycles in 12.5 minutes, then the 30th did not
-	  register and nothing reached the network for 47 min 29 s; after a
-	  hold-off, 29 clean cycles again and 46 min 51 s.  1NCE logged a
-	  Create PDP, an Update location and a Delete PDP for every cycle and
-	  nothing during the search, and 29 attaches in the hour before each
-	  of the car's four.  Every cut is a detach and every restore a new
-	  attach, and the 30th in an hour is refused until an hour after that
-	  hour's first cut: both bench refusals ended 3601 and 3603 s after
-	  it, so the 47 minutes was 60 less the 12.5 the cycles had taken, on
-	  EE and O2 alike.  That is the shape of the modem's own Radio Policy
-	  Manager, the GSMA TS.34 limit that Nordic's DevZone answers (old
-	  nRF9160 threads) put at 30 attaches an hour.  The modem reports it as
-	  +CGEV: RESTR 1,2 with the seconds left; this firmware has never
-	  enabled +CGEREP, so it is unconfirmed, and no way to disable it is
-	  documented.  Modem firmware 2.0.4, the newest Nordic publishes and
-	  what the bench runs, has it.  A restart of the radio does not end
-	  it; time does.  A cap would have to count every cut from the hour's
-	  first and stay well under 30.  The car's remote.conf has it off from
-	  0.4.86.
-
-config APP_HOLD_BREAK_PROBE_S
-	int "Seconds an RRC connection has lasted before it is cut as a hold"
-	depends on APP_HOLD_BREAK
-	default 5
-	range 3 60
-	help
-	  Measured from the later of the connection's start and our last
-	  datagram, so the attach and the burst after a restore do not count
-	  against the cell.  Where the network lets go by itself it does so in
-	  2.8 s (O2, bench) and this should stay clear of that, or every send is
-	  cut.  Where it is 10-25 s (the TAC 12296 cells, which ignore release
-	  assistance) a shorter probe saves more.  With no ECU speed the
-	  vehicle only counts as moving while the receiver's last fix is under
-	  10 s old, so keep it below that.
-
-config APP_HOLD_BREAK_WINDOW_S
-	int "Longest LTE stays off at a time (s)"
-	depends on APP_HOLD_BREAK
-	default 20
-	range 5 60
-	help
-	  Records parked meanwhile come one a second, and the backlog holds
-	  APP_DATABUF_SLOTS of them before it starts thinning, so this plus
-	  the few seconds to the next batch must stay well below that.  The
-	  window ends sooner for the reasons under APP_HOLD_BREAK.  The longer
-	  it is, the smaller the share of the drive spent blind on the way back
-	  in, and the later the server sees the track.
-
-config APP_HOLD_BREAK_REG_S
-	int "Seconds LTE gets to register again before the cut is given up"
-	depends on APP_HOLD_BREAK
-	default 15
-	range 5 60
-	help
-	  The main loop waits this long, feeding the watchdog and polling the
-	  ECU.  Past it the radio is left searching, as in any outage, and the
-	  feature stays off until the modem has registered again, and for five
-	  minutes after that.
-
-config APP_HOLD_BREAK_MIN_KMH
-	int "Speed above which a hold is cut (km/h)"
-	depends on APP_HOLD_BREAK
-	default 10
-	range 2 200
-	help
-	  The ECU's speed where it answers, else the receiver's.  A vehicle
-	  that is stopped loses nothing by waiting: the position does not
-	  change.  A cut that is open ends below half this speed.
-
-config APP_HOLD_BREAK_STICKY
-	int "Sends cut straight after the send once a hold has been seen"
-	depends on APP_HOLD_BREAK
-	default 4
-	range 0 20
-	help
-	  A hold found by the probe is likely to be followed by another on the
-	  next send, and waiting out the probe each time is APP_HOLD_BREAK_PROBE_S
-	  more blind seconds per cycle.  So for this many sends after one, LTE
-	  is taken away as soon as the send and its replies are done.  The send
-	  after that waits for the network again, which is how the unit finds
-	  its way back to ordinary operation when the cells change.  0 probes
-	  every time.
-
 config APP_SIGNAL_SAMPLE_S
 	int "Seconds between serving-cell signal readings (0 = only at wakes)"
 	default 60
@@ -1751,7 +1618,7 @@ config APP_DRIVE_STREAM
 	  its fix and the drive is batched (APP_BATCH_SIZE) to send as seldom as
 	  it can.  The external receiver has an antenna of its own, so while the
 	  engine runs this sends each record as it is built, as fast as it can
-	  (APP_DRIVE_STREAM_HZ is the most a second), over a connection it holds
+	  (or one every APP_DRIVE_STREAM_INTERVAL_S seconds), over a connection it holds
 	  up (the modem is told more is coming, so the radio does not release
 	  between records) rather than one released after each.  That also keeps
 	  the modem out of power saving mode: PSM is negotiated at attach and
@@ -1772,11 +1639,11 @@ config APP_DRIVE_STREAM
 	  at a record a second.  Records go back to being batched when the engine
 	  stops.
 
-config APP_DRIVE_STREAM_HZ
-	int "Most telemetry records a second while the engine runs (0 = no limit)"
+config APP_DRIVE_STREAM_INTERVAL_S
+	int "Seconds between telemetry records while the engine runs (0 = as fast as possible)"
 	depends on APP_DRIVE_STREAM
 	default 0
-	range 0 10
+	range 0 900
 	help
 	  A limit, not a target.  With 0 the stream goes as fast as it can: the
 	  receiver is asked for 10 fixes a second, so one is always waiting, and
@@ -1785,14 +1652,15 @@ config APP_DRIVE_STREAM_HZ
 	  140 to 270 ms to build and 15 to 25 ms to send gave 3.4 to 3.6 records
 	  a second without the K wire, and polling it takes a share of that.
 
-	  With a limit the receiver is asked for fixes at that rate (above 1 Hz)
-	  and a record is built for each, so the rate cannot exceed it; the K-wire
-	  poll gives way to a fix that is waiting, so the limit is held while a
-	  pass allows it.  Falling short of a limit is not reported.  Above 1 Hz
-	  the modem's temperature and supply readings, each an AT command, are
-	  refreshed once a second and not for every record.  The log says
-	  nothing while the stream works, and every thirty seconds how many
-	  records had to be built from the last position.
+	  With N of 1 or more at most one record is sent every N seconds: the
+	  receiver stays at 1 Hz, the stream waits out the rest of the interval
+	  after each send and then sends the latest fix.  Falling short of it is
+	  not reported.  Below 30 the connection is held as above (no batching,
+	  no PSM).  From 30 up it is not: the modem is not kept out of power
+	  saving mode and the link is released between sends, as in normal
+	  driving, since holding it for so few records would only spend data and
+	  power.  The log says nothing while the stream works, and every thirty
+	  seconds how many records had to be built from the last position.
 
 	  Data is about 300 bytes a record and a reply: 1.4 MB an hour of
 	  driving for each record a second.

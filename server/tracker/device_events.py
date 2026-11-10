@@ -243,6 +243,43 @@ def command_parts(command):
     return [p.strip() for p in (command or '').split(',') if p.strip()]
 
 
+# The runtime tunables (device columns the firmware takes as overrides): the
+# line for each, with %s for the value.  A NULL value reads "back to the built
+# value": the unit goes back to what it was compiled with.
+TUNABLE_TEXT = {
+    'tow_tilt_deg': ('Tow tilt alarm', 'set to %s deg'),
+    'parked_impact_mg': ('Parked impact threshold', 'set to %s mg'),
+    'impact_immediate_mg': ('Immediate impact report threshold', 'set to %s mg'),
+    'accel_alert_priority': ('Motion alert priority', 'set to %s'),
+    'accel_alert_backoff_s': ('Motion alert backoff', 'set to %s s'),
+    'obd_alerts': ('OBD alert rules', 'set to %s'),
+    'ignition_on_sleep_s': ('Ignition-on sleep interval', 'set to %s s'),
+    'battery_warning_mv': ('Battery warning', 'set to %s mV'),
+    'battery_poweroff_mv': ('Battery power-off', 'set to %s mV'),
+    'drive_stream': ('Drive stream', None),
+    'drive_stream_interval_s': ('Drive stream limit', None),
+    'track_period_ms': ('Track period', 'set to %s ms'),
+    'databuf_drain_s': ('Data buffer drain', 'set to %s s'),
+    'network_search_s': ('Network search timeout', 'set to %s s'),
+    'resp_poll_s': ('Response poll', 'set to %s s'),
+    'led_accel_wake': ('Wake-on-motion LED', None),
+}
+
+
+def tunable_text(column, value):
+    """The line for a runtime tunable set to ``value``, None (a NULL column)
+    meaning the unit is back on the value it was built with."""
+    label, how = TUNABLE_TEXT[column]
+    if value is None or value == '':
+        return '%s back to the built value' % label
+    if column == 'drive_stream_interval_s':
+        return ('Drive stream limited to one record every %d s' % value if value
+                else 'Drive stream not limited')
+    if how is None:
+        return '%s %s' % (label, 'on' if value else 'off')
+    return '%s %s' % (label, how % value)
+
+
 def setting_text(column, value):
     """The line for a setting changed, from the device column and its new
     value (an int)."""
@@ -274,6 +311,8 @@ def setting_text(column, value):
         return 'LEDs ' + on
     if column == 'gnss_backup':
         return 'GNSS backup supply set to ' + on
+    if column in TUNABLE_TEXT:
+        return tunable_text(column, value)
     return 'Setting changed: %s=%s' % (column, value)
 
 

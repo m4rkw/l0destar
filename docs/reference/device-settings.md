@@ -44,6 +44,7 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 | Movement alarm | `<ma>` | `device.movement_alarm` | `1` | Stored, synced and reported, but not acted on by firmware 0.4.x |
 | Track mode | `track=` | `device.track_mode` | `0` | GNSS off, engine and IMU data streamed quickly |
 | Device LEDs | `le=` | `device.leds` | `1` | `1` lets the status LEDs light, `0` keeps them all dark. Sent on every reply straight after `gw=`; set with `leds=<0\|1>` or `le` in `POST /api/1.0/config` |
+| Runtime tunables | `tu=` | 16 nullable `device` columns, [below](#runtime-tunables) | NULL | Optional overrides of values the firmware is built with. NULL means no override: the unit keeps the value it was built with. Sent on every reply straight after `le=` as `tu=<code>:<value>[;...]` (`tu=-` when none is set) |
 | Update advert | `fota=` | per-device manifest | - | See [OTA updates](../board-setup/ota-updates.md) |
 
 - A timed report while parked sends the last known position. GNSS is only started for it when movement has been detected since the previous one, or when the tracker has had no fix since it started. Ignition, movement, impact and tilt wake the tracker whatever the interval is.
@@ -145,8 +146,24 @@ Values must be whole numbers. The alerts themselves are described in [Configure 
 | `gwf` | `gnss_off_hour_from` |
 | `gwt` | `gnss_off_hour_to` |
 | `le` | `leds` |
+| `xtt` | `tow_tilt_deg` |
+| `xpi` | `parked_impact_mg` |
+| `xii` | `impact_immediate_mg` |
+| `xap` | `accel_alert_priority` |
+| `xab` | `accel_alert_backoff_s` |
+| `xoa` | `obd_alerts` |
+| `xis` | `ignition_on_sleep_s` |
+| `xbw` | `battery_warning_mv` |
+| `xbp` | `battery_poweroff_mv` |
+| `xds` | `drive_stream` |
+| `xdi` | `drive_stream_interval_s` |
+| `xtp` | `track_period_ms` |
+| `xdd` | `databuf_drain_s` |
+| `xns` | `network_search_s` |
+| `xrp` | `resp_poll_s` |
+| `xlw` | `led_accel_wake` |
 
-A `POST` must name the device, and every value must be an integer:
+A `POST` must name the device, and every value must be an integer (the runtime tunables below can also be `null`, and `xoa` is text):
 
 ```sh
 curl -X POST https://tracker.example.com/api/1.0/config \
@@ -156,6 +173,38 @@ curl -X POST https://tracker.example.com/api/1.0/config \
 ```
 
 Unlike the `int=` command, writing `int` here changes the server's value directly. The tracker adopts it from its next reply without sending an alert, and values from 1 to 9 are not raised to 10.
+
+## Runtime tunables
+
+These are values the firmware is normally built with (Kconfig options). Each can be overridden per device from the server. The unit holds the overrides in RAM only, and the server sends the full set on every reply, so a rebooted unit gets them back with its first reply.
+
+**NULL means no override: the unit keeps the value it was built with.** Every column starts NULL, so a device you have not touched behaves exactly as before, and the values in `remote.conf` stay meaningful. Setting a column to NULL again takes the override off and the unit goes back to its built value.
+
+| Column | `/config` code | Range | Overrides | Notes |
+|---|---|---|---|---|
+| `tow_tilt_deg` | `xtt` | 0-30 deg | `APP_TOW_TILT_DEG` | - |
+| `parked_impact_mg` | `xpi` | 300-2500 mg | `APP_PARKED_IMPACT_MG` | - |
+| `impact_immediate_mg` | `xii` | 0-1200 mg | `APP_IMPACT_IMMEDIATE_MG` | 0 = never |
+| `accel_alert_priority` | `xap` | -2 to 2 | `APP_ACCEL_ALERT_PRIORITY` | - |
+| `accel_alert_backoff_s` | `xab` | 0-86400 s | `APP_ACCEL_ALERT_BACKOFF_S` | - |
+| `obd_alerts` | `xoa` | rule list, up to 120 characters | `APP_OBD_ALERTS` | see below |
+| `ignition_on_sleep_s` | `xis` | 10-600 s | `APP_IGNITION_ON_SLEEP_INTERVAL` | - |
+| `battery_warning_mv` | `xbw` | 11000-12500 mV | `APP_BATTERY_WARNING_MV` | - |
+| `battery_poweroff_mv` | `xbp` | 10500-12200 mV | `APP_BATTERY_POWEROFF_MV` | must be below `battery_warning_mv` when both are set |
+| `drive_stream` | `xds` | 0 or 1 | `APP_DRIVE_STREAM` | - |
+| `drive_stream_interval_s` | `xdi` | 0-900 s | `APP_DRIVE_STREAM_INTERVAL_S` | 0 = as fast as possible, otherwise at most one record every N s |
+| `track_period_ms` | `xtp` | 200-5000 ms | `APP_TRACK_PERIOD_MS` | - |
+| `databuf_drain_s` | `xdd` | 1-600 s | `APP_DATABUF_DRAIN_S` | - |
+| `network_search_s` | `xns` | 60-86400 s | `APP_NETWORK_SEARCH_TIMEOUT` | - |
+| `resp_poll_s` | `xrp` | 5-600 s | `APP_RESP_POLL_S` | - |
+| `led_accel_wake` | `xlw` | 0 or 1 | `APP_LED_ACCEL_WAKE` | - |
+
+- `GET /api/1.0/config` shows each as its value or `null` (the override only); `GET /api/1.0/devices` lists them under their column names. Both also carry two objects keyed by code: `tunables_built` (the values the unit reported it was built with, `null` for any it has not reported) and `tunables` (the value in use: the override if set, else the built value, else `null`). Use `tunables` to show what a unit really runs; `xoa` is a string with real commas, `""` for no rules.
+- The unit reports its built values itself, as `tb=` in the record that carries `fw=` and `bd=` (once per boot, the built `CONFIG_APP_*` values, not the current overrides). The server keeps the text in `device`.`tunables_built` (VARCHAR(400), NULL until reported) only when it parses; unknown codes and bad values are ignored. Built values are not held to the override ranges.
+- `POST /api/1.0/config` takes them by code. A whole number outside the range, a non-integer, or text where a number is expected is refused with HTTP 400, as is a `battery_poweroff_mv` that is not below `battery_warning_mv` once the change is applied (the stored value of the other one counts when only one is posted). `null` clears one back to NULL; for `xoa`, `""` clears it too.
+- The `command` endpoint and `tools/command.py` take them by column name, for example `tow_tilt_deg=8`. They are applied straight away and never queued. `<name>=default` (or `<name>=` with nothing after it) clears one to NULL. For `obd_alerts` write `|` for the comma between rules, since a comma separates commands: `obd_alerts=coolant>=95|rpm>6500`.
+- `obd_alerts` is the rule list of `CONFIG_APP_OBD_ALERTS`: comma-separated rules `<field><op><value>[/<hysteresis>]`, such as `coolant>=95,rpm>6500,stft<-12.5/2`. The operators are `>` `>=` `<` `<=` `=`. It is at most 120 characters of printable ASCII with no `;` or `|`, and every rule must match that shape (the field names are the unit's business). An empty list is not a list: it means no override.
+- The unit also clamps what it is sent to the same ranges, and keeps the power-off level at least 100 mV below the warning level.
 
 ## Examples
 

@@ -250,6 +250,11 @@ def parse_csv_line(line):
         if extra.startswith('rst='):
             data['rst'] = extra[4:]
             continue
+        if extra.startswith('tb='):
+            # The built tunable values, code:value pairs joined by ';' like
+            # tu=, so taken whole rather than split like the others.
+            data['tunables_built'] = extra[3:]
+            continue
 
         for pair in extra.split(';'):
             if '=' not in pair:
@@ -465,6 +470,130 @@ def gnss_off_window_token(device, now=None):
     offset = now.utcoffset()
     shift = int(offset.total_seconds() // 3600) if offset else 0
     return '%d-%d' % ((hour_from - shift) % 24, (hour_to - shift) % 24)
+
+
+# The runtime tunables: (token code, device column, low, high).  A NULL column
+# is "no override" (the unit keeps the value it was built with).  The order is
+# the order of the tu= token.  obd_alerts is text, so has no range.
+TUNABLES = [
+    ('xtt', 'tow_tilt_deg', 0, 30),
+    ('xpi', 'parked_impact_mg', 300, 2500),
+    ('xii', 'impact_immediate_mg', 0, 1200),
+    ('xap', 'accel_alert_priority', -2, 2),
+    ('xab', 'accel_alert_backoff_s', 0, 86400),
+    ('xoa', 'obd_alerts', None, None),
+    ('xis', 'ignition_on_sleep_s', 10, 600),
+    ('xbw', 'battery_warning_mv', 11000, 12500),
+    ('xbp', 'battery_poweroff_mv', 10500, 12200),
+    ('xds', 'drive_stream', 0, 1),
+    ('xdi', 'drive_stream_interval_s', 0, 900),
+    ('xtp', 'track_period_ms', 200, 5000),
+    ('xdd', 'databuf_drain_s', 1, 600),
+    ('xns', 'network_search_s', 60, 86400),
+    ('xrp', 'resp_poll_s', 5, 600),
+    ('xlw', 'led_accel_wake', 0, 1),
+]
+TUNABLE_COLUMNS = [column for _, column, _, _ in TUNABLES]
+TUNABLE_RANGES = {column: (low, high) for _, column, low, high in TUNABLES
+                  if column != 'obd_alerts'}
+OBD_ALERTS_MAX = 120
+
+# One APP_OBD_ALERTS rule: <field><op><value>[/<hysteresis>], the operators
+# > >= < <= =, the field a name (or record key), the numbers decimal.
+_OBD_RULE = re.compile(
+    r'[a-z][a-z0-9_]*(?:>=|<=|>|<|=)-?\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)?')
+
+
+def valid_obd_alerts(text):
+    """True if ``text`` is a rule list the unit can take: comma-separated
+    APP_OBD_ALERTS rules, at most 120 printable ASCII characters, without
+    ';' or '|' (the tu= separators) and without empty rules."""
+    if not isinstance(text, str) or not text or len(text) > OBD_ALERTS_MAX:
+        return False
+    if any(not 0x20 < ord(c) < 0x7f or c in ';|' for c in text):
+        return False
+    return all(_OBD_RULE.fullmatch(rule) for rule in text.split(','))
+
+
+TUNABLES_BUILT_MAX = 400
+
+
+def parse_tunables_built(text):
+    """The tb= value (``code:value`` pairs joined by ';'; xoa's commas sent as
+    '|') as a dict of code -> int, or code -> str for xoa.  Unknown codes and
+    bad values are left out, so a damaged report yields what is readable (or
+    nothing).  Built values are not held to the override ranges: they are
+    whatever the firmware was compiled with."""
+    result = {}
+    if not isinstance(text, str):
+        return result
+    codes = {code for code, _, _, _ in TUNABLES}
+    for pair in text.split(';'):
+        code, sep, value = pair.partition(':')
+        if not sep or code not in codes or code in result:
+            continue
+        if code == 'xoa':
+            value = value.replace('|', ',')
+            if (len(value) > OBD_ALERTS_MAX
+                    or any(not 0x20 < ord(c) < 0x7f for c in value)):
+                continue
+            result[code] = value
+        else:
+            try:
+                result[code] = int(value)
+            except ValueError:
+                continue
+    return result
+
+
+def tunables_built_text(built):
+    """The stored form of a parse_tunables_built() dict: the same grammar the
+    unit sent, in table order, or None when it holds nothing."""
+    pairs = []
+    for code, _, _, _ in TUNABLES:
+        if code not in built:
+            continue
+        value = built[code]
+        if code == 'xoa':
+            value = value.replace(',', '|')
+        pairs.append('%s:%s' % (code, value))
+    return ';'.join(pairs)[:TUNABLES_BUILT_MAX] or None
+
+
+def tunables_built(device):
+    """The built values the unit reported, keyed by token code, null for any
+    it has not reported."""
+    built = parse_tunables_built(device.get('tunables_built'))
+    return {code: built.get(code) for code, _, _, _ in TUNABLES}
+
+
+def tunables_effective(device):
+    """The value in use per token code: the override if set, else the built
+    value the unit reported, else null."""
+    built = tunables_built(device)
+    result = {}
+    for code, column, _, _ in TUNABLES:
+        value = device.get(column)
+        if value is None:
+            value = built[code]
+        result[code] = value
+    return result
+
+
+def tunables_token(device):
+    """The tu= value for ``device``: its non-NULL tunables as
+    ``<code>:<value>`` joined by ';' in table order, or ``-`` when none is set.
+    The obd_alerts commas go out as '|' because the reply is comma-joined."""
+    pairs = []
+    for code, column, _, _ in TUNABLES:
+        value = device.get(column)
+        if value is None or value == '':
+            continue
+        if column == 'obd_alerts':
+            pairs.append('%s:%s' % (code, str(value).replace(',', '|')))
+        else:
+            pairs.append('%s:%d' % (code, int(value)))
+    return ';'.join(pairs) or '-'
 
 
 def _ignition_alerts(device, entry, now):
@@ -1201,10 +1330,28 @@ def process_record(data, device, ip, database=None):
         except Exception:
             logs.app.exception('version update failed for %s', device.get('imei'))
 
+    if 'tunables_built' in data and not history:
+        try:
+            _note_tunables_built(database, device, data['tunables_built'])
+        except Exception:
+            logs.app.exception('tunables_built update failed for %s',
+                               device.get('imei'))
+
     if 'request_int' in data:
         return device_config(device)
 
     return None
+
+
+def _note_tunables_built(database, device, raw):
+    """Keep the built tunable values the unit reported (tb=), when they parse
+    and differ from what the row holds."""
+    text = tunables_built_text(parse_tunables_built(raw))
+    if text is None or text == device.get('tunables_built'):
+        return
+    database.query('UPDATE `device` SET `tunables_built` = %s WHERE `id` = %s',
+                   (text, device['id']))
+    device['tunables_built'] = text
 
 
 def clear_track_mode(device, database, why):
@@ -1494,6 +1641,11 @@ def build_response(device, database, log, firmware_version=None):
     # Whether the unit's status LEDs may light, on every reply after gw=:
     # 1 unless the column says 0 (so a row without it reads as on).
     response += ',le=%d' % (0 if device.get('leds') == 0 else 1)
+
+    # The runtime tunables, on every reply after le=: the non-NULL columns as
+    # tu=<code>:<value>[;...], or tu=- when none is set.  The unit makes its
+    # overrides exactly this set, so a column set back to NULL clears it.
+    response += ',tu=%s' % tunables_token(device)
 
     # The unit that is answered applies what it is told, so the settings in
     # this reply are what it runs from now: filed as applied, ahead of its

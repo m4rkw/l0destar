@@ -267,25 +267,6 @@ void sleep_once_request(int secs);   /* sleep=<s>: the next wait, once */
  * takes effect at the next one. */
 int  modem_nbiot_fallback(bool on);
 bool modem_nbiot_fallback_on(void);
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-/* LTE off with the receiver left running (AT+CFUN=20) and on again (CFUN=21):
- * the hold breaker, main.c's.  While cut, modem_is_registered() is false and
- * nothing can be sent.  Both run `tick` (may be NULL) once a second while
- * they wait.  modem_lte_cut() is 0, an error with LTE as it was, or
- * -ETIMEDOUT with the command taken and not yet answered, which counts as cut;
- * modem_lte_restore() the attach time in ms, or an error, -ETIMEDOUT with the
- * radio left searching.  A restore that times out also reports what the modem
- * says at 5 s, 15 s and the cap, and logs the registration status changes that
- * follow; modem_search_report() is the same line again, for the caller to
- * repeat while the radio is still searching. */
-uint32_t modem_rrc_age_ms(void);        /* how long the connection now up has been; 0 if none */
-bool modem_lte_is_cut(void);
-int  modem_lte_cut(void (*tick)(void));
-int  modem_lte_restore(int timeout_s, void (*tick)(void));
-void modem_search_report(void);
-#else
-static inline bool modem_lte_is_cut(void) { return false; }
-#endif
 
 int  gnss_init(void);
 int  gnss_start(void);
@@ -559,24 +540,6 @@ void watchdog_init(void);
 void watchdog_kick(void);
 /* "stall:<addr>/..." once after a watchdog reset, else NULL (watchdog.c) */
 const char *watchdog_last_stall(void);
-
-/* Where the hold breaker was when the unit last gave a sign of life, kept in
- * noinit RAM across a reset (crumb.c; holdbreak.h has the phases and the
- * field's format).  crumb_previous() is what the last boot left, "hb:Q98/0",
- * for dbglog_reset_cause() to report after a reset nobody asked for. */
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-void        crumb_cut(void);               /* a cycle begins: time zero */
-void        crumb_phase(char phase);       /* a phase begins; 0 ends the cycle */
-char        crumb_phase_get(void);
-void        crumb_alive(void);             /* from watchdog_kick() */
-const char *crumb_previous(void);
-#else
-static inline void        crumb_cut(void) { }
-static inline void        crumb_phase(char phase) { (void)phase; }
-static inline char        crumb_phase_get(void) { return 0; }
-static inline void        crumb_alive(void) { }
-static inline const char *crumb_previous(void) { return NULL; }
-#endif
 
 void reboot_now(void);
 void status_delay(long ms);   /* watchdog-aware sleep */

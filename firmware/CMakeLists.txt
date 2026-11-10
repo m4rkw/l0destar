@@ -19,6 +19,7 @@ target_sources(app PRIVATE
     src/main.c
     src/crypto.c
     src/settings.c
+    src/tunables.c
     src/hw_common.c
     src/hw_domain.c
     src/hw_selftest.c
@@ -69,9 +70,6 @@ target_sources_ifdef(CONFIG_APP_DEMO_MODE app PRIVATE src/demo_mask.c)
 
 # The motion through gaps between GNSS fixes (see src/motion.c).
 target_sources_ifdef(CONFIG_APP_DEAD_RECKONING app PRIVATE src/motion.c)
-
-# When to take LTE away from a network that holds the radio (see Kconfig).
-target_sources_ifdef(CONFIG_APP_HOLD_BREAK app PRIVATE src/holdbreak.c src/crumb.c)
 
 # OBD-II telemetry / fault codes over the K wire.
 target_sources_ifdef(CONFIG_APP_KLINE_OBD app PRIVATE src/kline_obd.c)

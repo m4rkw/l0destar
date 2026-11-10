@@ -27,9 +27,6 @@
 #if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
 #include "extflash.h"
 #endif
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-#include "holdbreak.h"
-#endif
 
 LOG_MODULE_REGISTER(main, CONFIG_APP_LOG_LEVEL);
 
@@ -372,12 +369,8 @@ void dr_fifo_service(void)
 }
 #endif
 
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-static void hold_break_tick(void);
-#endif
-
 #if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY) || \
-    IS_ENABLED(CONFIG_APP_DEAD_RECKONING) || IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+    IS_ENABLED(CONFIG_APP_DEAD_RECKONING)
 /* gnss_collect()'s tick: about once a second while it waits for a fix. */
 static void fix_wait_tick(void)
 {
@@ -385,9 +378,6 @@ static void fix_wait_tick(void)
     obd_sample_tick();
 #endif
     dr_fifo_service();
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-    hold_break_tick();
-#endif
 }
 #endif
 
@@ -400,8 +390,8 @@ static int  s_coast_iters;
  * The built-in receiver shares its antenna with LTE, which is why a drive is
  * batched and every send is released at once.  The external one has an
  * antenna of its own, so while the engine runs each record is sent as it is
- * built, as fast as it can (at most APP_DRIVE_STREAM_HZ a second if that is
- * set), over a connection held up
+ * built, as fast as it can (or one every APP_DRIVE_STREAM_INTERVAL_S seconds
+ * if that is set), over a connection held up
  * between them (the modem is told more is coming) and still held until the
  * server answers for it.  A connection that is never idle for the network's
  * active time never reaches power saving mode, and that is how the modem is
@@ -423,23 +413,28 @@ static int  s_coast_iters;
  *   - a fix that came while a record was built and sent is kept for the next
  *     (no gnss_resume()), so a cycle a little over the period costs a little
  *     lag and not a whole period;
- *   - above 1 Hz the receiver is asked for fixes at the limit, or at
- *     DS_FAST_HZ with none.
- * Under a limit the cycle is paced by the receiver: collect_data() returns
- * when its next fix does, so the rate cannot exceed the limit.  With none the
- * receiver is faster than a cycle, a fix is always waiting, and the rate is
- * the cycle's: a build, a send and the K wire's share.  Falling short of a
- * limit is not reported; the stream goes as fast as it can.
+ *   - with no interval the receiver is asked for DS_FAST_HZ fixes a second;
+ *     with one it stays at 1 Hz.
+ * With an interval the cycle waits out the rest of it after each send
+ * (drive_stream_pace), then takes the latest fix, so at most one record goes
+ * every N seconds.  An interval of DS_HOLD_MAX_S or more does not hold the
+ * connection: it is released between sends as in normal driving, so the
+ * modem can reach PSM and no data is spent keeping the link up.  With none
+ * the receiver is faster than a cycle, a fix is always waiting, and the rate
+ * is the cycle's: a build, a send and the K wire's share.
  *
  * Track mode (do_track) has its own, and the sync below leaves it alone. */
 #if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
-#define DS_MAX_HZ       CONFIG_APP_DRIVE_STREAM_HZ      /* 0: no limit */
+#define DS_INTERVAL_S   s_ds_iv     /* 0: no limit; tun_drive_stream_interval_s() latched at stream start */
+#define DS_HOLD_MAX_S   30          /* an interval this long or more does not hold the connection */
 #define DS_FAST_HZ      10          /* what the receiver is asked for with none */
-#define DS_RX_HZ        (DS_MAX_HZ > 0 ? DS_MAX_HZ : DS_FAST_HZ)
+#define DS_RX_HZ        (DS_INTERVAL_S > 0 ? 1 : DS_FAST_HZ)
 #define DS_FIX_WAIT_MS  (CONFIG_APP_DRIVE_STREAM_FIX_WAIT_S * 1000)
 #define DS_LOG_MS       30000
 #define DS_OBD_EVERY_MS 900         /* the K wire is polled about once a second at most */
 
+static int     s_ds_iv;             /* the interval (s) this stream runs under, 0 none */
+static int64_t s_ds_next_ms;        /* earliest start of the next record under an interval */
 static bool    s_ds_on;             /* the engine is running: records go as a stream */
 static int64_t s_ds_t0_ms;          /* start of the log window (0: no record yet) */
 static int     s_ds_records;        /* built in it */
@@ -448,7 +443,7 @@ static int64_t s_ds_obd_ms;         /* when the K wire was last polled here */
 
 static bool drive_stream_wanted(void)
 {
-    return ignition == 0 && engine_running && !s_coasting &&
+    return ignition == 0 && engine_running && !s_coasting && tun_drive_stream() &&
            !(IS_ENABLED(CONFIG_APP_TRACK_MODE) && g_settings.track_mode);
 }
 
@@ -475,18 +470,22 @@ static void drive_stream_window(void)
 static void drive_stream_sync(void)
 {
     bool on = drive_stream_wanted();
-    bool hold = on && network_ready && !modem_lte_is_cut();
+    bool hold = on && network_ready && s_ds_iv < DS_HOLD_MAX_S;
 
     if (on != s_ds_on) {
         s_ds_on = on;
+        if (on) {
+            s_ds_iv = tun_drive_stream_interval_s();    /* kept until it stops */
+        }
 #if IS_ENABLED(CONFIG_APP_KLINE_OBD)
-        obd_stream_mode(on, DS_MAX_HZ > 0);
+        obd_stream_mode(on, DS_INTERVAL_S > 0);
 #endif
         databuf_stream(on);
         if (on) {
             s_ds_t0_ms = 0;             /* the window opens with the first record */
             s_ds_records = s_ds_stale = 0;
             s_ds_obd_ms = 0;
+            s_ds_next_ms = 0;
             data_set_lean(DS_RX_HZ > 1);
             if (DS_RX_HZ > 1) {
                 int err = gnss_set_rate_hz(DS_RX_HZ);
@@ -514,6 +513,7 @@ static void drive_stream_sync(void)
 
 static void drive_stream_note_record(void)
 {
+    s_ds_next_ms = k_uptime_get() + (int64_t)DS_INTERVAL_S * 1000;
     if (s_ds_t0_ms == 0) {
         s_ds_t0_ms = k_uptime_get();
     }
@@ -523,6 +523,23 @@ static void drive_stream_note_record(void)
     s_ds_records++;
     if (k_uptime_get() - s_ds_t0_ms >= DS_LOG_MS) {
         drive_stream_window();
+    }
+}
+
+/* Under an interval: sit out the rest of it before the next record, in short
+ * slices so a key change or the engine stopping is not kept waiting.  The
+ * receiver runs at 1 Hz meanwhile, so the fix taken afterwards is the latest;
+ * the wait ends half a second early since taking it can wait for the next fix. */
+static void drive_stream_pace(void)
+{
+    if (DS_INTERVAL_S <= 0) {
+        return;
+    }
+    while (s_ds_on && k_uptime_get() + 500 < s_ds_next_ms) {
+        if ((char)ignition_read() != ignition || !drive_stream_wanted()) {
+            return;
+        }
+        k_msleep(100);
     }
 }
 #endif /* CONFIG_APP_DRIVE_STREAM */
@@ -816,289 +833,6 @@ static int engine_rpm_or_na(void)
 #endif
 }
 
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-/* -- hold breaker (APP_HOLD_BREAK) -------------------------------------------
- *
- * Some cells keep the RRC connection up for minutes after a send, and GNSS
- * gets nothing while it is (2026-10-24, EE around Launceston: 5-347 s, 71 %
- * of the trip's blind time).  When the connection is still up probe_ms after
- * our last datagram, on a vehicle on the move, LTE is switched off with the
- * receiver left running (modem_lte_cut), the records that follow go to the
- * backlog instead of the network (hold_break_park, from STATE_SEND), and
- * when the window is out LTE comes back, registers, and the backlog and the
- * batch go in a burst (hold_break_restore, hold_break_open).  Straight after
- * that burst the next hold is cut without waiting for it (hold_break_close,
- * holdbreak.c's sticky count).
- *
- * Whatever goes wrong ends the same way, in LTE back on and the ordinary
- * outage handling: the loop's own check (hold_break_service) restores a cut
- * that has outlived its window, or whose reason has gone (key off, a stop,
- * an alert, a setting to report, a filling backlog), and a restore that does
- * not register in time leaves the radio searching, as any outage does, and
- * switches the feature off until the modem has registered again by itself and
- * for HOLD_BREAK_HOLDOFF_MS after that (hold_break_service; parking clears it,
- * do_sleep), while the log says what the modem makes of the search
- * (hold_break_watch).  Never in track mode, which holds the connection on
- * purpose. */
-static const struct hb_cfg s_hb_cfg = {
-    .probe_ms    = CONFIG_APP_HOLD_BREAK_PROBE_S * 1000,
-    .window_ms   = CONFIG_APP_HOLD_BREAK_WINDOW_S * 1000,
-    .grace_ms    = HOLD_BREAK_GRACE_MS,
-    .cooldown_ms = HOLD_BREAK_COOLDOWN_MS,
-    .holdoff_ms  = HOLD_BREAK_HOLDOFF_MS,
-    .min_kmh     = CONFIG_APP_HOLD_BREAK_MIN_KMH,
-    .sticky      = CONFIG_APP_HOLD_BREAK_STICKY,
-};
-static struct hb s_hb;
-/* After a restore that did not register: when the modem's account of the
- * search is next due in the log, and how many more are wanted. */
-static struct hb_watch s_hb_watch;
-/* When the restore that did not register gave up, for the line that says how
- * long the network was away. */
-static int64_t s_hb_fail_ms;
-/* When our last datagram went out.  A hold is what the network adds to that:
- * measured from the start of the connection, the attach and the burst that
- * follow a restore would count against the cell, and every cell would look
- * like one that holds. */
-static int64_t s_hb_tx_ms;
-
-/* What fix_wait_tick() does, less the breaker: for the waits the breaker
- * itself makes, which it must not start another cut from. */
-static void radio_wait_tick(void)
-{
-#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
-    obd_sample_tick();
-#endif
-    dr_fifo_service();
-}
-
-static bool hold_break_driving(void)
-{
-    return ignition == 0 && engine_running && !s_coasting &&
-           !(IS_ENABLED(CONFIG_APP_TRACK_MODE) && g_settings.track_mode);
-}
-
-/* Something that cannot wait for LTE, or that a cut would put in doubt: an
- * alert to send, an impact the loop has not looked at yet, a setting to
- * report, a send that failed, an ignition change the server has not been
- * told, a backlog with no room left to park in.  The room is the RAM ring's:
- * records already in the flash (APP_FLASH_BACKLOG) are not what a cut parks
- * into, and counting them would keep the breaker off for as long as an
- * outage's backlog took to drain. */
-static bool hold_break_urgent(void)
-{
-    return alert_count > 0 || atomic_get(&s_accel_int_flag) ||
-           send_int_to_server || !last_send_ok ||
-           previous_ignition != ignition ||
-           databuf_ring_count() >= CONFIG_APP_DATABUF_SLOTS *
-                                   HOLD_BREAK_BACKLOG_PCT / 100;
-}
-
-static void hold_break_facts(struct hb_now *n)
-{
-    const int64_t now = k_uptime_get();
-    const int64_t since_tx = MIN(now - s_hb_tx_ms, (int64_t)UINT32_MAX);
-    const uint32_t conn_ms = modem_rrc_age_ms();
-
-    n->now_ms = now;
-    n->speed_kmh = (int32_t)vehicle_speed_kmh();
-    n->rrc_up = modem_rrc_connected();
-    n->hold_ms = n->rrc_up ? MIN(conn_ms, (uint32_t)since_tx) : 0;
-    n->driving = hold_break_driving();
-    n->registered = modem_is_registered();
-    n->urgent = hold_break_urgent();
-}
-
-/* LTE off.  The replies that are due are taken in first, and what is still
- * unanswered goes back to the backlog: a datagram the modem had not sent yet
- * is then a copy the burst carries, and the server drops the ones it has. */
-static void hold_break_cut(const struct hb_now *n, bool after_send)
-{
-    crumb_cut();
-    if (!after_send) {
-        LOG_WRN("hold break: connected %u s past our last send at %d km/h on "
-                "cell %u tac %u — taking LTE off (%u cycles, %u failed, "
-                "re-attach %u ms mean / %u ms worst)",
-                (unsigned)(n->hold_ms / 1000), (int)n->speed_kmh,
-                (unsigned)g_cell.cid, (unsigned)g_cell.tac,
-                (unsigned)s_hb.cycles, (unsigned)s_hb.fails,
-                s_hb.cycles ? (unsigned)(s_hb.reg_ms_sum / s_hb.cycles) : 0U,
-                (unsigned)s_hb.reg_ms_max);
-    }
-    (void)transport_poll();
-    (void)databuf_settle(HOLD_BREAK_SETTLE_MS);
-    if (hold_break_urgent()) {
-        /* The settle put an alert back in its queue: that goes now. */
-        LOG_INF("hold break: something is owed — LTE stays on");
-        crumb_phase(0);
-        return;
-    }
-
-    int err = modem_lte_cut(radio_wait_tick);
-    const int64_t now = k_uptime_get();
-
-    if (err && err != -ETIMEDOUT) {
-        hb_cut_failed(&s_hb, &s_hb_cfg, now, err == -EIO);
-        LOG_WRN("hold break: LTE would not go (%d) — off %s", err,
-                err == -EIO ? "for this boot" : "for 10 minutes");
-        crumb_phase(0);
-        return;
-    }
-    hb_cut(&s_hb, &s_hb_cfg, now, after_send);
-    crumb_phase(HB_PH_OFF);
-}
-
-/* LTE back, and the backlog out ahead of the batch, oldest first, so the
- * server meets the track in the order it was driven. */
-static void hold_break_restore(void)
-{
-    crumb_phase(HB_PH_RESTORE);
-
-    const int32_t off_ms = (int32_t)(k_uptime_get() - s_hb.cut_ms);
-    const int reg = modem_lte_restore(CONFIG_APP_HOLD_BREAK_REG_S,
-                                      radio_wait_tick);
-
-    hb_restored(&s_hb, off_ms, reg);
-    if (reg < 0) {
-        LOG_WRN("hold break: LTE off %d s, not registered %d s after turning "
-                "it on (%d) — the modem keeps looking, hold breaking off until "
-                "it registers", off_ms / 1000, CONFIG_APP_HOLD_BREAK_REG_S,
-                reg);
-        s_hb_fail_ms = k_uptime_get();
-        s_hb_watch.left = HOLD_BREAK_WATCH_N;
-        s_hb_watch.due_ms = s_hb_fail_ms + HOLD_BREAK_WATCH_MS;
-        crumb_phase(HB_PH_FAILED);
-        return;
-    }
-    crumb_phase(HB_PH_DELIVER);
-    if (reg > 8000) {
-        LOG_WRN("hold break: LTE off %d s, %d ms to register again on cell "
-                "%u tac %u", off_ms / 1000, reg, (unsigned)g_cell.cid,
-                (unsigned)g_cell.tac);
-    } else {
-        LOG_INF("hold break: LTE off %d ms, registered again after %d ms",
-                off_ms, reg);
-    }
-    databuf_deliver(RESPONSE_TIMEOUT_MS, DRAIN_DRIVING_MS, NULL);
-    if (alert_count > 0) {
-        (void)alert_send();
-    }
-    s_hb_tx_ms = k_uptime_get();
-    crumb_phase(0);
-}
-
-/* gnss_collect()'s tick: the probe.  Only a fix wait that is getting no fixes
- * runs it, which is the wait a hold causes. */
-static void hold_break_tick(void)
-{
-    struct hb_now n;
-
-    hold_break_facts(&n);
-    if (hb_cut_wanted(&s_hb, &s_hb_cfg, &n, false)) {
-        hold_break_cut(&n, false);
-    }
-}
-
-/* A restore did not register and the radio is still searching: what the modem
- * says about it, every HOLD_BREAK_WATCH_MS, from the sleep loop once the unit is
- * parked (the search outlives the drive) and from the main loop with the key
- * off.  Not with the key on: the queries have no timeout of their own and the
- * car reset twice on the road with them running (hb_watch_due).  The reports at
- * 5 s, 15 s and the cap, inside the restore, are not held back. */
-static void hold_break_watch(void)
-{
-    if (s_hb_watch.left <= 0) {
-        return;
-    }
-    if (modem_unregistered_s() < 0) {
-        /* Registered, or the radio has been taken down. */
-        s_hb_watch.left = 0;
-        return;
-    }
-    if (hb_watch_due(&s_hb_watch, k_uptime_get(), HOLD_BREAK_WATCH_MS,
-                     ignition_read() == 0)) {
-        modem_search_report();
-    }
-}
-
-/* The top of the main loop: a cut whose time is up, or whose reason has gone,
- * is ended here, before anything that wants the network looks for it. */
-static void hold_break_service(void)
-{
-    struct hb_now n;
-
-    hold_break_watch();
-    if (s_hb.reg_wait && modem_is_registered()) {
-        /* The network is back, of its own accord: a dead zone left behind,
-         * or a refusal that ran its course.  Cuts need it, so nothing was
-         * being held back meanwhile; they stay off a while longer. */
-        hb_registered(&s_hb, &s_hb_cfg, k_uptime_get());
-        LOG_WRN("hold break: registered again %lld s after the restore gave "
-                "up — cutting resumes in %d min",
-                (k_uptime_get() - s_hb_fail_ms) / 1000,
-                HOLD_BREAK_HOLDOFF_MS / 60000);
-        crumb_phase(0);
-    }
-    if (!s_hb.cut) {
-        return;
-    }
-    if (!modem_lte_is_cut()) {
-        /* The radio was brought up some other way (modem_radio_up(), a
-         * power-off): nothing left to restore. */
-        s_hb.cut = false;
-        crumb_phase(0);
-        return;
-    }
-    hold_break_facts(&n);
-    if (hb_restore_due(&s_hb, &s_hb_cfg, &n, false)) {
-        hold_break_restore();
-    }
-}
-
-/* STATE_SEND with LTE cut and its window open: the batch goes to the backlog
- * and the loop collects the next one.  The receiver is left running, which is
- * what the cut is for.  False if the batch is to go out after all. */
-static bool hold_break_park(void)
-{
-    struct hb_now n;
-
-    if (!s_hb.cut || !modem_lte_is_cut()) {
-        return false;
-    }
-    hold_break_facts(&n);
-    if (hb_restore_due(&s_hb, &s_hb_cfg, &n, true)) {
-        return false;
-    }
-    databuf_push_lines(data_current, (size_t)data_index);
-    data_reset();
-    s_buffered_records = 0;
-    s_transition_buffered = false;
-    s_last_send_ms = k_uptime_get();
-    s_state = STATE_GPS_COLLECT;
-    return true;
-}
-
-/* STATE_SEND about to send: with LTE cut, this is the end of the window. */
-static void hold_break_open(void)
-{
-    if (modem_lte_is_cut()) {
-        hold_break_restore();
-    }
-}
-
-/* STATE_SEND done sending: a hold seen lately is cut again at once. */
-static void hold_break_close(void)
-{
-    struct hb_now n;
-
-    s_hb_tx_ms = k_uptime_get();
-    hold_break_facts(&n);
-    if (hb_cut_wanted(&s_hb, &s_hb_cfg, &n, true)) {
-        hold_break_cut(&n, true);
-    }
-}
-#endif
-
 #if IS_ENABLED(CONFIG_APP_KLINE_DTC_REPORT)
 /* Ignition as the fault-code reader last saw it, so the ignition-on read
  * fires exactly once per key turn.  -1 until the first observation. */
@@ -1313,12 +1047,6 @@ static bool backup_cut_confirm(float *v)
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-    /* Parked: whatever a restore that did not register switched off, and the
-     * hold-off after it, are over. */
-    hb_new_trip(&s_hb);
-    crumb_phase(0);
-#endif
     data_gap_reset();
     /* Track mode ends with the drive.  The server drops its switch on the
      * ignition-off record, so this only keeps the two in step: without it
@@ -1521,9 +1249,6 @@ static void do_sleep(void)
         if (!quiet) {
             console_resume();
         }
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-        hold_break_watch();
-#endif
 
         /* Set by every path below that brings the radio up.  network_ready is
          * not enough on its own: modem_connect() sets it only on success, but
@@ -2433,7 +2158,7 @@ static void do_ignition_sleep(void)
  * resumed, and the next cycle re-acquires. */
 static void do_track(void)
 {
-    const int64_t period_ms = CONFIG_APP_TRACK_PERIOD_MS;
+    const int64_t period_ms = tun_track_period_ms();
     const int64_t resp_ms   = (int64_t)CONFIG_APP_TRACK_RESP_INTERVAL_S * 1000;
     int64_t last_resp = k_uptime_get() - resp_ms;   /* read the first reply */
     int64_t last_log = 0;
@@ -2852,7 +2577,7 @@ int main(void)
     }
 
 #if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY) || \
-    IS_ENABLED(CONFIG_APP_DEAD_RECKONING) || IS_ENABLED(CONFIG_APP_HOLD_BREAK)
+    IS_ENABLED(CONFIG_APP_DEAD_RECKONING)
     /* Poll the ECU about once a second while waiting for a fix, which is
      * where most of a cycle goes: the record built after the fix then
      * costs no bus time, and engine RPM is sampled across the cycle rather
@@ -2897,9 +2622,6 @@ int main(void)
          * the rest of a cycle — the send, which can take seconds — so the
          * ring never holds more than a few. */
         dr_fifo_service();
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-        hold_break_service();
-#endif
 
         /* A failed-update report waiting for a link.  No-op with nothing
          * pending, which is every iteration but the ones after a revert. */
@@ -2952,11 +2674,6 @@ int main(void)
                  * after a spell without it: the count is a run of dead
                  * wakes, and this is proof the run is over. */
                 network_backoff_reset();
-            } else if (modem_lte_is_cut()) {
-                /* LTE is off for the hold breaker, window open: no outage to
-                 * wait out, retry or log.  STATE_SEND parks what is
-                 * collected. */
-                offline = true;
             } else {
                 int reg = modem_get_network_status();
                 if (reg == 1 || reg == 5) {
@@ -3287,19 +3004,14 @@ int main(void)
         }
 
         case STATE_SEND:
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-            if (hold_break_park()) {
-                break;
-            }
-#endif
             read_udp_response =
                 (previous_ignition == -1
                  || previous_ignition != ignition
                  || ignition != 0
                  || vehicle_speed_kmh() < 0.005f
-                 || (CONFIG_APP_RESP_POLL_S > 0 &&
+                 || (tun_resp_poll_s() > 0 &&
                      k_uptime_get() - s_last_resp_ms >=
-                         (int64_t)CONFIG_APP_RESP_POLL_S * 1000));
+                         (int64_t)tun_resp_poll_s() * 1000));
 
 #if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
             if (s_ds_on && transport_is_streaming()) {
@@ -3317,9 +3029,6 @@ int main(void)
             }
             led_sending();
             gnss_stop();
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-            hold_break_open();
-#endif
             /* The socket is kept after the send, not closed: the server's
              * reply is what says the records arrived, and it lands on it.
              * The release hint set on the send is what frees the radio. */
@@ -3403,9 +3112,6 @@ int main(void)
 
             /* The key can also turn during send_data() itself. */
             ignition = (char)ignition_read();
-#if IS_ENABLED(CONFIG_APP_HOLD_BREAK)
-            hold_break_close();
-#endif
 
 #if IS_ENABLED(CONFIG_APP_DRIVE_STREAM) && IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
             /* The K wire, now: the record built next takes the figures from
@@ -3488,6 +3194,11 @@ int main(void)
                 {
                     gnss_resume();
                 }
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+                else {
+                    drive_stream_pace();
+                }
+#endif
                 s_state = STATE_GPS_COLLECT;
             }
             break;

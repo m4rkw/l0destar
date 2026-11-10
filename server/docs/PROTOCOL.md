@@ -318,7 +318,7 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off][,le=<0|1>]
+1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off][,le=<0|1>][,tu=<code>:<value>[;<code>:<value>...]|-]
 ```
 
 Every datagram is answered, and the reply is the receipt: it is bound to the
@@ -353,6 +353,40 @@ disabled (switch off, or both hours equal).
 every reply straight after `gw=`: `le=1` (the default) lets them light, `le=0`
 keeps them all dark. The API sets it (`leds=<0|1>` in POST /api/1.0/command,
 not queued; `le` in /api/1.0/config).
+
+`tu=` carries the runtime tunables, the per-device overrides of values the
+unit is built with, after `le=` on every reply: the non-NULL columns as
+`<code>:<value>` pairs joined by `;`, in this order: `xtt` tow_tilt_deg,
+`xpi` parked_impact_mg, `xii` impact_immediate_mg, `xap` accel_alert_priority,
+`xab` accel_alert_backoff_s, `xoa` obd_alerts, `xis` ignition_on_sleep_s,
+`xbw` battery_warning_mv, `xbp` battery_poweroff_mv, `xds` drive_stream, `xdi`
+drive_stream_interval_s, `xtp` track_period_ms, `xdd` databuf_drain_s, `xns`
+network_search_s, `xrp` resp_poll_s, `xlw` led_accel_wake; or `tu=-` when
+every column is NULL. A NULL column is no override: the unit keeps its built
+value, so the unit makes its overrides exactly the listed pairs and anything
+not listed goes back to the built value. Values are integers except `xoa`, a
+rule list whose commas are sent as `|` (the reply is comma-joined; the unit
+turns them back). No value contains `;`, `,` or `|` otherwise. The server
+holds each to its range (see docs/reference/device-settings.md) and the unit
+clamps again. A reply without `tu=` (an older server) leaves the unit's
+overrides as they are. The API sets them by column name in
+POST /api/1.0/command (not queued, `<name>=default` clears) and by code in
+/api/1.0/config (`null` clears). Example:
+`1,3600,1,track=0,gw=off,le=1,tu=xtt:8;xoa:coolant>=95|rpm>6500;xbw:11900`.
+
+`tb=` is a record field (not a reply token), sent by the unit in the record
+that carries `fw=` and `bd=`, once per boot until a reply lands: the values
+the unit was BUILT with (the compiled-in defaults, not the current overrides),
+in the `tu=` grammar - `<code>:<value>` pairs joined by `;` for all sixteen
+codes, `xoa` commas sent as `|`, an empty `xoa` as `xoa:`. Because the pairs
+contain `;` the server takes the field whole. It stores the text, normalised to
+the pairs that parsed (unknown codes and non-integer values dropped), in
+`device`.`tunables_built` (VARCHAR(400)); a field with nothing readable leaves
+the row alone. GET /api/1.0/config and each GET /api/1.0/devices row then
+carry two objects keyed by code: `tunables_built` (the reported values, null
+where unknown) and `tunables` (the value in use: the override column if not
+NULL, else the built value, else null). Example:
+`tb=xtt:8;xpi:900;xoa:coolant>=95|rpm>6500;xds:0`.
 
 Commands are deleted as they are handed over, so delivery is at-most-once. A
 command lost to a dropped reply is re-queued by whoever issued it, which is

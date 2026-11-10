@@ -13,6 +13,8 @@
 #include "app.h"
 #include "backup_log.h"
 #include "hw_domain.h"
+#include "tunables.h"
+#include "tunables_core.h"
 
 LOG_MODULE_REGISTER(data, CONFIG_APP_LOG_LEVEL);
 
@@ -317,6 +319,21 @@ static void append_sync_fields(void)
                      DATA_LIMIT - data_index - 1,
                      ",fw=%s,bd=%s", fota_version(), fota_board_id());
         if (n > 0) data_index += n;
+
+        /* The built tunable values, so the app shows what the unit runs
+         * rather than "default".  Up to ~250 bytes with a full xoa, so it is
+         * left off a record it would push past the backlog's slot
+         * (DATABUF_REC_MAX 768, leaving 128 for the fields after it). */
+        char tb[TUN_BUILT_BUF];
+        int tl = tun_built_string(tb, sizeof(tb));
+        int rec_start = data_index;
+
+        while (rec_start > 0 && data_current[rec_start - 1] != '\n') rec_start--;
+        if (tl > 0 && data_index - rec_start + 4 + tl <= CONFIG_APP_DATABUF_REC_MAX - 128) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1, ",tb=%s", tb);
+            if (n > 0 && n < DATA_LIMIT - data_index - 1) data_index += n;
+        }
     }
 
     /* This record's own id.  Every record carries one; the server keeps it
@@ -1149,12 +1166,51 @@ static bool reply_take_int(char *cmd, const char *key, int *val)
     return false;
 }
 
+/* The tu= token (the runtime tunables, which can run to some 300 bytes) out
+ * of the commands part of a reply, applied here and taken out of the string,
+ * so that it neither has to fit the pending command buffer nor can a rule
+ * list inside it be mistaken for a command by cmd_run's substring matches.
+ * Applied before the reply's other commands run, from the main thread. */
+static void reply_take_tunables(char *cmd)
+{
+    char *p = cmd;
+
+    while (*p) {
+        char *comma = strchr(p, ',');
+
+        if (strncmp(p, "tu=", 3) == 0) {
+            char save = comma ? *comma : '\0';
+
+            if (comma) {
+                *comma = '\0';
+            }
+            tun_apply(p + 3);
+            if (comma) {
+                *comma = save;
+                memmove(p, comma + 1, strlen(comma + 1) + 1);
+            } else if (p > cmd) {
+                p[-1] = '\0';
+            } else {
+                *p = '\0';
+            }
+            return;
+        }
+        if (!comma) {
+            return;
+        }
+        p = comma + 1;
+    }
+}
+
 /* What a reply says, "1,<interval>,<movement_alarm>[,cmd]", applied. */
 static void reply_apply(const char *resp)
 {
     int interval = -1, ma = -1;
-    char cmd[128] = "";
-    int matched = sscanf(resp, "1,%d,%d,%127[^\n]", &interval, &ma, cmd);
+    static char cmd[512];       /* static: the main thread's stack is shared */
+    int matched;
+
+    cmd[0] = '\0';
+    matched = sscanf(resp, "1,%d,%d,%511[^\n]", &interval, &ma, cmd);
 
     /* A decodable response is proof a datagram arrived, which is the only
      * evidence that fw= and rst= landed.  Clearing s_fw_pending on the send
@@ -1186,6 +1242,9 @@ static void reply_apply(const char *resp)
                         g_settings.backup_interval, backup);
                 g_settings.backup_interval = backup;
             }
+        }
+        if (matched == 3) {
+            reply_take_tunables(cmd);
         }
         if (matched == 3 && cmd[0]) {
             pending_cmd_add(cmd);
@@ -1392,7 +1451,7 @@ int send_data(void)
 
     /* Server response, if requested */
     if (read_udp_response) {
-        char resp[256];
+        static char resp[512];      /* static: see s_reply in transport.c */
         int n = transport_recv_response(resp, sizeof(resp),
                                         RESPONSE_TIMEOUT_MS);
         if (n > 0) {

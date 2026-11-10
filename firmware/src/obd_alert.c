@@ -41,6 +41,7 @@
 #include <zephyr/logging/log.h>
 
 #include "app.h"
+#include "tunables_core.h"
 
 LOG_MODULE_REGISTER(obd_alert, CONFIG_APP_LOG_LEVEL);
 
@@ -242,9 +243,16 @@ static void fmt_value(char *out, size_t max, int32_t v, int scale)
 	}
 }
 
+/* The list the rules were last parsed from: the server can replace it
+ * (tun_obd_alerts()), and the rules follow at the next session start. */
+static char s_parsed[sizeof(CONFIG_APP_OBD_ALERTS) + TUN_OA_MAX + 1];
+
 void obd_alert_init(void)
 {
-	const char *s = CONFIG_APP_OBD_ALERTS;
+	const char *s = tun_obd_alerts();
+
+	strncpy(s_parsed, s, sizeof(s_parsed) - 1);
+	s_parsed[sizeof(s_parsed) - 1] = '\0';
 
 	s_n_rules = 0;
 	while (s_n_rules < OBD_ALERT_MAX_RULES) {
@@ -255,7 +263,7 @@ void obd_alert_init(void)
 			 * running the rest would hide exactly the alert the
 			 * operator thought they had configured. */
 			s_n_rules = 0;
-			LOG_ERR("OBD alerts disabled — fix CONFIG_APP_OBD_ALERTS");
+			LOG_ERR("OBD alerts disabled — fix the OBD alert rules (CONFIG_APP_OBD_ALERTS or the app)");
 			return;
 		}
 		if (rc == 0) {
@@ -284,6 +292,12 @@ void obd_alert_init(void)
 
 void obd_alert_reset(void)
 {
+	/* A new session: take up a changed rule list (logging it and any
+	 * fault in it as at boot) instead of re-arming the old one. */
+	if (strcmp(s_parsed, tun_obd_alerts()) != 0) {
+		obd_alert_init();
+		return;
+	}
 	for (int i = 0; i < s_n_rules; i++) {
 		s_rules[i].fired = false;
 	}

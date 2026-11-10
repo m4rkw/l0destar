@@ -105,7 +105,10 @@ static uint32_t s_last_id;       /* the latest send's, 0 before the first */
 /* Static rather than on the stack: the main thread's 8 KB also carries the
  * record builder and the OBD poll, and a reply read happens inside a send. */
 static uint8_t s_rx[UDP_PACKET_SIZE];
-static char    s_reply[256];
+/* 512: a reply can carry the whole tu= tunables token (up to ~300 bytes) on
+ * top of the settings that ride every reply; a longer one fails to decrypt
+ * into the buffer and the whole reply is lost. */
+static char    s_reply[512];
 
 #if CONFIG_APP_DEBUG_DROP_DATAGRAMS > 0
 static unsigned s_drop_count;
@@ -327,14 +330,6 @@ void transport_teardown(void)
 
 int transport_send(const uint8_t *plaintext, size_t pt_len)
 {
-    /* LTE is off on purpose (APP_HOLD_BREAK): nothing sent now would reach
-     * the server, and a socket opened on it can sit for the send timeout.
-     * The caller keeps what it had — the backlog, the alert queue — for the
-     * burst that follows LTE coming back. */
-    if (modem_lte_is_cut()) {
-        return -ENETDOWN;
-    }
-
     /* Replies that came in since the last send: each is a datagram that
      * arrived.  It can also drop a socket that has gone bad. */
     (void)transport_poll();

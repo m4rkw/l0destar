@@ -394,6 +394,24 @@ def test_unusable_board_is_dropped_and_the_record_still_stores(device, database)
     assert [(r['fw'], r['board']) for r in rows] == [('0.4.97', 'v4.0p1+kline')] * 2
 
 
+# -- the built tunable values (tb=) ----------------------------------------------
+
+def test_built_tunables_are_stored_on_the_device(device, database):
+    send(device, record(0, 51.5, -0.1, 0,
+                        extras=',fw=0.4.97,bd=v4.0p1,tb=xtt:8;xoa:a>1|b<2;xds:0'))
+
+    assert (db.lookup_device(imei=device['imei'])['tunables_built']
+            == 'xtt:8;xoa:a>1|b<2;xds:0')
+
+
+def test_unparseable_built_tunables_leave_the_row_alone(device, database):
+    send(device, record(0, 51.5, -0.1, 0, extras=',tb=xtt:8'))
+    send(device, record(1, 51.5, -0.1, 0, extras=',tb=junk;zzz:1;xtt:x'))
+
+    assert db.lookup_device(imei=device['imei'])['tunables_built'] == 'xtt:8'
+    assert last_log(database) is not None
+
+
 # -- the version on the device row -------------------------------------------
 
 def fresh(device):
@@ -1167,7 +1185,7 @@ def test_leds_api_round_trip(client, device, database, bearer):
     assert 'LEDs off' in events
 
     row = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
-    assert telemetry.build_response(row, db.web, logs.udp).endswith(',gw=off,le=0')
+    assert telemetry.build_response(row, db.web, logs.udp).endswith(',gw=off,le=0,tu=-')
 
     listed = client.get('/api/1.0/devices', headers=bearer)
     if listed.status_code == 200:
@@ -1191,3 +1209,32 @@ def test_leds_range_errors(client, device, bearer):
     response = client.post('/api/1.0/command', headers=bearer, json={
         'imei': device['imei'], 'command': 'leds=2'})
     assert response.status_code == 400
+
+
+def test_tunables_api_round_trip(client, device, database, bearer):
+    base = '/api/1.0/config?imei=%s' % device['imei']
+    assert client.get(base, headers=bearer).get_json()['xtt'] is None
+
+    posted = client.post('/api/1.0/config', headers=bearer, json={
+        'imei': device['imei'], 'xtt': 8, 'xoa': 'coolant>=95,rpm>6500', 'xbw': 11900})
+    assert posted.get_json()['status'] == 'ok'
+    got = client.get(base, headers=bearer).get_json()
+    assert (got['xtt'], got['xoa'], got['xbw'], got['xlw']) == (8, 'coolant>=95,rpm>6500', 11900, None)
+
+    row = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
+    assert telemetry.build_response(row, db.web, logs.udp).endswith(
+        ',gw=off,le=1,tu=xtt:8;xoa:coolant>=95|rpm>6500;xbw:11900')
+
+    cleared = client.post('/api/1.0/config', headers=bearer, json={
+        'imei': device['imei'], 'xtt': None, 'xoa': None, 'xbw': None})
+    assert cleared.get_json()['status'] == 'ok'
+    row = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
+    assert telemetry.build_response(row, db.web, logs.udp).endswith(',le=1,tu=-')
+    events = [r['text'] for r in database.all('SELECT `text` FROM `device_event`')]
+    assert 'Tow tilt alarm set to 8 deg' in events
+    assert 'Tow tilt alarm back to the built value' in events
+
+    listed = client.get('/api/1.0/devices', headers=bearer)
+    if listed.status_code == 200:
+        mine = [d for d in listed.get_json()['devices'] if d['imei'] == device['imei']]
+        assert mine[0]['tow_tilt_deg'] is None and 'obd_alerts' in mine[0]

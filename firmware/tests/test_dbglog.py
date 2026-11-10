@@ -150,12 +150,6 @@ static int64_t g_ms;
 int64_t k_uptime_get(void) { return g_ms; }
 const char *fatal_last_crash(void) { return NULL; }
 const char *watchdog_last_stall(void) { return NULL; }
-size_t hb_rst_compose(char *out, size_t out_sz, const char *cause,
-                      const char *crumb, const char *stall)
-{
-    (void)out; (void)out_sz; (void)cause; (void)crumb; (void)stall;
-    return 0;
-}
 
 /* Every unlock: once the module is in use the block must be sealed. */
 void h_unlocking(void)

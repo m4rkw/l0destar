@@ -55,6 +55,11 @@ SERVER_SIDE_SETTINGS = {
     'gnss_off_hour_to': 'gnss_off_hour_to',
     'leds': 'leds',
     'backup_interval': 'backup_int',
+    # The runtime tunables, by column name; a value of "default" (or nothing)
+    # clears one back to NULL, "the unit keeps the value it was built with".
+    # obd_alerts takes its rules separated by '|', as a comma would end the
+    # command: obd_alerts=coolant>=95|rpm>6500.
+    **{column: column for column in telemetry.TUNABLE_COLUMNS},
 }
 
 CONFIG_FIELDS = {
@@ -70,6 +75,7 @@ CONFIG_FIELDS = {
     'gwf': 'gnss_off_hour_from',
     'gwt': 'gnss_off_hour_to',
     'le': 'leds',
+    **{code: column for code, column, _, _ in telemetry.TUNABLES},
 }
 
 # Intervals the unit would raise to this anyway (the cell behind them is
@@ -90,7 +96,10 @@ SETTING_RANGES = {
     'gnss_off_hour_from': (0, 23),
     'gnss_off_hour_to': (0, 23),
     'leds': (0, 1),
+    **telemetry.TUNABLE_RANGES,
 }
+
+BATTERY_COLUMNS = ('battery_warning_mv', 'battery_poweroff_mv')
 
 
 def _setting(column, value):
@@ -108,6 +117,43 @@ def _setting(column, value):
     if column in NONZERO_MINIMUM and 0 < value < NONZERO_MINIMUM[column]:
         return None
     return value if low <= value <= high else None
+
+
+def _tunable(column, value):
+    """(True, the value to store) for a runtime tunable, (False, None) if it is
+    refused.  None, the string "default" and (for text) "" clear it to NULL;
+    obd_alerts is a rule list, the others whole numbers in their range."""
+    if value is None or (isinstance(value, str)
+                         and value.strip() in ('', 'default')
+                         and column == 'obd_alerts'):
+        return True, None
+    if column == 'obd_alerts':
+        return (True, value) if telemetry.valid_obd_alerts(value) else (False, None)
+    number = _setting(column, value)
+    return (False, None) if number is None else (True, number)
+
+
+def _tunable_error(key, column):
+    if column == 'obd_alerts':
+        return error('%s must be null, "" or up to %d characters of comma-'
+                     'separated rules like coolant>=95,rpm>6500/200 (printable '
+                     'ASCII, no ";" or "|")' % (key, telemetry.OBD_ALERTS_MAX))
+    return _setting_error(key, column)
+
+
+def _battery_conflict(device, updates):
+    """An error response if the battery power-off level would not sit below
+    the warning level once ``updates`` ({column: value}) are applied to
+    ``device``, else None.  Only checked when both are set."""
+    if not set(BATTERY_COLUMNS) & set(updates):
+        return None
+    merged = {c: updates[c] if c in updates else device.get(c)
+              for c in BATTERY_COLUMNS}
+    warning, poweroff = (merged[c] for c in BATTERY_COLUMNS)
+    if warning is not None and poweroff is not None and poweroff >= warning:
+        return error('battery_poweroff_mv (xbp) must be below '
+                     'battery_warning_mv (xbw)')
+    return None
 
 
 def _setting_error(key, column):
@@ -388,7 +434,14 @@ def get_config():
     result = {}
     for key, column in CONFIG_FIELDS.items():
         value = device.get(column)
-        result[key] = defaults.get(key, 0) if value is None else value
+        if column in telemetry.TUNABLE_COLUMNS:
+            result[key] = value   # null: no override, the unit's built value
+        else:
+            result[key] = defaults.get(key, 0) if value is None else value
+    # What the unit reported it was built with, and the value in use (the
+    # override if set, else the built value, else null).
+    result['tunables_built'] = telemetry.tunables_built(device)
+    result['tunables'] = telemetry.tunables_effective(device)
     return ok(result)
 
 
@@ -412,10 +465,19 @@ def update_config():
     updates = []
     for key, column in CONFIG_FIELDS.items():
         if key in data:
-            value = _setting(column, data[key])
-            if value is None:
-                return _setting_error(key, column)
+            if column in telemetry.TUNABLE_COLUMNS:
+                good, value = _tunable(column, data[key])
+                if not good:
+                    return _tunable_error(key, column)
+            else:
+                value = _setting(column, data[key])
+                if value is None:
+                    return _setting_error(key, column)
             updates.append((column, value))
+
+    failure = _battery_conflict(device, dict(updates))
+    if failure:
+        return failure
 
     if updates:
         assignments = ', '.join('`%s` = %%s' % column for column, _ in updates)
@@ -503,11 +565,27 @@ def queue_command():
         values = []
         for part in server_side:
             key, value = part.split('=', 1)
-            assignments.append('`%s` = %%s' % SERVER_SIDE_SETTINGS[key])
-            number = _setting(SERVER_SIDE_SETTINGS[key], value)
-            if number is None:
-                return _setting_error(key, SERVER_SIDE_SETTINGS[key])
+            column = SERVER_SIDE_SETTINGS[key]
+            assignments.append('`%s` = %%s' % column)
+            if column in telemetry.TUNABLE_COLUMNS:
+                value = value.strip()
+                if value == 'default' or (value == '' and column != 'obd_alerts'):
+                    value = None
+                elif column == 'obd_alerts':
+                    value = value.replace('|', ',')
+                good, number = _tunable(column, value)
+                if not good:
+                    return _tunable_error(key, column)
+            else:
+                number = _setting(column, value)
+                if number is None:
+                    return _setting_error(key, column)
             values.append(number)
+        failure = _battery_conflict(device, {
+            SERVER_SIDE_SETTINGS[part.split('=', 1)[0]]: value
+            for part, value in zip(server_side, values)})
+        if failure:
+            return failure
         values.append(device['id'])
         db.web.query(
             'UPDATE `device` SET %s WHERE `id` = %%s' % ', '.join(assignments),

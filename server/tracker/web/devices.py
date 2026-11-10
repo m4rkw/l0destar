@@ -12,7 +12,8 @@ import datetime
 from flask import request
 
 from .. import config, db
-from ..telemetry import COMMAND_MAX_AGE_HOURS
+from ..telemetry import (COMMAND_MAX_AGE_HOURS, TUNABLE_COLUMNS,
+                         tunables_built, tunables_effective)
 
 
 def _named(value):
@@ -404,6 +405,10 @@ def summary(device, database=None, log=None):
         'gnss_off_hour_to': (7 if device.get('gnss_off_hour_to') is None
                              else device['gnss_off_hour_to']),
         'leds': 0 if device.get('leds') == 0 else 1,
+        # Runtime tunables: null = no override, the unit keeps its built value.
+        **{column: device.get(column) for column in TUNABLE_COLUMNS},
+        'tunables_built': tunables_built(device),
+        'tunables': tunables_effective(device),
         'uptime': _nullable_float(log.get('uptime')),
         **config_state(device, database),
     }

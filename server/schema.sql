@@ -99,6 +99,48 @@ CREATE TABLE `device` (
   -- dark.  Sent in every reply as le=<0|1>, straight after gw=.
   `leds`               TINYINT(1)       NOT NULL DEFAULT 1,
 
+  -- Runtime tunables: optional overrides of the values the firmware is built
+  -- with (Kconfig).  NULL = no override, the unit keeps its built value.  The
+  -- non-NULL ones are sent in every reply as tu=<code>:<value>[;...] (tu=-
+  -- when all are NULL), straight after le=.
+  -- xtt: APP_TOW_TILT_DEG, degrees, 0-30
+  `tow_tilt_deg`          TINYINT DEFAULT NULL,
+  -- xpi: APP_PARKED_IMPACT_MG, milli-g, 300-2500
+  `parked_impact_mg`      SMALLINT DEFAULT NULL,
+  -- xii: APP_IMPACT_IMMEDIATE_MG, milli-g, 0-1200 (0 = never)
+  `impact_immediate_mg`   SMALLINT DEFAULT NULL,
+  -- xap: APP_ACCEL_ALERT_PRIORITY, -2 to 2
+  `accel_alert_priority`  TINYINT DEFAULT NULL,
+  -- xab: APP_ACCEL_ALERT_BACKOFF_S, seconds, 0-86400
+  `accel_alert_backoff_s` INT DEFAULT NULL,
+  -- xoa: APP_OBD_ALERTS, rule list, max 120 chars
+  `obd_alerts`            VARCHAR(120) DEFAULT NULL,
+  -- xis: APP_IGNITION_ON_SLEEP_INTERVAL, seconds, 10-600
+  `ignition_on_sleep_s`   SMALLINT DEFAULT NULL,
+  -- xbw: APP_BATTERY_WARNING_MV, mV, 11000-12500
+  `battery_warning_mv`    SMALLINT DEFAULT NULL,
+  -- xbp: APP_BATTERY_POWEROFF_MV, mV, 10500-12200, below the warning
+  `battery_poweroff_mv`   SMALLINT DEFAULT NULL,
+  -- xds: APP_DRIVE_STREAM, 0 or 1
+  `drive_stream`          TINYINT DEFAULT NULL,
+  -- xdi: APP_DRIVE_STREAM_INTERVAL_S, seconds, 0-900 (0 = as fast as possible)
+  `drive_stream_interval_s` SMALLINT UNSIGNED DEFAULT NULL,
+  -- xtp: APP_TRACK_PERIOD_MS, ms, 200-5000
+  `track_period_ms`       SMALLINT DEFAULT NULL,
+  -- xdd: APP_DATABUF_DRAIN_S, seconds, 1-600
+  `databuf_drain_s`       SMALLINT DEFAULT NULL,
+  -- xns: APP_NETWORK_SEARCH_TIMEOUT, seconds, 60-86400
+  `network_search_s`      INT DEFAULT NULL,
+  -- xrp: APP_RESP_POLL_S, seconds, 5-600
+  `resp_poll_s`           SMALLINT DEFAULT NULL,
+  -- xlw: APP_LED_ACCEL_WAKE, 0 or 1
+  `led_accel_wake`        TINYINT DEFAULT NULL,
+  -- The values the unit says it is built with (tb=), raw: <code>:<value>[;...]
+  -- in the tu= grammar, xoa's commas as '|'.  NULL until it has reported.
+  -- GET /config and /devices show them as tunables_built, and the value in
+  -- use (override, else built) as tunables.
+  `tunables_built`        VARCHAR(400) DEFAULT NULL,
+
   `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `imei` (`imei`)

@@ -47,6 +47,14 @@ def test_board():
     assert telemetry.parse_csv_line(FULL + ',bd=v4.0p1+kline')['board'] == 'v4.0p1+kline'
 
 
+def test_built_tunables_are_taken_whole_not_split_on_semicolons():
+    tb = 'xtt:8;xoa:coolant>=95|rpm>6500;xds:0'
+    data = telemetry.parse_csv_line(FULL + ',bd=v4.0p1+kline,tb=' + tb)
+    assert data['tunables_built'] == tb
+    assert data['board'] == 'v4.0p1+kline'
+    assert 'tunables_built' not in telemetry.parse_csv_line(FULL)
+
+
 def test_record_id():
     assert telemetry.parse_csv_line(FULL + ',rid=41238')['rec_id'] == '41238'
 
@@ -366,8 +374,8 @@ def test_response_carries_track_switch():
     on = telemetry.build_response({'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1,
                                    'track_mode': 1}, _NoCommands(), _Quiet(),
                                   firmware_version='0.4.22')
-    assert off.endswith(',track=0,gw=off,le=1')
-    assert on.endswith(',fota=0.4.22,track=1,gw=off,le=1')
+    assert off.endswith(',track=0,gw=off,le=1,tu=-')
+    assert on.endswith(',fota=0.4.22,track=1,gw=off,le=1,tu=-')
 
 
 class _Commands:
@@ -390,15 +398,15 @@ def test_response_carries_the_backup_interval_on_every_reply():
     device = {'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1, 'backup_int': 1800}
 
     assert telemetry.build_response(device, _NoCommands(), _Quiet()) == \
-        '1,60,1,backup=1800,track=0,gw=off,le=1'
+        '1,60,1,backup=1800,track=0,gw=off,le=1,tu=-'
     # After the commands, ahead of the advert and the track switch, which stay last.
     assert telemetry.build_response(dict(device, track_mode=1), _NoCommands(), _Quiet(),
                                     firmware_version='0.4.79') == \
-        '1,60,1,backup=1800,fota=0.4.79,track=1,gw=off,le=1'
+        '1,60,1,backup=1800,fota=0.4.79,track=1,gw=off,le=1,tu=-'
 
     queue = _Commands('locate')
     assert telemetry.build_response(device, queue, _Quiet()) == \
-        '1,60,1,locate,backup=1800,track=0,gw=off,le=1'
+        '1,60,1,locate,backup=1800,track=0,gw=off,le=1,tu=-'
     assert queue.deleted
 
 
@@ -408,9 +416,9 @@ def test_response_says_so_when_there_is_no_backup_interval():
     unset = {'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1}
 
     assert telemetry.build_response(unset, _NoCommands(), _Quiet()) == \
-        '1,60,1,backup=0,track=0,gw=off,le=1'
+        '1,60,1,backup=0,track=0,gw=off,le=1,tu=-'
     assert telemetry.build_response(dict(unset, backup_int=None), _NoCommands(),
-                                    _Quiet()) == '1,60,1,backup=0,track=0,gw=off,le=1'
+                                    _Quiet()) == '1,60,1,backup=0,track=0,gw=off,le=1,tu=-'
 
 
 def test_backup_interval_cannot_be_mistaken_for_a_command_by_the_firmware():
@@ -511,8 +519,8 @@ def test_net_scan_list_decoded():
 def test_response_carries_the_leds_token_after_gw():
     base = {'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1}
     # A row without the column reads as on, the column's default.
-    assert telemetry.build_response(base, _NoCommands(), _Quiet()).endswith(',gw=off,le=1')
+    assert telemetry.build_response(base, _NoCommands(), _Quiet()).endswith(',gw=off,le=1,tu=-')
     assert telemetry.build_response(dict(base, leds=1), _NoCommands(),
-                                    _Quiet()).endswith(',gw=off,le=1')
+                                    _Quiet()).endswith(',gw=off,le=1,tu=-')
     assert telemetry.build_response(dict(base, leds=0), _NoCommands(),
-                                    _Quiet()).endswith(',gw=off,le=0')
+                                    _Quiet()).endswith(',gw=off,le=0,tu=-')

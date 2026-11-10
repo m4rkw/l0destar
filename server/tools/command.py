@@ -37,6 +37,21 @@ Settings the server acts on, applied immediately and never sent to the device:
     gnss_off_hour_to=0-23
     leds=0|1               device status LEDs on/off
 
+Runtime tunables, overrides of values the firmware is built with.  Unset (NULL)
+means the unit keeps its built value: clear one with `<name>=default`.  Sent to
+the unit in every reply as tu=.
+
+    tow_tilt_deg=0-30              parked_impact_mg=300-2500
+    impact_immediate_mg=0-1200     accel_alert_priority=-2..2
+    accel_alert_backoff_s=0-86400  ignition_on_sleep_s=10-600
+    battery_warning_mv=11000-12500 battery_poweroff_mv=10500-12200 (below warning)
+    drive_stream=0|1               drive_stream_interval_s=0-900
+    track_period_ms=200-5000       databuf_drain_s=1-600
+    network_search_s=60-86400      resp_poll_s=5-600
+    led_accel_wake=0|1
+    obd_alerts=<rule>[|<rule>...]  e.g. obd_alerts='coolant>=95|rpm>6500'
+                                   (| for the comma, which separates commands)
+
 Also applied immediately rather than queued, because every response carries it
 to the device (as track mode does) and a queued copy would be undone by the
 next one:

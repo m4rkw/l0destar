@@ -30,6 +30,7 @@ import sys
 import _bootstrap  # noqa: F401
 
 from tracker import db, firmware
+from tracker.telemetry import TUNABLE_COLUMNS
 
 PSK_RE = re.compile(r'^[0-9a-fA-F]{64}$')
 
@@ -116,6 +117,9 @@ def show(args):
             device.get('gnss_off_window', 0), device.get('gnss_off_hour_from', 0),
             device.get('gnss_off_hour_to', 7))),
         ('device LEDs', 'on' if device.get('leds', 1) else 'off'),
+        ('runtime tunables', ' '.join(
+            '%s=%s' % (column, device[column]) for column in TUNABLE_COLUMNS
+            if device.get(column) is not None) or 'none (built values)'),
         ('firmware', device.get('fw') or '-'),
         ('board', device.get('board') or '-'),
         ('published firmware', firmware.latest_version(device['imei']) or '-'),

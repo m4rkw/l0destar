@@ -11,6 +11,8 @@
 #ifndef APP_CONFIG_H_
 #define APP_CONFIG_H_
 
+#include "tunables.h"
+
 /* -- protocol / endpoint --------------------------------------------------- */
 #define HOSTNAME            ""
 #define UDP_PORT            CONFIG_APP_SERVER_PORT
@@ -29,10 +31,10 @@
 #define RESPONSE_TIMEOUT_MS 4000
 
 /* What databuf_deliver() may spend sending the backlog: a parked wake and a
- * planned reboot are set in Kconfig; the hold breaker's is a drive's, so short. */
-#define DRAIN_PARKED_MS     (CONFIG_APP_DATABUF_DRAIN_S * 1000)
+ * planned reboot are set in Kconfig. */
+/* Server-changeable values (tunables.h) are calls, not constants. */
+#define DRAIN_PARKED_MS     (tun_databuf_drain_s() * 1000)
 #define DRAIN_REBOOT_MS     (CONFIG_APP_DATABUF_REBOOT_DRAIN_S * 1000)
-#define DRAIN_DRIVING_MS    10000
 #define TLS_SEC_TAG         1
 
 /* Fallback PSK, an all-zero placeholder: the tracker still sends with it, and
@@ -63,7 +65,7 @@
  * anything has changed.  A wake that finds no network at all backs off
  * further still — see NO_SIGNAL_MAX_INTERVAL. */
 #define ENGINE_OFF_BOOT_INTERVAL    3600
-#define IGNITION_ON_SLEEP_INTERVAL  CONFIG_APP_IGNITION_ON_SLEEP_INTERVAL
+#define IGNITION_ON_SLEEP_INTERVAL  tun_ignition_on_sleep_s()
 #define VOLTAGE_POLL_INTERVAL       CONFIG_APP_VOLTAGE_POLL_INTERVAL
 #define BATTERY_CHECK_INTERVAL      CONFIG_APP_BATTERY_CHECK_INTERVAL
 #define NETWORK_REGISTRATION_TIMEOUT CONFIG_APP_NETWORK_REGISTRATION_TIMEOUT
@@ -74,7 +76,7 @@
  * 0 = no limit, which is what every boot and wake had before: a boot idled
  * with GNSS and the modem both searching until the network came, a timed
  * wake left the modem searching until the next one. */
-#define NETWORK_SEARCH_TIMEOUT      CONFIG_APP_NETWORK_SEARCH_TIMEOUT
+#define NETWORK_SEARCH_TIMEOUT      tun_network_search_s()
 /* Ceiling on the engine-off wake interval while there is no network at all.
  * Each consecutive timed wake that cannot register doubles the wait, up to
  * this, and the first registration puts it back to the configured interval.
@@ -146,8 +148,8 @@
 #define GNSS_KEEP_MAX               3
 
 /* -- voltage thresholds (Kconfig uses mV, code uses float V) -------------- */
-#define BATTERY_WARNING_LEVEL       (CONFIG_APP_BATTERY_WARNING_MV / 1000.0f)
-#define BATTERY_POWEROFF_LEVEL      (CONFIG_APP_BATTERY_POWEROFF_MV / 1000.0f)
+#define BATTERY_WARNING_LEVEL       (tun_battery_warning_mv() / 1000.0f)
+#define BATTERY_POWEROFF_LEVEL      (tun_battery_poweroff_mv() / 1000.0f)
 #define SLEEP_SAFETY_VOLTAGE        (CONFIG_APP_SLEEP_SAFETY_MV / 1000.0f)
 #define ENGINE_RUNNING_VOLTAGE      (CONFIG_APP_ENGINE_RUNNING_MV / 1000.0f)
 #define IMPLAUSIBLE_VOLTAGE         5.0f
@@ -258,19 +260,19 @@
 #define ACC_MOVEMENT_THRESHOLD      CONFIG_APP_ACC_MOVEMENT_THRESHOLD
 #define MOVEMENT_INACTIVITY_RESET   CONFIG_APP_MOVEMENT_INACTIVITY_RESET
 #define CRASH_THRESHOLD_MG          CONFIG_APP_CRASH_THRESHOLD_MG
-#define PARKED_IMPACT_MG            CONFIG_APP_PARKED_IMPACT_MG
-#define IMPACT_IMMEDIATE_MG         CONFIG_APP_IMPACT_IMMEDIATE_MG
+#define PARKED_IMPACT_MG            tun_parked_impact_mg()
+#define IMPACT_IMMEDIATE_MG         tun_impact_immediate_mg()
 #define IMPACT_IMMEDIATE_MAX_MS     CONFIG_APP_IMPACT_IMMEDIATE_MAX_MS
-#define TOW_TILT_DEG                CONFIG_APP_TOW_TILT_DEG
+#define TOW_TILT_DEG                tun_tow_tilt_deg()
 #define TOW_POLL_S                  CONFIG_APP_TOW_POLL_S
 #define TOW_REARM_S                 CONFIG_APP_TOW_REARM_S
 #define TOW_STABLE_TENTHS           10   /* attitude "still" band: 1.0 deg */
 #define MOVEMENT_TEMPORARY_ENGINE_OFF_INTERVAL 14400
 #define NO_MOVEMENT_GPS_SKIP        86400
 #define DEFAULT_MOVEMENT_ALARM      IS_ENABLED(CONFIG_APP_MOVEMENT_ALARM)
-#define LED_ACCEL_WAKE              IS_ENABLED(CONFIG_APP_LED_ACCEL_WAKE)
-#define ACCEL_ALERT_PRIORITY        CONFIG_APP_ACCEL_ALERT_PRIORITY
-#define ACCEL_ALERT_BACKOFF_S       CONFIG_APP_ACCEL_ALERT_BACKOFF_S
+#define LED_ACCEL_WAKE              tun_led_accel_wake()
+#define ACCEL_ALERT_PRIORITY        tun_accel_alert_priority()
+#define ACCEL_ALERT_BACKOFF_S       tun_accel_alert_backoff_s()
 #define ACCEL_ALERT_BACKOFF_PRIORITY CONFIG_APP_ACCEL_ALERT_BACKOFF_PRIORITY
 
 /* -- error escalation ------------------------------------------------------ */
@@ -394,34 +396,6 @@
 #define FIX_GAP_MOVING_KMH          10.0f
 /* At most one such warning a minute; the next says how many it held back. */
 #define FIX_GAP_WARN_SPACING_MS     60000
-
-/* -- hold breaker (APP_HOLD_BREAK; the options say what it is for) --------- */
-/* Past the window, with no batch due to end it: the loop's own check allows
- * this much on top, so one that is a record or two from going out is not
- * pre-empted.  Only a fix wait with no fixes in it (a tunnel) gets this far. */
-#define HOLD_BREAK_GRACE_MS         10000
-/* After the modem failed to let LTE go (a command that came back with an
- * error): how long the feature stays off.  A refusal is for the rest of the
- * boot. */
-#define HOLD_BREAK_COOLDOWN_MS      600000
-/* After a restore that did not register: the feature stays off until the modem
- * has registered by itself (a cut needs a registration, and a dead zone ends
- * when the vehicle leaves it), and then this much longer, in case the cycling
- * had a hand in it.  Parking clears both: holdbreak.c's hb_new_trip(). */
-#define HOLD_BREAK_HOLDOFF_MS       300000
-/* After a restore that did not register, while the radio is still searching:
- * what the modem says about it is logged this often, this many times, so the
- * next one can be told from a cell that is not there (modem_search_report).
- * Only with the key off: holdbreak.h, hb_watch_due(). */
-#define HOLD_BREAK_WATCH_MS         30000
-#define HOLD_BREAK_WATCH_N          20
-/* What unanswered datagrams get before LTE goes: replies are normally in
- * within a fraction of a second, and anything still out after this is queued
- * again for the burst. */
-#define HOLD_BREAK_SETTLE_MS        2000
-/* The backlog is a ring of APP_DATABUF_SLOTS records and thins itself when it
- * fills.  Parking stops short of that: past this share the burst goes. */
-#define HOLD_BREAK_BACKLOG_PCT      75
 
 /* -- movement confirmation ------------------------------------------------- */
 #define MOVEMENT_CONFIRM_MS         CONFIG_APP_MOVEMENT_CONFIRM_MS

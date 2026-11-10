@@ -270,7 +270,7 @@ static int attempt(void)
     /* LTE first.  It is normally up by the time the receiver has been
      * configured, but a unit that woke on movement may still be attaching. */
     for (int64_t until = k_uptime_get() + NETWORK_WAIT_MS;
-         !modem_is_registered() || modem_lte_is_cut(); k_msleep(1000)) {
+         !modem_is_registered(); k_msleep(1000)) {
         if (!gnss_ext_assist_useful() || k_uptime_get() > until) {
             return -ENETDOWN;
         }
