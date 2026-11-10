@@ -11,7 +11,7 @@ import pytest
 
 from conftest import needs_db, record
 
-from tracker import db, logs, telemetry
+from tracker import db, interval_schedule, logs, telemetry
 
 pytestmark = needs_db
 
@@ -749,6 +749,109 @@ def test_backup_interval_rides_every_reply(device, database):
     send(device, record(3, 51.5, -0.1, 0, extras=',int=900;ma=1;backup=60'))
     updated = db.lookup_device(imei=device['imei'])
     assert (updated['int'], updated['backup_int']) == (900, 1800)
+
+
+NIGHTS = [{'days': [0, 1, 2, 3, 4, 5, 6], 'from': '22:00', 'to': '06:00', 'int': 7200}]
+
+
+@pytest.fixture
+def london_at(monkeypatch):
+    import datetime
+    import zoneinfo
+
+    def set_time(*when):
+        moment = datetime.datetime(*when, tzinfo=zoneinfo.ZoneInfo('Europe/London'))
+        monkeypatch.setattr(interval_schedule, 'local_now', lambda: moment)
+    return set_time
+
+
+def test_the_reply_interval_follows_the_schedule(device, database, london_at):
+    database.query('UPDATE `device` SET `int` = 900, `interval_schedule` = %s '
+                   'WHERE `id` = %s',
+                   (interval_schedule.dumps(NIGHTS), device['id']))
+    london_at(2026, 11, 10, 12, 0)
+    assert send(device, record(0, 51.5, -0.1, 0)).startswith('1,900,')
+    london_at(2026, 11, 10, 23, 0)
+    assert send(device, record(1, 51.5, -0.1, 0)).startswith('1,7200,')
+    # Cut short at the start of the 900 s period.
+    london_at(2026, 11, 10, 5, 45)
+    assert send(device, record(2, 51.5, -0.1, 0)).startswith('1,%d,'
+                                                              % (15 * 60 + interval_schedule.SLACK_S))
+    # What was sent is filed as applied.
+    assert db.lookup_device(imei=device['imei'])['ap_int'] == 15 * 60 + interval_schedule.SLACK_S
+
+
+def test_a_reported_interval_does_not_overwrite_the_base_of_a_schedule(
+        device, database, london_at):
+    database.query('UPDATE `device` SET `int` = 900, `interval_schedule` = %s '
+                   'WHERE `id` = %s',
+                   (interval_schedule.dumps(NIGHTS), device['id']))
+    london_at(2026, 11, 10, 23, 0)
+    send(device, record(0, 51.5, -0.1, 0, extras=',ri=1;int=7200'))
+    assert db.lookup_device(imei=device['imei'])['int'] == 900
+
+
+def test_schedule_config_round_trip(client, device, database, bearer):
+    url = '/api/1.0/config?imei=%s' % device['imei']
+    first = client.get(url, headers=bearer).get_json()
+    assert first['isch'] is None
+    assert first['interval_now'] == first['int'] == 3600
+
+    posted = client.post('/api/1.0/config', headers=bearer,
+                         json={'imei': device['imei'], 'isch': NIGHTS})
+    assert posted.get_json()['status'] == 'ok'
+    again = client.get(url, headers=bearer).get_json()
+    assert again['isch'] == NIGHTS
+    assert again['int'] == 3600           # the plain interval is untouched
+    events = database.all('SELECT `text` FROM `device_event` ORDER BY `id`')
+    assert events[-1]['text'] == 'Report schedule set (1 rule)'
+
+    client.post('/api/1.0/config', headers=bearer,
+                json={'imei': device['imei'], 'isch': None})
+    assert client.get(url, headers=bearer).get_json()['isch'] is None
+    assert db.lookup_device(imei=device['imei'])['interval_schedule'] is None
+    events = database.all('SELECT `text` FROM `device_event` ORDER BY `id`')
+    assert events[-1]['text'] == 'Report schedule cleared'
+
+    client.post('/api/1.0/config', headers=bearer,
+                json={'imei': device['imei'], 'isch': NIGHTS})
+    client.post('/api/1.0/config', headers=bearer,
+                json={'imei': device['imei'], 'isch': []})
+    assert db.lookup_device(imei=device['imei'])['interval_schedule'] is None
+
+
+@pytest.mark.parametrize('bad', [
+    'nonsense', [{'days': [7], 'from': '00:00', 'to': '01:00', 'int': 60}],
+    [{'days': [0], 'from': '00:00', 'to': '01:00', 'int': 5}],
+    [{'days': [0], 'from': '0:00', 'to': '01:00', 'int': 60}],
+    NIGHTS * 9,
+])
+def test_a_bad_schedule_is_refused_with_a_message(client, device, bad, bearer):
+    response = client.post('/api/1.0/config', headers=bearer,
+                           json={'imei': device['imei'], 'isch': bad})
+    assert response.status_code == 400
+    assert 'interval schedule' in response.get_json()['message']
+    assert db.lookup_device(imei=device['imei'])['interval_schedule'] is None
+
+
+def test_schedule_command_sets_the_column_and_is_not_queued(client, device, database, bearer):
+    import json
+    text = json.dumps(NIGHTS, separators=(',', ':')).replace(',', '|')
+    response = client.post('/api/1.0/command', headers=bearer,
+                           json={'imei': device['imei'],
+                                 'command': 'interval_schedule=%s,locate' % text})
+    assert response.get_json()['status'] == 'ok'
+    assert interval_schedule.loads(
+        db.lookup_device(imei=device['imei'])['interval_schedule']) == NIGHTS
+    assert [r['command'] for r in database.all('SELECT `command` FROM `command`')] == ['locate']
+
+    refused = client.post('/api/1.0/command', headers=bearer,
+                          json={'imei': device['imei'],
+                                'command': 'interval_schedule=[{"days":[9]}]'})
+    assert refused.status_code == 400
+    client.post('/api/1.0/command', headers=bearer,
+                json={'imei': device['imei'], 'command': 'interval_schedule=default'})
+    assert db.lookup_device(imei=device['imei'])['interval_schedule'] is None
 
 
 def test_commands_are_delivered_once(device, database):

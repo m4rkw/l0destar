@@ -22,6 +22,7 @@ analogue behaviour); it says the command sequences are what the datasheet asks f
     uv run --python 3.12 --with pytest pytest -q firmware/tests/test_extflash.py
 """
 import ctypes as C
+import errno
 import os
 import re
 import shutil
@@ -34,6 +35,7 @@ SRC = os.environ.get("EF_SRC", os.path.join(os.path.dirname(os.path.abspath(__fi
 
 SECTOR = 4096
 EBUSY, ENODEV, EACCES, EIO, ETIMEDOUT, EINVAL = 16, 19, 13, 5, 60, 22      # macOS errno
+EAGAIN = errno.EAGAIN                                                       # the host's, as the harness is built on it
 ERR_IO, ERR_DEAD = -2, -5
 
 STUB_UTIL_H = r"""
@@ -421,6 +423,7 @@ void m_end(void) { extflash_end(); }
 void m_park(void) { extflash_park(); }
 int  m_probe(uint32_t *sectors) { return extflash_probe(sectors); }
 int  m_check(void) { return extflash_check(); }
+int  m_boot_check(uint8_t *id) { return extflash_boot_check(id); }
 
 int m_dev_read(uint32_t a, void *b, size_t n) { const struct flashlog_dev *d = extflash_dev(8); return d->read(d->ctx, a, b, n); }
 int m_dev_prog(uint32_t a, const void *b, size_t n) { const struct flashlog_dev *d = extflash_dev(8); return d->prog(d->ctx, a, b, n); }
@@ -509,6 +512,7 @@ def load(variant, sectors=8):
     L.m_cmd.argtypes = [C.c_int]
     L.m_probe.argtypes = [C.POINTER(C.c_uint32)]
     L.m_check.argtypes = []
+    L.m_boot_check.argtypes = [C.c_void_p]
     L.m_dev_read.argtypes = [C.c_uint32, C.c_void_p, C.c_size_t]
     L.m_dev_prog.argtypes = [C.c_uint32, C.c_char_p, C.c_size_t]
     L.m_dev_erase.argtypes = [C.c_uint32]
@@ -785,6 +789,98 @@ def test_with_no_controller_fitted_the_override_frees_the_bus(chip_factory):
     c.open_log()
     assert c.append(rec(1)) == 0
     c.L.m_end()
+
+
+# --------------------------------------------------------------------------- the chip is asked who it is at boot
+
+def boot_check(c):
+    buf = C.create_string_buffer(3)
+    err = c.L.m_boot_check(buf)
+    return err, tuple(buf.raw[:3])
+
+
+def commands_sent(c):
+    return {cmd for cmd in range(256) if c.L.m_cmd(cmd)}
+
+
+def test_before_init_nothing_has_been_asked(chip_factory):
+    c = chip_factory()
+    assert boot_check(c)[0] == -EAGAIN
+    assert commands_sent(c) == set()
+
+
+@pytest.mark.parametrize("variant", ["own", "nocan"])
+def test_init_reads_the_id_once_and_parks_the_chip(chip_factory, variant):
+    c = chip_factory(variant, rail=False, controller=False)
+    c.L.m_init()
+    assert boot_check(c) == (0, (0xC2, 0x28, 0x17))
+    assert commands_sent(c) == {0x9F, 0xB9}               # the ID read and the deep power-down, nothing else
+    assert c.L.m_cmd(0x9F) == 1 and c.L.m_dp() == 1
+    assert c.logs() == []                                 # the caller says what it found
+
+
+@pytest.mark.parametrize("fault, said", [
+    ((1, 1), (0xFF, 0xFF, 0xFF)), ((1, 2), (0x00, 0x00, 0x00)),
+    ((2, 0x16), (0xC2, 0x28, 0x16)), ((8, 0xEF), (0xEF, 0x28, 0x17)), ((9, 0x40), (0xC2, 0x40, 0x17))],
+    ids=["no chip: all ones", "a line held low: all zeros", "wrong density", "another maker", "another type"])
+def test_a_chip_that_answers_wrongly_or_not_at_all_is_reported_with_what_it_said(chip_factory, fault, said):
+    c = chip_factory("own")
+    c.L.m_fault(*fault)
+    c.L.m_init()
+    assert boot_check(c) == (-ENODEV, said)
+    assert commands_sent(c) == {0x9F, 0xB9}               # still sent to sleep, and nothing written to it
+    assert c.L.m_cmd(0xB9) == 1
+
+
+def test_later_sessions_do_not_change_the_answer_the_boot_got(chip_factory):
+    c = chip_factory("own")
+    c.L.m_init()
+    c.L.m_fault(1, 1)                                     # the chip goes away afterwards
+    c.L.m_park()
+    assert boot_check(c) == (0, (0xC2, 0x28, 0x17))       # what it said at boot
+    assert c.L.m_cmd(0x9F) == 1                           # a park does not ask again
+    assert c.L.m_begin() == 0
+    assert c.L.m_check() == -ENODEV                       # the session check is what notices it
+    c.L.m_end()
+
+
+def test_a_chip_found_wrong_at_boot_is_not_quietly_forgiven_by_a_later_park(chip_factory):
+    c = chip_factory("own")
+    c.L.m_fault(1, 1)
+    c.L.m_init()
+    c.L.m_fault(1, 0)                                     # it answers next time
+    c.L.m_park()
+    assert boot_check(c) == (-ENODEV, (0xFF, 0xFF, 0xFF))  # the boot's answer is the boot's
+    assert c.L.m_cmd(0x9F) == 1                           # the tier asks again itself, at its first spill
+
+
+def test_on_the_cans_bus_the_id_is_read_when_the_rail_first_comes_up_and_not_again(chip_factory):
+    c = chip_factory("shared", rail=False, controller=True)
+    c.L.m_init()
+    assert boot_check(c)[0] == -EAGAIN                    # the rail is down: nothing touched, nothing learnt
+    assert c.L.m_pin_events() == 0 and commands_sent(c) == set()
+    c.L.m_rail_edge(1)                                    # CAN init raises it at boot
+    assert boot_check(c) == (0, (0xC2, 0x28, 0x17))
+    assert c.L.m_cmd(0x9F) == 1 and c.L.m_cmd(0xB9) == 1
+    c.L.m_rail_edge(0)
+    c.L.m_rail_edge(1)                                    # a later CAN session: parked again, not asked again
+    assert c.L.m_cmd(0x9F) == 1 and c.L.m_cmd(0xB9) == 2
+    assert boot_check(c) == (0, (0xC2, 0x28, 0x17))
+
+
+def test_if_the_rail_is_already_up_at_init_the_id_is_read_at_once(chip_factory):
+    c = chip_factory("shared", rail=True, controller=True)
+    c.L.m_init()
+    assert boot_check(c) == (0, (0xC2, 0x28, 0x17))
+
+
+def test_a_chip_that_is_wrong_on_the_cans_bus_is_reported_once_the_rail_has_been_up(chip_factory):
+    c = chip_factory("shared", rail=False, controller=True)
+    c.L.m_fault(1, 1)
+    c.L.m_init()
+    assert boot_check(c)[0] == -EAGAIN
+    c.L.m_rail_edge(1)
+    assert boot_check(c) == (-ENODEV, (0xFF, 0xFF, 0xFF))
 
 
 # --------------------------------------------------------------------------- a chip that is not right

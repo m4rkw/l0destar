@@ -396,6 +396,14 @@ int      databuf_count(void);                /* everything waiting: RAM and flas
 int      databuf_ring_count(void);           /* of it, the part held in RAM */
 uint32_t databuf_dropped(void);
 void     databuf_reset(void);
+/* Says what the flash chip's ID read at boot found: one line if it answered, a
+ * warning and an alert (APP_HW_FAULT_PRIORITY, once per boot) if it did not.
+ * From the main thread's startup, with the other parts that may not answer. */
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+void     databuf_flash_report(void);
+#else
+static inline void databuf_flash_report(void) { }
+#endif
 /* The drive stream is running (true) or not.  While it is, the backlog keeps
  * records APP_DATABUF_STREAM_GAP_S apart by when they were built, so a stream
  * of them does not fill the slots in seconds.  Only with APP_DRIVE_STREAM. */

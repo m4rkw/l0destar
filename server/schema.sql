@@ -99,6 +99,13 @@ CREATE TABLE `device` (
   -- dark.  Sent in every reply as le=<0|1>, straight after gw=.
   `leds`               TINYINT(1)       NOT NULL DEFAULT 1,
 
+  -- The engine-off reporting schedule: JSON list of up to 8 rules {"days":
+  -- [0-6, Monday is 0], "from": "HH:MM", "to": "HH:MM", "int": seconds}, server
+  -- local time, first match wins (int 0 = no timed reports, else 10-86400).
+  -- The interval in every reply is the first rule in force now, else `int`.
+  -- NULL = no schedule.  GET /config shows it as isch.
+  `interval_schedule`  TEXT             DEFAULT NULL,
+
   -- Runtime tunables: optional overrides of the values the firmware is built
   -- with (Kconfig).  NULL = no override, the unit keeps its built value.  The
   -- non-NULL ones are sent in every reply as tu=<code>:<value>[;...] (tu=-

@@ -25,6 +25,7 @@ handle it is given (.one / .all / .query, as in db.py) and nothing else.
 """
 
 import datetime
+import json
 import logging
 import re
 
@@ -289,6 +290,13 @@ def setting_text(column, value):
     if column == 'backup_int':
         return ('Backup report interval set to %d s' % value if value
                 else 'Backup report interval follows the normal one')
+    if column == 'interval_schedule':
+        try:
+            rules = len(json.loads(value)) if value else 0
+        except (TypeError, ValueError):
+            rules = 0
+        return ('Report schedule set (%d rule%s)' % (rules, '' if rules == 1 else 's')
+                if rules else 'Report schedule cleared')
     if column == 'movement_alarm':
         return 'Movement alarm ' + on
     if column == 'alarm':

@@ -11,6 +11,7 @@ every way the flash can be missing or fail leaves the backlog as it was without 
     uv run --python 3.12 --with pytest pytest -q firmware/tests/test_databuf_flash.py
 """
 import ctypes as C
+import errno
 import os
 import re
 import shutil
@@ -20,6 +21,7 @@ import tempfile
 import pytest
 
 SRC = os.environ.get("DB_SRC", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
+HW_FAULT_PRIORITY = 1       # CONFIG_APP_HW_FAULT_PRIORITY in CFLAGS below: what a part that did not answer at boot is sent at
 
 KERNEL_H = r"""
 #ifndef STUB_KERNEL_H
@@ -167,6 +169,7 @@ uint32_t h_sim_erases(int i) { (void)i; return 0; }
 void h_sim_corrupt(uint32_t addr) { (void)addr; }
 int h_sim_progs(void) { return 0; }
 void h_sim_set_id_ok(int ok) { (void)ok; }
+void h_sim_set_boot(int err, int a, int b, int c) { (void)err; (void)a; (void)b; (void)c; }
 #else
 #define SIM_SECTORS 32
 static uint8_t  sim_mem[SIM_SECTORS * 4096];
@@ -229,6 +232,20 @@ int extflash_check(void)
     if (!sim_in_session) sim_violations++;
     return sim_id_ok ? 0 : -ENODEV;
 }
+/* What the driver's ID read at boot found (extflash_init): not a session, the
+ * driver did it before the tier was ever used. */
+static int     sim_boot_err = 0;
+static uint8_t sim_boot_id[3] = { 0xC2, 0x28, 0x17 };
+int extflash_boot_check(uint8_t id[3])
+{
+    memcpy(id, sim_boot_id, 3);
+    return sim_boot_err;
+}
+void h_sim_set_boot(int err, int a, int b, int c)
+{
+    sim_boot_err = err;
+    sim_boot_id[0] = (uint8_t)a; sim_boot_id[1] = (uint8_t)b; sim_boot_id[2] = (uint8_t)c;
+}
 int extflash_probe(uint32_t *sectors)
 {
     if (!sim_in_session) sim_violations++;
@@ -248,6 +265,7 @@ void h_sim_reset(void)
     memset(sim_erases, 0, sizeof(sim_erases));
     sim_violations = sim_in_session = sim_sessions = sim_busy = sim_progs = sim_unreadable = 0;
     sim_present = 1; sim_fail_prog_after = -1; sim_id_ok = 1;
+    h_sim_set_boot(0, 0xC2, 0x28, 0x17);
 }
 void h_sim_set_id_ok(int ok) { sim_id_ok = ok; }
 void h_sim_set(int present, int busy, int fail_prog_after, int unreadable)
@@ -263,6 +281,7 @@ int h_sim_progs(void) { return sim_progs; }
 #endif
 
 /* -- the entry points the tests use ---------------------------------------- */
+void h_flash_report(void) { databuf_flash_report(); }
 int h_push(const char *s) { return databuf_push_lines(s, strlen(s)); }
 int h_count(void) { return databuf_count(); }
 int h_ring_count(void) { return databuf_ring_count(); }
@@ -296,6 +315,7 @@ CFLAGS = [
     "-DCONFIG_APP_FLASH_BACKLOG=1", "-DCONFIG_APP_FLASH_BACKLOG_SECTORS=32",
     "-DCONFIG_APP_FLASH_BACKLOG_GAP_S=1", "-DCONFIG_APP_FLASH_BACKLOG_MAX_CYCLES=100000",
     "-DCONFIG_APP_FLASH_BACKLOG_MAX_OPENS_PER_HOUR=2400",
+    "-DCONFIG_APP_HW_FAULT_PRIORITY=%d" % HW_FAULT_PRIORITY,
 ]
 
 
@@ -342,6 +362,7 @@ def load(so):
     L.h_alert_msg.argtypes = [C.c_int]
     L.h_alert_prio.argtypes = [C.c_int]
     L.h_sim_set_id_ok.argtypes = [C.c_int]
+    L.h_sim_set_boot.argtypes = [C.c_int] * 4
     L.h_dg.argtypes = [C.c_int]
     L.h_dbg_set_unanswered.argtypes = [C.c_int]
     L.h_dbg_answered.restype = C.c_uint32
@@ -876,6 +897,91 @@ def test_records_that_cannot_be_read_back_raise_no_alert(so_flash):
     assert any("could not be read back" in l for l in d.logs(2))
     assert d.alerts() == []
     d.check_flash_discipline()
+
+
+# --------------------------------------------------------------------------- the chip's ID, said at boot
+
+def test_a_chip_that_answers_at_boot_says_so_in_one_line_and_raises_nothing(so_flash):
+    d = DB(so_flash)
+    d.L.h_flash_report()
+    assert d.logs() == ["flash backlog: chip ready, ID C2 28 17 (MX25R6435F)"]
+    assert d.alerts() == []
+    assert d.L.h_sim_sessions() == 0                # the driver read it at boot: the tier touches no chip here
+    d.check_flash_discipline()
+
+
+def test_a_chip_that_did_not_answer_at_boot_is_a_warning_and_an_alert_for_a_fitted_part(so_flash):
+    d = DB(so_flash)
+    d.L.h_sim_set_boot(-errno.ENODEV, 0xFF, 0xFF, 0xFF)
+    d.L.h_flash_report()
+    assert d.logs(3) == []
+    (warn,) = d.logs(2)
+    assert "FF FF FF" in warn and "C2 28 17" in warn
+    (msg, prio), = d.alerts()
+    assert prio == HW_FAULT_PRIORITY                # not the 0 of the tier's own: a part that did not answer at boot
+    assert msg.startswith("flash chip not responding") and "FF FF FF" in msg
+    assert len(msg) < 120                           # alert.c cuts anything longer
+    assert d.L.h_sim_sessions() == 0
+    d.check_flash_discipline()
+
+
+def test_a_wrong_chip_says_what_it_returned(so_flash):
+    d = DB(so_flash)
+    d.L.h_sim_set_boot(-errno.ENODEV, 0xC2, 0x28, 0x16)         # the 32 Mbit part
+    d.L.h_flash_report()
+    assert "C2 28 16" in d.logs(2)[0]
+    assert "C2 28 16" in d.alerts()[0][0]
+
+
+def test_the_boot_alert_is_the_boots_one_flash_alert_so_the_first_spill_does_not_repeat_it(so_flash):
+    d = DB(so_flash)
+    d.L.h_sim_set_boot(-errno.ENODEV, 0, 0, 0)
+    d.L.h_sim_set(0, 0, -1, 0)                      # and it is still not there when the ring fills
+    d.L.h_set_registered(0)
+    d.L.h_flash_report()
+    assert len(d.alerts()) == 1
+    d.push(300)
+    assert sum("unavailable" in l for l in d.logs(2)) == 1       # the spill still says so in the log...
+    assert len(d.alerts()) == 1                                  # ...but the operator was told at boot
+    d.check_flash_discipline()
+
+
+def test_a_chip_that_answered_at_boot_can_still_raise_its_alert_if_it_stops_answering_later(so_flash):
+    d = DB(so_flash)
+    d.L.h_flash_report()                            # it answered: the boot's alert is unspent
+    d.L.h_set_registered(0)
+    d.push(100)                                     # the first spill worked
+    d.L.h_sim_set_id_ok(0)
+    d.push(300)
+    assert "chip stopped answering" in only_alert(d)             # the tier's own, at its own priority
+    d.check_flash_discipline()
+
+
+def test_an_id_the_driver_could_not_read_yet_says_nothing(so_flash):
+    d = DB(so_flash)
+    d.L.h_sim_set_boot(-errno.EAGAIN, 0, 0, 0)      # a bus shared with the CAN controller, its rail not up
+    d.L.h_flash_report()
+    assert d.logs() == [] and d.alerts() == []
+
+
+def test_the_boot_report_leaves_the_tier_ready_for_a_chip_that_comes_back(so_flash):
+    d = DB(so_flash)
+    d.L.h_sim_set_boot(-errno.ENODEV, 0xFF, 0xFF, 0xFF)          # it did not answer at boot
+    d.L.h_flash_report()
+    d.L.h_set_registered(0)
+    d.push(300)                                     # but at the first spill it does
+    assert d.L.h_sim_sessions() > 0 and d.L.h_dropped() == 0
+    assert any(l.startswith("flash backlog: 32 sectors") for l in d.logs(3))
+    d.L.h_set_registered(1)
+    assert d.drain() == list(range(300))
+    assert len(d.alerts()) == 1                     # the boot's, and nothing since
+    d.check_flash_discipline()
+
+
+def test_a_build_without_the_flash_tier_has_nothing_to_report(so_noflash):
+    d = DB(so_noflash)
+    d.L.h_flash_report()
+    assert d.logs() == [] and d.alerts() == []
 
 
 # --------------------------------------------------------------------------- held log lines

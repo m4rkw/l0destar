@@ -9,7 +9,8 @@
  *
  * SHARED BUS
  * ----------
- * The v4.1.x designs wire the flash to the CAN controller's SCK, SDI and SDO.
+ * The v4.0p2 and v4.1.x designs wire the flash to the CAN controller's SCK, SDI
+ * and SDO.
  * The MCP2518FD is on a switched rail (hw_domain.c), and with that rail down
  * its pins are clamp diodes into a dead supply: anything that drives the bus
  * pushes current into it, and on v4.1.2 SDO goes to the controller's output pin
@@ -21,10 +22,12 @@
  * Give the flash pins of its own (or set APP_PIN_CAN_* to -1 where no CAN
  * controller is fitted) and the restriction goes away.
  *
- * Not run on hardware.  Written from the datasheet (checked against Rev. 1.2)
- * for the board designs that carry it (hardware/l0destar_v4.1.x, not in the
- * repository yet), and exercised on the host against a model of the chip
- * (tests/test_extflash.py).
+ * Run on hardware only as far as the ID read at boot (a v4.0p2 bench unit,
+ * 10 Nov 2026, after a pin reset and after a cold start: C2 28 17); programming
+ * and erasing have not.  Written from the datasheet (checked against Rev. 1.2)
+ * for the board designs that carry it (hardware/l0destar_v4.0p2, and the
+ * v4.1.x ones, not in the repository yet), and exercised on the host against a
+ * model of the chip (tests/test_extflash.py).
  */
 
 #ifndef APP_EXTFLASH_H_
@@ -34,10 +37,20 @@
 
 #include "flashlog.h"
 
-/* Once, early in boot, after hw_domain_init(): puts the chip into deep
- * power-down.  On a shared bus that has to wait for the CAN rail, so it is done
- * the first time that comes up (the boot-time self-test and CAN init do). */
+/* Once, early in boot, after hw_domain_init(): wakes the chip, reads its ID and
+ * puts it into deep power-down.  On a shared bus that has to wait for the CAN
+ * rail, so it is done the first time that comes up (the boot-time self-test and
+ * CAN init do).  What the ID read found is extflash_boot_check()'s. */
 void extflash_init(void);
+
+/* What the ID read at boot found, for the caller that says so (databuf.c does,
+ * from the main thread's startup): 0 if it is the chip this was written for,
+ * -ENODEV if not, with id[] what came back (FF FF FF for no chip, or one that
+ * does not answer; 00 00 00 for a line held low), -EAGAIN if it has not been
+ * read yet because the bus is shared with the CAN controller and its rail has
+ * not come up.  Asked once per boot: a chip that goes wrong later is the
+ * session check's to find (extflash_check()). */
+int  extflash_boot_check(uint8_t id[3]);
 
 /* Opens a session.  0, or -EBUSY when the flash shares its bus with the CAN
  * controller and the CAN rail is down.  Nothing is touched in that case. */
@@ -47,7 +60,8 @@ int  extflash_begin(void);
  * returned 0, whatever happened in between. */
 void extflash_end(void);
 
-/* A session with nothing in it: the chip is woken and put back to sleep. */
+/* A session with nothing in it: the chip is woken and put back to sleep.  The
+ * first one of a boot also reads its ID, for extflash_boot_check(). */
 void extflash_park(void);
 
 /* Inside a session: checks the chip is the one this was written for and

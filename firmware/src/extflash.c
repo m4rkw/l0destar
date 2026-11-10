@@ -29,6 +29,7 @@
  */
 
 #include <errno.h>
+#include <string.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
@@ -291,11 +292,32 @@ void extflash_end(void)
 	gpio_pin_configure(hw_gpio0, PIN_FLASH_CS, GPIO_OUTPUT_HIGH);
 }
 
+static bool read_id(uint8_t id[3]);
+
+/* What the first session of the boot found when it asked the chip who it is:
+ * extflash_boot_check()'s answer.  -EAGAIN until then. */
+static uint8_t s_boot_id[3];
+static int     s_boot_err = -EAGAIN;
+
 void extflash_park(void)
 {
 	if (extflash_begin() == 0) {
+		if (s_boot_err == -EAGAIN) {
+			/* The first time this boot, and only then: the ID read is
+			 * about 0.2 ms, but the chip's answer does not change between
+			 * parks, and one that goes wrong later is extflash_check()'s. */
+			s_boot_err = read_id(s_boot_id) ? 0 : -ENODEV;
+		}
 		extflash_end();
 	}
+}
+
+int extflash_boot_check(uint8_t id[3])
+{
+	if (s_boot_err != -EAGAIN) {
+		memcpy(id, s_boot_id, sizeof(s_boot_id));
+	}
+	return s_boot_err;
 }
 
 /* The CAN rail is up (first user, pins released): the flash can be reached. */

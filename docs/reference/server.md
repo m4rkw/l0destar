@@ -138,6 +138,7 @@ Each device's settings live in its `device` row. The first four are sent to the 
 |---|---|---|---|
 | `int` | `0` | `int=<seconds>` command, or `int` in `POST /api/1.0/config` | Engine-off timed wake interval in seconds; 0 means no timed wakes. |
 | `backup_int` | `0` | `backup_interval=<seconds>` command, or `backup` in `POST /api/1.0/config` | Timed-report interval in seconds while the inline battery backup module is carrying the tracker, sent as `backup=`; 0 means the engine-off interval applies then too. |
+| `interval_schedule` | NULL | `interval_schedule=<json>` command (`\|` for each comma, `default` clears it), or `isch` in `POST /api/1.0/config` | Optional engine-off reporting schedule: up to 8 rules of `{"days": [0-6, Monday is 0], "from": "HH:MM", "to": "HH:MM", "int": seconds}` in server local time, first match wins, `int` 0 or 10-86400. The interval sent in every reply is the first rule in force now, else `int`, shortened so a long sleep does not pass the start of a shorter period. Added by `2026-11-10_interval_schedule.sql`. See [Reporting schedule](device-settings.md#reporting-schedule). |
 | `movement_alarm` | `1` | `movealarm=0` or `movealarm=1` command, or `ma` | Movement alarm flag, reported back by the tracker. Current firmware does not act on it. |
 | `track_mode` | `0` | the web interface, or `POST /api/1.0/trackmode` | Track mode switch. Cleared at ignition off, or when the device is next heard from after more than an hour of silence. |
 | `alarm` | `0` | `alarm=0` or `alarm=1`, or `al` | Notify when the ignition comes on. |
@@ -196,7 +197,7 @@ command.py <imei> <command> [command ...]
 command.py <imei> fota-retry
 ```
 
-Queues a command for the tracker's next reply, through the HTTP API at `api_base`, using the first token in `api_token` (create one with `gentoken.py` first). Several commands given together are sent together. The server-side settings - `alarm=`, `garage=`, `overnightalarm=`, `overnight_alarm_hour_from=`, `overnight_alarm_hour_to=`, `gnss_off_window=`, `gnss_off_hour_from=` and `gnss_off_hour_to=`, `leds=` and the runtime tunables - and `backup_interval=` are applied straight away instead of being queued. `fota-retry` clears a firmware version withheld from the device after a failed update and queues `fota`. The commands the firmware understands are listed in [Device settings and commands](device-settings.md#commands).
+Queues a command for the tracker's next reply, through the HTTP API at `api_base`, using the first token in `api_token` (create one with `gentoken.py` first). Several commands given together are sent together. The server-side settings - `alarm=`, `garage=`, `overnightalarm=`, `overnight_alarm_hour_from=`, `overnight_alarm_hour_to=`, `gnss_off_window=`, `gnss_off_hour_from=` and `gnss_off_hour_to=`, `leds=` and the runtime tunables - and `backup_interval=` and `interval_schedule=` are applied straight away instead of being queued. `fota-retry` clears a firmware version withheld from the device after a failed update and queues `fota`. The commands the firmware understands are listed in [Device settings and commands](device-settings.md#commands).
 
 ### `gentoken.py`
 

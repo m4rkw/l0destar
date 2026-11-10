@@ -60,7 +60,8 @@ import re
 import threading
 import time
 
-from . import config, db, deadreckon, device_events, firmware, logs, notify
+from . import (config, db, deadreckon, device_events, firmware,
+               interval_schedule, logs, notify)
 
 # Fixed fields, in wire order, named for the columns they are stored in.  The
 # eleventh is seconds since boot on current firmware; its column kept the
@@ -1313,8 +1314,12 @@ def process_record(data, device, ip, database=None):
 
     # Mirror config the device reported back onto its row — from a live
     # record only, since a late one can carry a setting since changed.
+    # With a reporting schedule the interval the unit reports is whichever one
+    # it was last sent, not the plain one the schedule falls back to: not
+    # mirrored, or the schedule would overwrite its own base.
     updates = [(key, int(data[key])) for key in DEVICE_SYNC_KEYS
-               if key in data and not history]
+               if key in data and not history
+               and not (key == 'int' and device.get('interval_schedule'))]
     if updates:
         assignments = ', '.join('`%s` = %%s' % key for key, _ in updates)
         database.query(
@@ -1587,6 +1592,10 @@ def build_response(device, database, log, firmware_version=None):
     replaying a `poweroff` the operator has since changed their mind about.
     """
     settings = device_config(device)
+    # The engine-off interval for this moment: the plain one, or what the
+    # device's reporting schedule says for the time of day (see
+    # interval_schedule.py).  It is what the unit is told and so what it runs.
+    settings['int'] = interval_schedule.interval_now(device)
     response = '1,%s,%s' % (settings['int'], settings['ma'])
 
     expired = _expiring_commands(database, device['id'])

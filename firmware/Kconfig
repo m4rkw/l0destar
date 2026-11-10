@@ -1847,7 +1847,11 @@ config APP_FLASH_BACKLOG
 	  src/extflash.h.
 
 	  The flash is put into deep power-down at boot and after every use (0.007
-	  uA typical; standby is 5 to 24 uA).
+	  uA typical; standby is 5 to 24 uA).  Its ID is read once at boot and the
+	  console says so; a chip that does not answer is alerted at once, once
+	  per boot, as a fitted part that did not answer at boot
+	  (APP_HW_FAULT_PRIORITY), not at the first outage that would have needed
+	  it.
 
 	  Wear: see src/flashlog.h.  The
 	  chip is rated for 100,000 erases a sector.  Records are only appended,

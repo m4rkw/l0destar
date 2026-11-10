@@ -342,6 +342,14 @@ silently; a later change alerts, is acked (`ak=gnssbk`) and, turned on, makes
 the next wake search for a fresh fix. Off is held until the ignition comes on.
 The API sets it (`gnssbk=<0|1>` in POST /api/1.0/command, not queued).
 
+The interval in the reply is `device`.`int`, unless the device has a reporting
+schedule (`device`.`interval_schedule`, JSON rules in server local time): then
+it is the interval the schedule gives for the time the reply is built, cut
+short when needed so the unit wakes at the start of a period with a shorter
+one. Nothing on the wire changes; the unit simply sleeps for what it is told.
+While a schedule is set the server does not copy the unit's reported `int=`
+into `device`.`int`.
+
 `gw=` is the GNSS backup off window (`device`.`gnss_off_window`,
 `gnss_off_hour_from`, `gnss_off_hour_to`), sent on every reply straight after
 `gb=`: `gw=<from>-<to>` in whole UTC hours, converted from the server's local

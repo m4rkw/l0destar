@@ -11,7 +11,7 @@ import datetime
 
 from flask import request
 
-from .. import config, db
+from .. import config, db, interval_schedule
 from ..telemetry import (COMMAND_MAX_AGE_HOURS, TUNABLE_COLUMNS,
                          tunables_built, tunables_effective)
 
@@ -405,6 +405,10 @@ def summary(device, database=None, log=None):
         'gnss_off_hour_to': (7 if device.get('gnss_off_hour_to') is None
                              else device['gnss_off_hour_to']),
         'leds': 0 if device.get('leds') == 0 else 1,
+        # The engine-off reporting schedule (a list of rules, null if none)
+        # and the interval the server would send now.
+        'interval_schedule': interval_schedule.loads(device.get('interval_schedule')),
+        'interval_now': interval_schedule.interval_now(device),
         # Runtime tunables: null = no override, the unit keeps its built value.
         **{column: device.get(column) for column in TUNABLE_COLUMNS},
         'tunables_built': tunables_built(device),

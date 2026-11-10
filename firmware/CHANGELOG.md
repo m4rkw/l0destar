@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.4.120
+
+### System workqueue stack 1152 -> 2048 bytes
+The system workqueue overflowed (`rst=sw+fatal:2`) when the modem registered on a network that grants PSM in the attach (O2): lte_lc then dispatches the PSM update inline on that thread, and the app's `PSM: granted` WRN goes through the log core and the capture backend on the same stack, about 1.1 KB deep with `LOG_MODE_IMMEDIATE`.
+
+- `CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE=2048` in prj.conf (+896 bytes of RAM; the car's build has 8.6 KB free). Production logs deferred, so it never formatted on that stack; the bump covers any build that does.
+- Status: built for the bench and for the car's config; bench-run through three O2 attaches with the PSM grant, no fault.
+
+### Fatal report names the thread
+For a stack overflow the registers are junk (the hardware cannot push a frame onto a stack that has run out), so `fatal:2@<pc>` placed nothing. The note now also keeps the faulting thread and its stack size, and the next boot's ERR line prints them (`... thread 0x20020238 (sysworkq), stack 2048 B (overflow: pc/lr invalid)`). `rst=` is unchanged.
+
+- The note's layout changed, so its magic did: a note left by an older image is ignored.
+- Status: 51 host tests (`tests/test_fatal.py`) pass; built; not seen on hardware, nothing has crashed since.
+
+### v4.0p2 board profile
+`CONFIG_APP_BOARD_L0DESTAR_V4_0P2` (board id `v4.0p2`) for `hardware/l0destar_v4.0p2`: its own pin map, the SPI flash on by default, no L wire; the options are v4.0's.
+
+- A unit with no CAN parts sets `APP_PIN_CAN_SCK`, `_SDI` and `_SDO` to -1, so the flash's bus is its own.
+- Status: built; bench-run on one unit (I2C, GNSS and the K rails answer; the flash chip's ID is read at every boot); the backlog has not spilled to the flash yet.
+
+### Flash chip checked at startup
+The flash chip's ID is read once at boot and the console says so (`flash backlog: chip ready, ID C2 28 17 (MX25R6435F)`). A chip that does not answer is logged and queued as an alert at `APP_HW_FAULT_PRIORITY` (default 1), like any fitted part that did not answer at boot, instead of being found at the first outage that needs it.
+
+- Said once per boot from the main thread's startup, next to the INA228 and accelerometer checks, and it counts as the boot's one flash alert, so the first spill does not repeat it. The tier is left as it was: that spill asks the chip again.
+- On a bus shared with the CAN controller the ID is read when the CAN rail first comes up; if it never does, nothing is said, as before. Builds without the flash tier are unchanged.
+- Status: 21 new host tests (the driver against the chip model, the tier's alerts), mutation-checked; bench-run on v4.0p2, after a pin reset and after a cold start, both read `C2 28 17`; the failure path is host-tested only.
+
 ## 0.4.118
 
 ### Settings changeable from the app
@@ -12,6 +39,9 @@ Fifteen build-time settings can now be overridden per unit from the app; the Kco
 - NULL on the server = the built value. One log line per change ("tu: xtt 6 -> 8"). Reply buffers grew to 512 bytes so the token is not cut.
 - The unit also reports its built values once per boot as `tb=` (with `fw=`/`bd=`, same grammar, `xoa` commas as `|`) so the app shows the real value instead of "default".
 - Status: host tests pass; built; not run on hardware.
+
+### No false "Command acknowledged: gnssbk"
+The off window's own switch-off came back as `gb=0` and was acked as if the user had sent it. Only a real user change is acked now; status: not built or run.
 
 ### Hold breaker removed
 The hold breaker (`AT+CFUN=20/21` cycling to break an LTE RRC hold) is gone; it was never any use.

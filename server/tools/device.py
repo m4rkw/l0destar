@@ -29,7 +29,7 @@ import sys
 
 import _bootstrap  # noqa: F401
 
-from tracker import db, firmware
+from tracker import db, firmware, interval_schedule
 from tracker.telemetry import TUNABLE_COLUMNS
 
 PSK_RE = re.compile(r'^[0-9a-fA-F]{64}$')
@@ -90,6 +90,17 @@ def list_devices(args):
     return 0
 
 
+def _schedule_text(stored):
+    rules = interval_schedule.loads(stored)
+    if not rules:
+        return 'none (the engine-off interval always applies)'
+    days = 'MTWTFSS'
+    return '; '.join('%s %s-%s %s' % (
+        ''.join(days[d] if d in r['days'] else '.' for d in range(7)),
+        r['from'], r['to'], '%ds' % r['int'] if r['int'] else 'off')
+        for r in rules)
+
+
 def show(args):
     device = _find(args.imei)
     if device is None:
@@ -103,6 +114,7 @@ def show(args):
         ('pre-shared key', 'set' if device['psk'] else 'not set'),
         ('engine-off interval',
          '%ds' % device['int'] if device['int'] else '0 (no timed wakes)'),
+        ('report schedule', _schedule_text(device.get('interval_schedule'))),
         ('backup interval',
          '%ds' % device['backup_int'] if device.get('backup_int')
          else '0 (same as the engine-off interval)'),

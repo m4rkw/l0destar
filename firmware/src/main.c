@@ -2375,7 +2375,9 @@ int main(void)
     hw_domain_init();
 #if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
     /* The flash into deep power-down, where it stays until the backlog needs
-     * it: in standby it would draw 5 to 24 uA for as long as the unit is up. */
+     * it: in standby it would draw 5 to 24 uA for as long as the unit is up.
+     * Its ID is read on the way, once; databuf_flash_report() below says what
+     * it found. */
     extflash_init();
 #endif
     hw_aux_power_on();
@@ -2424,6 +2426,12 @@ int main(void)
                       CONFIG_APP_HW_FAULT_PRIORITY);
     }
     if (hw_can_init())    LOG_WRN("CAN controller init failed");
+    /* The flash chip, the same way: its ID was read by extflash_init() above
+     * or, on a bus shared with the CAN controller, when that rail first came
+     * up (the self-test and the CAN init above).  One line if it answered; if
+     * not, the warning and the queued alert the parts above get.  Nothing on a
+     * build without the flash tier. */
+    databuf_flash_report();
     if (IS_ENABLED(CONFIG_APP_BOARD_HAS_L_SENSE) && kline_l_sense_init()) {
         LOG_WRN("L sense init failed — no L-line short detection");
     }

@@ -14,12 +14,14 @@ names none falls back to ``default_device`` or the only enrolled device, and
 anything that changes state has to name its device.
 """
 
+import json
 import math
 import re
 
 from flask import Blueprint, redirect, request
 
-from .. import config, db, deadreckon, device_events, notify, telemetry
+from .. import (config, db, deadreckon, device_events, interval_schedule, notify,
+                telemetry)
 from . import audit, devices, error, ok, unauthorised
 from .auth import login_required
 
@@ -55,6 +57,10 @@ SERVER_SIDE_SETTINGS = {
     'gnss_off_hour_to': 'gnss_off_hour_to',
     'leds': 'leds',
     'backup_interval': 'backup_int',
+    # The engine-off reporting schedule, as JSON with '|' for each comma (a
+    # comma ends a command): interval_schedule=[{"days":[0|1]|...}].  "default"
+    # or nothing clears it.  Every reply carries the interval it gives.
+    'interval_schedule': 'interval_schedule',
     # The runtime tunables, by column name; a value of "default" (or nothing)
     # clears one back to NULL, "the unit keeps the value it was built with".
     # obd_alerts takes its rules separated by '|', as a comma would end the
@@ -131,6 +137,18 @@ def _tunable(column, value):
         return (True, value) if telemetry.valid_obd_alerts(value) else (False, None)
     number = _setting(column, value)
     return (False, None) if number is None else (True, number)
+
+
+def _schedule(raw):
+    """(the text to store, None), or (None, a message) when ``raw`` is not a
+    schedule: a list, or None (which clears it), or the JSON text of one."""
+    try:
+        if isinstance(raw, str):
+            raw = raw.strip()
+            raw = None if raw in ('', 'default', 'null') else json.loads(raw)
+        return interval_schedule.dumps(interval_schedule.validate(raw)), None
+    except ValueError as e:
+        return None, 'interval schedule: %s' % e
 
 
 def _tunable_error(key, column):
@@ -442,6 +460,11 @@ def get_config():
     # override if set, else the built value, else null).
     result['tunables_built'] = telemetry.tunables_built(device)
     result['tunables'] = telemetry.tunables_effective(device)
+    # The engine-off reporting schedule (null if none) and the interval the
+    # server would send at this moment: "int" is only what applies when no
+    # rule does.
+    result['isch'] = interval_schedule.loads(device.get('interval_schedule'))
+    result['interval_now'] = interval_schedule.interval_now(device)
     return ok(result)
 
 
@@ -458,11 +481,16 @@ def update_config():
     if failure:
         return failure
 
-    unknown = sorted(set(data) - set(CONFIG_FIELDS) - {'imei', 'device_id'})
+    unknown = sorted(set(data) - set(CONFIG_FIELDS) - {'imei', 'device_id', 'isch'})
     if unknown:
         return error('unknown setting: %s' % ', '.join(str(k) for k in unknown))
 
     updates = []
+    if 'isch' in data:
+        text, problem = _schedule(data['isch'])
+        if problem:
+            return error(problem)
+        updates.append(('interval_schedule', text))
     for key, column in CONFIG_FIELDS.items():
         if key in data:
             if column in telemetry.TUNABLE_COLUMNS:
@@ -567,7 +595,11 @@ def queue_command():
             key, value = part.split('=', 1)
             column = SERVER_SIDE_SETTINGS[key]
             assignments.append('`%s` = %%s' % column)
-            if column in telemetry.TUNABLE_COLUMNS:
+            if column == 'interval_schedule':
+                number, problem = _schedule(value.replace('|', ','))
+                if problem:
+                    return error(problem)
+            elif column in telemetry.TUNABLE_COLUMNS:
                 value = value.strip()
                 if value == 'default' or (value == '' and column != 'obd_alerts'):
                     value = None

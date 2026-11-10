@@ -73,6 +73,7 @@
  * the flash are sent for as long as they can be read.
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -273,8 +274,9 @@ int databuf_stamp(const char *in, size_t len, char *out, size_t cap)
 /* -- the flash tier ---------------------------------------------------------
  *
  * Opened the first time the ring is full: a boot that never has an outage long
- * enough to need it reads nothing from the chip (it was parked at boot), and a
- * chip that is not there is found out about when it matters. */
+ * enough to need it reads nothing from the chip but its ID, once, when it is
+ * parked at boot, and a chip that does not answer that is said at once
+ * (databuf_flash_report) rather than when it matters. */
 
 #define FL_SECTORS       CONFIG_APP_FLASH_BACKLOG_SECTORS
 /* Records moved in one go when the ring is full.  A session has a wake from
@@ -348,6 +350,45 @@ static void fl_alert(const char *what)
     s_fl_alerted = true;
     snprintf(msg, sizeof(msg), "flash backlog: %s, RAM backlog only", what);
     alert_enqueue(msg, 0);
+}
+
+/* The chip's ID, asked for once at boot by extflash_init() and said here, from
+ * main.c's startup in the main thread, as the other fitted parts that did not
+ * answer are.  A chip that is not there is the same loss as one found missing
+ * at the first spill, found at once instead of an outage later, so it is a
+ * fault of a fitted part: APP_HW_FAULT_PRIORITY, queued to ride out with the
+ * first record.  It counts as the boot's one flash alert, so the first spill
+ * does not say it again.  The tier is left as it is: that spill asks the chip
+ * again and decides, and a chip that has come back is used.
+ *
+ * A chip that answers gets one line, so that the console shows the part is
+ * there.  Nothing is said when the ID could not be read yet (a bus shared with
+ * the CAN controller whose rail has not come up): the first spill finds out, as
+ * it always did. */
+void databuf_flash_report(void)
+{
+    uint8_t id[3];
+    const int err = extflash_boot_check(id);
+
+    if (err == -EAGAIN) {
+        return;
+    }
+    if (err == 0) {
+        LOG_INF("flash backlog: chip ready, ID %02X %02X %02X (MX25R6435F)",
+                id[0], id[1], id[2]);
+        return;
+    }
+
+    LOG_WRN("flash backlog: the chip returned ID %02X %02X %02X at startup, "
+            "not C2 28 17 (MX25R6435F)", id[0], id[1], id[2]);
+    if (!s_fl_alerted) {
+        char msg[FL_ALERT_MSG];
+
+        s_fl_alerted = true;
+        snprintf(msg, sizeof(msg), "flash chip not responding (SPI): outage "
+                 "backlog is RAM only (ID %02X %02X %02X)", id[0], id[1], id[2]);
+        alert_enqueue(msg, CONFIG_APP_HW_FAULT_PRIORITY);
+    }
 }
 
 /* Inside a session, the first time: finds the chip and the place the ring has

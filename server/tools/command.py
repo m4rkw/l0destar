@@ -60,6 +60,13 @@ next one:
                            reporting interval while the inline backup module is
                            carrying the tracker; 0 = the engine-off interval
                            applies then too
+    interval_schedule=<json>
+                           engine-off reporting schedule: a JSON list of rules
+                           {"days":[0-6, Monday 0],"from":"HH:MM","to":"HH:MM",
+                           "int":seconds}, up to 8, with | for each comma (a
+                           comma ends a command); "default" clears it.  The
+                           interval sent follows it by the (server local) time
+                           of day; see docs/reference/device-settings.md.
 
 Track mode is switched from the map page or POST /api/1.0/trackmode rather than
 queued here: every reply already carries the server's switch, so a queued

@@ -40,6 +40,7 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 | Setting | Reply field | Server column | New device | Meaning |
 |---|---|---|---|---|
 | Engine-off interval | `<int>` | `device.int` | `0` | Seconds between timed reports while parked; `0` means none |
+| Reporting schedule | `<int>` | `device.interval_schedule` | none | Optional JSON rules that make the engine-off interval depend on the time of day and the day of the week; no schedule means `device.int` always applies. Set with `isch` in `POST /api/1.0/config` or `interval_schedule=<json>`; see [Reporting schedule](#reporting-schedule) |
 | Backup interval | `backup=` | `device.backup_int` | `0` | Seconds between timed reports while the inline backup module is carrying the tracker; `0` means the engine-off interval applies then too. Set with `backup_interval=<seconds>` or `backup` in `POST /api/1.0/config`; see [Reporting interval on backup power](../deployment/configuration.md#reporting-interval-on-backup-power) |
 | Movement alarm | `<ma>` | `device.movement_alarm` | `1` | Stored, synced and reported, but not acted on by firmware 0.4.x |
 | Track mode | `track=` | `device.track_mode` | `0` | GNSS off, engine and IMU data streamed quickly |
@@ -50,6 +51,26 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 - A timed report while parked sends the last known position. GNSS is only started for it when movement has been detected since the previous one, or when the tracker has had no fix since it started. Ignition, movement, impact and tilt wake the tracker whatever the interval is.
 - Movement, impact and tilt alerts are raised whatever the movement alarm flag says. Use the priority settings in [Configure alerts](../deployment/alerts.md) to quieten them.
 - Track mode is switched from the web page (see [Web interface and API](../board-setup/web-interface.md)). The server clears it when the ignition goes off, or when a device is heard from after an hour of silence, and the tracker ignores `track=1` while the ignition is off.
+
+### Reporting schedule
+
+The tracker sleeps for the interval it was last told, so the server can vary the engine-off interval through the day: every reply carries the interval that applies at that moment, and `device.int` is used only where no rule matches. For example, an hour overnight and 15 minutes at other times on weekdays, and every two hours at weekends:
+
+```json
+{"imei": "355025936386877", "isch": [
+  {"days": [0, 1, 2, 3, 4], "from": "22:00", "to": "06:00", "int": 3600},
+  {"days": [5, 6], "from": "00:00", "to": "00:00", "int": 7200}
+]}
+```
+
+with `int` set to 900 for the rest. Post it to `POST /api/1.0/config`; `{"isch": null}` or `[]` clears it, and `GET /api/1.0/config` returns it as `isch` together with `interval_now`, the interval the server would send at that moment.
+
+- A schedule has up to 8 rules and at most 600 characters of JSON. Each rule has `days` (a non-empty list of unique weekday numbers, Monday 0 to Sunday 6), `from` and `to` (`HH:MM`, server local time, Europe/London) and `int` (seconds: `0` for no timed reports, or 10 to 86400; 1 to 9 is refused, as for `int=`). A bad schedule is refused with a 400 and a message saying which rule.
+- `to` is exclusive. A rule whose `from` is later than `to` runs across midnight and belongs to the day it starts: `[4]`, 22:00 to 06:00 covers Friday night until Saturday 06:00. `from` equal to `to` is the whole day.
+- The first matching rule wins; a time that matches none gets `device.int`.
+- A long sleep never carries across into a shorter interval: if the next period has a shorter interval (not 0) and starts sooner than the current interval would end, the reply carries the time left to that boundary (at least 10 seconds, plus 5 seconds so the wake lands inside the new period). A period of `0` counts as unbounded, so a unit in a no-reports period is woken at the start of the next one that has timed reports.
+- It replaces only the engine-off interval. The backup interval (`backup=`) is untouched. While a schedule is set, the interval a unit reports back (`int=` in its records) is not copied to `device.int`, and the `applied` interval shown for the unit is the one it was last sent, which can differ from `int`. Compare it with `interval_now`.
+- The same value is accepted by `command.py <imei> 'interval_schedule=<json>'` and `POST /api/1.0/command`, with `|` in place of each comma (a comma ends a command); `interval_schedule=default` clears it. The device's event log shows `Report schedule set (N rules)` and `Report schedule cleared`.
 
 ## When the device reads a reply
 
@@ -146,6 +167,7 @@ Values must be whole numbers. The alerts themselves are described in [Configure 
 | `gwf` | `gnss_off_hour_from` |
 | `gwt` | `gnss_off_hour_to` |
 | `le` | `leds` |
+| `isch` | `interval_schedule` (a list of rules or `null`, not a number; see [Reporting schedule](#reporting-schedule)) |
 | `xtt` | `tow_tilt_deg` |
 | `xpi` | `parked_impact_mg` |
 | `xii` | `impact_immediate_mg` |

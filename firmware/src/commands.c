@@ -178,8 +178,8 @@ void cmd_run(char *cmd)
             if (want || was_on) {
                 alert_enqueue(want ? "gnss backup supply ON"
                                    : "gnss backup supply OFF", 0);
+                ack_add("gnssbk");
             }
-            ack_add("gnssbk");
         }
         last = want;
     }
