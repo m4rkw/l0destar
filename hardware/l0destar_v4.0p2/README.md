@@ -25,8 +25,7 @@ yourself rather than taking them on trust.
 
 ## New features
 
-- GPS function of the nRF9151 replaced with a dedicated U-blox MAX-M10S GPS
-  module supporting BeiDou, Galileo, GLONASS, GPS / QZSS constellations.
+- MX25R6435FZNIL0 64Mbit (8MB) SPI flash chip added for data buffering / config
 
 ## Test status
 
