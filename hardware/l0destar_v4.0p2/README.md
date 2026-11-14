@@ -49,9 +49,6 @@ yourself rather than taking them on trust.
 | Accelerometer | Wake on motion | NOT TESTED | |
 | GPS antenna bias tee | Obtains GPS signal | NOT TESTED | |
 | K-wire | K wire connectivity | NOT TESTED | |
-| K-wire | L-line pulldown | NOT TESTED | |
-| K-wire | L-line external short to 12V while L\_SEND high | NOT TESTED | |
-| K-wire | L-line sensing via L\_SENSE | NOT TESTED | |
 | CAN | Connectivity | NOT TESTED | |
 | CAN standby via XSTBY signal | Low standby current | NOT TESTED | |
 | Board | Quiescent current, GNSS backup supply off | | |
@@ -74,10 +71,8 @@ power.
  - USB-C can be connected and disconnected for programming without any power
    disruption
  - Optional CAN interface
- - Optional K-wire (ISO 14230-1 K-line) interface with L and K connections for
-   full functionality - the wire carries KWP2000 (ISO 14230-4), the older
+ - Optional K-wire (ISO 14230-1 K-line) interface - the wire carries KWP2000 (ISO 14230-4), the older
    ISO 9141-2, and manufacturer-specific pre-OBD protocols such as VAG KW1281
- - CAN/K-wire switchable via jumper pads
  - Auxiliary rail sensing/fault detection
  - MCU over-voltage protection on the 4.2V rail with fault-injection test point
  - I2C bus filtering against LTE TX bursts
@@ -103,34 +98,6 @@ in a vehicle for testing the pragmatic decision was taken to power it with a
 connect USB-C at any time to update the firmware without needing to disconnect
 power.
 
-## Board configuration
-
-See below for parts required for either CAN bus or K-wire (ISO 14230-1 K-line). Both sets
-of components can be populated for future use but only one set can be in use at
-any given time.
-
-The table below shows which jumper pads should be connected for each of these
-modes. **It's critical that only one system is enabled at the same time, if you
-short both CAN and K-line pads at the same time unpredictable behaviour may
-occur**
-
-Connect the pads as required by bridging them with solder or placing a 0R
-resistor. **Make sure the pads that should be unconnected are not connected.**
-
-| Interface | S5R1 | S5R2 | S5R3 | S5R4 |
-|-----------|------|------|------|------|
-| None      | OPEN | OPEN | OPEN | OPEN |
-| CAN bus   | CONNECT | OPEN | CONNECT | OPEN |
-| K-line    | OPEN | CONNECT | OPEN | CONNECT |
-
-S5R5 is a separate pad on the same sheet: it bridges `PP4V2_UNPROTECTED`
-straight to `PP4V2_OVP_PROTECTED`, bypassing the OVP MOSFET S11Q1. Leave it
-**OPEN** unless the S11x protection circuit is not populated. Not recommended.
-
-The S5R1-S5R4 pads only route the two vehicle bus lines (S1J1 pin 3 and pin 6)
-to one interface or the other. Power rails for CAN and K-line are switched by
-separate load switches.
-
 ## Notes
 
  - All caps on the 12V rails must be >= 50V in order to handle transients
@@ -147,15 +114,6 @@ separate load switches.
    carry 10K pull-ups (S10R2, S10R1) to PP3V3\_K, which float when that rail
    is down. Firmware must take the TJA1027T to sleep (K\_SLEEP low) and then
    park K\_TX/K\_RX/K\_SLEEP before dropping K\_ENABLE
- - L\_SEND is not on a switched rail, so it is safe to drive at any time. It
-   reaches S10Q1's gate through S10R7 (47K series), with the 10K pulldown
-   (S10R5) on the GPIO side and S10R9 (1M) holding the gate down directly, so
-   the FET stays off while the nRF is in reset or the pin is parked - and even
-   if S10R7 opens. S10Q1's drain reaches the L wire through S10U2, an
-   AL5809-90 that caps the pulldown at 90 mA and thermally shuts down, so an
-   external short to battery can no longer cook the FET. The same node is
-   tapped for L\_SENSE through S10D5 (cathode on the L node, blocking the
-   vehicle's 12V) and S10R8 (47K)
  - K\_SLEEP has a 100K pulldown (S10R6), so the transceiver stays asleep while
    the nRF is in reset or the pin is parked
  - The OVP stage latches off while the unprotected rail stays above the
@@ -181,16 +139,6 @@ separate load switches.
    simpler for managing inventory. Because of this, several of the "example"
    links will be to the parts I bought which might be tighter tolerance or
    higher voltage rating than the indicated minimum spec
- - Both L-line GPIO protections work the same way: S10R7 on L\_SEND (against a
-   drain-gate short in S10Q1) and S10R8 on L\_SENSE (against S10D5 failing
-   short). Each is 47K, bounding the fault current to ~250 uA at 12V, and each
-   relies on the nRF9151's internal clamp to hold the voltage. Note that
-   Nordic specify only a voltage limit on I/O pins (-0.3V to VDD\_GPIO + 0.3V)
-   and publish no clamp or injection current rating; while the clamp conducts
-   the pin necessarily sits above that limit, and the current is delivered
-   into VDD\_GPIO, which the Connect Kit's TPS63901 cannot sink. 250 uA is
-   judged small enough on both counts, but this is a design assumption rather
-   than a datasheet-backed guarantee
 
 ## Bill of materials - required
 
@@ -242,8 +190,6 @@ separate load switches.
 | S6R5 | Enable voltage divider resistor | DNP | - | **Optional** - see note below |
 | S6R6 | Enable voltage divider resistor | DNP | - | **Optional** - see note below |
 | S7U1 | Reverse-blocking load switch | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://www.ebay.co.uk/itm/178539837620) | |
-| S7R1 | 100K resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
-| S7R2 | 1M resistor | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | S7C1 | 2.2uF capacitor | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |
 | S7C2 | 100nF capacitor | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | S8U1 | ASM330LHHXTR accelerometer | ASM330LHHXTR | [ASM330LHHXTR](https://estore.st.com/en/products/mems-and-sensors/inemo-inertial-modules/asm330lhhx.html) | |
@@ -273,7 +219,6 @@ separate load switches.
 | S13D1 | Status LED | 0603 | [150060RS86000](https://uk.farnell.com/wurth-elektronik/150060rs86000/led-red-800mcd-624nm/dp/3408608) | |
 | S13D2 | Status LED | 0603 | [150060RS86000](https://uk.farnell.com/wurth-elektronik/150060rs86000/led-red-800mcd-624nm/dp/3408608) | |
 | S13D3 | Status LED | 0603 | [150060RS86000](https://uk.farnell.com/wurth-elektronik/150060rs86000/led-red-800mcd-624nm/dp/3408608) | |
-| S15J1 | u.FL PCB connector | 50 ohm | [U.FL-R-SMT(01)](https://www.ebay.co.uk/itm/178540053901) | |
 | S15J2 | SMA PCB connector | 50 ohm | [SMA-J-P-H-RA-TH1](https://www.ebay.co.uk/itm/178540028662) | |
 | S15J3 | u.FL PCB connector | 50 ohm | [U.FL-R-SMT(01)](https://www.ebay.co.uk/itm/178540053901) | |
 | S15J4 | SMA PCB connector | 50 ohm | [SMA-J-P-H-RA-TH1](https://www.ebay.co.uk/itm/178540028662) | |
@@ -283,8 +228,6 @@ separate load switches.
 | S15C2 | 100pF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [0402N101J500CT](https://uk.farnell.com/multicomp-pro/0402n101j500ct/cap-100pf-50v-5-c0g-np0-0402/dp/2496792) | |
 | S15C3 | 10nF RF capacitor | 0402 >= 50V 5% C0G / NP0 | [GRM1555C1H103JE01D](https://uk.farnell.com/murata/grm1555c1h103je01d/cap-mlcc-0-01uf-5-c0g-50vdc-0402/dp/4803046RL) | |
 | S15C4 | 2.2uF capacitor | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |
-| S15D1 | DNP - ESD protection diode (GSM path) | DNP - not necessary | | |
-| S15D2 | DNP - ESD protection diode (GPS path) | DNP - not necessary | | |
 | S15R1 | Bias tee feed resistor | 0508 15R 5% 1W | [3430A2F15RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f15rtdf/res-15r-1w-thick-film-0508-wide/dp/4206818) | |
 | S16U1 | Reverse-blocking load switch | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://www.ebay.co.uk/itm/178539837620) | |
 | S16U2 | U-blox MAX-M10S GPS Module | U-blox MAX-M10S GPS Module | [MAX-M10S-00B](https://www.digikey.co.uk/en/products/detail/u-blox/MAX-M10S-00B/15712906) | |
@@ -297,7 +240,7 @@ separate load switches.
 | S16R2 | 1K resistor | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
 | S16R3 | 1K resistor | 0402 1K 5% | [CRCW04021K00FKED](https://uk.farnell.com/vishay/crcw04021k00fked/res-1k-1-0-063w-0402-thick-film/dp/1469662) | |
 | S16R4 | 100K resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
-| S16R5 | 1M resistor | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
+| S16R5 | 1M resistor | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | S17U1 | SPI flash | MX25R6435FZNIL0 64Mbit WSON-8 6x5mm | MX25R6435FZNIL0 (Macronix) | Verify stock/P/N before ordering; footprint is WSON-8-1EP 6x5mm |
 | S17C1 | 100nF capacitor | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | Flash decoupling |
 | S17R1 | Flash pull-up resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
@@ -394,22 +337,12 @@ Can be omitted if K-wire is not required
 | S7R8 | 100K resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | S7R9 | 1M resistor | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | S10U1 | Line transceiver | TJA1027T\_20,118 | [TJA1027T\_20,118](https://uk.farnell.com/nxp/tja1027t-20-118/lin-transceiver-20kbaud-18v-soic/dp/2400570) | |
-| S10U2 | AL5809-90 LED driver | AL5809-90P1-7 | [AL5809-90P1-7](https://uk.farnell.com/diodes-inc/al5809-90p1-7/led-drvr-constant-current-powerdi/dp/2543512) | |
-| S10Q1 | MOSFET | 2N7002 SOT-23 | [2N7002](https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174) | |
 | S10D1 | 1N4148W diode | 1N4148W | [1N4148W-E3-08](https://www.ebay.co.uk/itm/178539887745) | |
 | S10D2 | 400W TVS diode | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://www.ebay.co.uk/itm/178539916580) | |
-| S10D3 | 1N4148W diode | 1N4148W | [1N4148W-E3-08](https://www.ebay.co.uk/itm/178539887745) | |
-| S10D4 | 400W TVS diode | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://www.ebay.co.uk/itm/178539916580) | |
-| S10D5 | 1N4148W diode | 1N4148W | [1N4148W-E3-08](https://www.ebay.co.uk/itm/178539887745) | |
 | S10R1 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S10R2 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S10R3 | 510R 0508 resistor | 0508 510R 5% 1W | [3430A2F510RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f510rtdf/res-510r-1w-thick-film-0508-wide/dp/4206859) | |
-| S10R4 | 510R 0508 resistor | 0508 510R 5% 1W | [3430A2F510RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f510rtdf/res-510r-1w-thick-film-0508-wide/dp/4206859) | |
-| S10R5 | 10K 0402 resistor | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | S10R6 | 100K resistor | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
-| S10R7 | 47K resistor | 0402 47K 5% | [ERJ2RKF4702X](https://uk.farnell.com/panasonic/erj2rkf4702x/res-47k-1-0-1w-0402-thick-film/dp/2302806) | |
-| S10R8 | 47K resistor | 0402 47K 5% | [ERJ2RKF4702X](https://uk.farnell.com/panasonic/erj2rkf4702x/res-47k-1-0-1w-0402-thick-film/dp/2302806) | |
-| S10R9 | 1M gate pulldown resistor | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | anti-sulfur recommended, not critical |
 | S10C1 | 100nF capacitor | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 
 ## Parts list
@@ -434,11 +367,11 @@ buck enable divider. Quantities are per board.
 | All | 15K 0805 anti-sulfur resistor | 1 | 0805 15K 1% ANTI-SULFUR AEC-Q200 | [MCMR08X1502FTL](https://uk.farnell.com/multicomp-pro/mcmr08x1502ftl/res-15k-1-0-125w-0805-ceramic/dp/2073646) | anti-sulfur AEC-Q200 recommended, must be 0805 for current handling in fault conditions |
 | All | 18.2K 0402 resistor | 1 | 0402 18.2K 1% | [RC0402FR-0718K2L](https://uk.farnell.com/yageo/rc0402fr-0718k2l/res-18k2-1-0-0625w-0402-thick/dp/3495542) | 18.2K == 2MHz |
 | All | 56K 0402 resistor | 2 | 0402 56K 5% | [MCMR04X5602FTL](https://uk.farnell.com/multicomp-pro/mcmr04x5602ftl/res-56k-1-0-0625w-0402-ceramic/dp/2073131) | |
-| All | 100K 0402 resistor | 7 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
+| All | 100K 0402 resistor | 6 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | All | 180K 0402 resistor | 1 | 0402 180K 5% | [MCWR04X1803FTL](https://uk.farnell.com/multicomp-pro/mcwr04x1803ftl/res-180k-1-0-0625w-thick-film/dp/2447116) | |
 | All | 226K 0402 anti-sulfur resistor | 1 | 0402 226K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2263FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2263ftl/res-226k-1-0-0625w-0402-ceramic/dp/2072796) | VOUT == 0.782V x (1 + S6R3/S6R2) == 4.24V, sets output voltage, keep 1%, anti-sulfur AEC-Q200 recommended |
 | All | 1M 0402 resistor 1% | 1 | 0402 1M 1% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
-| All | 1M 0402 resistor 5% | 3 | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
+| All | 1M 0402 resistor 5% | 2 | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
 | All | 1M 0402 anti-sulfur resistor | 2 | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Regulator output / trip point, keep 1%, anti-sulfur AEC-Q200 recommended |
 | All | 1.05M 0402 resistor | 1 | 0402 1.05M 1% | [RC0402FR-071M05L](https://uk.farnell.com/yageo/rc0402fr-071m05l/res-1m05-1-0-063w-thick-film-0402/dp/3951647) | Sets trip point, keep 1% |
 | All | 33M 0603 resistor | 1 | 0603 33M 5% | [MCHVR03JTHX3305](https://uk.farnell.com/multicomp-pro/mchvr03jthx3305/res-33m-5-0-1w-0603-thick-film/dp/2825824) | |
@@ -472,7 +405,7 @@ buck enable divider. Quantities are per board.
 | All | Reverse-blocking load switch | 2 | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://www.ebay.co.uk/itm/178539837620) | |
 | All | ASM330LHHXTR accelerometer | 1 | ASM330LHHXTR | [ASM330LHHXTR](https://estore.st.com/en/products/mems-and-sensors/inemo-inertial-modules/asm330lhhx.html) | |
 | All | Status LED | 3 | 0603 | [150060RS86000](https://uk.farnell.com/wurth-elektronik/150060rs86000/led-red-800mcd-624nm/dp/3408608) | |
-| All | u.FL PCB connector | 2 | 50 ohm | [U.FL-R-SMT(01)](https://www.ebay.co.uk/itm/178540053901) | |
+| All | u.FL PCB connector | 1 | 50 ohm | [U.FL-R-SMT(01)](https://www.ebay.co.uk/itm/178540053901) | |
 | All | SMA PCB connector | 2 | 50 ohm | [SMA-J-P-H-RA-TH1](https://www.ebay.co.uk/itm/178540028662) | |
 | All | u.FL cable | 2 | 50 ohm 35mm | [U.FL-2LPHF6-04N1TV-A-35](https://uk.farnell.com/hirose-hrs/u-fl-2lphf6-04n1tv-a-35/cbl-assy-u-fl-r-a-plug-r-a-plug/dp/4294251) | 1x LTE, 1x GPS |
 | All | U-blox MAX-M10S GPS Module | 1 | U-blox MAX-M10S GPS Module | [MAX-M10S-00B](https://www.digikey.co.uk/en/products/detail/u-blox/MAX-M10S-00B/15712906) | |
@@ -495,24 +428,21 @@ buck enable divider. Quantities are per board.
 | CAN | MCP2518FD CAN controller | 1 | MCP2518FDT-H/SL | [MCP2518FDT-H/SL](https://www.ebay.co.uk/itm/178539603676) | |
 | CAN | Reverse-blocking load switch | 1 | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://www.ebay.co.uk/itm/178539837620) | |
 | CAN | 2-pin 2.54mm header | 1 | 2-pin 2.54mm header | [68001-402HLF](https://uk.farnell.com/amphenol-communications-solutions/68001-402hlf/conn-header-2pos-1row-2-54mm-th/dp/3881905) | |
-| K-wire | 510R 0508 resistor | 2 | 0508 510R 5% 1W | [3430A2F510RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f510rtdf/res-510r-1w-thick-film-0508-wide/dp/4206859) | |
-| K-wire | 10K 0402 resistor | 3 | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
-| K-wire | 47K resistor | 2 | 0402 47K 5% | [ERJ2RKF4702X](https://uk.farnell.com/panasonic/erj2rkf4702x/res-47k-1-0-1w-0402-thick-film/dp/2302806) | |
+| K-wire | 510R 0508 resistor | 1 | 0508 510R 5% 1W | [3430A2F510RTDF](https://uk.farnell.com/cgs-te-connectivity/3430a2f510rtdf/res-510r-1w-thick-film-0508-wide/dp/4206859) | |
+| K-wire | 10K 0402 resistor | 2 | 0402 10K 5% | [CRCW040210K0FKED](https://uk.farnell.com/vishay/crcw040210k0fked/res-10k-1-0-063w-0402-thick-film/dp/1469669) | |
 | K-wire | 100K 0402 resistor | 4 | 0402 100K 5% | [MCPWR02FTEP1003A](https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624) | |
 | K-wire | 180K 0402 resistor | 1 | 0402 180K 5% | [MCWR04X1803FTL](https://uk.farnell.com/multicomp-pro/mcwr04x1803ftl/res-180k-1-0-0625w-thick-film/dp/2447116) | |
 | K-wire | 1M 0402 resistor | 1 | 0402 1M 5% | [ERJ2RKF1004X](https://uk.farnell.com/panasonic/erj2rkf1004x/res-1m-1-0-1w-0402-thick-film/dp/2302957) | |
-| K-wire | 1M 0402 anti-sulfur resistor | 1 | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | anti-sulfur recommended, not critical |
 | K-wire | 1nF capacitor | 2 | 0402 >= 50V 10% X7R | [0402B102K500CT](https://uk.farnell.com/multicomp-pro/0402b102k500ct/cap-1000pf-50v-10-x7r-0402/dp/2496767) | |
 | K-wire | 100nF 50V 0402 capacitor | 2 | 0402 >= 50V 10% X7R | [GRM155R71H104KE14D](https://uk.farnell.com/murata/grm155r71h104ke14d/cap-0-1-f-50v-10-x7r-0402/dp/2611912) | |
 | K-wire | 220nF capacitor | 1 | 0603 >= 50V 10% X7R | [GRM188R71H224KAC4D](https://uk.farnell.com/murata/grm188r71h224kac4d/cap-0-22-f-50v-10-x7r-0603/dp/2688525) | |
 | K-wire | 2.2uF 0603 capacitor | 1 | 0603 >= 25V 10% X7R | [GRM188Z71E225KE43D](https://uk.farnell.com/murata/grm188z71e225ke43d/cap-mlcc-2-2uf-x7r-25v-0603/dp/4335731) | |
-| K-wire | MOSFET | 2 | 2N7002 SOT-23 | [2N7002](https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174) | |
-| K-wire | 1N4148W diode | 3 | 1N4148W | [1N4148W-E3-08](https://www.ebay.co.uk/itm/178539887745) | |
-| K-wire | 400W TVS diode | 2 | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://www.ebay.co.uk/itm/178539916580) | |
+| K-wire | MOSFET | 1 | 2N7002 SOT-23 | [2N7002](https://uk.farnell.com/multicomp-pro/2n7002/mosfet-n-ch-60v-0-115a-sot-23/dp/4295174) | |
+| K-wire | 1N4148W diode | 1 | 1N4148W | [1N4148W-E3-08](https://www.ebay.co.uk/itm/178539887745) | |
+| K-wire | 400W TVS diode | 1 | PTVS33VS1UTR,115 SOD-123W | [PTVS33VS1UTR,115](https://www.ebay.co.uk/itm/178539916580) | |
 | K-wire | Line transceiver | 1 | TJA1027T\_20,118 | [TJA1027T\_20,118](https://uk.farnell.com/nxp/tja1027t-20-118/lin-transceiver-20kbaud-18v-soic/dp/2400570) | |
 | K-wire | 12V load switch | 1 | Active high 12v load switch | [ITS4060SSJNXUMA1](https://www.ebay.co.uk/itm/178539828483) | |
 | K-wire | Reverse-blocking load switch | 1 | Active high 3.3v load switch with reverse blocking | [SiP32431DR3-T1GE3](https://www.ebay.co.uk/itm/178539837620) | |
-| K-wire | AL5809-90 LED driver | 1 | AL5809-90P1-7 | [AL5809-90P1-7](https://uk.farnell.com/diodes-inc/al5809-90p1-7/led-drvr-constant-current-powerdi/dp/2543512) | |
 | Optional | 1M 0402 anti-sulfur resistor | 1 | 0402 1M 1% ANTI-SULFUR AEC-Q200 | [AF0402FR-071ML](https://uk.farnell.com/yageo/af0402fr-071ml/res-1m-1-0-063w-thick-film-0402/dp/4148383) | Buck enable divider: S6R4, in place of the 0R jumper |
 | Optional | 243K 0402 anti-sulfur resistor | 1 | 0402 243K 1% ANTI-SULFUR AEC-Q200 | [MCMR04X2433FTL](https://uk.farnell.com/multicomp-pro/mcmr04x2433ftl/res-243k-1-0-0625w-0402-ceramic/dp/2072824) | Buck enable divider: S6R5 |
 | Optional | 3.92M 1% resistor | 1 | 0402 3.92M 1% | [CRCW04023M92FKED](https://uk.farnell.com/vishay/crcw04023m92fked/res-3m92-1-0-063w-0402-thick-film/dp/2141113) | Buck enable divider: S6R6 |
