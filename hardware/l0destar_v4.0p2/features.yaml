@@ -1,0 +1,165 @@
+# Feature callouts for the board photo. Render with:
+#   python3 ../tools/board_features.py features.yaml --check
+#
+# Each feature: refs (designators, grouped into one callout), label (first line
+# bold, "\n" for a second line), optional side (left/right/top/bottom), optional
+# offset [dx_mm, dy_mm] to nudge the anchor, or at [x_mm, y_mm] to place it by
+# hand in PCB coordinates.
+
+pcb: l0destar.kicad_pcb
+photo: images/pcb0.png
+output: images/features.png
+title: l0destar v4.0p2
+subtitle: LTE-M / NB-IoT vehicle tracker carrier board for the nRF9151 Connect Kit, with a dedicated u-blox GNSS module and 8 MB SPI flash
+auto_sides: [left, right, top, bottom]
+crop_pad_mm: 3
+crop_max_mm: {left: 5, right: 14, top: 3, bottom: 3}
+
+style:
+  board_width: 2000
+  font_size: 26
+  accent: "#ff6a00"
+
+features:
+  # ---- power input (left) ----
+  - refs: [S1J1]
+    label: "Main connector\n6-pin Molex Micro-Fit 3.0\n12 V, ignition, GND, CAN H/L and K-wire on separate pins"
+    side: left
+  - refs: [S2F1, S2F2]
+    label: "2 A fuses\n12 V live and ignition inputs"
+    side: left
+  - refs: [S2D2, S2D4, S10D2]
+    label: "TVS transient protection\nPTVS33VS1U, sized for ISO 7637-2 pulse 2a"
+    side: left
+  - refs: [S2Q2]
+    label: "Reverse polarity protection\nSQJ457EP P-channel MOSFET"
+    side: left
+  - refs: [S2C1, S2C2]
+    label: "47 µF input capacitors\n2220 X7R, 50 V"
+    side: bottom
+  - refs: [S6U1]
+    label: "LT8609 buck converter\n12 V to 4.2 V for the Connect Kit"
+    side: bottom
+  - refs: [S6L1]
+    label: "2.2 µH inductor\nCoilcraft XFL4020"
+    side: left
+  - refs: [S6R4, S6R5, S6R6]
+    label: "Buck enable / UVLO\nS6R4 0R jumper by default, optional divider: on ≈ 5.6 V, off ≈ 4.3 V"
+    side: left
+  - refs: [S11Q1, S11U1]
+    label: "4.2 V rail protection\nLM66100 ideal diode + over-voltage cut-off MOSFET"
+    side: left
+  - refs: [S11U2]
+    label: "ATL431 OVP reference\ntrip ≈ 4.95 V, release ≈ 4.8 V"
+    side: left
+  - refs: [S12TP2]
+    label: "4.2 V protected test point"
+    side: left
+  - refs: [S12TP1, S12TP3, S12TP5, S12TP6, S12TP7]
+    label: "Rail test points\nGND, 3.3 V, CAN 3.3 V, K-line 3.3 V, K-line 12 V"
+    side: left
+  - refs: [S1J4]
+    label: "4.2 V power out\n1.27 mm header to the Connect Kit battery input"
+    side: left
+
+  # ---- Connect Kit ----
+  - refs: [S1J3]
+    label: "nRF9151 Connect Kit socket\npins 21–40, 2.54 mm"
+    side: left
+    offset: [-16, 0]
+  - refs: [S1J2]
+    label: "nRF9151 Connect Kit socket\npins 1–20, 2.54 mm"
+    side: bottom
+    offset: [-16, 0]
+
+  # ---- sensing ----
+  - refs: [S3U1]
+    label: "INA238\nbattery voltage monitor, I²C"
+    side: right
+  - refs: [S8U1, S8R1]
+    label: "ASM330LHH 6-axis IMU\nwake-on-motion accel + gyro, ferrite-fed"
+    side: bottom
+
+  # ---- CAN ----
+  - refs: [S9J1]
+    label: "CAN termination jumper\n120 Ω across CAN H/L"
+    side: top
+  - refs: [S9U1]
+    label: "TCAN3414DR CAN transceiver"
+    side: top
+  - refs: [S9U2, S9Y1]
+    label: "MCP2518FD CAN FD controller\nSPI to the nRF9151, 40 MHz crystal"
+    side: top
+  - refs: [S9FL1]
+    label: "CAN common-mode choke\nACT1210-101 (optional)"
+    side: top
+  - refs: [S7U2]
+    label: "CAN 3.3 V load switch\nCAN_ENABLE"
+    side: top
+  - refs: [S9D1]
+    label: "NUP2105L CAN ESD protection"
+    side: top
+
+  # ---- K-line ----
+  - refs: [S7U4]
+    label: "K-line 3.3 V load switch\nK_ENABLE, with S7U3 for the K-line domain"
+    side: bottom
+  - refs: [S7U3]
+    label: "ITS4060 12 V load switch\nswitched 12 V for the K-line transceiver"
+    side: bottom
+  - refs: [S10U1]
+    label: "TJA1027 K-line transceiver\nKWP2000, ISO 9141-2, KW1281"
+    side: bottom
+  - refs: [S10R3, S10D1]
+    label: "K-line pull-up\n510 Ω, 1 W, via 1N4148W from switched 12 V"
+    side: bottom
+
+  # ---- GNSS ----
+  - refs: [S16U2]
+    label: "u-blox MAX-M10S GNSS module\nGPS, Galileo, GLONASS, BeiDou, QZSS; UART to the nRF9151"
+    side: top
+  - refs: [S16U1]
+    label: "GNSS 3.3 V load switch\nGNSS_ENABLE"
+    side: top
+  - refs: [S7U1]
+    label: "GNSS backup 3.3 V load switch\nkeeps the receiver's backup domain alive for hot starts"
+    side: top
+  - refs: [S16TP1]
+    label: "GNSS 3.3 V test point"
+    side: bottom
+  - refs: [S16TP2]
+    label: "SAFEBOOT_N test point"
+    side: right
+  - refs: [S16TP3]
+    label: "TIMEPULSE test point"
+    side: top
+  - refs: [S12TP4]
+    label: "GNSS backup 3.3 V test point"
+    side: left
+
+  # ---- storage ----
+  - refs: [S17U1]
+    label: "MX25R6435FZNIL0 SPI flash\n64 Mbit (8 MB) for data buffering / config"
+    side: right
+
+  # ---- RF ----
+  - refs: [S15J2]
+    label: "GNSS antenna, SMA\n3.3 V bias tee for active antennas"
+    side: right
+  - refs: [S15L1, S15FB1, S15R1]
+    label: "GNSS bias tee\n68 nH RF choke + ferrite + 15 R feed"
+    side: right
+  - refs: [S15J4]
+    label: "LTE antenna, SMA\ninner-layer keepout under the centre pin"
+    side: right
+  - refs: [S15J3]
+    label: "LTE antenna, U.FL\nconnection to the Makerdiary board"
+    side: right
+
+  # ---- misc ----
+  - refs: [S13D1, S13D2, S13D3]
+    label: "Status LEDs\n3 x red 0603"
+    side: right
+  - refs: [H4]
+    label: "M2 mounting holes\n4 places"
+    side: right
