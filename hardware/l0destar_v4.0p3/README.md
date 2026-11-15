@@ -26,6 +26,7 @@ yourself rather than taking them on trust.
 ## New features
 
 - The flash chip now has its own SPI bus
+- Rail fault sensing on the GNSS backup supply
 
 ## Test status
 
@@ -83,6 +84,7 @@ power.
 - K\_SLEEP tied to a pullup as there's no need for this to be GPIO controlled
 - GNSS\_TIMEPULSE removed as this isn't used
 - The flash chip no longer shares an SPI bus with the CAN circuit
+- Added rail fault sensing on the GNSS backup supply
 
 ## Power supply
 

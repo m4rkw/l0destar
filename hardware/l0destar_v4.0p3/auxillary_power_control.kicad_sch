@@ -1383,6 +1383,12 @@
 		(uuid "a2d57b61-bb2e-4c0e-9810-ca1a2764eae5")
 	)
 	(junction
+		(at 127 26.67)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "a5eb6b2f-fcf6-45c1-b7ac-5138e874ed1a")
+	)
+	(junction
 		(at 126.365 100.33)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -1393,6 +1399,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "f742b07c-3d44-4fad-8f29-7dceac3c7443")
+	)
+	(junction
+		(at 116.84 26.67)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "f9956184-074b-4528-add8-c17998b431af")
 	)
 	(wire
 		(pts
@@ -1443,6 +1455,16 @@
 			(type default)
 		)
 		(uuid "1ccb6be8-eeb2-4c03-aba7-de0f58783dcd")
+	)
+	(wire
+		(pts
+			(xy 109.22 21.59) (xy 81.28 21.59)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1fb61efe-8d0b-4987-8212-4e1497125be7")
 	)
 	(wire
 		(pts
@@ -1556,6 +1578,16 @@
 	)
 	(wire
 		(pts
+			(xy 109.22 26.67) (xy 109.22 21.59)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "48b2d104-52ce-4247-afc6-9d795210031b")
+	)
+	(wire
+		(pts
 			(xy 226.695 35.56) (xy 226.695 36.83)
 		)
 		(stroke
@@ -1626,6 +1658,16 @@
 	)
 	(wire
 		(pts
+			(xy 81.28 21.59) (xy 81.28 26.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5a778540-d887-4e89-88fc-71428cd6d786")
+	)
+	(wire
+		(pts
 			(xy 232.41 76.2) (xy 232.41 77.47)
 		)
 		(stroke
@@ -1666,6 +1708,16 @@
 	)
 	(wire
 		(pts
+			(xy 127 26.67) (xy 129.54 26.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "604696b9-8a3e-4598-9b0d-02ee4275f158")
+	)
+	(wire
+		(pts
 			(xy 76.2 26.67) (xy 81.28 26.67)
 		)
 		(stroke
@@ -1673,6 +1725,16 @@
 			(type default)
 		)
 		(uuid "62cd1d3c-ab92-4171-8ba6-ba36b51e8f32")
+	)
+	(wire
+		(pts
+			(xy 116.84 26.67) (xy 109.22 26.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "64ddfa85-faa6-4002-a9fa-b91a4639c878")
 	)
 	(wire
 		(pts
@@ -1786,6 +1848,16 @@
 	)
 	(wire
 		(pts
+			(xy 124.46 26.67) (xy 127 26.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8faec384-e042-46bb-85c6-46d7cfc090e8")
+	)
+	(wire
+		(pts
 			(xy 34.29 26.67) (xy 60.96 26.67)
 		)
 		(stroke
@@ -1873,6 +1945,16 @@
 			(type default)
 		)
 		(uuid "a9c41011-e45e-4ba5-9f80-52ec6bf47662")
+	)
+	(wire
+		(pts
+			(xy 118.11 26.67) (xy 116.84 26.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ab3d2a27-074c-4fa2-9721-3b93618e5826")
 	)
 	(wire
 		(pts
@@ -2046,6 +2128,16 @@
 	)
 	(wire
 		(pts
+			(xy 127 26.67) (xy 127 31.75)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "da2c868c-1963-4bb3-a2a8-707c5260cca5")
+	)
+	(wire
+		(pts
 			(xy 226.695 27.94) (xy 230.505 27.94)
 		)
 		(stroke
@@ -2143,6 +2235,16 @@
 			(type default)
 		)
 		(uuid "f22308c5-4a63-4ddb-9eda-bdc629777a32")
+	)
+	(wire
+		(pts
+			(xy 127 39.37) (xy 127 40.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f7f989eb-cb97-43da-b6e6-c301acfe4a1b")
 	)
 	(wire
 		(pts
@@ -2249,6 +2351,30 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
+			)
+		)
+	)
+	(global_label "PP3V3_GNSS_BCKP_ST"
+		(shape input)
+		(at 129.54 26.67 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "3c559075-39bf-46eb-bd75-355dea833266")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 153.7522 26.67 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
 			)
 		)
 	)
@@ -2699,6 +2825,84 @@
 			(project "l0destar"
 				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
 					(reference "S7U1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 127 40.64 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "0459471b-51aa-4297-9021-65fa90089957")
+		(property "Reference" "#PWR030"
+			(at 127 46.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 127 45.72 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 127 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 127 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 127 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "c0ec869b-d5dd-4025-97d7-37d5c892a5c1")
+		)
+		(instances
+			(project "l0destar"
+				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
+					(reference "#PWR030")
 					(unit 1)
 				)
 			)
@@ -3756,6 +3960,216 @@
 			(project "l0destar"
 				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
 					(reference "S7C8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 127 35.56 180)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "610a95fb-3e67-481e-9e2a-60faedf330a8")
+		(property "Reference" "S7R11"
+			(at 129.54 34.2899 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "0402 1M 5%"
+			(at 129.54 36.8299 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 128.778 35.56 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C304.pdf"
+			(at 127 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 127 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "ERJ2RKF1004X"
+			(at 127 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Panasonic"
+			(at 127 35.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "1"
+			(uuid "6314d9d4-8ddb-4d34-ae91-061c7bdcc8a2")
+		)
+		(pin "2"
+			(uuid "26aa9b81-e347-4ccd-9f1f-1ba279efb39a")
+		)
+		(instances
+			(project "l0destar"
+				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
+					(reference "S7R11")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 120.65 26.67 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "685cc2a7-08b7-4743-8f52-9cded0f85f5a")
+		(property "Reference" "S7R10"
+			(at 120.65 20.955 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "0402 100K 5%"
+			(at 120.65 23.495 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 120.65 28.448 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "https://uk.farnell.com/multicomp-pro/mcpwr02ftep1003a/res-100k-1-thick-film-0402/dp/4538624"
+			(at 120.65 26.67 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 120.65 26.67 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer_Part_Number" "MCPWR02FTEP1003A"
+			(at 120.65 26.67 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(property "Manufacturer_Name" "Multicomp Pro"
+			(at 120.65 26.67 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "1"
+			(uuid "3a0fe847-22b5-48dd-aeea-65a03f883a22")
+		)
+		(pin "2"
+			(uuid "16e5f229-a64e-4d75-a469-470a7dce426b")
+		)
+		(instances
+			(project "l0destar"
+				(path "/6b82df34-c34f-4615-8477-25790583a5d0"
+					(reference "S7R10")
 					(unit 1)
 				)
 			)
