@@ -105,14 +105,14 @@ power.
    switched rail, so both float when the domain is off - enable the nRF
    internal pulldown on those pins
  - K-line side, now its own domain - K\_ENABLE gates PP3V3\_K and PP12V\_K
-   together. Both K\_TX and K\_SLEEP land on the TJA1027T, which is supplied
-   from PP12V\_K (VBAT, pin 7), so driving either high with the rail down
-   backfeeds it through the transceiver's ESD clamps. K\_TX and K\_RX also
-   carry 10K pull-ups (S10R2, S10R1) to PP3V3\_K, which float when that rail
-   is down. Firmware must take the TJA1027T to sleep (K\_SLEEP low) and then
-   park K\_TX/K\_RX/K\_SLEEP before dropping K\_ENABLE
- - K\_SLEEP has a 100K pulldown (S10R6), so the transceiver stays asleep while
-   the nRF is in reset or the pin is parked
+   together. K\_TX lands on the TJA1027T, which is supplied from PP12V\_K
+   (VBAT, pin 7), so driving it high with the rail down backfeeds the
+   transceiver through its ESD clamps. K\_TX and K\_RX also carry 10K pull-ups
+   (S10R2, S10R1) to PP3V3\_K, which float when that rail is down. Firmware
+   must park K\_TX/K\_RX (low or tri-state) before dropping K\_ENABLE
+ - The TJA1027T SLP\_N pin is not GPIO controlled: it is tied to PP3V3\_K
+   through a 100K pull-up (S10R6), so the transceiver is awake whenever the
+   K-line domain is powered. K\_ENABLE is the only way to put it to sleep
  - The OVP stage latches off while the unprotected rail stays above the
    release threshold. If the buck is genuinely faulted it will stay off; to
    clear a transient trip the input power has to drop far enough for the buck
@@ -253,8 +253,8 @@ S6R4/S6R5/S6R6 form a 3-resistor divider on the LT8609 EN/UV pin that gives
 the buck a defined under-voltage lockout with hysteresis: it won't start until
 the supply reaches ~5.6V and will shut off if the supply falls to ~4.3V, then
 needs ~5.6V again to restart. This is aimed at ISO 16750-2 low-voltage and
-drop-out tests. The divider draws around ~9 µA continuously from the 12V
-input, on top of the ~35.5 µA the rest of the board draws asleep, so it is
+drop-out tests. The divider draws around ~10 µA continuously from the 12V
+input (more as the supply rises, ~11 µA at 13.8V), on top of the ~35.5 µA the rest of the board draws asleep, so it is
 DNP by default.
 
 **Default build (no divider):** fit S6R4 as a `0402 0R` jumper and leave S6R5

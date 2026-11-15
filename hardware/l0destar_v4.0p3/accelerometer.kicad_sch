@@ -836,7 +836,7 @@
 		)
 		(uuid "2a2faf48-3d38-4094-a04e-f08fbe20b48e")
 	)
-	(text "ASM330LHHXTR 6-axis IMU\n100pF decoupling caps on SDA/SCL (paired with 1.8K pullups on the connector sheet)\nOptional ferrite bead filter (0R 0402 by default)\nSymbol fixed in v3.4 to set pins 10/11 NC"
+	(text "ASM330LHHXTR 6-axis IMU\n100pF decoupling caps on SDA/SCL (paired with 1.8K pullups on the connector sheet)\nFerrite bead filter on supply (S8R1, 600R BLM15AG601SH1D; 0R 0402 is a valid substitute)\nSymbol fixed in v3.4 to set pins 10/11 NC"
 		(exclude_from_sim no)
 		(at 178.816 171.958 0)
 		(effects
