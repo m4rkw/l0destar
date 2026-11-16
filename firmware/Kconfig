@@ -1737,6 +1737,27 @@ config APP_DRIVE_STREAM_WINDOW_MS
 	  fast as the loop runs and requeues the oldest unanswered datagram when
 	  the slots are full, as before.
 
+config APP_DRIVE_STREAM_SEND_TIMEOUT_MS
+	int "Longest a streamed send waits for the modem to take the datagram (ms, 0 = 10 s as outside the stream)"
+	depends on APP_DRIVE_STREAM
+	default 2000
+	range 0 10000
+	help
+	  The modem's send() blocks while it is not delivering: its buffer is
+	  full of the datagrams it is holding, or it is changing cell.  The loop
+	  that builds the records is the one waiting, so nothing is recorded for
+	  as long as it waits, and neither the backlog nor the flash can make up
+	  a record that was never built.  Four stalls of 10 to 15 s (a send timing
+	  out at 10 s, then a reconnect and a second send) left holes of that
+	  size in the track in four days' driving.
+
+	  While the stream runs a send that is not taken inside this is given up:
+	  its records wait in the backlog, as those of a shut window do (see
+	  APP_DRIVE_STREAM_WINDOW_MS), nothing counts as a failed send, and the
+	  next one tries again.  The third in a row replaces the socket, which
+	  clears what the modem is holding.  Sends outside the stream keep the
+	  10 s.  0 keeps 10 s for the stream too.
+
 config APP_DATABUF_SLOTS
 	int "Telemetry records held when the link is down"
 	default 32
@@ -1980,6 +2001,28 @@ config APP_WDT_FREEZE_CAPTURE
 	  0x20), PRIMASK or a locked-up CPU, which leave no note.  So a note names
 	  the culprit, and no note after a watchdog reset rules out the first group
 	  and leaves the second.  Bench-tested one case at a time; see watchdog.c.
+
+config APP_ISR_STACK_MARK
+	bool "Report how deep the interrupt stack went before the last reset"
+	default y
+	depends on !INIT_STACKS
+	help
+	  Every interrupt handler runs on one stack, ISR_STACK_SIZE bytes.  If it
+	  runs out, the secure side takes the fault and halts the CPU, and the
+	  hardware watchdog resets the chip up to 12 s later: the next boot says
+	  plain rst=wdt with no note, which is also what a stopped kernel timer
+	  looks like.  The stack is filled with a pattern at boot and read back
+	  after the next reset, so that the two can be told apart.
+
+	  rst= then carries isr:<bytes> after a reset nothing planned (a watchdog
+	  reset, a lock-up, a crash or a stall note) and after any reset when the
+	  peak was half the stack or more, which also puts a line on the log.  A
+	  peak within 128 bytes of the limit reads (full).  A power cut, a pin reset
+	  or a new image leaves nothing to read.  Costs a 2 KB fill at boot and about
+	  40 bytes of RAM.
+
+	  Excluded with INIT_STACKS, whose own fill of the stack at boot would
+	  hide the peak.
 
 # --- captured warnings/errors ----------------------------------------------
 

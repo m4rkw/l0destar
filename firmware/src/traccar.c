@@ -109,6 +109,12 @@ void transport_set_streaming(bool on)
     s_streaming = on;
 }
 
+/* No send timeout of its own to shorten: a request is answered or fails. */
+void transport_set_short_send(bool on)
+{
+    ARG_UNUSED(on);
+}
+
 bool transport_is_streaming(void)
 {
     return s_streaming;

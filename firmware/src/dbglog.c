@@ -890,10 +890,12 @@ const char *dbglog_reset_cause(void)
             { RESET_CPU_LOCKUP,     "lockup" },
         };
         uint32_t cause = 0;
+        uint32_t raw = 0;
         size_t pos = 0;
 
         s_read = true;
         if (hwinfo_get_reset_cause(&cause) == 0 && cause != 0) {
+            raw = cause;
             for (size_t i = 0; i < ARRAY_SIZE(names); i++) {
                 if (!(cause & names[i].bit)) {
                     continue;
@@ -934,8 +936,20 @@ const char *dbglog_reset_cause(void)
         const char *freeze = watchdog_last_freeze();
 
         if (freeze && pos < sizeof(s_cause)) {
+            pos += snprintf(s_cause + pos, sizeof(s_cause) - pos, "%s%s",
+                            pos ? "+" : "", freeze);
+        }
+
+        /* Or that the interrupt stack ran out, which the secure side answers
+         * with a halt that only the watchdog ends: also a plain wdt.  After a
+         * reset nothing planned its peak is always given, whatever it was. */
+        bool unplanned = (raw & (RESET_WATCHDOG | RESET_CPU_LOCKUP)) != 0 ||
+                         crash || stall || freeze;
+        const char *isr = isr_mark_last(unplanned);
+
+        if (isr && pos < sizeof(s_cause)) {
             snprintf(s_cause + pos, sizeof(s_cause) - pos, "%s%s",
-                     pos ? "+" : "", freeze);
+                     pos ? "+" : "", isr);
         }
     }
     return s_cause[0] ? s_cause : NULL;

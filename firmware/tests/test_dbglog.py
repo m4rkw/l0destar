@@ -163,6 +163,11 @@ int64_t k_uptime_get(void) { return g_ms; }
 const char *fatal_last_crash(void) { return T_CRASH; }
 const char *watchdog_last_stall(void) { return T_STALL; }
 const char *watchdog_last_freeze(void) { return T_FREEZE; }
+#ifndef T_ISR
+#define T_ISR NULL
+#endif
+static int g_isr_calls, g_isr_unplanned;
+const char *isr_mark_last(bool unplanned) { g_isr_calls++; g_isr_unplanned = unplanned; return T_ISR; }
 
 /* Every unlock: once the module is in use the block must be sealed. */
 void h_unlocking(void)
@@ -177,6 +182,8 @@ void h_set_ms(int64_t ms) { g_ms = ms; }
 int  h_lock_bad(void) { return g_lock_bad + (g_lock_depth != 0 ? 1000 : 0); }
 int  h_unsealed(void) { return g_unsealed; }
 const char *h_reset_cause(void) { return dbglog_reset_cause(); }
+int h_isr_calls(void) { return g_isr_calls; }
+int h_isr_unplanned(void) { return g_isr_unplanned; }
 
 void h_capture(const char *line, int len, int64_t ms) { capture(line, (uint8_t)len, ms); }
 int  h_take(char *out, int max) { return dbglog_take(out, (size_t)max); }
@@ -1125,14 +1132,16 @@ def test_garbage_under_the_sanitisers_where_the_toolchain_has_them():
 WDT, SW = 1 << 4, 1 << 1
 
 
-def cause(hw=0, crash=None, stall=None, freeze=None):
-    """dbglog_reset_cause() for one combination of what the hardware, fatal.c and
-    watchdog.c report: a build per combination, since it is composed once per boot."""
+def cause_info(hw=0, crash=None, stall=None, freeze=None, isr=None):
+    """dbglog_reset_cause() for one combination of what the hardware, fatal.c,
+    watchdog.c and isr_mark.c report: a build per combination, since it is composed
+    once per boot.  Gives the text, how often isr_mark_last() was asked and what it
+    was told about the reset being unplanned."""
     d = tempfile.mkdtemp()
     write_stubs(d)
     so = os.path.join(d, "libcause.so")
     defs = [f"-DHW_CAUSE={hw}"]
-    for name, val in (("T_CRASH", crash), ("T_STALL", stall), ("T_FREEZE", freeze)):
+    for name, val in (("T_CRASH", crash), ("T_STALL", stall), ("T_FREEZE", freeze), ("T_ISR", isr)):
         if val is not None:
             defs.append('-D%s="%s"' % (name, val))
     cmd = ["cc", *CFLAGS, "-DCONFIG_APP_DATABUF_UNACKED_SLOTS=6", *defs, "-shared", "-fPIC",
@@ -1142,7 +1151,13 @@ def cause(hw=0, crash=None, stall=None, freeze=None):
     L = C.CDLL(so)
     L.h_reset_cause.restype = C.c_char_p
     got = L.h_reset_cause()
-    return None if got is None else got.decode()
+    again = L.h_reset_cause()                       # cached: the same text, no second look
+    assert again == got
+    return (None if got is None else got.decode()), L.h_isr_calls(), L.h_isr_unplanned()
+
+
+def cause(**kw):
+    return cause_info(**kw)[0]
 
 
 def test_no_reset_cause_and_nothing_noted_reports_none():
@@ -1172,3 +1187,54 @@ def test_everything_at_once_is_cut_to_fit_not_overrun():
     got = cause(hw=WDT | SW, crash="fatal:2@3e99c735", stall="stall:4aa02/3e254/49722/48a78",
                 freeze="fz:48a78/3e254/i479")
     assert len(got) <= 63 and got.startswith("sw+wdt+fatal:2@3e99c735+stall:")
+
+
+# -- the interrupt stack's peak ---------------------------------------------------------------
+
+PIN, BOR, POR, LOCKUP = 1 << 0, 1 << 2, 1 << 3, 1 << 8
+
+
+def test_the_stack_peak_is_the_last_token():
+    assert cause(hw=WDT, isr="isr:2010") == "wdt+isr:2010"
+    assert cause(hw=WDT, stall="stall:4aa02/3e254", isr="isr:300") == "wdt+stall:4aa02/3e254+isr:300"
+    assert cause(hw=WDT, freeze="fz:48a78/3e254", isr="isr:300") == "wdt+fz:48a78/3e254+isr:300"
+    assert cause(hw=SW, crash="fatal:2@3e99c", stall="stall:1/2", freeze="fz:3/4", isr="isr:99") == \
+        "sw+fatal:2@3e99c+stall:1/2+fz:3/4+isr:99"
+
+
+def test_the_stack_peak_alone_is_its_token():
+    assert cause(isr="isr:1500") == "isr:1500"
+
+
+def test_without_a_peak_nothing_is_added():
+    assert cause(hw=WDT) == "wdt"
+    assert cause(hw=WDT, freeze="fz:3/4") == "wdt+fz:3/4"
+
+
+def test_the_stack_peak_is_cut_to_fit_not_overrun():
+    got = cause(hw=WDT | SW, crash="fatal:2@3e99c735", stall="stall:4aa02/3e254/49722/48a78",
+                freeze="fz:48a78/3e254/i479", isr="isr:2010")
+    assert len(got) <= 63 and got.startswith("sw+wdt+fatal:2@3e99c735+stall:")
+
+
+def asked(**kw):
+    got, calls, unplanned = cause_info(**kw)
+    assert calls == 1                                # once per boot, however often the cause is read
+    return bool(unplanned)
+
+
+@pytest.mark.parametrize("hw", [WDT, LOCKUP, WDT | SW, WDT | PIN | SW, LOCKUP | SW])
+def test_a_watchdog_or_lockup_reset_is_one_nothing_planned(hw):
+    assert asked(hw=hw)
+
+
+@pytest.mark.parametrize("hw", [0, SW, PIN, PIN | SW, BOR, POR])
+def test_a_reset_with_no_such_cause_or_note_is_not(hw):
+    assert not asked(hw=hw)
+
+
+@pytest.mark.parametrize("note", ["crash", "stall", "freeze"])
+def test_any_note_of_a_fault_makes_it_unplanned_whatever_the_register_says(note):
+    kw = {note: "x:1"}
+    assert asked(hw=SW, **kw)
+    assert asked(hw=0, **kw)

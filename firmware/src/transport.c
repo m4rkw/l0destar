@@ -34,6 +34,7 @@
 #include <zephyr/net/socket.h>
 
 #include "app.h"
+#include "send_policy.h"
 
 LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
 
@@ -82,6 +83,17 @@ LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
  * window, with a kick before each send. */
 #define SEND_TIMEOUT_MS  10000
 
+/* The drive stream's own, much shorter (send_policy.h).  The loop that builds
+ * the records is the one waiting in send(), and a record not built is not
+ * there for the backlog to hold.  0 leaves the stream on SEND_TIMEOUT_MS. */
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+#define STREAM_SEND_TIMEOUT_MS  CONFIG_APP_DRIVE_STREAM_SEND_TIMEOUT_MS
+#else
+#define STREAM_SEND_TIMEOUT_MS  0
+#endif
+/* The third timeout in a row replaces the socket (send_policy.h). */
+#define STREAM_HOLD_MAX  3
+
 static int s_sock = -1;
 static struct sockaddr_in s_server;
 static bool s_resolved;
@@ -91,6 +103,10 @@ static int  s_silent_sends;      /* registered sends since the last reply */
 static int64_t s_silent_since_ms;
 /* Track mode: hold the RRC connection between sends. */
 static bool s_streaming;
+/* The drive stream's short send timeout is on (transport_set_short_send). */
+static bool s_short_send;
+static int  s_sndtimeo_ms;       /* what SO_SNDTIMEO on s_sock says; 0 = not set yet */
+static int  s_held;              /* sends given up in a row (send_policy.h) */
 
 /* The server binds each reply to the nonce of the request it answers (the
  * response AAD is IMEI || request nonce), so a reply authenticates against
@@ -114,9 +130,40 @@ static char    s_reply[512];
 static unsigned s_drop_count;
 #endif
 
+/* Puts the send timeout the mode calls for on the open socket. */
+static void apply_send_timeout(void)
+{
+    int ms = send_policy_timeout_ms(s_short_send, STREAM_SEND_TIMEOUT_MS,
+                                    SEND_TIMEOUT_MS);
+
+    if (s_sock < 0 || ms == s_sndtimeo_ms) {
+        return;
+    }
+
+    struct zsock_timeval tv = {
+        .tv_sec  = ms / 1000,
+        .tv_usec = (ms % 1000) * 1000,
+    };
+    if (zsock_setsockopt(s_sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv))) {
+        LOG_WRN("SO_SNDTIMEO: %d — sends can block", errno);
+        return;
+    }
+    s_sndtimeo_ms = ms;
+}
+
 void transport_set_streaming(bool on)
 {
     s_streaming = on;
+    if (!on) {
+        transport_set_short_send(false);
+    }
+}
+
+void transport_set_short_send(bool on)
+{
+    s_short_send = on;
+    s_held = 0;
+    apply_send_timeout();
 }
 
 bool transport_is_streaming(void)
@@ -293,13 +340,8 @@ int transport_open(void)
         return -errno;
     }
 
-    struct zsock_timeval tv = {
-        .tv_sec  = SEND_TIMEOUT_MS / 1000,
-        .tv_usec = (SEND_TIMEOUT_MS % 1000) * 1000,
-    };
-    if (zsock_setsockopt(s_sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv))) {
-        LOG_WRN("SO_SNDTIMEO: %d — sends can block", errno);
-    }
+    s_sndtimeo_ms = 0;
+    apply_send_timeout();
 
     return 0;
 }
@@ -409,7 +451,16 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
     int64_t send_ms = k_uptime_get();
 
     if (!dropped && zsock_send(s_sock, buf, total, 0) < 0) {
-        LOG_WRN("send failed (%d) after %lld ms, reconnecting", errno,
+        int e = errno;
+
+        if (send_policy_hold(e, s_short_send, STREAM_SEND_TIMEOUT_MS, &s_held,
+                             STREAM_HOLD_MAX)) {
+            /* The modem is busy or full, not the socket bad: the caller keeps
+             * the records.  The same words every time, so the log folds them. */
+            LOG_WRN("send not taken in %d ms — held", STREAM_SEND_TIMEOUT_MS);
+            return TRANSPORT_HELD;
+        }
+        LOG_WRN("send failed (%d) after %lld ms, reconnecting", e,
                 k_uptime_get() - send_ms);
         transport_teardown();
         err = transport_open();
@@ -422,6 +473,7 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
             return -errno;
         }
     }
+    s_held = 0;
 
     /* Filed under a fresh id with the nonce its reply will be bound to. */
     if (++s_last_id == 0) {

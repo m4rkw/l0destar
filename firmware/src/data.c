@@ -1511,6 +1511,15 @@ int send_data(void)
     }
 
     int err = transport_send((const uint8_t *)s_tx, (size_t)tx_len);
+    if (err == TRANSPORT_HELD && stream_keeps_records) {
+        /* The modem did not take it inside the stream's send timeout: busy or
+         * full, not a bad socket.  The records wait in the backlog as a shut
+         * window's do, and nothing counts as a failed send, so modem_recover()
+         * keeps its hands off the socket.  The log lines stay in their buffer. */
+        dbglog_ack(false);
+        databuf_push_lines(data_current, (size_t)data_index);
+        return 0;
+    }
     if (err) {
         /* The log lines stay in their buffer for the next attempt. */
         dbglog_ack(false);

@@ -1,0 +1,29 @@
+⏺ The RAM percentage itself is not the cause, but RAM does matter through one fixed-size region, the 2 KB interrupt stack, and I've reproduced its failure on the bench. My usage limit has been reached, so
+  I'm stopping here. Nothing is applied and your tree is unchanged.
+
+  Why 91.6% doesn't matter
+  - The car-config app image uses 141,284 of 154,264 bytes. That is a static link-time figure: stacks and heaps are fixed arrays, so nothing grows at runtime.
+  - The roughly 13 KB left over is an unused libc heap arena (checked in the ELF).
+  - The 16 KB kernel heap held at most 32 bytes on the bench.
+
+  What does matter: the interrupt stack
+  - Bench test: I overflowed it deliberately. TF-M, the secure firmware, took a HardFault, printed FATAL ERROR: HardFault, and halted with interrupts off. Four seconds later the watchdog reset the unit and
+    the next boot said plain wdt, with no fatal:, stall: or fz: note. That is the same signature as the car's three freezes. The console log is
+    /private/tmp/claude-501/-Users-mark-code-l0destar-firmware/e136f998-e444-481f-ba27-33c0140a0287/scratchpad/w3/console_ram.log.
+  - Correction: Earlier I said a plain wdt meant no fault was taken. That was wrong. A HardFault handled by TF-M leaves exactly this signature. The freeze capture in 0.4.127 can't see it either; it printed
+    nothing in this test.
+  - Not proven for the car: On the bench the interrupt stack used at most 304 of 2048 bytes (that includes boot-time init), so it looks roomy. The car's real peaks are unknown.
+  - Tightest margin measured: the log thread, at 604 of 768 bytes. An overflow there gives a noted fatal:2, not a hang.
+
+  Proposed fix, not built
+  1. Remember the interrupt stack's high-water mark across a reset and report it on the next boot. After the next hang it would show whether this stack was exhausted.
+  2. Set CONFIG_TFM_HALT_ON_CORE_PANIC=n, so a secure-side fault reboots the unit at once instead of freezing for about 12 s.
+  3. Optionally raise the interrupt stack to 3 KB, which costs 1 KB of RAM.
+
+  State
+  - The bench is back on your own build and powered off: power, rd6006 and the PSU plug.
+  - Memory notes are updated, including the correction above.
+  - The send-timeout patch is still waiting for your "apply".
+
+  Left to do: the three items above (code, host tests, a bench check of the high-water report), and the unlimited-stream drive on 0.4.125 to separate firmware from the 1 s stream setting. Say the word and
+  I'll start with the watermark and the TF-M setting.

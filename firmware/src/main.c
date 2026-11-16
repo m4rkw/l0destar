@@ -509,6 +509,9 @@ static void drive_stream_sync(void)
     if (transport_is_streaming() != hold) {
         transport_set_streaming(hold);
         stream_keeps_records = hold;
+        /* Only this stream can hold a record a send gave up on; track mode's
+         * are too big for the backlog. */
+        transport_set_short_send(hold);
     }
 }
 

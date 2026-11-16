@@ -7,6 +7,7 @@
 #ifndef APP_H_
 #define APP_H_
 
+#include <errno.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -343,9 +344,18 @@ void transport_close(void);
  * (RAI_ONGOING) instead of releasing the radio after each one.  Only
  * sensible with GNSS stopped, since the radio is then LTE's anyway. */
 void transport_set_streaming(bool on);
+/* The drive stream's short send timeout (APP_DRIVE_STREAM_SEND_TIMEOUT_MS) on
+ * or off.  Only the drive stream turns it on: its records can wait in the
+ * backlog when a send is given up, track mode's cannot.  Off with streaming. */
+void transport_set_short_send(bool on);
 /* Drop the socket, hint or no hint: before the modem is powered off or
  * reset, and when a send has failed on it. */
 void transport_teardown(void);
+/* transport_send() gives this when the modem did not take the datagram inside
+ * the short send timeout: a busy or full modem, not a bad socket.  Nothing
+ * was queued; the caller keeps the records and nothing counts as a failed
+ * send.  Only with the short timeout on. */
+#define TRANSPORT_HELD  (-ETIME)
 int  transport_send(const uint8_t *plaintext, size_t pt_len);
 /* The server's reply to the last send, "1,<interval>,<movement_alarm>[,cmd]".
  * UDP waits up to timeout_ms for the datagram; Traccar already has it (a
@@ -569,6 +579,10 @@ const char *watchdog_last_stall(void);
 /* "fz:<pc>/<lr>[/i<irq>]" once after a watchdog reset that caught a frozen
  * kernel, with the detail on the log, else NULL (watchdog.c, freeze_note.h) */
 const char *watchdog_last_freeze(void);
+/* "isr:<bytes>" once: how deep the interrupt stack got before the last reset,
+ * after one nothing planned (unplanned) and after any when it was half full or
+ * more, with a log line for those; else NULL (isr_mark.c, isr_mark.h) */
+const char *isr_mark_last(bool unplanned);
 
 void reboot_now(void);
 void status_delay(long ms);   /* watchdog-aware sleep */

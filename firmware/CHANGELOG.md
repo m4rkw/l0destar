@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.128
+
+### Whether the interrupt stack ran out before a reset
+If the 2 KB interrupt stack overflows, the secure side takes the fault and halts the CPU, and the hardware watchdog resets the chip up to 12 s later: the next boot says plain `rst=wdt` with no note, which is also what a stopped kernel timer looks like. The stack is now filled with a pattern at every boot and read back after the next reset, so the two can be told apart.
+
+- `rst=` ends with `isr:<bytes>`, the deepest the handlers went, after a reset nothing planned (watchdog, lock-up, or a crash, stall or freeze note) and after any reset when the peak was half the stack or more. Those also log `previous boot: interrupt stack peak <n> of 2048 bytes`, marked `(full)` within 128 bytes of the limit. A reboot with a low peak says nothing.
+- `APP_ISR_STACK_MARK` (default y, not with `INIT_STACKS`): a 2 KB fill at boot and about 40 bytes of RAM. A power cut, a pin reset or a new image leaves nothing to read, so the first boot after an update is silent.
+- Status: 29 host tests for the pattern and the wording and 18 for the `rst=` composition (mutation-checked); built for v4.0p2, v3.3 and Traccar; bench-run on v4.0p2 with a 1304-byte excursion in a handler (read back as 1304), a stalled thread (672 after a minute of modem activity) and a deliberate overflow (2048, full). Not run on the car.
+
+### A stalled modem no longer stops the stream recording
+A send the modem would not take blocked the loop that builds the records for up to 10 s, 15 with the reconnect, leaving a hole in the track that neither the backlog nor the flash could fill.
+
+- While the drive stream runs, a send not taken within `APP_DRIVE_STREAM_SEND_TIMEOUT_MS` (2000; 0 keeps 10 s) is given up: its records wait in the backlog, nothing counts as a failed send, and the next send tries again. The third timeout in a row replaces the socket, as the 10 s one did on its first. Track mode and sends outside the stream keep 10 s.
+- Status: host tests (`tests/test_send_policy.py`, mutation-checked); built for v4.0p2, v3.3 and the Traccar transport; not run on hardware. The 2 s is a guess from the slow sends seen (2 to 9 s succeeded, four stalled to the 10 s limit).
+
 ## 0.4.127
 
 ### Where the CPU was when the watchdog catches a frozen kernel
