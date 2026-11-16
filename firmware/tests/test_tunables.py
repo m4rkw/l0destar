@@ -33,7 +33,9 @@ int  get(int k) { return tun_table_get(&t, (enum tun_key)k, built); }
 int  is_set(int k) { return t.set[k]; }
 int  oa_set(void) { return t.oa_set; }
 const char *oa(void) { return t.oa; }
-int  fmt_built(char *out, size_t cap, const char *oa) { return tun_format_built(out, cap, built, oa); }
+int  fmt_built(char *out, size_t cap, const char *oa, const char *op) { return tun_format_built(out, cap, built, oa, op); }
+int  op_set(void) { return t.op_set; }
+const char *op(void) { return t.op; }
 /* the same, but the bytes after the list are a trap: a parser that reads past
  * the length would pick up xtt:11 and an xoa from them */
 void apply_exact(const char *s, size_t n) {
@@ -228,15 +230,15 @@ def test_long_garbage_is_safe(lib):
 
 # -- tb=: the built values as a record field ---------------------------------
 
-TB_ORDER = ["xtt", "xpi", "xii", "xap", "xab", "xoa", "xis", "xbw", "xbp", "xds", "xdi", "xtp", "xdd", "xns", "xrp", "xlw"]
+TB_ORDER = ["xtt", "xpi", "xii", "xap", "xab", "xoa", "xop", "xis", "xbw", "xbp", "xds", "xdi", "xtp", "xdd", "xns", "xrp", "xlw"]
 
 
-def fmt(lib, oa, cap=272):
-    lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p]
+def fmt(lib, oa, cap=304, op="0C05"):
+    lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p, C.c_char_p]
     for i, k in enumerate(KEYS):
         lib.set_built(i, BUILT[k])
     buf = C.create_string_buffer(cap)
-    n = lib.fmt_built(buf, cap, oa.encode())
+    n = lib.fmt_built(buf, cap, oa.encode(), op.encode())
     return n, buf.value.decode()
 
 
@@ -251,13 +253,14 @@ def test_tb_commas_become_pipes(lib):
 
 def test_tb_empty_xoa(lib):
     n, s = fmt(lib, "")
-    assert ";xoa:;xis:30;" in s
+    assert ";xoa:;xop:0C05;xis:30;" in s
 
 
 def test_tb_negative(lib):
     lib.set_built(KEYS.index("xap"), -2)
-    buf = C.create_string_buffer(272)
-    assert lib.fmt_built(buf, 272, b"") > 0
+    buf = C.create_string_buffer(304)
+    lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p, C.c_char_p]
+    assert lib.fmt_built(buf, 304, b"", b"0C05") > 0
     assert b"xap:-2;" in buf.value
     lib.set_built(KEYS.index("xap"), 2)
 
@@ -267,10 +270,10 @@ def test_tb_worst_case_fits(lib):
     assert len(oa) == 120
     for i, k in enumerate(KEYS):
         lib.set_built(i, LIMITS[k][1] if k != "xap" else -2)
-    buf = C.create_string_buffer(272)
-    lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p]
-    n = lib.fmt_built(buf, 272, oa.encode())
-    assert 0 < n <= 250 and n == len(buf.value)
+    buf = C.create_string_buffer(304)
+    lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p, C.c_char_p]
+    n = lib.fmt_built(buf, 304, oa.encode(), b"0C" * 12)
+    assert 0 < n <= 280 and n == len(buf.value)
     assert buf.value.decode().count("|") == oa.count(",")
 
 
@@ -281,3 +284,41 @@ def test_tb_too_small_or_long(lib):
     assert (n, s) == (-1, "")
     n, s = fmt(lib, "", cap=1)
     assert (n, s) == (-1, "")
+
+
+def test_tb_op_too_long(lib):
+    n, s = fmt(lib, "", op="0C" * 13)
+    assert (n, s) == (-1, "")
+    n, s = fmt(lib, "", cap=60)
+    assert (n, s) == (-1, "")
+
+
+# -- xop: the OBD PID selection ----------------------------------------------
+
+def test_xop_is_taken_as_hex(lib):
+    lib.op.restype = C.c_char_p
+    tt = Tun(lib)
+    tt.apply("xtt:3;xop:0C05")
+    assert lib.op_set() and lib.op() == b"0C05"
+    tt.apply("xop:0c0B1F;xtt:4")
+    assert lib.op() == b"0c0B1F" and tt.get("xtt") == 4
+    tt.apply("xop:" + "0C" * 12)
+    assert lib.op_set() and len(lib.op()) == 24
+
+
+@pytest.mark.parametrize("bad", ["", "0C,05", "0G", "0C|05", "0C" * 13, "0C 05"])
+def test_xop_bad_value_unsets(lib, bad):
+    tt = Tun(lib)
+    tt.apply("xop:0C05")
+    assert lib.op_set()
+    tt.apply("xop:" + bad)
+    assert not lib.op_set()
+
+
+def test_xop_not_listed_goes_back_to_built(lib):
+    tt = Tun(lib)
+    tt.apply("xop:0C05")
+    tt.apply("xtt:3")
+    assert not lib.op_set()
+    tt.apply("-")
+    assert not lib.op_set()

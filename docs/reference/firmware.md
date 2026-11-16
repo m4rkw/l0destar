@@ -502,6 +502,7 @@ backlog itself have not run.
 | `APP_DEBUG_LOG_TAIL` | int, 256-16384 | `3072` | Bytes kept from the most recent lines, as a ring in which a repeated line collapses into a count |
 | `APP_DEBUG_LOG_LINE_MAX` | int, 64-255 | `160` | Longest line kept, including about 20 bytes of prefix |
 | `APP_DEBUG_LOG_PER_RECORD` | int, 0-1000 | `600` | Most log bytes appended to one record; the rest waits for the next |
+| `APP_WDT_FREEZE_CAPTURE` | bool | `y` | Depends on `TASK_WDT_HW_FALLBACK`. Leaves the nRF watchdog driver's own interrupt out (`WDT_NRFX_NO_IRQ`) and takes the watchdog's early warning, about 60 µs before a reset, at the highest interrupt priority. After a watchdog reset that no thread's missed kick explains (the kernel's timer stopped) the next boot reports where the CPU was: `rst=wdt+fz:<pc>/<lr>[/i<irq>]` and five `previous boot froze:` log lines (the interrupted code's registers, active and pending interrupts, the system timer's registers, the stack above the frame); look the addresses up in the map file of the image that was running. Reaches a handler stuck at the system timer's level or below, and a thread under BASEPRI 0x40 or more; not a handler at the modem IPC's level (hardware level 1), `irq_lock()`, PRIMASK or a lock-up, which leave no note. Costs nothing while the unit runs |
 
 ### Modem recovery
 

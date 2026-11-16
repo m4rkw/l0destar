@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.127
+
+### Where the CPU was when the watchdog catches a frozen kernel
+A watchdog reset that no thread's missed kick explains (the car's three on 2026-11-16: plain `rst=wdt`, 12 to 13 s after the last datagram) means the kernel's timer stopped. The hardware watchdog's early warning, about 60 µs before the reset, now records where the CPU was.
+
+- Next boot: `rst=wdt+fz:<pc>/<lr>[/i<irq>]` and five `previous boot froze:` log lines: the interrupted code's registers, the active and pending interrupts, the system timer's registers and the stack above the frame. Look the addresses up in the map file of the image that was running. `APP_WDT_FREEZE_CAPTURE` (default y) leaves the driver's own watchdog interrupt out (`WDT_NRFX_NO_IRQ`) and takes the early warning at the highest priority; nothing runs while the unit does.
+- Reach, measured on the bench: a handler stuck at the system timer's level or below, or a thread under BASEPRI 0x40 or more, leaves a note. A handler at the modem IPC's level (hardware level 1), `irq_lock()`, PRIMASK and a lock-up leave none, so no note after a watchdog reset rules the first group out. A thread that stops kicking still gets the 32 s callback and its `stall:` note, unchanged.
+- Status: 33 host tests (`tests/test_freeze_note.py`, mutation-checked); built for v4.0p2 and v3.3; bench-run on v4.0p2 with eight deliberate freezes, one per boot, and five minutes of normal running with no stray reset. Not run on the car.
+
+### OBD PID selection and supported-PID scan
+The unit sends only the OBD PIDs it is told to, and reports which PIDs the car supports.
+
+- Default is engine speed and coolant temperature (`APP_OBD_PIDS`, `"0C05"`): `orpm`, `ormin`, `ormax`, `oravg`, `ocl`. The server overrides it with tunable `xop` (up to 12 PIDs as concatenated 2-digit hex in the order wanted, e.g. `0C050B`; also in `tb=`). Bad or unknown PIDs are ignored; an empty result falls back to the default.
+- The 16 existing keys keep their names and scales and are sent only when their PID is selected (`ormin`/`ormax`/`oravg` with `0C`, `omil`/`odtc` with `01`, `ofs` with `03`). Other PIDs from the catalogue (`obd_pids.h`, 55 PIDs) go as `o<hex>=<int>`, e.g. `o0B=95`.
+- Engine speed, vehicle speed, the status word and the fields an `APP_OBD_ALERTS` rule names are still read, but sent only when selected. Only supported PIDs are asked for; the support chain (PID 00, 20 ... C0) is read at session open.
+- `os=<0|1>` rides every reply. A change to `os=1` asks for one scan: once the engine is running (RPM > 0) the support words are read afresh and sent once as `osp=<hex>` (8 digits per 32 PIDs, trailing zero words trimmed). Nothing is sent if PID 00 gets no answer (retried every 30 s). One scan per request; a request still repeated 30 min after its answer is made again. Kept in memory only.
+- The K-wire is the only OBD path; the CAN transceiver has no OBD request code.
+- Status: 161 host tests (`tests/test_obd_pids.py`, `tests/test_tunables.py`); built for v4.0p2 and v3.3; not run on hardware.
+
+### Pending server commands no longer fill up with repeats
+A waiting copy of a setting that rides every reply (`gw=`, `le=`, `os=`, and any added later) was kept beside the newest one, so a burst of replies filled the 128-byte buffer and each further reply logged `server command dropped, no room`, with a real command able to be the one dropped.
+
+- A waiting `key=value` item is dropped when the newest reply carries the same key; a bare command is kept once. `fota=`, `track=`, `gb=`, `im=` and `gx=` still go whatever the newest reply says. The warning stays for commands that really do not fit.
+- Status: host tests (`tests/test_cmd_merge.py`, mutation-checked); built for the car's configuration; not run on hardware.
+
 ## 0.4.125
 
 ### GNSS backup supply: a separate rule on the backup module
@@ -25,6 +50,7 @@ A record that waited in the external flash backlog is sent with `fl=1`, and the 
 
 - Server: nullable `log.flash` column (migration `2026-11-12_log_flash.sql`); the tag is left off rather than failing a datagram that has no room for it.
 - The unit also sends `fc=<n>`, the erase cycles of the flash log's most used sector (rated 100,000), whenever it changes and once the log has been opened, which now happens at boot (reading the sector headers, writing nothing; about 0.4 to 0.8 s estimated, not measured) rather than at the first spill; a failed open is left for the first spill to retry; the server keeps it on the device row (`flash_cycles`, `flash_cycles_at`, migration `2026-11-12_device_flash_cycles.sql`) and in `/devices`.
+- The unit also sends `fe=<n>`, the sectors erased since the chip was new (2016 per lap, so `fc` is `fe` / 2016), because `fc` stays 0 for the whole first lap; server column `device.flash_erases` (migration `2026-11-16_device_flash_erases.sql`) and `flash_erases` in `/devices`.
 - Status: host-built only; not run on hardware.
 
 ### Flash chip put to sleep on every board that has it

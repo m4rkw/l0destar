@@ -8,10 +8,11 @@ switched on for the wrong vehicle is worse than an error.
 """
 
 import datetime
+import json
 
 from flask import request
 
-from .. import config, db, interval_schedule
+from .. import config, db, interval_schedule, obd
 from ..telemetry import (COMMAND_MAX_AGE_HOURS, TUNABLE_COLUMNS,
                          install_state, tunables_built, tunables_effective)
 
@@ -189,6 +190,20 @@ def _nullable_float(value):
     return None if value is None else to_float(value)
 
 
+def obd_extra(raw):
+    """A row's obd_extra as a dict of PID -> number, None when it has none."""
+    if not raw:
+        return None
+    try:
+        value = json.loads(raw) if isinstance(raw, str) else raw
+    except ValueError:
+        return None
+    if not isinstance(value, dict):
+        return None
+    return {pid: v for pid, v in value.items()
+            if isinstance(v, (int, float)) and not isinstance(v, bool)} or None
+
+
 def imu_burst(raw):
     """A track-mode record's IMU burst as a list of [ax, ay, az, gx, gy, gz]:
     accel in milli-g, gyro in deg/s, oldest first, 26 Hz.  None when the
@@ -264,6 +279,9 @@ def position(row, database=None, track_mode=None):
     # ahead of voltage to call the engine running and shows the rest.
     for column in OBD_LIVE_COLUMNS:
         out[column] = _nullable_float(row.get(column))
+    # The PIDs outside those columns, {"0B": 95.0} by catalogue unit, null
+    # when the record has none.
+    out['obd_extra'] = obd_extra(row.get('obd_extra'))
     for column in IMU_LIVE_COLUMNS:
         value = row.get(column)
         if value is not None and column.startswith('gyro_'):
@@ -373,6 +391,27 @@ def _net_scan(device):
     return {'at': _stamp(device['net_scan_at']), 'cells': cells}
 
 
+def obd_state(device):
+    """The OBD PID selection and scan as the API shows them.  ``obd_pids`` is
+    the selection in use (the override, else what the unit reported it was
+    built with, else the default 0C,05) and ``obd_pids_default`` whether it is
+    not an override; ``obd_supported`` the PIDs the last scan found (null if
+    never scanned), ``obd_supported_at`` when, ``obd_selectable`` the PIDs a picker may offer (the defaults until a scan, then the supported ones), ``obd_scan`` whether a scan is
+    wanted and not yet answered."""
+    pids, default = obd.effective_selection(
+        device, tunables_built(device).get('xop'))
+    supported = obd.supported_pids(device.get('obd_supported'))
+    return {
+        'obd_pids': pids,
+        'obd_pids_default': default,
+        'obd_supported': supported,
+        'obd_selectable': obd.selectable(supported),
+        'obd_supported_at': _stamp(device.get('obd_supported_at'))
+        if supported is not None else None,
+        'obd_scan': bool(device.get('obd_scan')),
+    }
+
+
 def summary(device, database=None, log=None):
     """A device and its latest record, as the device list shows them.
 
@@ -420,12 +459,14 @@ def summary(device, database=None, log=None):
         **{column: device.get(column) for column in TUNABLE_COLUMNS},
         'tunables_built': tunables_built(device),
         'tunables': tunables_effective(device),
+        **obd_state(device),
         # Erase cycles of the unit's flash log's most used sector (rated
         # 100,000), as last reported, and when it last changed.
         'install_mode': install_state(device)[0],
         'install_report': install_state(device)[1],
         'install_enable': install_state(device)[2],
         'flash_cycles': device.get('flash_cycles'),
+        'flash_erases': device.get('flash_erases'),
         'flash_cycles_at': (device['flash_cycles_at'].strftime('%Y-%m-%d %H:%M:%S')
                             if device.get('flash_cycles_at') else None),
         'uptime': _nullable_float(log.get('uptime')),

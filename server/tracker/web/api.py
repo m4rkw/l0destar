@@ -21,9 +21,9 @@ import re
 from flask import Blueprint, redirect, request
 
 from .. import (config, db, deadreckon, device_events, interval_schedule, notify,
-                telemetry)
+                obd, telemetry)
 from . import audit, devices, error, ok, unauthorised
-from .auth import login_required
+from .auth import current_user, login_required
 
 bp = Blueprint('api', __name__, url_prefix='/api/1.0')
 
@@ -60,6 +60,9 @@ SERVER_SIDE_SETTINGS = {
     'gnss_bk_hour_to': 'gnss_bk_hour_to',
     'leds': 'leds',
     'backup_interval': 'backup_int',
+    # Rescan of the car's supported OBD PIDs: 1 asks for one (the unit does it
+    # with the engine running and answers with osp=), 0 withdraws the request.
+    'obd_scan': 'obd_scan',
     # The engine-off reporting schedule, as JSON with '|' for each comma (a
     # comma ends a command): interval_schedule=[{"days":[0|1]|...}].  "default"
     # or nothing clears it.  Every reply carries the interval it gives.
@@ -67,7 +70,8 @@ SERVER_SIDE_SETTINGS = {
     # The runtime tunables, by column name; a value of "default" (or nothing)
     # clears one back to NULL, "the unit keeps the value it was built with".
     # obd_alerts takes its rules separated by '|', as a comma would end the
-    # command: obd_alerts=coolant>=95|rpm>6500.
+    # command: obd_alerts=coolant>=95|rpm>6500.  obd_pids (the PIDs captured)
+    # does the same: obd_pids=0C|05|0B.
     **{column: column for column in telemetry.TUNABLE_COLUMNS},
 }
 
@@ -87,6 +91,7 @@ CONFIG_FIELDS = {
     'gwbf': 'gnss_bk_hour_from',
     'gwbt': 'gnss_bk_hour_to',
     'le': 'leds',
+    'obd_scan': 'obd_scan',
     **{code: column for code, column, _, _ in telemetry.TUNABLES},
 }
 
@@ -111,6 +116,7 @@ SETTING_RANGES = {
     'gnss_bk_hour_from': (0, 23),
     'gnss_bk_hour_to': (0, 23),
     'leds': (0, 1),
+    'obd_scan': (0, 1),
     **telemetry.TUNABLE_RANGES,
 }
 
@@ -158,6 +164,35 @@ def _schedule(raw):
         return interval_schedule.dumps(interval_schedule.validate(raw)), None
     except ValueError as e:
         return None, 'interval schedule: %s' % e
+
+
+def _obd_selection(device, value):
+    """(the text to store, None), or (None, a message) for an OBD PID
+    selection: a list, or a string of PIDs (``0C,05,0B``, ``0C|05`` or
+    ``0C050B``).  None, "", "default" and [] clear it (the unit's own
+    default).  Every PID must be in the catalogue, at most 12, and each must be
+    one the car supports once a scan has said which."""
+    if value is None or (isinstance(value, str)
+                         and value.strip() in ('', 'default')):
+        return None, None
+    try:
+        pids = obd.parse_selection(value)
+    except ValueError as e:
+        return None, 'obd_pids: %s' % e
+    if not pids:
+        return None, None
+    supported = obd.supported_pids(device.get('obd_supported'))
+    allowed = obd.selectable(supported)
+    missing = [pid for pid in pids if pid not in allowed]
+    if missing:
+        if supported is None:
+            return None, ('obd_pids: %s not selectable until the car has been '
+                          'scanned (only %s so far; see obd_selectable)'
+                          % (', '.join(missing), ', '.join(allowed)))
+        return None, ('obd_pids: %s not supported by this vehicle (see '
+                      'obd_supported; request a rescan with obd_scan=1)'
+                      % ', '.join(missing))
+    return obd.selection_text(pids), None
 
 
 def _tunable_error(key, column):
@@ -330,7 +365,7 @@ def journey_points(journey_id):
         'SELECT `latitude`, `longitude`, `speed`, `combined_speed`, `altitude`, '
         '`heading`, `timestamp`, `gsm_timestamp`, `ignition_state`, '
         '`battery_level`, `mcc`, `mnc`, `rat`, `cell_location`, `track_mode`, '
-        '`rec_id`, `satellites`, `hdop`, `obd_speed`, `motion`, '
+        '`rec_id`, `satellites`, `hdop`, `obd_speed`, `motion`, `obd_extra`, '
         + ', '.join('`%s`' % c for c in
                     devices.OBD_LIVE_COLUMNS + devices.IMU_LIVE_COLUMNS)
         + ' FROM `log` '
@@ -471,6 +506,9 @@ def get_config():
     (result['install_mode'], result['install_report'],
      result['install_enable']) = telemetry.install_state(device)
     result['tunables'] = telemetry.tunables_effective(device)
+    # The PIDs the unit captures (a list), whether that is the default, the
+    # PIDs the car supports (null before a scan) and whether a scan is pending.
+    result.update(devices.obd_state(device))
     # The engine-off reporting schedule (null if none) and the interval the
     # server would send at this moment: "int" is only what applies when no
     # rule does.
@@ -493,7 +531,7 @@ def update_config():
         return failure
 
     unknown = sorted(set(data) - set(CONFIG_FIELDS)
-                     - {'imei', 'device_id', 'isch', 'install_mode'})
+                     - {'imei', 'device_id', 'isch', 'install_mode', 'obd_pids'})
     if unknown:
         return error('unknown setting: %s' % ', '.join(str(k) for k in unknown))
 
@@ -510,9 +548,20 @@ def update_config():
         if problem:
             return error(problem)
         updates.append(('interval_schedule', text))
+    if 'obd_pids' in data and 'xop' in data:
+        return error('give obd_pids or xop, not both')
+    if 'obd_pids' in data:
+        text, problem = _obd_selection(device, data['obd_pids'])
+        if problem:
+            return error(problem)
+        updates.append(('obd_pids', text))
     for key, column in CONFIG_FIELDS.items():
         if key in data:
-            if column in telemetry.TUNABLE_COLUMNS:
+            if column == 'obd_pids':
+                value, problem = _obd_selection(device, data[key])
+                if problem:
+                    return error(problem.replace('obd_pids:', key + ':', 1))
+            elif column in telemetry.TUNABLE_COLUMNS:
                 good, value = _tunable(column, data[key])
                 if not good:
                     return _tunable_error(key, column)
@@ -620,6 +669,11 @@ def queue_command():
                 number, problem = _schedule(value.replace('|', ','))
                 if problem:
                     return error(problem)
+            elif column == 'obd_pids':
+                number, problem = _obd_selection(
+                    device, value.replace('|', ',').strip())
+                if problem:
+                    return error(problem)
             elif column in telemetry.TUNABLE_COLUMNS:
                 value = value.strip()
                 if value == 'default' or (value == '' and column != 'obd_alerts'):
@@ -715,6 +769,17 @@ def list_devices():
     """Every enrolled device with its latest record; see devices.summary()."""
     return ok({'devices': [devices.summary(device)
                            for device in devices.enrolled()]})
+
+
+@bp.route('/obd/pids', methods=['GET'])
+def obd_pid_list():
+    """The OBD PIDs that can be selected: [{pid, name, unit, scale, size,
+    legacy_key}].  Static, so either a signed-in session or an API token may
+    read it."""
+    if not bearer_ok() and current_user() is None:
+        return unauthorised()
+    return ok({'pids': obd.catalogue(), 'max_selected': obd.MAX_SELECTED,
+               'default': obd.DEFAULT_SELECTION})
 
 
 @bp.route('/devices/events', methods=['GET'])

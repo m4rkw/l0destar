@@ -15,7 +15,7 @@ from tracker import device_events as ev, telemetry
 EVERY = {
     'tow_tilt_deg': 8, 'parked_impact_mg': 900, 'impact_immediate_mg': 700,
     'accel_alert_priority': -1, 'accel_alert_backoff_s': 86400,
-    'obd_alerts': 'coolant>=95,rpm>6500,stft<-12.5/2',
+    'obd_alerts': 'coolant>=95,rpm>6500,stft<-12.5/2', 'obd_pids': '0C050B',
     'ignition_on_sleep_s': 30, 'battery_warning_mv': 11900,
     'battery_poweroff_mv': 11000, 'drive_stream': 1, 'drive_stream_interval_s': 900,
     'track_period_ms': 1000, 'databuf_drain_s': 60, 'network_search_s': 3600,
@@ -23,7 +23,7 @@ EVERY = {
 }
 CODES = {'tow_tilt_deg': 'xtt', 'parked_impact_mg': 'xpi', 'impact_immediate_mg': 'xii',
          'accel_alert_priority': 'xap', 'accel_alert_backoff_s': 'xab',
-         'obd_alerts': 'xoa', 'ignition_on_sleep_s': 'xis', 'battery_warning_mv': 'xbw',
+         'obd_alerts': 'xoa', 'obd_pids': 'xop', 'ignition_on_sleep_s': 'xis', 'battery_warning_mv': 'xbw',
          'battery_poweroff_mv': 'xbp', 'drive_stream': 'xds', 'drive_stream_interval_s': 'xdi',
          'track_period_ms': 'xtp', 'databuf_drain_s': 'xdd', 'network_search_s': 'xns',
          'resp_poll_s': 'xrp', 'led_accel_wake': 'xlw'}
@@ -54,13 +54,13 @@ def test_the_table_matches_the_contract():
 
 
 def test_no_tunable_set_is_tu_dash_after_le():
-    assert reply().endswith(',gw=off,le=1,tu=-,im=0,gx=off')
+    assert reply().endswith(',gw=off,le=1,tu=-,im=0,gx=off,os=0')
     assert telemetry.tunables_token({'tow_tilt_deg': None, 'obd_alerts': ''}) == '-'
 
 
 def test_some_set_are_listed_in_table_order():
     assert reply(battery_warning_mv=11900, tow_tilt_deg=8, accel_alert_priority=0).endswith(
-        ',le=1,tu=xtt:8;xap:0;xbw:11900,im=0,gx=off')
+        ',le=1,tu=xtt:8;xap:0;xbw:11900,im=0,gx=off,os=0')
     # Zero is a value, not "unset".
     assert telemetry.tunables_token({'drive_stream': 0}) == 'xds:0'
 
@@ -68,10 +68,10 @@ def test_some_set_are_listed_in_table_order():
 def test_all_set_and_the_obd_commas_become_pipes():
     token = telemetry.tunables_token(EVERY)
     assert token == ('xtt:8;xpi:900;xii:700;xap:-1;xab:86400;'
-                     'xoa:coolant>=95|rpm>6500|stft<-12.5/2;xis:30;xbw:11900;xbp:11000;'
+                     'xoa:coolant>=95|rpm>6500|stft<-12.5/2;xop:0C050B;xis:30;xbw:11900;xbp:11000;'
                      'xds:1;xdi:900;xtp:1000;xdd:60;xns:3600;xrp:20;xlw:0')
     assert ',' not in token
-    assert reply(**EVERY).endswith(',le=1,tu=' + token + ',im=0,gx=off')
+    assert reply(**EVERY).endswith(',le=1,tu=' + token + ',im=0,gx=off,os=0')
 
 
 def test_the_reply_stays_small_with_every_tunable_at_its_largest():
@@ -247,7 +247,7 @@ def test_every_tunable_has_wording():
 
 # -- tb=: the values the unit was built with ----------------------------------------
 
-TB = ('xtt:8;xpi:900;xii:700;xap:-1;xab:86400;xoa:coolant>=95|rpm>6500;xis:30;'
+TB = ('xtt:8;xpi:900;xii:700;xap:-1;xab:86400;xoa:coolant>=95|rpm>6500;xop:0C05;xis:30;'
       'xbw:11900;xbp:11000;xds:1;xdi:900;xtp:1000;xdd:60;xns:3600;xrp:20;xlw:0')
 
 

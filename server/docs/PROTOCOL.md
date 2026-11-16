@@ -66,12 +66,15 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `omaf` | mass air flow, g/s × 100 | per-packet |
 | `otim`, `ostft`, `oltft` | timing advance and fuel trims, × 10 | per-packet |
 | `ofs`, `omil`, `odtc` | fuel system status bitmap, MIL lamp, stored code count | per-packet |
+| `o<2hex>` | any other selected PID, `o0B=95`: the wire integer is `round(value * scale)` by the catalogue (`GET /api/1.0/obd/pids`, tracker/obd.py); stored in `log.obd_extra` as JSON `{"0B": 95.0}`, unknown PIDs dropped. A key is sent only when its PID is selected (`xop`) | per-packet |
 | `tm` | 1 = built in track mode: GNSS off, position is the last fix, speed the ECU's | per-packet |
 | `acc` | IMU burst: `ax/ay/az/gx/gy/gz` per sample, samples joined by `:`, oldest first, 26 Hz; accel milli-g, gyro raw LSB | per-packet |
 | `rid` | the device's own id for this record, consecutive within a boot | per-packet |
 | `age` | seconds between the device building the record and sending it — only on a record sent late | per-packet, not stored |
 | `fl` | `1` on a record that was held in the unit's external flash before it was sent (the flash backlog); stored as `log.flash` | per-record |
 | `fc` | erase cycles of the flash log's most used sector (rated 100,000), sent when the value changes and only once the log has been opened this boot; kept on the device row (`device.flash_cycles`, `flash_cycles_at`) | device row |
+| `osp` | the car's supported-PID bitmaps from a scan, 8 uppercase hex digits per 32-PID word from PID `00` (`BE1FA813`), whole words only, at most 56 characters; stored on `device.obd_supported` / `obd_supported_at`, clears `device.obd_scan`, logs a device event; a late copy from the backlog is kept too | device row |
+| `fe` | sectors of the flash log erased since the chip was new (2016 per lap, so `fc` = `fe` / 2016); moves on the first write, sent when it changes; kept on `device.flash_erases` | device row |
 | `ir` | installation check, `<name>:<1\|0\|->` pairs joined by `;` (`-` = not fitted/testable), sent in answer to `instreport`; stored as JSON on `device.install_report` | device row |
 | `ie` | installation enable outcome, `1` (fix obtained, mode ended) or `0[:<reason>]`, sent in answer to `instenable`; stored on `device.install_enable`, `1` clears `device.install_mode` | device row |
 | `rsrp` | serving cell RSRP, dBm (−140…−44) | per-packet |
@@ -322,7 +325,7 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off][,le=<0|1>][,tu=<code>:<value>[;<code>:<value>...]|-][,im=<0|1>]
+1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off][,le=<0|1>][,tu=<code>:<value>[;<code>:<value>...]|-][,im=<0|1>][,gx=<from>-<to>|off|def][,os=<0|1>]
 ```
 
 Every datagram is answered, and the reply is the receipt: it is bound to the
@@ -363,7 +366,7 @@ disabled (switch off, or both hours equal).
 
 `gx=` is what the GNSS backup supply does while the unit runs on the backup
 module (`device`.`gnss_bk_window`, `gnss_bk_hour_from`, `gnss_bk_hour_to`), the
-last token of every reply: `gx=off` (the default) keeps the supply on, `gx=<from>-<to>`
+token of every reply after `im=`: `gx=off` (the default) keeps the supply on, `gx=<from>-<to>`
 drops it in its own window (whole UTC hours, converted like `gw=`, possibly
 wrapping midnight) and ignores the regular window and the fixed daily cut-off,
 `gx=def` follows the regular `gw=` window and cut-off exactly as on normal power.
@@ -374,13 +377,15 @@ every reply straight after `gw=`: `le=1` (the default) lets them light, `le=0`
 keeps them all dark. The API sets it (`leds=<0|1>` in POST /api/1.0/command,
 not queued; `le` in /api/1.0/config).
 
-`im=` (always last) is installation mode: 1 while `device.install_mode` is set. A unit in that mode polls every 10 s and acts on the `instreport` / `instenable` commands, which the API accepts only while the mode is on.
+`im=` is installation mode: 1 while `device.install_mode` is set. A unit in that mode polls every 10 s and acts on the `instreport` / `instenable` commands, which the API accepts only while the mode is on.
+
+`os=` (always last) says whether a supported-PID scan is wanted: 1 while `device.obd_scan` is set. It is set by the app (`obd_scan`) and by the server on the first record with OBD values from a device with no scan on file, and cleared by the scan's `osp=`. The unit scans once per request, with the engine running (RPM > 0), and holds it only in RAM.
 
 `tu=` carries the runtime tunables, the per-device overrides of values the
 unit is built with, after `le=` on every reply: the non-NULL columns as
 `<code>:<value>` pairs joined by `;`, in this order: `xtt` tow_tilt_deg,
 `xpi` parked_impact_mg, `xii` impact_immediate_mg, `xap` accel_alert_priority,
-`xab` accel_alert_backoff_s, `xoa` obd_alerts, `xis` ignition_on_sleep_s,
+`xab` accel_alert_backoff_s, `xoa` obd_alerts, `xop` obd_pids, `xis` ignition_on_sleep_s,
 `xbw` battery_warning_mv, `xbp` battery_poweroff_mv, `xds` drive_stream, `xdi`
 drive_stream_interval_s, `xtp` track_period_ms, `xdd` databuf_drain_s, `xns`
 network_search_s, `xrp` resp_poll_s, `xlw` led_accel_wake; or `tu=-` when
@@ -388,7 +393,8 @@ every column is NULL. A NULL column is no override: the unit keeps its built
 value, so the unit makes its overrides exactly the listed pairs and anything
 not listed goes back to the built value. Values are integers except `xoa`, a
 rule list whose commas are sent as `|` (the reply is comma-joined; the unit
-turns them back). No value contains `;`, `,` or `|` otherwise. The server
+turns them back), and `xop`, the selected OBD PIDs as concatenated 2-digit
+hex (`xop:0C050B`, up to 12, no separators; unset = the unit's `APP_OBD_PIDS`). No value contains `;`, `,` or `|` otherwise. The server
 holds each to its range (see docs/reference/device-settings.md) and the unit
 clamps again. A reply without `tu=` (an older server) leaves the unit's
 overrides as they are. The API sets them by column name in
@@ -399,7 +405,7 @@ POST /api/1.0/command (not queued, `<name>=default` clears) and by code in
 `tb=` is a record field (not a reply token), sent by the unit in the record
 that carries `fw=` and `bd=`, once per boot until a reply lands: the values
 the unit was BUILT with (the compiled-in defaults, not the current overrides),
-in the `tu=` grammar - `<code>:<value>` pairs joined by `;` for all sixteen
+in the `tu=` grammar - `<code>:<value>` pairs joined by `;` for all seventeen
 codes, `xoa` commas sent as `|`, an empty `xoa` as `xoa:`. Because the pairs
 contain `;` the server takes the field whole. It stores the text, normalised to
 the pairs that parsed (unknown codes and non-integer values dropped), in

@@ -100,6 +100,10 @@ void cmd_run(char *cmd)
      * saw. */
     install_take_token(cmd);
 
+    /* os=<0|1>: the server wants the ECU's supported-PID list.  Taken out the
+     * same way; the scan runs at the next OBD poll with the engine running. */
+    obd_scan_take_token(cmd);
+
     /* gx=: the off rule while on the backup module.  Taken out the same way,
      * silent, not echoed. */
     {

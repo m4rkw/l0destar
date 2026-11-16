@@ -167,6 +167,19 @@ CREATE TABLE `device` (
   -- Wear of the external flash log (fc=), as last reported.
   `flash_cycles`  INT UNSIGNED  DEFAULT NULL COMMENT 'fc=: erase cycles of the flash log''s most used sector, as last reported',
   `flash_cycles_at` DATETIME   DEFAULT NULL COMMENT 'when flash_cycles was last changed',
+  `flash_erases`  INT UNSIGNED  DEFAULT NULL COMMENT 'fe=: sectors of the flash log erased since the chip was new (2016 sectors = one lap = one cycle), as last reported',
+
+  -- OBD PID selection (xop, in tu= like the other tunables): the PIDs the
+  -- unit captures, concatenated 2-digit hex in order ('0C050B'); NULL = the
+  -- firmware default (0C05: engine speed and coolant temperature).  Up to 12.
+  `obd_pids`      VARCHAR(24)  DEFAULT NULL COMMENT 'xop: PIDs captured, concatenated hex in order; NULL = firmware default',
+  -- What the car supports, from the unit's scan (osp=): the support bitmaps
+  -- as uppercase hex, 8 digits per 32 PIDs from PID 00; NULL = never scanned.
+  `obd_supported`    VARCHAR(64) DEFAULT NULL COMMENT 'osp=: supported-PID bitmaps, 8 hex digits per word from PID 00',
+  `obd_supported_at` DATETIME    DEFAULT NULL COMMENT 'when obd_supported was last reported',
+  -- A scan is wanted (os=1 on every reply): the app asked for one, or the unit
+  -- sent OBD values and never a scan.  Cleared when osp= arrives.
+  `obd_scan`      TINYINT(1)   NOT NULL DEFAULT 0 COMMENT 'os=: a supported-PID scan is wanted',
 
   `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -312,6 +325,9 @@ CREATE TABLE `log` (
   `obd_fuel_status` SMALLINT UNSIGNED DEFAULT NULL COMMENT 'raw PID 03 bitmap',
   `obd_mil`         TINYINT(1)   DEFAULT NULL,
   `obd_dtc_count`   TINYINT UNSIGNED DEFAULT NULL COMMENT 'stored codes',
+  -- The other PIDs the unit was asked to capture (o<2hex>=), by catalogue
+  -- unit, JSON {"0B": 95.0}; NULL when the record has none.
+  `obd_extra`       TEXT         DEFAULT NULL COMMENT 'JSON of PID -> value for PIDs without a column of their own',
 
   -- What the interface shows: the ECU's road speed when reported, else GNSS.
   `combined_speed`  DECIMAL(6,2) DEFAULT NULL COMMENT 'mph',

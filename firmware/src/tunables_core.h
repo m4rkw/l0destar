@@ -8,7 +8,9 @@
  *     tu=<code>:<value>[;<code>:<value>...]      or tu=-  for none
  * and the table is made equal to the pairs listed: a key not listed goes back
  * to its built value, an unknown code or a value out of range is ignored.
- * The one string, xoa, has its commas sent as '|'.
+ * The string xoa has its commas sent as '|'.  The string xop (the OBD PIDs to
+ * capture) is concatenated 2-digit hex, e.g. 0C05, so it needs no escaping;
+ * obd_pids.h parses it.
  */
 #ifndef TUNABLES_CORE_H
 #define TUNABLES_CORE_H
@@ -38,6 +40,7 @@ enum tun_key {
 };
 
 #define TUN_OA_MAX 120		/* characters of the OBD alert rule list */
+#define TUN_OP_MAX 24		/* characters of the OBD PID selection: 12 PIDs */
 
 static const struct {
 	char code[4];
@@ -68,6 +71,8 @@ struct tun_table {
 	int32_t val[TUN_N_INT];
 	bool    oa_set;
 	char    oa[TUN_OA_MAX + 1];
+	bool    op_set;
+	char    op[TUN_OP_MAX + 1];
 };
 
 static inline void tun_table_clear(struct tun_table *t)
@@ -153,6 +158,23 @@ static inline void tun_table_apply(struct tun_table *t, const char *list, size_t
 				t->oa[0] = '\0';
 			}
 		}
+		if (memcmp(seg, "xop", 3) == 0) {
+			bool ok = vlen > 0 && vlen <= TUN_OP_MAX;
+
+			for (size_t i = 0; ok && i < vlen; i++) {
+				ok = (v[i] >= '0' && v[i] <= '9') ||
+				     (v[i] >= 'A' && v[i] <= 'F') ||
+				     (v[i] >= 'a' && v[i] <= 'f');
+			}
+			if (ok) {
+				memcpy(t->op, v, vlen);
+				t->op[vlen] = '\0';
+				t->op_set = true;
+			} else {
+				t->op_set = false;
+				t->op[0] = '\0';
+			}
+		}
 	}
 }
 
@@ -174,25 +196,27 @@ static inline int32_t tun_table_get(const struct tun_table *t, enum tun_key k,
 }
 
 /* The built values as the "tb=" record field, in the tu= grammar: all fifteen
- * integer keys plus xoa (commas sent as '|', "xoa:" when empty), ';'-separated
- * in the order xtt xpi xii xap xab xoa xis xbw xbp xds xdi xtp xdd xns xrp xlw.
- * Worst case with every integer in its limits and a 120-char xoa is 251 bytes
+ * integer keys plus xoa (commas sent as '|', "xoa:" when empty) and xop (the
+ * PID selection, "xop:" when empty), ';'-separated in the order xtt xpi xii
+ * xap xab xoa xop xis xbw xbp xds xdi xtp xdd xns xrp xlw.  Worst case with
+ * every integer in its limits, a 120-char xoa and a 24-char xop is 280 bytes
  * plus the NUL; TUN_BUILT_BUF leaves room for a few out-of-range Kconfig
  * values.  Returns the length, or -1 (out[0] = '\0') if it does not fit or the
- * xoa is longer than TUN_OA_MAX. */
-#define TUN_BUILT_BUF 272
+ * xoa / xop is longer than TUN_OA_MAX / TUN_OP_MAX. */
+#define TUN_BUILT_BUF 304
 
 static inline int tun_format_built(char *out, size_t cap, const int32_t built[TUN_N_INT],
-				   const char *oa)
+				   const char *oa, const char *op)
 {
 	size_t n = 0;
 	size_t oalen = strlen(oa);
+	size_t oplen = strlen(op);
 
 	if (cap == 0) {
 		return -1;
 	}
 	out[0] = '\0';
-	if (oalen > TUN_OA_MAX) {
+	if (oalen > TUN_OA_MAX || oplen > TUN_OP_MAX) {
 		return -1;
 	}
 	for (int k = 0; k < TUN_N_INT; k++) {
@@ -236,6 +260,15 @@ static inline int tun_format_built(char *out, size_t cap, const int32_t built[TU
 			for (size_t i = 0; i < oalen; i++) {
 				out[n++] = oa[i] == ',' ? '|' : oa[i];
 			}
+			if (n + 1 + 4 + oplen + 1 > cap) {
+				out[0] = '\0';
+				return -1;
+			}
+			out[n++] = ';';
+			memcpy(out + n, "xop:", 4);
+			n += 4;
+			memcpy(out + n, op, oplen);
+			n += oplen;
 		}
 	}
 	out[n] = '\0';

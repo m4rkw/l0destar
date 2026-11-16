@@ -12,6 +12,7 @@
 
 #include "app.h"
 #include "backup_log.h"
+#include "cmd_merge.h"
 #include "hw_domain.h"
 #include "install.h"
 #include "tunables.h"
@@ -322,7 +323,7 @@ static void append_sync_fields(void)
         if (n > 0) data_index += n;
 
         /* The built tunable values, so the app shows what the unit runs
-         * rather than "default".  Up to ~250 bytes with a full xoa, so it is
+         * rather than "default".  Up to ~280 bytes with a full xoa and xop, so it is
          * left off a record it would push past the backlog's slot
          * (DATABUF_REC_MAX 768, leaving 128 for the fields after it). */
         char tb[TUN_BUILT_BUF];
@@ -351,6 +352,22 @@ static void append_sync_fields(void)
             if (n > 0 && n < DATA_LIMIT - data_index - 1) {
                 data_index += n;
                 s_fc_sent = fc;
+            }
+        }
+    }
+
+    /* fe=: sectors erased since the chip was new, the finer count behind fc=
+     * (fc= only moves once per lap of the ring). */
+    {
+        static int32_t s_fe_sent = -1;
+        int32_t fe = databuf_flash_erases();
+
+        if (fe >= 0 && fe != s_fe_sent) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1, ",fe=%d", (int)fe);
+            if (n > 0 && n < DATA_LIMIT - data_index - 1) {
+                data_index += n;
+                s_fe_sent = fe;
             }
         }
     }
@@ -1181,48 +1198,19 @@ int data_send_line(const char *line)
  * send waited for, and several can arrive between two runs — so a command is
  * merged in rather than overwriting the one before: the server deletes a
  * command once it has put it in a reply, and this is the only copy.  The
- * fields that ride every reply (fota=, track=) are taken from the newest
- * reply, which goes first, since cmd_run acts on the first of each it finds;
- * the older copies are dropped. */
+ * newest reply goes first, since cmd_run acts on the first of each field it
+ * finds, and a waiting copy of a field the newest one also carries (the
+ * settings that ride every reply: fota=, track=, gw=, le=, ...) is dropped
+ * (cmd_merge.h). */
+static void pending_cmd_dropped(const char *item, size_t len)
+{
+    LOG_WRN("server command dropped, no room: %.*s", (int)len, item);
+}
+
 static void pending_cmd_add(const char *cmd)
 {
-    char merged[sizeof(pending_server_cmd)];
-    size_t used = strlen(cmd);
-
-    if (used >= sizeof(merged)) {
-        used = sizeof(merged) - 1;
-    }
-    memcpy(merged, cmd, used);
-    merged[used] = '\0';
-
-    const char *p = pending_server_cmd;
-
-    while (*p) {
-        const char *comma = strchr(p, ',');
-        size_t len = comma ? (size_t)(comma - p) : strlen(p);
-        bool routine = (len >= 5 && strncmp(p, "fota=", 5) == 0) ||
-                       (len >= 6 && strncmp(p, "track=", 6) == 0) ||
-                       (len >= 3 && strncmp(p, "gb=", 3) == 0) ||
-                       (len >= 3 && strncmp(p, "im=", 3) == 0) ||
-                       (len >= 3 && strncmp(p, "gx=", 3) == 0);
-
-        if (len > 0 && !routine) {
-            if (used + 1 + len < sizeof(merged)) {
-                merged[used++] = ',';
-                memcpy(&merged[used], p, len);
-                used += len;
-                merged[used] = '\0';
-            } else {
-                LOG_WRN("server command dropped, no room: %.*s", (int)len, p);
-            }
-        }
-        if (!comma) {
-            break;
-        }
-        p = comma + 1;
-    }
-
-    memcpy(pending_server_cmd, merged, used + 1);
+    cmd_merge_add(pending_server_cmd, sizeof(pending_server_cmd), cmd,
+                  pending_cmd_dropped);
 }
 
 /* A "<key>=<n>" field out of the commands part of a reply, with its comma,

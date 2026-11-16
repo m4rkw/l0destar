@@ -132,7 +132,10 @@ HWINFO_H = r"""
 #define RESET_SECURITY (1u << 6)
 #define RESET_LOW_POWER_WAKE (1u << 7)
 #define RESET_CPU_LOCKUP (1u << 8)
-static inline int hwinfo_get_reset_cause(uint32_t *c) { *c = 0; return 0; }
+#ifndef HW_CAUSE
+#define HW_CAUSE 0
+#endif
+static inline int hwinfo_get_reset_cause(uint32_t *c) { *c = HW_CAUSE; return 0; }
 static inline int hwinfo_clear_reset_cause(void) { return 0; }
 #endif
 """
@@ -148,8 +151,18 @@ HARNESS = r"""
 int g_lock_depth, g_lock_bad, g_unsealed;
 static int64_t g_ms;
 int64_t k_uptime_get(void) { return g_ms; }
-const char *fatal_last_crash(void) { return NULL; }
-const char *watchdog_last_stall(void) { return NULL; }
+#ifndef T_CRASH
+#define T_CRASH NULL
+#endif
+#ifndef T_STALL
+#define T_STALL NULL
+#endif
+#ifndef T_FREEZE
+#define T_FREEZE NULL
+#endif
+const char *fatal_last_crash(void) { return T_CRASH; }
+const char *watchdog_last_stall(void) { return T_STALL; }
+const char *watchdog_last_freeze(void) { return T_FREEZE; }
 
 /* Every unlock: once the module is in use the block must be sealed. */
 void h_unlocking(void)
@@ -163,6 +176,7 @@ void h_unlocking(void)
 void h_set_ms(int64_t ms) { g_ms = ms; }
 int  h_lock_bad(void) { return g_lock_bad + (g_lock_depth != 0 ? 1000 : 0); }
 int  h_unsealed(void) { return g_unsealed; }
+const char *h_reset_cause(void) { return dbglog_reset_cause(); }
 
 void h_capture(const char *line, int len, int64_t ms) { capture(line, (uint8_t)len, ms); }
 int  h_take(char *out, int max) { return dbglog_take(out, (size_t)max); }
@@ -1104,3 +1118,57 @@ def test_garbage_under_the_sanitisers_where_the_toolchain_has_them():
                      ("with address,undefined sanitisers" if sanitised else "WITHOUT sanitisers"))
     assert r.returncode == 0, r.stdout + r.stderr
     assert r.stdout.strip() == "ok"
+
+
+# -- the reset cause named in rst= ---------------------------------------------------------------
+
+WDT, SW = 1 << 4, 1 << 1
+
+
+def cause(hw=0, crash=None, stall=None, freeze=None):
+    """dbglog_reset_cause() for one combination of what the hardware, fatal.c and
+    watchdog.c report: a build per combination, since it is composed once per boot."""
+    d = tempfile.mkdtemp()
+    write_stubs(d)
+    so = os.path.join(d, "libcause.so")
+    defs = [f"-DHW_CAUSE={hw}"]
+    for name, val in (("T_CRASH", crash), ("T_STALL", stall), ("T_FREEZE", freeze)):
+        if val is not None:
+            defs.append('-D%s="%s"' % (name, val))
+    cmd = ["cc", *CFLAGS, "-DCONFIG_APP_DATABUF_UNACKED_SLOTS=6", *defs, "-shared", "-fPIC",
+           "-o", so, "-I", d, "-I", SRC, os.path.join(d, "h.c")]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    assert r.returncode == 0 and r.stderr == "", r.stderr
+    L = C.CDLL(so)
+    L.h_reset_cause.restype = C.c_char_p
+    got = L.h_reset_cause()
+    return None if got is None else got.decode()
+
+
+def test_no_reset_cause_and_nothing_noted_reports_none():
+    assert cause() is None
+
+
+def test_a_freeze_note_alone_gives_its_token():
+    assert cause(freeze="fz:48a78/3e254") == "fz:48a78/3e254"
+
+
+def test_a_watchdog_reset_with_a_freeze_note_says_where():
+    assert cause(hw=WDT, freeze="fz:48a78/3e254/i21") == "wdt+fz:48a78/3e254/i21"
+
+
+def test_the_stall_note_still_names_itself_and_the_freeze_follows_it():
+    assert cause(hw=WDT, stall="stall:4aa02/3e254") == "wdt+stall:4aa02/3e254"
+    assert cause(hw=WDT, stall="stall:4aa02/3e254", freeze="fz:48a78/3e254") == \
+        "wdt+stall:4aa02/3e254+fz:48a78/3e254"
+
+
+def test_a_crash_note_comes_first_then_the_stall_then_the_freeze():
+    assert cause(hw=SW, crash="fatal:2@3e99c", stall="stall:1/2", freeze="fz:3/4") == \
+        "sw+fatal:2@3e99c+stall:1/2+fz:3/4"
+
+
+def test_everything_at_once_is_cut_to_fit_not_overrun():
+    got = cause(hw=WDT | SW, crash="fatal:2@3e99c735", stall="stall:4aa02/3e254/49722/48a78",
+                freeze="fz:48a78/3e254/i479")
+    assert len(got) <= 63 and got.startswith("sw+wdt+fatal:2@3e99c735+stall:")

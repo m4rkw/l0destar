@@ -62,7 +62,7 @@ import threading
 import time
 
 from . import (config, db, deadreckon, device_events, firmware,
-               interval_schedule, logs, notify)
+               interval_schedule, logs, notify, obd)
 
 # Fixed fields, in wire order, named for the columns they are stored in.  The
 # eleventh is seconds since boot on current firmware; its column kept the
@@ -216,7 +216,7 @@ LOG_COLUMNS = [
 ] + [column for column, _, _ in OBD_FIELDS.values()] + [
     'combined_speed', 'track_mode', 'imu_burst', 'rec_id', 'wake_ms',
     'attach_ms', 'rsrp', 'snr', 'band',
-    'pathloss', 'rsrq', 'ce_level', 'tx_rep', 'motion', 'flash',
+    'pathloss', 'rsrq', 'ce_level', 'tx_rep', 'motion', 'flash', 'obd_extra',
 ]
 
 _TIMESTAMP_RE = re.compile(
@@ -265,6 +265,17 @@ def parse_csv_line(line):
             # Erase cycles of the flash log's most used sector (flash backlog).
             if extra[3:].isdigit() and len(extra) <= 13:
                 data['flash_cycles'] = int(extra[3:])
+            continue
+        if extra.startswith('fe='):
+            # Sectors of the flash log erased since the chip was new: the
+            # finer wear count behind fc= (which only moves once per lap).
+            if extra[3:].isdigit() and len(extra) <= 13:
+                data['flash_erases'] = int(extra[3:])
+            continue
+        if extra.startswith('osp='):
+            # The supported-PID bitmaps of a scan, 8 hex digits per word,
+            # taken whole (checked when it is filed).
+            data['obd_supported'] = extra[4:]
             continue
         if extra.startswith('tb='):
             # The built tunable values, code:value pairs joined by ';' like
@@ -337,6 +348,9 @@ def parse_csv_line(line):
                 data[column] = value
             elif key in OBD_FIELDS:
                 data[OBD_FIELDS[key][0]] = value
+            elif obd.pid_key(key):
+                # A PID outside the sixteen above: o<2hex>=<int>.
+                data.setdefault('obd_extra', {})[obd.pid_key(key)] = value
 
     return data
 
@@ -461,6 +475,16 @@ def _build_entry(data, device, ip, previous):
         else:
             entry[column] = round(value / scale * factor, 2)
 
+    # The other PIDs the unit was asked for, by catalogue scale, one JSON
+    # object per record: {"0B": 95.0}.  Unknown PIDs are dropped.
+    extra = {}
+    for pid, raw in (data.get('obd_extra') or {}).items():
+        value = obd.extra_value(pid, raw)
+        if value is not None:
+            extra[pid] = value
+    if extra:
+        entry['obd_extra'] = json.dumps(extra, sort_keys=True)
+
     # The speed the interface shows.  The ECU's road speed, when the device
     # reports one, is the vehicle's own figure: it does not wander with a poor
     # fix and reads a clean zero when stationary.  Without it, the GNSS speed.
@@ -523,7 +547,7 @@ def gnss_off_window_token(device, now=None):
 
 # The runtime tunables: (token code, device column, low, high).  A NULL column
 # is "no override" (the unit keeps the value it was built with).  The order is
-# the order of the tu= token.  obd_alerts is text, so has no range.
+# the order of the tu= token.  obd_alerts and obd_pids are text, so have no range.
 TUNABLES = [
     ('xtt', 'tow_tilt_deg', 0, 30),
     ('xpi', 'parked_impact_mg', 300, 2500),
@@ -531,6 +555,7 @@ TUNABLES = [
     ('xap', 'accel_alert_priority', -2, 2),
     ('xab', 'accel_alert_backoff_s', 0, 86400),
     ('xoa', 'obd_alerts', None, None),
+    ('xop', 'obd_pids', None, None),
     ('xis', 'ignition_on_sleep_s', 10, 600),
     ('xbw', 'battery_warning_mv', 11000, 12500),
     ('xbp', 'battery_poweroff_mv', 10500, 12200),
@@ -543,8 +568,10 @@ TUNABLES = [
     ('xlw', 'led_accel_wake', 0, 1),
 ]
 TUNABLE_COLUMNS = [column for _, column, _, _ in TUNABLES]
+# Text tunables, which have no numeric range.
+TEXT_TUNABLES = ('obd_alerts', 'obd_pids')
 TUNABLE_RANGES = {column: (low, high) for _, column, low, high in TUNABLES
-                  if column != 'obd_alerts'}
+                  if column not in TEXT_TUNABLES}
 OBD_ALERTS_MAX = 120
 
 # One APP_OBD_ALERTS rule: <field><op><value>[/<hysteresis>], the operators
@@ -569,7 +596,8 @@ TUNABLES_BUILT_MAX = 400
 
 def parse_tunables_built(text):
     """The tb= value (``code:value`` pairs joined by ';'; xoa's commas sent as
-    '|') as a dict of code -> int, or code -> str for xoa.  Unknown codes and
+    '|') as a dict of code -> int, or code -> str for xoa and xop (the PID
+    selection as concatenated hex).  Unknown codes and
     bad values are left out, so a damaged report yields what is readable (or
     nothing).  Built values are not held to the override ranges: they are
     whatever the firmware was compiled with."""
@@ -585,6 +613,10 @@ def parse_tunables_built(text):
             value = value.replace('|', ',')
             if (len(value) > OBD_ALERTS_MAX
                     or any(not 0x20 < ord(c) < 0x7f for c in value)):
+                continue
+            result[code] = value
+        elif code == 'xop':
+            if not obd.valid_selection_text(value):
                 continue
             result[code] = value
         else:
@@ -632,7 +664,8 @@ def tunables_effective(device):
 def tunables_token(device):
     """The tu= value for ``device``: its non-NULL tunables as
     ``<code>:<value>`` joined by ';' in table order, or ``-`` when none is set.
-    The obd_alerts commas go out as '|' because the reply is comma-joined."""
+    The obd_alerts commas go out as '|' because the reply is comma-joined;
+    obd_pids is concatenated hex (``xop:0C050B``), with no separator at all."""
     pairs = []
     for code, column, _, _ in TUNABLES:
         value = device.get(column)
@@ -640,6 +673,8 @@ def tunables_token(device):
             continue
         if column == 'obd_alerts':
             pairs.append('%s:%s' % (code, str(value).replace(',', '|')))
+        elif column == 'obd_pids':
+            pairs.append('%s:%s' % (code, value))
         else:
             pairs.append('%s:%d' % (code, int(value)))
     return ';'.join(pairs) or '-'
@@ -1397,11 +1432,34 @@ def process_record(data, device, ip, database=None):
             logs.app.exception('install update failed for %s',
                                device.get('imei'))
 
+    # The scan result is a fact about the car, so a late copy is kept too: the
+    # one scan a unit sends per request must not be lost to the backlog.
+    if 'obd_supported' in data:
+        try:
+            _note_obd_supported(database, device, data['obd_supported'])
+        except Exception:
+            logs.app.exception('obd_supported update failed for %s',
+                               device.get('imei'))
+
+    if not history and _has_obd_values(entry):
+        try:
+            _request_first_scan(database, device)
+        except Exception:
+            logs.app.exception('obd scan request failed for %s',
+                               device.get('imei'))
+
     if 'flash_cycles' in data and not history:
         try:
             _note_flash_cycles(database, device, data['flash_cycles'])
         except Exception:
             logs.app.exception('flash_cycles update failed for %s',
+                               device.get('imei'))
+
+    if 'flash_erases' in data and not history:
+        try:
+            _note_flash_erases(database, device, data['flash_erases'])
+        except Exception:
+            logs.app.exception('flash_erases update failed for %s',
                                device.get('imei'))
 
     if 'request_int' in data:
@@ -1496,6 +1554,43 @@ def _note_install(database, device, data):
                     ' (%s)' % detail if detail else ''))
 
 
+def _has_obd_values(entry):
+    """Whether a record carries any OBD reading: the unit has a car to scan."""
+    return (entry.get('obd_extra') is not None
+            or any(entry.get(column) is not None
+                   for column, _, _ in OBD_FIELDS.values()))
+
+
+def _request_first_scan(database, device):
+    """Ask for the supported-PID scan (os=1 on every reply until it arrives)
+    of a unit that has sent OBD values and never a scan.  Done here, once, on
+    the first such record rather than by a query on every reply."""
+    if device.get('obd_supported') is not None or device.get('obd_scan'):
+        return
+    database.query('UPDATE `device` SET `obd_scan` = 1 WHERE `id` = %s',
+                   (device['id'],))
+    device['obd_scan'] = 1
+
+
+def _note_obd_supported(database, device, raw):
+    """File a supported-PID scan (osp=): the bitmap text as sent (uppercased)
+    and when, the request for one answered, and a line in the event log.  A
+    value that is not whole 8-digit hex words is dropped."""
+    text = raw.strip().upper() if isinstance(raw, str) else ''
+    pids = obd.supported_pids(text)
+    if pids is None:
+        logs.app.warning('unusable osp=%r from %s', raw[:60] if raw else raw,
+                         device.get('imei', '?'))
+        return
+    database.query('UPDATE `device` SET `obd_supported` = %s, '
+                   '`obd_supported_at` = NOW(), `obd_scan` = 0 WHERE `id` = %s',
+                   (text, device['id']))
+    device['obd_supported'] = text
+    device['obd_scan'] = 0
+    device_events.record(database, device['id'], 'result',
+                         'OBD supported PIDs scanned: %d PIDs' % len(pids))
+
+
 def _note_flash_cycles(database, device, cycles):
     """Keep the flash log's wear the unit reported (fc=) on the device row,
     and when it was reported, when it differs from what the row holds."""
@@ -1505,6 +1600,15 @@ def _note_flash_cycles(database, device, cycles):
                    '`flash_cycles_at` = NOW() WHERE `id` = %s',
                    (cycles, device['id']))
     device['flash_cycles'] = cycles
+
+
+def _note_flash_erases(database, device, erases):
+    """Keep the sector erase count the unit reported (fe=) on the device row."""
+    if erases == device.get('flash_erases'):
+        return
+    database.query('UPDATE `device` SET `flash_erases` = %s WHERE `id` = %s',
+                   (erases, device['id']))
+    device['flash_erases'] = erases
 
 
 def _note_tunables_built(database, device, raw):
@@ -1819,9 +1923,15 @@ def build_response(device, database, log, firmware_version=None):
     # that does not know the token ignores it.
     response += ',im=%d' % (1 if device.get('install_mode') else 0)
 
-    # What the GNSS backup supply does on backup power (gx=): the last token,
-    # so the ones the older tests and units anchor on keep their place.
+    # What the GNSS backup supply does on backup power (gx=), after the tokens
+    # the older tests and units anchor on, so they keep their place.
     response += ',gx=%s' % gnss_backup_power_token(device)
+
+    # Whether the unit should scan the car for its supported PIDs (os=), on
+    # every reply, after gx=.  1 while a scan is wanted: the app asked for one,
+    # or the unit has sent OBD values and never a scan (set on that record).
+    # The unit acts once per request; the scan's osp= clears it.
+    response += ',os=%d' % (1 if device.get('obd_scan') else 0)
 
     # The unit that is answered applies what it is told, so the settings in
     # this reply are what it runs from now: filed as applied, ahead of its

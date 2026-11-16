@@ -21,6 +21,8 @@ int  tun_impact_immediate_mg(void);
 int  tun_accel_alert_priority(void);
 int  tun_accel_alert_backoff_s(void);
 const char *tun_obd_alerts(void);
+/* The OBD PIDs to capture, concatenated 2-digit hex ("0C05"); parsed by obd_pids.h. */
+const char *tun_obd_pids(void);
 int  tun_ignition_on_sleep_s(void);
 int  tun_battery_warning_mv(void);
 int  tun_battery_poweroff_mv(void);

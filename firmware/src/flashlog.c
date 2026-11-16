@@ -239,6 +239,11 @@ static bool rate_ok(struct flashlog *fl, uint32_t now_s)
     return true;
 }
 
+uint32_t flashlog_erases(const struct flashlog *fl)
+{
+    return fl->next_seq - 1u;
+}
+
 uint32_t flashlog_cycles(const struct flashlog *fl)
 {
     return (fl->next_seq - 1u) / fl->dev->sectors;

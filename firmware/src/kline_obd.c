@@ -23,10 +23,14 @@
  *
  * POLLING
  * -------
- * One poll shape serves both the normal cadence and track mode: the four
- * PIDs that move on a timescale a driver can see (RPM, speed, throttle,
- * load) every call, and one of the eight slow-moving ones in rotation, so a
- * call is four or five exchanges (~0.5 s) rather than thirteen (~1.3 s).
+ * One poll shape serves both the normal cadence and track mode: the PIDs
+ * that move on a timescale a driver can see (RPM and speed always, throttle
+ * and load when wanted) every call, and one of the slow-moving ones in
+ * rotation, so a call is a few exchanges rather than a dozen.  Which PIDs are
+ * read is the selection (APP_OBD_PIDS, tunable xop, default engine speed and
+ * coolant temperature) plus what the tracker itself needs: RPM and speed, the
+ * status word (stored-code watch) and the fields an OBD alert rule names.
+ * Only the selected ones are put in the record.
  * Results merge into a live snapshot: fast fields are overwritten each
  * call, slow ones keep their last reading until it is OBD_SLOW_MAX_AGE_MS
  * old.  The GNSS fix wait ticks the poll at ~1 Hz, which is where a cycle
@@ -35,8 +39,11 @@
  *
  * SUPPORTED PIDS
  * --------------
- * The first poll of each session reads mode 01 PID 00, the support bitmap,
- * and everything after that only asks for PIDs the ECU claims.  On the
+ * The first poll of each session reads mode 01 PID 00, the support bitmap
+ * (and PID 20, 40 ... while its last bit says another word follows), and
+ * everything after that only asks for PIDs the ECU claims.  The server can ask
+ * for the list (reply token os=1): it is read afresh, once the engine is
+ * running (some ECUs report fewer PIDs with it stopped), and sent as osp=.  On the
  * reference vehicle that is fifteen of them and nothing above 0x15; asking
  * blind would waste ~100 ms per unsupported PID, since an ECU that does not
  * implement a PID simply says nothing.
@@ -45,7 +52,8 @@
  * -------
  * Values go into the telemetry record as integers with a fixed scale, so the
  * packet never carries a decimal point and the firmware needs no float
- * formatting.  The server divides them back (see OBD_FIELDS in main.py).
+ * formatting.  The catalogue with the scales is obd_pids.h; the server
+ * divides them back with its copy of it.
  */
 
 #include <stdio.h>
@@ -54,10 +62,18 @@
 #include <zephyr/logging/log.h>
 
 #include "app.h"
+#include "obd_pids.h"
+#include "tunables.h"
 
 LOG_MODULE_REGISTER(kline_obd, CONFIG_APP_LOG_LEVEL);
 
-#define OBD_NA        INT32_MIN         /* field not read this cycle */
+#define OBD_NA        OBD_NOT_AVAILABLE /* field not read this cycle */
+
+#ifdef CONFIG_APP_OBD_PIDS
+#define BUILT_OBD_PIDS CONFIG_APP_OBD_PIDS
+#else
+#define BUILT_OBD_PIDS "0C05"
+#endif
 #define OBD_MAX_DTCS  12
 
 /* P3max is 5 s: idle longer than that between requests and the ECU drops the
@@ -129,7 +145,8 @@ LOG_MODULE_REGISTER(kline_obd, CONFIG_APP_LOG_LEVEL);
 
 static bool     s_open;                 /* session believed to be up */
 static bool     s_pids_known;
-static uint8_t  s_pids[4];              /* mode 01 PID 00 support bitmap */
+static uint8_t  s_bm[OBD_BM_WORDS][4];  /* mode 01 PID 00, 20, 40 ... support words */
+static int      s_nwords;               /* words read into s_bm */
 static bool     s_abort;                /* ignition went off mid-poll */
 
 /* RPM accumulated across polls between telemetry records. */
@@ -138,13 +155,26 @@ static int64_t  s_rpm_sum;
 static int32_t  s_rpm_n;
 
 /* The live snapshot, and when each part of it was last read. */
-static const uint8_t s_slow_pids[] = {
+static const uint8_t s_slow_legacy[] = {
 	PID_COOLANT, PID_INTAKE, PID_MAF, PID_TIMING,
 	PID_STFT, PID_LTFT, PID_FUEL_SYS, PID_STATUS,
 };
+/* The rotation: the slow PIDs that are wanted (see POLLING) and then the
+ * selected PIDs that have no field of their own.  Rebuilt when the selection
+ * or the alert rules change. */
+#define OBD_ROT_MAX (ARRAY_SIZE(s_slow_legacy) + OBD_SEL_MAX)
+static uint8_t  s_rot[OBD_ROT_MAX];
+static unsigned int s_rot_n;
+static struct obd_sel s_sel;
+static char     s_sel_src[2 * OBD_SEL_MAX + 1];       /* the xop text s_sel came from */
+static uint32_t s_amask;                         /* alert rules' PIDs, as built for */
+static bool     s_plan_built;
+static struct obd_scan s_scan;                   /* os= */
+static char     s_osp[OBD_BM_WORDS * 8 + 1];     /* the scan answer, until a record takes it */
+static bool     s_osp_pending;
 static struct obd_snapshot s_live;
 static int64_t  s_live_ms;                        /* last fast poll */
-static int64_t  s_slow_ms[ARRAY_SIZE(s_slow_pids)];
+static int64_t  s_slow_ms[OBD_ROT_MAX];
 static unsigned int s_slow_idx;
 static bool     s_no_reopen;    /* set while polling from the fix-wait tick */
 static bool     s_stream;       /* the drive stream is running (obd_stream_mode) */
@@ -204,13 +234,47 @@ static void obd_live_reset(void)
 
 static bool pid_supported(uint8_t pid)
 {
-	if (!s_pids_known || pid < 1 || pid > 32) {
-		return false;
+	return s_pids_known && obd_bm_supported(s_bm, s_nwords, pid);
+}
+
+static bool pid_wanted(uint8_t pid)
+{
+	return obd_pid_wanted(&s_sel, s_amask, pid);
+}
+
+/* Follow the selection (xop) and the alert rules: rebuild the rotation if
+ * either has changed since it was built. */
+static void obd_plan_refresh(void)
+{
+	const char *src = tun_obd_pids();
+	uint32_t am = obd_alert_pid_mask();
+
+	if (s_plan_built && am == s_amask && strcmp(src, s_sel_src) == 0) {
+		return;
 	}
+	strncpy(s_sel_src, src, sizeof(s_sel_src) - 1);
+	s_sel_src[sizeof(s_sel_src) - 1] = '\0';
+	s_amask = am;
+	obd_sel_effective(src, BUILT_OBD_PIDS, &s_sel);
 
-	int i = pid - 1;
+	s_rot_n = 0;
+	for (size_t i = 0; i < ARRAY_SIZE(s_slow_legacy); i++) {
+		if (pid_wanted(s_slow_legacy[i])) {
+			s_rot[s_rot_n++] = s_slow_legacy[i];
+		}
+	}
+	for (unsigned int i = 0; i < s_sel.n && s_rot_n < OBD_ROT_MAX; i++) {
+		uint8_t pid = s_sel.pid[i];
 
-	return (s_pids[i / 8] & (0x80 >> (i % 8))) != 0;
+		if (pid != PID_STATUS && obd_snap_legacy(&s_live, pid) == NULL) {
+			s_rot[s_rot_n++] = pid;
+		}
+	}
+	s_slow_idx = 0;
+	if (s_plan_built) {
+		obd_live_reset();       /* values of PIDs no longer read must not linger */
+	}
+	s_plan_built = true;
 }
 
 void obd_close(void)
@@ -248,6 +312,30 @@ void obd_close(void)
 	 * the reopen path and the flag is what records that it happened. */
 }
 
+/* Read the support words: PID 00, then 20, 40 ... while the last bit of the
+ * word just read says another follows.  Returns the words read into bm (0 if
+ * PID 00 got no answer); a later word that is not answered ends the chain. */
+static int obd_read_bitmaps(uint8_t bm[][4])
+{
+	uint8_t buf[8];
+	int w;
+
+	for (w = 0; w < OBD_BM_WORDS; w++) {
+		int n = kline_obd_pid((uint8_t)(w * 0x20), buf, sizeof(buf));
+
+		s_last_req_ms = k_uptime_get();
+		if (n < 4) {
+			break;
+		}
+		memcpy(bm[w], buf, 4);
+		if (!obd_bm_more(bm[w])) {
+			w++;
+			break;
+		}
+	}
+	return w;
+}
+
 /* Open a session if one is not already up, and learn what the ECU supports. */
 static int obd_ensure_session(void)
 {
@@ -282,18 +370,17 @@ static int obd_ensure_session(void)
 	s_open = true;
 	s_last_req_ms = k_uptime_get();
 
-	uint8_t buf[8];
-	int n = kline_obd_pid(0x00, buf, sizeof(buf));
+	int n = obd_read_bitmaps(s_bm);
 
-	if (n >= 4) {
-		memcpy(s_pids, buf, 4);
+	if (n >= 1) {
+		s_nwords = n;
 		s_pids_known = true;
-		LOG_INF("OBD session open, PID support %02X %02X %02X %02X",
-			s_pids[0], s_pids[1], s_pids[2], s_pids[3]);
+		LOG_INF("OBD session open, PID support %02X %02X %02X %02X (%d words)",
+			s_bm[0][0], s_bm[0][1], s_bm[0][2], s_bm[0][3], n);
 	} else {
 		/* No support bitmap means we cannot tell what is safe to ask
 		 * for.  Rather than guess, treat the session as unusable. */
-		LOG_WRN("OBD session open but PID 00 unanswered (%d)", n);
+		LOG_WRN("OBD session open but PID 00 unanswered");
 		obd_close();
 		return -EPROTO;
 	}
@@ -383,7 +470,8 @@ int obd_speed_kmh(void)
 	return s_state_speed;
 }
 
-/* Read `pid` and convert it, or leave the field as OBD_NA. */
+/* Read `pid` and convert it (the catalogue's wire integer), or leave the
+ * field as OBD_NA. */
 static void obd_get(uint8_t pid, int32_t *out)
 {
 	uint8_t b[8];
@@ -395,57 +483,14 @@ static void obd_get(uint8_t pid, int32_t *out)
 
 	int n = obd_read(pid, b, sizeof(b));
 
-	if (n < 1) {
-		return;
-	}
-
-	switch (pid) {
-	case PID_STATUS:                                  /* A: MIL + count */
-		*out = b[0];
-		break;
-	case PID_FUEL_SYS:
-		*out = b[0];
-		break;
-	case PID_LOAD:                                    /* % x10 */
-	case PID_THROTTLE:
-		*out = (int32_t)b[0] * 1000 / 255;
-		break;
-	case PID_COOLANT:                                 /* deg C */
-	case PID_INTAKE:
-		*out = (int32_t)b[0] - 40;
-		break;
-	case PID_STFT:                                    /* % x10, signed */
-	case PID_LTFT:
-		*out = ((int32_t)b[0] - 128) * 1000 / 128;
-		break;
-	case PID_RPM:                                     /* rpm */
-		if (n >= 2) {
-			*out = ((int32_t)b[0] * 256 + b[1]) / 4;
-		}
-		break;
-	case PID_SPEED:                                   /* km/h */
-		*out = b[0];
-		break;
-	case PID_TIMING:                                  /* deg x10, signed */
-		*out = (int32_t)b[0] * 5 - 640;
-		break;
-	case PID_MAF:                                     /* g/s x100 */
-		if (n >= 2) {
-			*out = (int32_t)b[0] * 256 + b[1];
-		}
-		break;
-	default:
-		break;
+	if (n < 1 || !obd_pid_decode(pid, b, n, out)) {
+		*out = OBD_NA;
 	}
 }
 
 static void obd_snapshot_clear(struct obd_snapshot *s)
 {
-	memset(s, 0, sizeof(*s));
-	s->rpm = s->speed = s->coolant = s->intake = OBD_NA;
-	s->load = s->throttle = s->timing = s->stft = s->ltft = OBD_NA;
-	s->maf = s->fuel_status = s->mil = s->dtc_count = OBD_NA;
-	s->rpm_min = s->rpm_max = s->rpm_avg = OBD_NA;
+	obd_snap_clear(s);
 }
 
 /* PID 01 packs the malfunction lamp into bit 7 and the stored-code count
@@ -503,21 +548,11 @@ static int obd_snapshot_copy(struct obd_snapshot *s)
 	int64_t slow_max = s_stream ? OBD_STREAM_SLOW_MAX_AGE_MS : OBD_SLOW_MAX_AGE_MS;
 
 	*s = s_live;
-	for (unsigned int i = 0; i < ARRAY_SIZE(s_slow_pids); i++) {
+	for (unsigned int i = 0; i < s_rot_n; i++) {
 		if (s_slow_ms[i] && now - s_slow_ms[i] <= slow_max) {
 			continue;
 		}
-		switch (s_slow_pids[i]) {
-		case PID_COOLANT:  s->coolant = OBD_NA;     break;
-		case PID_INTAKE:   s->intake = OBD_NA;      break;
-		case PID_MAF:      s->maf = OBD_NA;         break;
-		case PID_TIMING:   s->timing = OBD_NA;      break;
-		case PID_STFT:     s->stft = OBD_NA;        break;
-		case PID_LTFT:     s->ltft = OBD_NA;        break;
-		case PID_FUEL_SYS: s->fuel_status = OBD_NA; break;
-		case PID_STATUS:   s->mil = s->dtc_count = OBD_NA; break;
-		default: break;
-		}
+		obd_snap_forget(s, s_rot[i]);
 	}
 	if (s_rpm_n > 0) {
 		s->rpm_min = s_rpm_min;
@@ -534,11 +569,11 @@ static int obd_snapshot_copy(struct obd_snapshot *s)
 /* One slow-moving PID: the next in rotation that the ECU supports. */
 static void obd_read_slow(int64_t now)
 {
-	for (unsigned int tries = 0; tries < ARRAY_SIZE(s_slow_pids) && !s_abort; tries++) {
+	for (unsigned int tries = 0; tries < s_rot_n && !s_abort; tries++) {
 		unsigned int idx = s_slow_idx;
-		uint8_t pid = s_slow_pids[idx];
+		uint8_t pid = s_rot[idx];
 
-		s_slow_idx = (s_slow_idx + 1) % ARRAY_SIZE(s_slow_pids);
+		s_slow_idx = (s_slow_idx + 1) % s_rot_n;
 		if (!pid_supported(pid)) {
 			continue;
 		}
@@ -550,18 +585,40 @@ static void obd_read_slow(int64_t now)
 			break;		/* asked and unanswered: keep the old value */
 		}
 		s_slow_ms[idx] = now;
-		switch (pid) {
-		case PID_COOLANT:  s_live.coolant = v;     break;
-		case PID_INTAKE:   s_live.intake = v;      break;
-		case PID_MAF:      s_live.maf = v;         break;
-		case PID_TIMING:   s_live.timing = v;      break;
-		case PID_STFT:     s_live.stft = v;        break;
-		case PID_LTFT:     s_live.ltft = v;        break;
-		case PID_FUEL_SYS: s_live.fuel_status = v; break;
-		case PID_STATUS:   obd_note_status(v, &s_live); break;
-		default: break;
+		if (pid == PID_STATUS) {
+			obd_note_status(v, &s_live);
+		} else {
+			obd_snap_set(&s_live, pid, v);
 		}
 		break;
+	}
+}
+
+/* Read the support words afresh and queue them as osp=.  No answer to PID 00
+ * queues nothing and the request stays open (tried again after a backoff). */
+static void obd_scan_run(int64_t now)
+{
+	uint8_t bm[OBD_BM_WORDS][4];
+	int n = obd_read_bitmaps(bm);
+
+	if (n < 1) {
+		obd_scan_failed(&s_scan, now);
+		LOG_WRN("OBD scan: PID 00 unanswered");
+		return;
+	}
+	memcpy(s_bm, bm, sizeof(s_bm));
+	s_nwords = n;
+	s_pids_known = true;
+	s_osp_pending = obd_bm_hex(bm, n, s_osp, sizeof(s_osp)) > 0;
+	obd_scan_finished(&s_scan, now);
+}
+
+void obd_scan_take_token(char *cmd)
+{
+	int os = obd_os_take(cmd);
+
+	if (os >= 0) {
+		obd_scan_reply(&s_scan, os, k_uptime_get());
 	}
 }
 
@@ -595,6 +652,7 @@ static int obd_poll(struct obd_snapshot *s, bool slack)
 
 	s_abort = false;
 	s_reopened_this_poll = false;
+	obd_plan_refresh();
 
 	int err = obd_ensure_session();
 
@@ -631,9 +689,19 @@ static int obd_poll(struct obd_snapshot *s, bool slack)
 	obd_note_state(s_live.rpm, s_live.speed);
 	obd_note_rpm(s_live.rpm);
 
+	/* The server wants the supported-PID list: read it once the engine is
+	 * running, since an ECU may report fewer PIDs with it stopped. */
+	if (!silent && s_live.rpm > 0 && obd_scan_due(&s_scan, now)) {
+		obd_scan_run(now);
+	}
+
 	if (!slack) {
-		obd_get(PID_THROTTLE, &s_live.throttle);
-		obd_get(PID_LOAD,     &s_live.load);
+		if (pid_wanted(PID_THROTTLE)) {
+			obd_get(PID_THROTTLE, &s_live.throttle);
+		}
+		if (pid_wanted(PID_LOAD)) {
+			obd_get(PID_LOAD, &s_live.load);
+		}
 		s_live_ms = now;
 		obd_read_slow(now);
 	} else {
@@ -642,12 +710,20 @@ static int obd_poll(struct obd_snapshot *s, bool slack)
 			if (i > 0 && gnss_fix_pending()) {
 				break;
 			}
-			switch (s_extra) {
+			/* Throttle and load only when wanted; the slow PID is
+			 * always a candidate, so this ends. */
+			unsigned int c;
+
+			do {
+				c = s_extra;
+				s_extra = (s_extra + 1) % OBD_EXTRAS;
+			} while ((c == 0 && !pid_wanted(PID_THROTTLE)) ||
+				 (c == 1 && !pid_wanted(PID_LOAD)));
+			switch (c) {
 			case 0:  obd_get(PID_THROTTLE, &s_live.throttle); break;
 			case 1:  obd_get(PID_LOAD,     &s_live.load);     break;
 			default: obd_read_slow(now);                      break;
 			}
-			s_extra = (s_extra + 1) % OBD_EXTRAS;
 		}
 	}
 
@@ -843,53 +919,22 @@ int obd_watch_dtc_count(void)
 	return 0;
 }
 
-/* Append the fields that were actually read, as ",k=v;k=v".  Returns the
- * number of bytes written. */
+/* Append the fields that were actually read and are selected, as
+ * ",k=v;k=v" (obd_format), then the scan answer ",osp=<hex>" once if one is
+ * waiting.  Returns the number of bytes written. */
 int obd_append(char *buf, int max, const struct obd_snapshot *s)
 {
-	static const struct {
-		const char *key;
-		size_t off;
-	} map[] = {
-		{ "orpm",  offsetof(struct obd_snapshot, rpm)         },
-		{ "ormin", offsetof(struct obd_snapshot, rpm_min)     },
-		{ "ormax", offsetof(struct obd_snapshot, rpm_max)     },
-		{ "oravg", offsetof(struct obd_snapshot, rpm_avg)     },
-		{ "ospd",  offsetof(struct obd_snapshot, speed)       },
-		{ "ocl",   offsetof(struct obd_snapshot, coolant)     },
-		{ "oit",   offsetof(struct obd_snapshot, intake)      },
-		{ "old",   offsetof(struct obd_snapshot, load)        },
-		{ "oth",   offsetof(struct obd_snapshot, throttle)    },
-		{ "omaf",  offsetof(struct obd_snapshot, maf)         },
-		{ "otim",  offsetof(struct obd_snapshot, timing)      },
-		{ "ostft", offsetof(struct obd_snapshot, stft)        },
-		{ "oltft", offsetof(struct obd_snapshot, ltft)        },
-		{ "ofs",   offsetof(struct obd_snapshot, fuel_status) },
-		{ "omil",  offsetof(struct obd_snapshot, mil)         },
-		{ "odtc",  offsetof(struct obd_snapshot, dtc_count)   },
-	};
-	int len = 0;
-	bool first = true;
+	obd_plan_refresh();
 
-	if (!s->valid || max <= 0) {
-		return 0;
-	}
+	int len = obd_format(buf, max, s, &s_sel);
 
-	for (size_t i = 0; i < ARRAY_SIZE(map); i++) {
-		int32_t v = *(const int32_t *)((const char *)s + map[i].off);
+	if (s->valid && s_osp_pending && max > 0) {
+		int n = snprintf(&buf[len], max - len, ",osp=%s", s_osp);
 
-		if (v == OBD_NA) {
-			continue;
+		if (n > 0 && n < max - len) {
+			len += n;
+			s_osp_pending = false;
 		}
-
-		int n = snprintf(&buf[len], max - len, "%c%s=%d",
-				 first ? ',' : ';', map[i].key, v);
-
-		if (n <= 0 || n >= max - len) {
-			break;		/* out of room: emit what fits */
-		}
-		len += n;
-		first = false;
 	}
 	return len;
 }

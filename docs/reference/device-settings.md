@@ -45,7 +45,7 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 | Movement alarm | `<ma>` | `device.movement_alarm` | `1` | Stored, synced and reported, but not acted on by firmware 0.4.x |
 | Track mode | `track=` | `device.track_mode` | `0` | GNSS off, engine and IMU data streamed quickly |
 | Device LEDs | `le=` | `device.leds` | `1` | `1` lets the status LEDs light, `0` keeps them all dark. Sent on every reply straight after `gw=`; set with `leds=<0\|1>` or `le` in `POST /api/1.0/config` |
-| Runtime tunables | `tu=` | 16 nullable `device` columns, [below](#runtime-tunables) | NULL | Optional overrides of values the firmware is built with. NULL means no override: the unit keeps the value it was built with. Sent on every reply straight after `le=` as `tu=<code>:<value>[;...]` (`tu=-` when none is set) |
+| Runtime tunables | `tu=` | 17 nullable `device` columns, [below](#runtime-tunables) | NULL | Optional overrides of values the firmware is built with. NULL means no override: the unit keeps the value it was built with. Sent on every reply straight after `le=` as `tu=<code>:<value>[;...]` (`tu=-` when none is set) |
 | Update advert | `fota=` | per-device manifest | - | See [OTA updates](../board-setup/ota-updates.md) |
 
 - A timed report while parked sends the last known position. GNSS is only started for it when movement has been detected since the previous one, or when the tracker has had no fix since it started. Ignition, movement, impact and tilt wake the tracker whatever the interval is.
@@ -177,6 +177,7 @@ Values must be whole numbers. The alerts themselves are described in [Configure 
 | `xap` | `accel_alert_priority` |
 | `xab` | `accel_alert_backoff_s` |
 | `xoa` | `obd_alerts` |
+| `xop` | `obd_pids` (also accepted as `obd_pids`, a list or comma-separated string; see [OBD PIDs](#obd-pids)) |
 | `xis` | `ignition_on_sleep_s` |
 | `xbw` | `battery_warning_mv` |
 | `xbp` | `battery_poweroff_mv` |
@@ -213,6 +214,7 @@ These are values the firmware is normally built with (Kconfig options). Each can
 | `accel_alert_priority` | `xap` | -2 to 2 | `APP_ACCEL_ALERT_PRIORITY` | - |
 | `accel_alert_backoff_s` | `xab` | 0-86400 s | `APP_ACCEL_ALERT_BACKOFF_S` | - |
 | `obd_alerts` | `xoa` | rule list, up to 120 characters | `APP_OBD_ALERTS` | see below |
+| `obd_pids` | `xop` | up to 12 PIDs as concatenated hex, `0C050B` | `APP_OBD_PIDS` | see [OBD PIDs](#obd-pids) |
 | `ignition_on_sleep_s` | `xis` | 10-600 s | `APP_IGNITION_ON_SLEEP_INTERVAL` | - |
 | `battery_warning_mv` | `xbw` | 11000-12500 mV | `APP_BATTERY_WARNING_MV` | - |
 | `battery_poweroff_mv` | `xbp` | 10500-12200 mV | `APP_BATTERY_POWEROFF_MV` | must be below `battery_warning_mv` when both are set |
@@ -230,6 +232,17 @@ These are values the firmware is normally built with (Kconfig options). Each can
 - The `command` endpoint and `tools/command.py` take them by column name, for example `tow_tilt_deg=8`. They are applied straight away and never queued. `<name>=default` (or `<name>=` with nothing after it) clears one to NULL. For `obd_alerts` write `|` for the comma between rules, since a comma separates commands: `obd_alerts=coolant>=95|rpm>6500`.
 - `obd_alerts` is the rule list of `CONFIG_APP_OBD_ALERTS`: comma-separated rules `<field><op><value>[/<hysteresis>]`, such as `coolant>=95,rpm>6500,stft<-12.5/2`. The operators are `>` `>=` `<` `<=` `=`. It is at most 120 characters of printable ASCII with no `;` or `|`, and every rule must match that shape (the field names are the unit's business). An empty list is not a list: it means no override.
 - The unit also clamps what it is sent to the same ranges, and keeps the power-off level at least 100 mV below the warning level.
+
+## OBD PIDs
+
+Which Mode 01 PIDs the unit captures from the car, and what the car supports. The unit reads only the selected PIDs, so a short selection is also a lighter bus and smaller records.
+
+- **Selection** is the `obd_pids` column (tunable `xop`): up to 12 PIDs, in the order you give, sent in `tu=` as concatenated 2-digit hex (`xop:0C050B`, no separators). NULL means the firmware default `APP_OBD_PIDS`, `0C05`: engine speed (`0C`) and coolant temperature (`05`). `GET /api/1.0/obd/pids` lists the PIDs that can be selected, with name, unit and scale; a PID outside it is refused with HTTP 400, as is a 13th PID. Duplicates are dropped.
+- **Setting it.** `POST /api/1.0/config` with `"obd_pids": "0C,05,0B"` (or a JSON list, or `"xop": "0C050B"`); `"default"`, `null`, `""` or `[]` clear it. The `command` endpoint takes `obd_pids=0C|05|0B` (`|` for the comma) or `obd_pids=default`. Once the car's supported PIDs are known (below), a PID the car does not support is refused with HTTP 400 and a message naming it; before the first scan any catalogue PID is accepted.
+- **Reading it.** `GET /api/1.0/config` and each `GET /api/1.0/devices` row carry `obd_pids` (the selection in use, a list of hex strings: the override, else the value the unit reported being built with, else `["0C","05"]`) and `obd_pids_default` (true when it is not an override). The raw value is `xop` (a string, `null` for none) in `/config` and under `tunables`.
+- **Supported PIDs.** The unit scans the car's support bitmaps (PID `00`, `20`, ... chained while the last bit is set) and sends them once as `osp=`. The server keeps them on `device.obd_supported` (hex, 8 digits per 32 PIDs, VARCHAR(64)) with the time in `obd_supported_at`, and logs "OBD supported PIDs scanned: N PIDs". The API shows `obd_supported` (a list of hex PIDs, `null` if never scanned; the chain PIDs `20`, `40`, ... are left out), `obd_supported_at` and `obd_scan`. A car may report PIDs the catalogue lacks: they are listed but cannot be selected.
+- **When it scans.** The unit scans with the engine running (RPM above 0), not merely with the ignition on, because some ECUs report fewer PIDs with the engine stopped; a wanted scan waits until it is. The first one happens by itself: the first record with OBD values from a device that never scanned sets `obd_scan`. To scan again (a different car, a changed ECU) `POST /api/1.0/config` `{"obd_scan": 1}` (or the command `obd_scan=1`); `obd_scan` reads true until the result arrives, and `0` withdraws the request.
+- **Values.** A selected PID is sent as `o<2-hex>=<integer>` in the record's OBD extra. The sixteen older keys (`orpm`, `ocl`, ...) keep their columns and scales; their PIDs ride on those keys (`ormin`, `ormax`, `oravg` with `0C`, `omil` and `odtc` with `01`, `ofs` with `03`). Any other PID is stored in `log.obd_extra` (JSON, `{"0B": 95.0}`) in the catalogue's unit, and `carpos`, the live stream and the journey points carry it as `obd_extra`. The unit still polls what it needs for ignition logic and the `obd_alerts` rules but only sends what is selected.
 
 ## Examples
 

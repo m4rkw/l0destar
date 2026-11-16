@@ -25,6 +25,12 @@ LOG_MODULE_REGISTER(tun, CONFIG_APP_LOG_LEVEL);
 #define BUILT_OBD_ALERTS ""
 #endif
 
+#ifdef CONFIG_APP_OBD_PIDS
+#define BUILT_OBD_PIDS CONFIG_APP_OBD_PIDS
+#else
+#define BUILT_OBD_PIDS "0C05"
+#endif
+
 static const int32_t s_built[TUN_N_INT] = {
 	[TUN_XTT] = CONFIG_APP_TOW_TILT_DEG,
 	[TUN_XPI] = CONFIG_APP_PARKED_IMPACT_MG,
@@ -55,9 +61,14 @@ static const char *oa_get(const struct tun_table *t)
 	return t->oa_set ? t->oa : BUILT_OBD_ALERTS;
 }
 
+static const char *op_get(const struct tun_table *t)
+{
+	return t->op_set ? t->op : BUILT_OBD_PIDS;
+}
+
 int tun_built_string(char *out, size_t cap)
 {
-	return tun_format_built(out, cap, s_built, BUILT_OBD_ALERTS);
+	return tun_format_built(out, cap, s_built, BUILT_OBD_ALERTS, BUILT_OBD_PIDS);
 }
 
 void tun_apply(const char *list)
@@ -72,6 +83,7 @@ void tun_apply(const char *list)
 	struct tun_table n;
 	int32_t before[TUN_N_INT];
 	char oa_before[TUN_OA_MAX + 1];
+	char op_before[TUN_OP_MAX + 1];
 
 	if (len == 1 && list[0] == '-') {
 		len = 0;
@@ -81,6 +93,8 @@ void tun_apply(const char *list)
 	}
 	strncpy(oa_before, oa_get(&s_t), sizeof(oa_before) - 1);
 	oa_before[sizeof(oa_before) - 1] = '\0';
+	strncpy(op_before, op_get(&s_t), sizeof(op_before) - 1);
+	op_before[sizeof(op_before) - 1] = '\0';
 
 	tun_table_apply(&n, list, len);
 
@@ -97,6 +111,9 @@ void tun_apply(const char *list)
 	if (strcmp(oa_before, oa_get(&s_t)) != 0) {
 		LOG_INF("tu: xoa \"%s\" -> \"%s\"", oa_before, oa_get(&s_t));
 	}
+	if (strcmp(op_before, op_get(&s_t)) != 0) {
+		LOG_INF("tu: xop \"%s\" -> \"%s\"", op_before, op_get(&s_t));
+	}
 }
 
 int  tun_tow_tilt_deg(void)          { return get(TUN_XTT); }
@@ -105,6 +122,7 @@ int  tun_impact_immediate_mg(void)   { return get(TUN_XII); }
 int  tun_accel_alert_priority(void)  { return get(TUN_XAP); }
 int  tun_accel_alert_backoff_s(void) { return get(TUN_XAB); }
 const char *tun_obd_alerts(void)     { return oa_get(&s_t); }
+const char *tun_obd_pids(void)       { return op_get(&s_t); }
 int  tun_ignition_on_sleep_s(void)   { return get(TUN_XIS); }
 int  tun_battery_warning_mv(void)    { return get(TUN_XBW); }
 int  tun_battery_poweroff_mv(void)   { return get(TUN_XBP); }

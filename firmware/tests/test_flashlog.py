@@ -70,6 +70,7 @@ int h_commit(struct h *h) { return flashlog_commit(&h->fl, &h->cur); }
 uint32_t h_cur_n(struct h *h) { return h->cur.n; }
 uint32_t h_cur_lost(struct h *h) { return h->cur.lost; }
 uint32_t h_cycles(struct h *h) { return flashlog_cycles(&h->fl); }
+uint32_t h_erases(struct h *h) { return flashlog_erases(&h->fl); }
 uint32_t h_next_seq(struct h *h) { return h->fl.next_seq; }
 uint32_t h_head_idx(struct h *h) { return h->fl.head_idx; }
 int h_dead(struct h *h) { return h->fl.dead; }
@@ -110,7 +111,7 @@ def lib():
     L.h_cursor.argtypes = [C.c_void_p]
     L.h_next.argtypes = [C.c_void_p, C.c_void_p, C.c_uint16]
     L.h_commit.argtypes = [C.c_void_p]
-    for name in ("h_cur_n", "h_cur_lost", "h_cycles", "h_next_seq", "h_head_idx"):
+    for name in ("h_cur_n", "h_cur_lost", "h_cycles", "h_erases", "h_next_seq", "h_head_idx"):
         getattr(L, name).argtypes = [C.c_void_p]
         getattr(L, name).restype = C.c_uint32
     L.h_dead.argtypes = [C.c_void_p]
@@ -421,6 +422,7 @@ def test_every_sector_is_erased_once_per_lap(mk):
     assert sim.erases == [laps - 1] * 16
     assert log.stats()["erases"] == sum(sim.erases)
     assert log.cycles() == laps
+    assert log.erases() == 16 * laps                  # sectors opened: moves before the first lap is done
 
 
 def test_the_erase_counts_never_differ_by_more_than_one(mk):

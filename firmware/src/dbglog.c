@@ -925,8 +925,17 @@ const char *dbglog_reset_cause(void)
         const char *stall = watchdog_last_stall();
 
         if (stall && pos < sizeof(s_cause)) {
+            pos += snprintf(s_cause + pos, sizeof(s_cause) - pos, "%s%s",
+                            pos ? "+" : "", stall);
+        }
+
+        /* Or, when no thread was stuck, that the kernel itself was: where the
+         * CPU was when the hardware watchdog's early warning came. */
+        const char *freeze = watchdog_last_freeze();
+
+        if (freeze && pos < sizeof(s_cause)) {
             snprintf(s_cause + pos, sizeof(s_cause) - pos, "%s%s",
-                     pos ? "+" : "", stall);
+                     pos ? "+" : "", freeze);
         }
     }
     return s_cause[0] ? s_cause : NULL;

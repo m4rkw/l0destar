@@ -197,5 +197,8 @@ int flashlog_commit(struct flashlog *fl, struct flashlog_cur *c);
 /* Sector erases the lifetime of the log has needed per sector, from the
  * sequence numbers: at most this many on any sector. */
 uint32_t flashlog_cycles(const struct flashlog *fl);
+/* Sectors opened (erased) since the chip was new: the finer wear counter,
+ * which moves on the first write where the lap count stays 0. */
+uint32_t flashlog_erases(const struct flashlog *fl);
 
 #endif

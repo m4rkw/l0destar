@@ -295,6 +295,20 @@ config APP_KLINE_TELEMETRY
 	  Needs APP_KLINE_ECU_ADDR and APP_KLINE_BAUD to match the vehicle —
 	  run APP_KLINE_DISCOVER once to find them.
 
+config APP_OBD_PIDS
+	string "OBD-II PIDs captured in the telemetry record"
+	depends on APP_KLINE_TELEMETRY
+	default "0C05"
+	help
+	  Mode 01 PIDs sent with each record, as concatenated 2-digit hex
+	  in the order wanted, at most 12: the default 0C05 is engine speed
+	  (also its min/max/average over the cycle) and coolant temperature.
+	  The server can override this at run time (tunable xop).  PIDs the
+	  ECU does not support are not asked for; PIDs the firmware has no
+	  catalogue entry for are ignored.  Engine speed and vehicle speed
+	  are always read for the tracker's own logic, and so are the PIDs an
+	  APP_OBD_ALERTS rule names, but only the selected ones are sent.
+
 config APP_OBD_ALERTS
 	string "Threshold alerts on OBD-II telemetry"
 	depends on APP_KLINE_TELEMETRY
@@ -1937,6 +1951,35 @@ config APP_FLASH_BACKLOG_MAX_OPENS_PER_HOUR
 	  record that would open one more is held in RAM (and thinned there) until
 	  the hour is up.  Counted from boot, so it limits a runaway and not a
 	  reset loop; the cycle limit above is the stop for that.
+
+# --- watchdog ----------------------------------------------------------------
+
+config APP_WDT_FREEZE_CAPTURE
+	bool "Record where the CPU was when the hardware watchdog catches a frozen kernel"
+	default y
+	depends on TASK_WDT_HW_FALLBACK
+	select WDT_NRFX_NO_IRQ
+	help
+	  The hardware watchdog's window is 12 s and the kernel's timer feeds it, so
+	  a reset that no thread's missed kick explains means the timer interrupt
+	  stopped: something held interrupts off, stayed in an interrupt handler, or
+	  locked the CPU up.  Nothing in a thread can say which.
+
+	  The watchdog raises an interrupt about 60 us before it resets.  This takes
+	  it (the driver's own handler is left out) at the highest interrupt
+	  priority, and saves where the CPU was, which interrupts were active or
+	  pending and the system timer's registers into noinit RAM.  The next boot
+	  reports it as rst=wdt+fz:<pc>/<lr>[/i<irq>] with five log lines of
+	  detail; look the addresses up in the map file of the image that was
+	  running.  Costs nothing while the unit runs.
+
+	  It reaches a handler stuck at the system timer's interrupt level or
+	  below, and a thread holding interrupts off at BASEPRI 0x40 or more.  It
+	  does not reach a handler at the modem IPC's level (hardware level 1: on
+	  this part levels 0 and 1 are one effective level), irq_lock() (BASEPRI
+	  0x20), PRIMASK or a locked-up CPU, which leave no note.  So a note names
+	  the culprit, and no note after a watchdog reset rules out the first group
+	  and leaves the second.  Bench-tested one case at a time; see watchdog.c.
 
 # --- captured warnings/errors ----------------------------------------------
 

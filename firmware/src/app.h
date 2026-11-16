@@ -408,9 +408,12 @@ void     databuf_flash_report(void);
 /* The most erase cycles any sector of the flash log has had, or -1 while the
  * log has not been opened this boot (it opens at the first spill). */
 int32_t  databuf_flash_cycles(void);
+/* Sectors erased since the chip was new, or -1 likewise. */
+int32_t  databuf_flash_erases(void);
 #else
 static inline void databuf_flash_report(void) { }
 static inline int32_t databuf_flash_cycles(void) { return -1; }
+static inline int32_t databuf_flash_erases(void) { return -1; }
 #endif
 /* The drive stream is running (true) or not.  While it is, the backlog keeps
  * records APP_DATABUF_STREAM_GAP_S apart by when they were built, so a stream
@@ -563,6 +566,9 @@ void watchdog_init(void);
 void watchdog_kick(void);
 /* "stall:<addr>/..." once after a watchdog reset, else NULL (watchdog.c) */
 const char *watchdog_last_stall(void);
+/* "fz:<pc>/<lr>[/i<irq>]" once after a watchdog reset that caught a frozen
+ * kernel, with the detail on the log, else NULL (watchdog.c, freeze_note.h) */
+const char *watchdog_last_freeze(void);
 
 void reboot_now(void);
 void status_delay(long ms);   /* watchdog-aware sleep */
@@ -651,26 +657,8 @@ void kline_dtc_string(uint16_t v, char *out);   /* 6 bytes: "P0133" + NUL */
  * with a fixed scale so the telemetry packet needs no float formatting;
  * OBD_NOT_AVAILABLE marks a PID this ECU does not support or did not answer.
  * The server unscales them (OBD_FIELDS in main.py). */
-#define OBD_NOT_AVAILABLE INT32_MIN
-
-struct obd_snapshot {
-	bool valid;
-	int32_t rpm;            /* rpm            */
-	int32_t speed;          /* km/h           */
-	int32_t coolant;        /* deg C          */
-	int32_t intake;         /* deg C          */
-	int32_t load;           /* %      x10     */
-	int32_t throttle;       /* %      x10     */
-	int32_t maf;            /* g/s    x100    */
-	int32_t timing;         /* deg    x10     */
-	int32_t stft, ltft;     /* %      x10     */
-	int32_t rpm_min;        /* rpm, over the cycle */
-	int32_t rpm_max;
-	int32_t rpm_avg;
-	int32_t fuel_status;    /* raw bitmap     */
-	int32_t mil;            /* 0 / 1          */
-	int32_t dtc_count;      /* stored codes   */
-};
+/* struct obd_snapshot, OBD_NOT_AVAILABLE and the PID catalogue: obd_pids.h. */
+#include "obd_pids.h"
 
 /* The poll: RPM, speed, throttle and load every call, plus one of the
  * slow-moving PIDs in rotation — four or five exchanges (~0.5 s) rather than
@@ -680,7 +668,17 @@ struct obd_snapshot {
  * records, which the fix-wait tick has usually just refreshed). */
 int  obd_poll_fast(struct obd_snapshot *s);
 int  obd_snapshot_take(struct obd_snapshot *s);
+/* The record fields: the selected PIDs (tunable xop) that were read, and the
+ * scan answer osp= once after a scan.  Returns the bytes written. */
 int  obd_append(char *buf, int max, const struct obd_snapshot *s);
+/* The os=<0|1> reply token (cmd_run): takes it out of the reply and starts a
+ * scan of the ECU's supported PIDs if it is a new request.  The scan runs at
+ * the next poll with the engine running (RPM > 0). */
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+void obd_scan_take_token(char *cmd);
+#else
+static inline void obd_scan_take_token(char *cmd) { (void)obd_os_take(cmd); }
+#endif
 int  obd_dtc_report(char *buf, int max);
 void obd_close(void);
 
@@ -723,10 +721,12 @@ int  obd_speed_kmh(void);
 void obd_alert_init(void);                          /* parse the rules; logs each */
 void obd_alert_eval(const struct obd_snapshot *s);  /* queue alerts and clears */
 void obd_alert_reset(void);                         /* re-arm: session closed */
+uint32_t obd_alert_pid_mask(void);                  /* bit n: a rule reads PID n */
 #else
 static inline void obd_alert_init(void) { }
 static inline void obd_alert_eval(const struct obd_snapshot *s) { }
 static inline void obd_alert_reset(void) { }
+static inline uint32_t obd_alert_pid_mask(void) { return 0; }
 #endif
 
 /* The stored-code count rides in mode 01 PID 01, which every poll already

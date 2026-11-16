@@ -283,6 +283,7 @@ int h_sim_progs(void) { return sim_progs; }
 /* -- the entry points the tests use ---------------------------------------- */
 void h_flash_report(void) { databuf_flash_report(); }
 int32_t h_flash_cycles(void) { return databuf_flash_cycles(); }
+int32_t h_flash_erases(void) { return databuf_flash_erases(); }
 int h_push(const char *s) { return databuf_push_lines(s, strlen(s)); }
 int h_count(void) { return databuf_count(); }
 int h_ring_count(void) { return databuf_ring_count(); }
@@ -907,11 +908,13 @@ def test_records_that_cannot_be_read_back_raise_no_alert(so_flash):
 def test_a_chip_that_answers_at_boot_says_so_and_opens_the_log_and_raises_nothing(so_flash):
     d = DB(so_flash)
     assert d.L.h_flash_cycles() == -1               # not opened yet
+    assert d.L.h_flash_erases() == -1
     d.L.h_flash_report()
     assert d.logs() == ["flash backlog: chip ready, ID C2 28 17 (MX25R6435F)",
                         "flash backlog: 32 sectors, 0 erase cycles used so far"]
     assert d.alerts() == []
     assert d.L.h_flash_cycles() == 0                # the wear counter is known without a spill
+    assert d.L.h_flash_erases() == 0                # and the sector count behind it
     assert d.L.h_sim_sessions() == 1                # one session to read the headers, nothing written
     d.check_flash_discipline()
 

@@ -436,6 +436,11 @@ static bool fl_open(void)
     return true;
 }
 
+int32_t databuf_flash_erases(void)
+{
+    return s_fl_state == FL_UP ? (int32_t)flashlog_erases(&s_fl) : -1;
+}
+
 int32_t databuf_flash_cycles(void)
 {
     return s_fl_state == FL_UP ? (int32_t)flashlog_cycles(&s_fl) : -1;

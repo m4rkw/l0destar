@@ -254,6 +254,7 @@ TUNABLE_TEXT = {
     'accel_alert_priority': ('Motion alert priority', 'set to %s'),
     'accel_alert_backoff_s': ('Motion alert backoff', 'set to %s s'),
     'obd_alerts': ('OBD alert rules', 'set to %s'),
+    'obd_pids': ('OBD PIDs captured', 'set to %s'),
     'ignition_on_sleep_s': ('Ignition-on sleep interval', 'set to %s s'),
     'battery_warning_mv': ('Battery warning', 'set to %s mV'),
     'battery_poweroff_mv': ('Battery power-off', 'set to %s mV'),
@@ -273,6 +274,9 @@ def tunable_text(column, value):
     label, how = TUNABLE_TEXT[column]
     if value is None or value == '':
         return '%s back to the built value' % label
+    if column == 'obd_pids':
+        return 'OBD PIDs captured set to %s' % ','.join(
+            value[i:i + 2] for i in range(0, len(value), 2))
     if column == 'drive_stream_interval_s':
         return ('Drive stream limited to one record every %d s' % value if value
                 else 'Drive stream not limited')
@@ -330,6 +334,9 @@ def setting_text(column, value):
         return 'GNSS backup supply set to ' + on
     if column == 'install_mode':
         return 'Installation mode ' + on
+    if column == 'obd_scan':
+        return ('OBD supported-PID rescan requested' if value
+                else 'OBD supported-PID rescan cancelled')
     if column in TUNABLE_TEXT:
         return tunable_text(column, value)
     return 'Setting changed: %s=%s' % (column, value)

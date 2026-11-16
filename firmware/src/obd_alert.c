@@ -56,22 +56,23 @@ struct obd_field {
 	size_t off;           /* into struct obd_snapshot */
 	int scale;            /* snapshot units per engineering unit */
 	const char *unit;     /* for the message */
+	uint8_t pid;          /* the mode 01 PID that carries it (0x01 for mil, dtc) */
 };
 
 static const struct obd_field s_fields[] = {
-	{ "rpm",      "orpm",  offsetof(struct obd_snapshot, rpm),         1,   "rpm"  },
-	{ "speed",    "ospd",  offsetof(struct obd_snapshot, speed),       1,   "km/h" },
-	{ "coolant",  "ocl",   offsetof(struct obd_snapshot, coolant),     1,   "C"    },
-	{ "intake",   "oit",   offsetof(struct obd_snapshot, intake),      1,   "C"    },
-	{ "load",     "old",   offsetof(struct obd_snapshot, load),        10,  "%"    },
-	{ "throttle", "oth",   offsetof(struct obd_snapshot, throttle),    10,  "%"    },
-	{ "maf",      "omaf",  offsetof(struct obd_snapshot, maf),         100, "g/s"  },
-	{ "timing",   "otim",  offsetof(struct obd_snapshot, timing),      10,  "deg"  },
-	{ "stft",     "ostft", offsetof(struct obd_snapshot, stft),        10,  "%"    },
-	{ "ltft",     "oltft", offsetof(struct obd_snapshot, ltft),        10,  "%"    },
-	{ "fuel",     "ofs",   offsetof(struct obd_snapshot, fuel_status), 1,   ""     },
-	{ "mil",      "omil",  offsetof(struct obd_snapshot, mil),         1,   ""     },
-	{ "dtc",      "odtc",  offsetof(struct obd_snapshot, dtc_count),   1,   ""     },
+	{ "rpm",      "orpm",  offsetof(struct obd_snapshot, rpm),         1,   "rpm", 0x0C },
+	{ "speed",    "ospd",  offsetof(struct obd_snapshot, speed),       1,   "km/h", 0x0D },
+	{ "coolant",  "ocl",   offsetof(struct obd_snapshot, coolant),     1,   "C", 0x05 },
+	{ "intake",   "oit",   offsetof(struct obd_snapshot, intake),      1,   "C", 0x0F },
+	{ "load",     "old",   offsetof(struct obd_snapshot, load),        10,  "%", 0x04 },
+	{ "throttle", "oth",   offsetof(struct obd_snapshot, throttle),    10,  "%", 0x11 },
+	{ "maf",      "omaf",  offsetof(struct obd_snapshot, maf),         100, "g/s", 0x10 },
+	{ "timing",   "otim",  offsetof(struct obd_snapshot, timing),      10,  "deg", 0x0E },
+	{ "stft",     "ostft", offsetof(struct obd_snapshot, stft),        10,  "%", 0x06 },
+	{ "ltft",     "oltft", offsetof(struct obd_snapshot, ltft),        10,  "%", 0x07 },
+	{ "fuel",     "ofs",   offsetof(struct obd_snapshot, fuel_status), 1,   "", 0x03 },
+	{ "mil",      "omil",  offsetof(struct obd_snapshot, mil),         1,   "", 0x01 },
+	{ "dtc",      "odtc",  offsetof(struct obd_snapshot, dtc_count),   1,   "", 0x01 },
 };
 
 enum obd_op { OP_GT, OP_GE, OP_LT, OP_LE, OP_EQ };
@@ -288,6 +289,18 @@ void obd_alert_init(void)
 			r->field->name, s_op_str[r->op], t, r->field->unit,
 			h, r->field->unit);
 	}
+}
+
+/* The PIDs the parsed rules read, so the poll keeps reading them when the
+ * selection no longer sends them. */
+uint32_t obd_alert_pid_mask(void)
+{
+	uint32_t m = 0;
+
+	for (int i = 0; i < s_n_rules; i++) {
+		m |= 1u << s_rules[i].field->pid;
+	}
+	return m;
 }
 
 void obd_alert_reset(void)
