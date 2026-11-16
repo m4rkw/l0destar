@@ -70,6 +70,10 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `acc` | IMU burst: `ax/ay/az/gx/gy/gz` per sample, samples joined by `:`, oldest first, 26 Hz; accel milli-g, gyro raw LSB | per-packet |
 | `rid` | the device's own id for this record, consecutive within a boot | per-packet |
 | `age` | seconds between the device building the record and sending it — only on a record sent late | per-packet, not stored |
+| `fl` | `1` on a record that was held in the unit's external flash before it was sent (the flash backlog); stored as `log.flash` | per-record |
+| `fc` | erase cycles of the flash log's most used sector (rated 100,000), sent when the value changes and only once the log has been opened this boot; kept on the device row (`device.flash_cycles`, `flash_cycles_at`) | device row |
+| `ir` | installation check, `<name>:<1\|0\|->` pairs joined by `;` (`-` = not fitted/testable), sent in answer to `instreport`; stored as JSON on `device.install_report` | device row |
+| `ie` | installation enable outcome, `1` (fix obtained, mode ended) or `0[:<reason>]`, sent in answer to `instenable`; stored on `device.install_enable`, `1` clears `device.install_mode` | device row |
 | `rsrp` | serving cell RSRP, dBm (−140…−44) | per-packet |
 | `snr` | serving cell SNR, dB (−24…+24) | per-packet |
 | `band` | LTE band in use | per-packet |
@@ -318,7 +322,7 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off][,le=<0|1>][,tu=<code>:<value>[;<code>:<value>...]|-]
+1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off][,le=<0|1>][,tu=<code>:<value>[;<code>:<value>...]|-][,im=<0|1>]
 ```
 
 Every datagram is answered, and the reply is the receipt: it is bound to the
@@ -357,10 +361,20 @@ hours with the offset in force when the reply is built (local 00-07 in BST is
 `gw=23-6`), the span possibly wrapping midnight; or `gw=off` when it is
 disabled (switch off, or both hours equal).
 
+`gx=` is what the GNSS backup supply does while the unit runs on the backup
+module (`device`.`gnss_bk_window`, `gnss_bk_hour_from`, `gnss_bk_hour_to`), the
+last token of every reply: `gx=off` (the default) keeps the supply on, `gx=<from>-<to>`
+drops it in its own window (whole UTC hours, converted like `gw=`, possibly
+wrapping midnight) and ignores the regular window and the fixed daily cut-off,
+`gx=def` follows the regular `gw=` window and cut-off exactly as on normal power.
+On regular power it changes nothing. A unit that does not know it ignores it.
+
 `le=` is whether the unit's status LEDs may light (`device`.`leds`), sent on
 every reply straight after `gw=`: `le=1` (the default) lets them light, `le=0`
 keeps them all dark. The API sets it (`leds=<0|1>` in POST /api/1.0/command,
 not queued; `le` in /api/1.0/config).
+
+`im=` (always last) is installation mode: 1 while `device.install_mode` is set. A unit in that mode polls every 10 s and acts on the `instreport` / `instenable` commands, which the API accepts only while the mode is on.
 
 `tu=` carries the runtime tunables, the per-device overrides of values the
 unit is built with, after `le=` on every reply: the non-NULL columns as

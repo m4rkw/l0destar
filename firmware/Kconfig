@@ -366,6 +366,31 @@ config APP_KLINE_DTC_ON_DELAY_MS
 	  The engine ECU needs a moment to boot and start answering after the
 	  key turns.  Reading too early just times out and costs a session.
 
+menu "Installation mode"
+
+config APP_INSTALL_MODE
+	bool "Installation mode: a unit being fitted, driven from the app"
+	default y
+	help
+	  A mode the server switches (im=<0|1> on every reply).  A unit being
+	  fitted may have no 12 V and no antenna yet, so while it is on the unit
+	  keeps trying for a connection and holds it, polls the server every 10 s
+	  for the commands `instreport` (a quick self-test, sent as ir= and as one
+	  alert) and `instenable` (get a GNSS fix, then leave the mode), and raises
+	  no other alerts.  The mode is kept across soft resets in retained RAM.
+	  Say n to leave the code out.
+
+config APP_INSTALL_MODE_DEFAULT
+	bool "Start in installation mode after a power loss or pin reset"
+	depends on APP_INSTALL_MODE
+	default n
+	help
+	  What the unit starts in when its retained RAM holds no note of the mode:
+	  first power-up, power loss, pin reset.  y for an image flashed to a new
+	  unit; the first reply from the server says otherwise if it should not be.
+
+endmenu
+
 menu "Track mode"
 
 config APP_TRACK_MODE

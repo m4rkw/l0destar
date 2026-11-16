@@ -32,6 +32,7 @@
 
 #include "app.h"
 #include "config.h"
+#include "install.h"
 
 LOG_MODULE_REGISTER(alert, CONFIG_APP_LOG_LEVEL);
 
@@ -75,7 +76,7 @@ static uint32_t next_aid(void)
     return ++s_aid;
 }
 
-void alert_enqueue(const char *msg, int priority)
+static void enqueue(const char *msg, int priority)
 {
     int slot = -1;
 
@@ -105,6 +106,35 @@ void alert_enqueue(const char *msg, int priority)
     LOG_INF("queued: %s", msg);
 #endif
 }
+
+/* The one gate for installation mode: a unit being fitted raises no alerts
+ * (what looks like a fault is mostly "not installed yet").  The install
+ * check's own summary comes in through alert_enqueue_install(). */
+void alert_enqueue(const char *msg, int priority)
+{
+    if (install_active()) {
+        return;
+    }
+    enqueue(msg, priority);
+}
+
+#if IS_ENABLED(CONFIG_APP_INSTALL_MODE)
+void alert_enqueue_install(const char *msg, int priority)
+{
+    enqueue(msg, priority);
+}
+
+/* Entering the mode: what was queued before it is not sent. */
+void alert_drop_queued(void)
+{
+    for (int i = 0; i < ALERT_QUEUE_SIZE; i++) {
+        if (s_alert[i].state == ALERT_QUEUED) {
+            s_alert[i].state = ALERT_FREE;
+            alert_count--;
+        }
+    }
+}
+#endif
 
 /* The queued alert raised first, or -1: sent in the order they were raised. */
 static int next_queued(void)

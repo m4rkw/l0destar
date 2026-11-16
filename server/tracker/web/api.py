@@ -55,6 +55,9 @@ SERVER_SIDE_SETTINGS = {
     'gnss_off_window': 'gnss_off_window',
     'gnss_off_hour_from': 'gnss_off_hour_from',
     'gnss_off_hour_to': 'gnss_off_hour_to',
+    'gnss_bk_window': 'gnss_bk_window',
+    'gnss_bk_hour_from': 'gnss_bk_hour_from',
+    'gnss_bk_hour_to': 'gnss_bk_hour_to',
     'leds': 'leds',
     'backup_interval': 'backup_int',
     # The engine-off reporting schedule, as JSON with '|' for each comma (a
@@ -80,6 +83,9 @@ CONFIG_FIELDS = {
     'gw': 'gnss_off_window',
     'gwf': 'gnss_off_hour_from',
     'gwt': 'gnss_off_hour_to',
+    'gwb': 'gnss_bk_window',
+    'gwbf': 'gnss_bk_hour_from',
+    'gwbt': 'gnss_bk_hour_to',
     'le': 'leds',
     **{code: column for code, column, _, _ in telemetry.TUNABLES},
 }
@@ -101,6 +107,9 @@ SETTING_RANGES = {
     'gnss_off_window': (0, 1),
     'gnss_off_hour_from': (0, 23),
     'gnss_off_hour_to': (0, 23),
+    'gnss_bk_window': (0, 2),
+    'gnss_bk_hour_from': (0, 23),
+    'gnss_bk_hour_to': (0, 23),
     'leds': (0, 1),
     **telemetry.TUNABLE_RANGES,
 }
@@ -459,6 +468,8 @@ def get_config():
     # What the unit reported it was built with, and the value in use (the
     # override if set, else the built value, else null).
     result['tunables_built'] = telemetry.tunables_built(device)
+    (result['install_mode'], result['install_report'],
+     result['install_enable']) = telemetry.install_state(device)
     result['tunables'] = telemetry.tunables_effective(device)
     # The engine-off reporting schedule (null if none) and the interval the
     # server would send at this moment: "int" is only what applies when no
@@ -481,11 +492,19 @@ def update_config():
     if failure:
         return failure
 
-    unknown = sorted(set(data) - set(CONFIG_FIELDS) - {'imei', 'device_id', 'isch'})
+    unknown = sorted(set(data) - set(CONFIG_FIELDS)
+                     - {'imei', 'device_id', 'isch', 'install_mode'})
     if unknown:
         return error('unknown setting: %s' % ', '.join(str(k) for k in unknown))
 
     updates = []
+    if 'install_mode' in data:
+        mode = data['install_mode']
+        if isinstance(mode, int) and mode in (0, 1):
+            mode = bool(mode)
+        if not isinstance(mode, bool):
+            return error('install_mode must be true or false')
+        updates.append(('install_mode', int(mode)))
     if 'isch' in data:
         text, problem = _schedule(data['isch'])
         if problem:
@@ -573,6 +592,8 @@ def queue_command():
         elif part:
             if part.startswith('int=') and _setting('int', part[4:]) is None:
                 return _setting_error('int', 'int')
+            if part in ('instreport', 'instenable') and not device.get('install_mode'):
+                return error('%s needs installation mode (set install_mode first)' % part)
             if part.startswith('gnssbk='):
                 if part[7:] not in ('0', '1'):
                     return error('gnssbk must be 0 or 1')

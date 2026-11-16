@@ -44,7 +44,8 @@ LOG_MODULE_REGISTER(extflash, CONFIG_APP_LOG_LEVEL);
 
 BUILD_ASSERT(PIN_FLASH_SCK >= 0 && PIN_FLASH_SDI >= 0 &&
 	     PIN_FLASH_SDO >= 0 && PIN_FLASH_CS >= 0,
-	     "CONFIG_APP_FLASH_BACKLOG needs APP_PIN_FLASH_SCK, _SDI, _SDO and _CS");
+	     "a board with the external flash (APP_BOARD_HAS_EXT_FLASH) needs APP_PIN_FLASH_SCK, "
+	     "_SDI, _SDO and _CS");
 
 /* Whether the bus is the CAN controller's.  The MCP2518FD is on a switched rail
  * and clamps its I/O to it, so the bus may only be driven while that rail is up
@@ -86,8 +87,10 @@ BUILD_ASSERT(PIN_FLASH_SCK >= 0 && PIN_FLASH_SDI >= 0 &&
 #define PAGE_BYTES   FLASHLOG_PAGE_SIZE
 #define CHIP_BYTES   (CHIP_SECTORS * SECTOR_BYTES)
 
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
 BUILD_ASSERT(CONFIG_APP_FLASH_BACKLOG_SECTORS <= POS_SECTORS,
 	     "APP_FLASH_BACKLOG_SECTORS leaves out the sectors kept for log lines");
+#endif
 
 /* Waits.  The datasheet's maxima are 10 ms for a page program (ultra-low-power
  * mode; 4 ms in high-performance mode) and 240 ms for a sector erase (both);
@@ -127,6 +130,10 @@ static uint8_t spi_read_byte(void)
 	return v;
 }
 
+/* From here to extflash_dev() is the backlog's: the reads, programs and erases flashlog
+ * asks for.  A board that has the chip without the backlog needs only the part
+ * that puts it to sleep (begin, end, park, init). */
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
 static void spi_write_cmd_addr(uint8_t cmd, uint32_t addr)
 {
 	spi_write_byte(cmd);
@@ -256,6 +263,7 @@ const struct flashlog_dev *extflash_dev(uint32_t sectors)
 	s_dev.sectors = sectors;
 	return &s_dev;
 }
+#endif /* CONFIG_APP_FLASH_BACKLOG */
 
 int extflash_begin(void)
 {
@@ -279,6 +287,9 @@ int extflash_begin(void)
 
 void extflash_end(void)
 {
+	/* The chip ignores deep power-down while it is still programming or erasing.
+	 * It is never busy here: program and erase wait for it before they return
+	 * (a chip that overran their timeouts is broken, and not waited for again). */
 	cs(0);
 	spi_write_byte(CMD_DP);
 	cs(1);
@@ -351,6 +362,7 @@ static bool read_id(uint8_t id[3])
 	return id[0] == ID_MANUF && id[1] == ID_TYPE && id[2] == ID_DENSITY;
 }
 
+#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
 int extflash_check(void)
 {
 	uint8_t id[3];
@@ -385,3 +397,4 @@ int extflash_probe(uint32_t *sectors)
 	*sectors = MIN((uint32_t)CONFIG_APP_FLASH_BACKLOG_SECTORS, POS_SECTORS);
 	return 0;
 }
+#endif /* CONFIG_APP_FLASH_BACKLOG */

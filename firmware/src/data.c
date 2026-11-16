@@ -13,6 +13,7 @@
 #include "app.h"
 #include "backup_log.h"
 #include "hw_domain.h"
+#include "install.h"
 #include "tunables.h"
 #include "tunables_core.h"
 
@@ -336,6 +337,24 @@ static void append_sync_fields(void)
         }
     }
 
+    /* fc=: the flash log's wear, in erase cycles of its most used sector,
+     * whenever it has changed since it was last put in a record.  Known only
+     * once the log has been opened this boot, so a unit that never spills
+     * never sends it. */
+    {
+        static int32_t s_fc_sent = -1;
+        int32_t fc = databuf_flash_cycles();
+
+        if (fc >= 0 && fc != s_fc_sent) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1, ",fc=%d", (int)fc);
+            if (n > 0 && n < DATA_LIMIT - data_index - 1) {
+                data_index += n;
+                s_fc_sent = fc;
+            }
+        }
+    }
+
     /* This record's own id.  Every record carries one; the server keeps it
      * so a later record can refer back to this one. */
     s_last_rec_id = next_rec_id();
@@ -372,6 +391,17 @@ static void append_sync_fields(void)
                 data_index += n;
                 cmd_ack_taken();
             }
+        }
+    }
+
+    /* Installation mode (install.c): im=1 while in it, ir= and ie= once. */
+    {
+        int in = install_fields(&data_current[data_index],
+                                DATA_LIMIT - data_index - 1);
+
+        if (in > 0 && in < DATA_LIMIT - data_index - 1) {
+            data_index += in;
+            install_fields_taken();
         }
     }
 
@@ -1067,6 +1097,72 @@ int collect_track_data(void)
 }
 #endif /* CONFIG_APP_TRACK_MODE */
 
+#if IS_ENABLED(CONFIG_APP_INSTALL_MODE)
+/* Installation mode's status record.  Not collect_data(): that one waits for a
+ * fix and drops the record without one, and a unit being fitted has none.  The
+ * position is the last known (0.000000 if there never was one), with sats and
+ * hdop only while the fix is recent, and cl=1 when it is not a live one. */
+int collect_install_data(void)
+{
+    char now_iso[40];
+    int n;
+    float v = battery_read_voltage();
+    bool fresh = g_gnss.valid && k_uptime_get() - g_gnss.fix_uptime_ms < 10000;
+    const char *lat = g_gnss.lat_str[0] ? g_gnss.lat_str : "0.000000";
+    const char *lon = g_gnss.lon_str[0] ? g_gnss.lon_str : "0.000000";
+
+    if (v < 0.0f) {
+        v = 0.0f;
+    }
+    data_gap_reset();
+    if (data_index > 0 && data_index < DATA_LIMIT - 1) {
+        data_current[data_index++] = '\n';
+    }
+    n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+        "%s,%s,%s,0.00,%.2f,%.2f,%ld,%ld,%.2f,%d,%lld,%d",
+        fresh && g_gnss.time_iso[0] ? g_gnss.time_iso
+                                    : clock_timestamp(now_iso, sizeof(now_iso)),
+        lat, lon, (double)g_gnss.altitude_m, (double)g_gnss.heading_deg,
+        fresh ? g_gnss.hdop_x10 : 0L, fresh ? g_gnss.sats : 0L, (double)v,
+        ignition == 0 ? 1 : 0, k_uptime_get() / 1000, 0);
+    if (n > 0 && n < DATA_LIMIT - data_index - 1) data_index += n;
+
+    int ax, ay, az;
+    if (accel_read(&ax, &ay, &az) == 0) {
+        n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+                     ",ax=%d;ay=%d;az=%d", ax, ay, az);
+        if (n > 0) data_index += n;
+    }
+    if (g_cell.valid) {
+        if (network_ready && SIGNAL_SAMPLE_MS > 0 &&
+            k_uptime_get() - g_cell.signal_ms >= SIGNAL_SAMPLE_MS) {
+            modem_read_signal();
+        }
+        n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+                     ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=%d;rat=%s",
+                     g_cell.mcc, g_cell.mnc, g_cell.tac, g_cell.cid,
+                     fresh ? 0 : 1, modem_rat());
+        if (n > 0) data_index += n;
+        if (g_cell.signal_valid &&
+            k_uptime_get() - g_cell.signal_ms <= SIGNAL_FRESH_MS) {
+            n = snprintf(&data_current[data_index],
+                         DATA_LIMIT - data_index - 1,
+                         ",rsrp=%d;snr=%d;band=%d",
+                         g_cell.rsrp_dbm, g_cell.snr_db, g_cell.band);
+            if (n > 0) data_index += n;
+        }
+    }
+    n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
+                 ",up=%lld", k_uptime_get() / 1000);
+    if (n > 0) data_index += n;
+
+    append_sync_fields();
+    data_current[data_index] = '\0';
+    last_record_stale = !fresh;
+    return 1;
+}
+#endif /* CONFIG_APP_INSTALL_MODE */
+
 /* Send one pre-formatted line as its own datagram — used for the "D,"
  * fault-code report.  Deliberately not routed through the telemetry buffer:
  * that buffer is discarded when a collection finds no fix, and a fault-code
@@ -1106,7 +1202,9 @@ static void pending_cmd_add(const char *cmd)
         size_t len = comma ? (size_t)(comma - p) : strlen(p);
         bool routine = (len >= 5 && strncmp(p, "fota=", 5) == 0) ||
                        (len >= 6 && strncmp(p, "track=", 6) == 0) ||
-                       (len >= 3 && strncmp(p, "gb=", 3) == 0);
+                       (len >= 3 && strncmp(p, "gb=", 3) == 0) ||
+                       (len >= 3 && strncmp(p, "im=", 3) == 0) ||
+                       (len >= 3 && strncmp(p, "gx=", 3) == 0);
 
         if (len > 0 && !routine) {
             if (used + 1 + len < sizeof(merged)) {

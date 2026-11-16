@@ -365,6 +365,8 @@ static void fl_alert(const char *what)
  * there.  Nothing is said when the ID could not be read yet (a bus shared with
  * the CAN controller whose rail has not come up): the first spill finds out, as
  * it always did. */
+static bool fl_open(void);
+
 void databuf_flash_report(void)
 {
     uint8_t id[3];
@@ -376,6 +378,17 @@ void databuf_flash_report(void)
     if (err == 0) {
         LOG_INF("flash backlog: chip ready, ID %02X %02X %02X (MX25R6435F)",
                 id[0], id[1], id[2]);
+        /* Open the log now, so the wear counter (fc=) is known from the first
+         * record of the boot and not only after the first spill.  Opening
+         * reads the sector headers and writes nothing.  A failure is left for
+         * the first spill to find, as it always was: the state is put back so
+         * that spill asks the chip again. */
+        if (s_fl_state == FL_NEW && extflash_begin() == 0) {
+            if (!fl_open()) {
+                s_fl_state = FL_NEW;
+            }
+            extflash_end();
+        }
         return;
     }
 
@@ -421,6 +434,11 @@ static bool fl_open(void)
     LOG_INF("flash backlog: %u sectors, %u erase cycles used so far",
             (unsigned)sectors, (unsigned)flashlog_cycles(&s_fl));
     return true;
+}
+
+int32_t databuf_flash_cycles(void)
+{
+    return s_fl_state == FL_UP ? (int32_t)flashlog_cycles(&s_fl) : -1;
 }
 
 /* Starts a session on the flash, opening the log the first time.  False, and
@@ -585,6 +603,13 @@ static size_t fl_pack(char *out, size_t max, int64_t now_s, int *packed_out,
         if (m < 0) {
             *drained = false;
             break;
+        }
+        /* fl=1: this record waited in the external flash, so the server can
+         * count how much the tier is used.  Left off, not failed, when the
+         * datagram has no room for the four bytes. */
+        if (used + sep + (size_t)m + 5 <= max) {
+            memcpy(&out[used + sep + (size_t)m], ",fl=1", 5);
+            m += 5;
         }
         if (sep) {
             out[used] = '\n';

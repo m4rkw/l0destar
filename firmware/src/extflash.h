@@ -5,7 +5,9 @@
  * Every use is a session: extflash_begin(), whatever reads and writes, then
  * extflash_end().  Between sessions the flash is in deep power-down (0.007 uA
  * typical, against 5 to 24 uA in standby), the SPI pins are idle and the chip
- * select is high.  extflash_init() puts it there at boot.
+ * select is high.  extflash_init() puts it there at boot, on every board that
+ * has the chip (APP_BOARD_HAS_EXT_FLASH), whether or not the backlog uses it:
+ * only the backlog's own parts (below) need APP_FLASH_BACKLOG.
  *
  * SHARED BUS
  * ----------
@@ -64,7 +66,9 @@ void extflash_end(void);
  * first one of a boot also reads its ID, for extflash_boot_check(). */
 void extflash_park(void);
 
-/* Inside a session: checks the chip is the one this was written for and
+/* The rest of this is the backlog's (APP_FLASH_BACKLOG builds only).
+ *
+ * Inside a session: checks the chip is the one this was written for and
  * writable, and says how many sectors the backlog may use (at most the chip's
  * first 2016: the last 32 are kept for log lines).  0, -ENODEV for
  * another chip, -EACCES if its block protection is set, -ETIMEDOUT if it is

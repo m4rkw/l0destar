@@ -24,7 +24,8 @@
 #include "hw_common.h"
 #include "hw_domain.h"
 #include "pins.h"
-#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+#include "install.h"
+#if IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_FLASH)
 #include "extflash.h"
 #endif
 
@@ -1176,6 +1177,21 @@ static void do_sleep(void)
     for (;;) {
         watchdog_kick();
 
+        /* Installation mode switched on by a reply during the last pass: stop
+         * sleeping.  Same set-up as a key wake; install_run() takes over from
+         * the main loop. */
+        if (install_active()) {
+            console_resume();
+            atomic_set(&s_report_owed, 0);
+            ign_irq_disable();
+            accel_irq_disable();
+            hw_power_wake();
+            hw_aux_power_on();
+            led_on();
+            s_state = STATE_IDLE;
+            return;
+        }
+
         /* pick shortest wake interval (accel uses interrupt, not polling) */
         int sleep_secs = 3600;
         if (telemetry_remaining > 0 && telemetry_remaining < sleep_secs)
@@ -1190,7 +1206,7 @@ static void do_sleep(void)
         if (resend_owed && sleep_secs > RESEND_POLL_S)
             sleep_secs = RESEND_POLL_S;   /* notice the registration */
         if (sleep_secs < 1) sleep_secs = 1;
-        hw_gnss_backup_cutoff(sleep_secs);
+        hw_gnss_backup_cutoff(sleep_secs, s_backup_seen);
 
         k_sem_reset(&s_wake_sem);
         /* Re-arm the ignition wake after the reset, never before it: the
@@ -1313,6 +1329,7 @@ static void do_sleep(void)
                     backup_wake = true;
                     backup_woke = true;
                     s_backup_seen = true;
+                    hw_gnss_backup_on_battery(true);
                     telemetry_remaining = 0;
                 } else if (on_ms >= IGN_WAKE_DEBOUNCE_MS) {
                     /* Long enough for a key: a short key cycle, which IDLE
@@ -1470,6 +1487,7 @@ static void do_sleep(void)
                     backup_wake = true;
                     backup_woke = true;
                     s_backup_seen = true;
+                    hw_gnss_backup_on_battery(true);
                     telemetry_remaining = 0;
                 }
             } else if (s_backup_seen && v > BACKUP_SUPPLY_MAX) {
@@ -1477,6 +1495,7 @@ static void do_sleep(void)
                 LOG_WRN("sleep: rail %.2fV - car supply back, reporting it",
                         (double)v);
                 s_backup_seen = false;
+                hw_gnss_backup_on_battery(false);
                 restore_wake = true;
             }
         }
@@ -2122,7 +2141,8 @@ static void do_ignition_sleep(void)
                 fota_check(FOTA_CTX_AWAKE);
 
                 /* Or switched track mode on: the main loop picks it up. */
-                if (IS_ENABLED(CONFIG_APP_TRACK_MODE) && g_settings.track_mode) {
+                if ((IS_ENABLED(CONFIG_APP_TRACK_MODE) && g_settings.track_mode) ||
+                    install_active()) {     /* installation mode: likewise */
                     s_state = STATE_IDLE;
                     return;
                 }
@@ -2300,6 +2320,40 @@ static void read_imei(void)
     }
 }
 
+#if IS_ENABLED(CONFIG_APP_INSTALL_MODE)
+/* Installation mode: bring-up steps that failed at boot and are tried again
+ * from its loop, every 30 s, each on its own (a failed one never stops the
+ * rest).  Set by main(); only ever true with the mode on. */
+static bool s_bu_modem_failed, s_bu_tls_failed, s_bu_gnss_failed;
+
+static void install_bringup_retry(void)
+{
+    static int64_t last_ms;
+
+    if (k_uptime_get() - last_ms < 30000) {
+        return;
+    }
+    last_ms = k_uptime_get();
+    if (s_bu_modem_failed && modem_init() == 0) {
+        modem_on_registered(on_registered);
+        s_bu_modem_failed = false;
+        s_bu_tls_failed = true;             /* never tried without a modem */
+        install_note(INSTALL_PART_MODEM, true);
+    }
+    if (!s_bu_modem_failed && g_settings.imei[0] == '\0') {
+        read_imei();
+    }
+    if (!s_bu_modem_failed && s_bu_tls_failed && modem_provision_tls() == 0) {
+        s_bu_tls_failed = false;
+        install_note(INSTALL_PART_TLS, true);
+    }
+    if (s_bu_gnss_failed && gnss_init() == 0) {
+        s_bu_gnss_failed = false;
+        install_note(INSTALL_PART_GNSS, true);
+    }
+}
+#endif
+
 int main(void)
 {
     LOG_INF("=== l0destar firmware boot (v%s, board %s) ===",
@@ -2341,6 +2395,10 @@ int main(void)
         watchdog_init();
     }
 
+    /* Installation mode: the retained note, or the compiled default.  Before
+     * anything can queue an alert, which the mode drops. */
+    install_init();
+
     /* Before anything tries to update again: work out whether the update
      * staged before the last reboot is the one now running.  It queues an
      * alert and a line for the server if MCUboot reverted it, which is what
@@ -2373,11 +2431,12 @@ int main(void)
     }
 
     hw_domain_init();
-#if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
+#if IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_FLASH)
     /* The flash into deep power-down, where it stays until the backlog needs
      * it: in standby it would draw 5 to 24 uA for as long as the unit is up.
-     * Its ID is read on the way, once; databuf_flash_report() below says what
-     * it found. */
+     * Done whether or not the backlog is built, so a chip nobody uses is not
+     * left awake.  Its ID is read on the way, once; databuf_flash_report()
+     * below says what it found. */
     extflash_init();
 #endif
     hw_aux_power_on();
@@ -2514,30 +2573,58 @@ int main(void)
             ignition_read() == 0 ? "ON" : "OFF",
             (double)battery_read_voltage());
 
+    /* Installation mode: a part that does not come up is noted and the rest
+     * carries on (retried from the mode's loop), where otherwise the unit
+     * gives up here. */
+    bool modem_ok = true;
+
     if (modem_init()) {
         LOG_ERR("modem init failed");
-        return 0;
+        if (!install_active()) {
+            return 0;
+        }
+        modem_ok = false;
+#if IS_ENABLED(CONFIG_APP_INSTALL_MODE)
+        s_bu_modem_failed = s_bu_tls_failed = true;
+#endif
+        install_note(INSTALL_PART_MODEM, false);
+    } else {
+        modem_on_registered(on_registered);
+        /* Before connecting: a modem that registers after the start-up wait
+         * would otherwise leave the IMEI unset, and every send dropped, for
+         * the whole boot. */
+        read_imei();
+        if (modem_provision_tls()) {
+            LOG_ERR("TLS provisioning failed");
+            if (!install_active()) {
+                return 0;
+            }
+#if IS_ENABLED(CONFIG_APP_INSTALL_MODE)
+            s_bu_tls_failed = true;
+#endif
+            install_note(INSTALL_PART_TLS, false);
+        }
     }
-    modem_on_registered(on_registered);
-    /* Before connecting: a modem that registers after the start-up wait
-     * would otherwise leave the IMEI unset, and every send dropped, for the
-     * whole boot. */
-    read_imei();
-    if (modem_provision_tls()) {
-        LOG_ERR("TLS provisioning failed");
-        return 0;
-    }
+    bool gnss_ok = true;
+
     if (gnss_init()) {
         LOG_ERR("gnss init failed");
-        return 0;
+        if (!install_active()) {
+            return 0;
+        }
+        gnss_ok = false;
+#if IS_ENABLED(CONFIG_APP_INSTALL_MODE)
+        s_bu_gnss_failed = true;
+#endif
+        install_note(INSTALL_PART_GNSS, false);
     }
     /* The external receiver (v4.0) has no assistance to fetch. */
-    if (!IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_GNSS) && agnss_init()) {
+    if (gnss_ok && !IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_GNSS) && agnss_init()) {
         LOG_WRN("A-GNSS init failed — will run without assistance");
     }
 
     led_boot_animation();
-    if (modem_connect() == 0) {
+    if (modem_ok && modem_connect() == 0) {
         if (g_settings.imei[0] == '\0') {
             read_imei();   /* the read above failed */
         }
@@ -2580,7 +2667,7 @@ int main(void)
         LOG_INF("no network yet — skipping A-GNSS, GNSS will ask later");
     }
 
-    if (s_state != STATE_SLEEP) {
+    if (s_state != STATE_SLEEP && gnss_ok) {
         gnss_start();
     }
 
@@ -2621,6 +2708,15 @@ int main(void)
 
     for (;;) {
         watchdog_kick();
+#if IS_ENABLED(CONFIG_APP_INSTALL_MODE)
+        /* Installation mode takes over everything below until the server
+         * switches it off (install.c); then the tracker starts from idle. */
+        if (install_active()) {
+            install_run(install_bringup_retry);
+            s_state = STATE_IDLE;
+            continue;
+        }
+#endif
         crash_check();
         handle_ignition_state();
 #if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)

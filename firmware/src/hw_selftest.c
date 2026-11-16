@@ -68,6 +68,81 @@ static int wait_rail(int pin, int expect, const char *label)
 	}
 }
 
+/* A sense line read once it has had up to timeout_ms to reach `expect`;
+ * quiet, unlike wait_rail().  False on a read error too. */
+static bool rail_reads(int pin, int expect, int timeout_ms)
+{
+	for (int waited = 0;; waited += RAIL_POLL_MS) {
+		if (gpio_pin_get(hw_gpio0, pin) == expect) {
+			return true;
+		}
+		if (waited >= timeout_ms) {
+			return false;
+		}
+		k_msleep(RAIL_POLL_MS);
+	}
+}
+
+/* One request/release cycle of a domain with the senses read in between, for
+ * installation mode's report.  Returns false if the domain did not come up or
+ * a sense line disagreed.  A domain somebody else already holds is left as it
+ * was, so its fall is not waited for. */
+static bool domain_cycle(enum hw_domain d, int pin_a, int up_a, int pin_b, int up_b)
+{
+	bool held = hw_domain_is_on(d);
+	bool ok = true;
+
+	if (hw_domain_request(d, HW_DOMAIN_USER_TEST)) {
+		return false;
+	}
+	if (pin_a >= 0 && !rail_reads(pin_a, up_a, RAIL_OFF_TIMEOUT_MS)) {
+		ok = false;
+	}
+	if (pin_b >= 0 && !rail_reads(pin_b, up_b, RAIL_OFF_TIMEOUT_MS)) {
+		ok = false;
+	}
+	hw_domain_release(d, HW_DOMAIN_USER_TEST);
+	if (!held) {
+		if (pin_a >= 0 && !rail_reads(pin_a, !up_a, RAIL_OFF_TIMEOUT_MS)) {
+			ok = false;
+		}
+		if (pin_b >= 0 && !rail_reads(pin_b, !up_b, RAIL_OFF_TIMEOUT_MS)) {
+			ok = false;
+		}
+	}
+	return ok;
+}
+
+void hw_rail_check_all(signed char out[HW_RAIL_COUNT])
+{
+	for (int i = 0; i < HW_RAIL_COUNT; i++) {
+		out[i] = -1;
+	}
+	if (PIN_GPS_RAIL_ST >= 0) {
+		out[HW_RAIL_GPS3V3] = hw_domain_is_on(HW_DOMAIN_AUX) &&
+				      !hw_domain_faulted(HW_DOMAIN_AUX) &&
+				      rail_reads(PIN_GPS_RAIL_ST, 1, 50);
+	}
+	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_CAN) && PIN_CAN_RAIL_ST >= 0) {
+		out[HW_RAIL_CAN3V3] = domain_cycle(hw_can_domain(), PIN_CAN_RAIL_ST, 1,
+						   -1, 0);
+	}
+	if (IS_ENABLED(CONFIG_APP_BOARD_HAS_KLINE) &&
+	    (PIN_K3V3_RAIL_ST >= 0 || PIN_K12V_RAIL_ST >= 0)) {
+		bool ok = domain_cycle(HW_DOMAIN_K, PIN_K3V3_RAIL_ST, 1,
+				       PIN_K12V_RAIL_ST, rail_level(1));
+
+		/* One enable gates both rails; the cycle cannot say which of the
+		 * two disagreed, so a failure is reported against both. */
+		if (PIN_K3V3_RAIL_ST >= 0) {
+			out[HW_RAIL_K3V3] = ok;
+		}
+		if (PIN_K12V_RAIL_ST >= 0) {
+			out[HW_RAIL_K12V] = ok;
+		}
+	}
+}
+
 int hw_selftest(void)
 {
 	int fails = 0;
@@ -137,6 +212,13 @@ int hw_selftest(void)
 int hw_selftest(void)
 {
 	return 0;
+}
+
+void hw_rail_check_all(signed char out[HW_RAIL_COUNT])
+{
+	for (int i = 0; i < HW_RAIL_COUNT; i++) {
+		out[i] = -1;
+	}
 }
 
 #endif

@@ -13,7 +13,7 @@ from flask import request
 
 from .. import config, db, interval_schedule
 from ..telemetry import (COMMAND_MAX_AGE_HOURS, TUNABLE_COLUMNS,
-                         tunables_built, tunables_effective)
+                         install_state, tunables_built, tunables_effective)
 
 
 def _named(value):
@@ -404,6 +404,13 @@ def summary(device, database=None, log=None):
         'gnss_off_hour_from': device.get('gnss_off_hour_from') or 0,
         'gnss_off_hour_to': (7 if device.get('gnss_off_hour_to') is None
                              else device['gnss_off_hour_to']),
+        # The GNSS backup supply on backup power: 0 keep it on (the default),
+        # 1 drop it in its own window (hours in server local time), 2 follow
+        # the regular window above.
+        'gnss_bk_window': device.get('gnss_bk_window') or 0,
+        'gnss_bk_hour_from': device.get('gnss_bk_hour_from') or 0,
+        'gnss_bk_hour_to': (7 if device.get('gnss_bk_hour_to') is None
+                            else device['gnss_bk_hour_to']),
         'leds': 0 if device.get('leds') == 0 else 1,
         # The engine-off reporting schedule (a list of rules, null if none)
         # and the interval the server would send now.
@@ -413,6 +420,14 @@ def summary(device, database=None, log=None):
         **{column: device.get(column) for column in TUNABLE_COLUMNS},
         'tunables_built': tunables_built(device),
         'tunables': tunables_effective(device),
+        # Erase cycles of the unit's flash log's most used sector (rated
+        # 100,000), as last reported, and when it last changed.
+        'install_mode': install_state(device)[0],
+        'install_report': install_state(device)[1],
+        'install_enable': install_state(device)[2],
+        'flash_cycles': device.get('flash_cycles'),
+        'flash_cycles_at': (device['flash_cycles_at'].strftime('%Y-%m-%d %H:%M:%S')
+                            if device.get('flash_cycles_at') else None),
         'uptime': _nullable_float(log.get('uptime')),
         **config_state(device, database),
     }

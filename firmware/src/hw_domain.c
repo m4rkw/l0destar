@@ -186,13 +186,44 @@ void hw_gnss_backup_window(int from_utc, int to_utc)
 	s_win_to = to_utc;
 }
 
-/* In the window now; false without a clock, which holds the supply. */
+/* gx=: what the window and the fixed hour do while on the backup module.
+ * Keep the supply on until the server says otherwise.  Not kept across a
+ * reset. */
+static enum backup_gx_mode s_gx_mode = BACKUP_GX_KEEP;
+static int s_gx_from = -1;
+static int s_gx_to = -1;
+
+void hw_gnss_backup_gx(int mode, int from_utc, int to_utc)
+{
+	s_gx_mode = (enum backup_gx_mode)mode;
+	s_gx_from = from_utc;
+	s_gx_to = to_utc;
+}
+
+/* True while the backup module carries the tracker (main.c's s_backup_seen). */
+static bool s_on_backup;
+
+void hw_gnss_backup_on_battery(bool on_backup)
+{
+	s_on_backup = on_backup;
+}
+
+/* In the window that applies now (on backup power the gx= rule, else gw=);
+ * false without a clock, which holds the supply. */
 static bool bckp_window_now(void)
 {
 	int64_t ms;
+	int from = s_win_from, to = s_win_to;
 
-	return s_win_from >= 0 && date_time_now(&ms) == 0 &&
-	       backup_window_contains(ms / 1000, s_win_from, s_win_to);
+	if (s_on_backup && s_gx_mode == BACKUP_GX_KEEP) {
+		return false;
+	}
+	if (s_on_backup && s_gx_mode == BACKUP_GX_WINDOW) {
+		from = s_gx_from;
+		to = s_gx_to;
+	}
+	return from >= 0 && date_time_now(&ms) == 0 &&
+	       backup_window_contains(ms / 1000, from, to);
 }
 
 bool hw_gnss_backup_is_on(void)
@@ -589,7 +620,7 @@ void hw_domain_notify_set(enum hw_domain dom, hw_domain_notify_t cb)
 	}
 }
 
-void hw_gnss_backup_cutoff(int sleep_s)
+void hw_gnss_backup_cutoff(int sleep_s, bool on_backup)
 {
 	int64_t ms;
 
@@ -597,15 +628,16 @@ void hw_gnss_backup_cutoff(int sleep_s)
 		bckp_set(false);	/* the startup fix is done */
 		return;
 	}
-	if ((BCKP_OFF_HOUR < 0 && s_win_from < 0) || !s_bckp_on ||
+	if ((BCKP_OFF_HOUR < 0 && s_win_from < 0 &&
+	     !(on_backup && s_gx_mode == BACKUP_GX_WINDOW)) || !s_bckp_on ||
 	    hw_domain_is_on(HW_DOMAIN_AUX) || date_time_now(&ms) != 0) {
 		return;		/* nothing to drop, or no clock to judge by */
 	}
 	/* In the window, or about to enter it (the unit is not woken for the
-	 * start), or at the fixed hour. */
-	if (backup_window_contains(ms / 1000, s_win_from, s_win_to) ||
-	    (s_win_from >= 0 && backup_cutoff_due(ms / 1000, sleep_s, s_win_from)) ||
-	    backup_cutoff_due(ms / 1000, sleep_s, BCKP_OFF_HOUR)) {
+	 * start), or at the fixed hour; on the backup module the gx= rule
+	 * decides which of them count. */
+	if (backup_drop_due(s_gx_mode, s_gx_from, s_gx_to, s_win_from, s_win_to,
+			    BCKP_OFF_HOUR, on_backup, ms / 1000, sleep_s)) {
 		bckp_set(false);
 	}
 }
@@ -622,7 +654,11 @@ bool hw_gnss_backup_want(bool on)
 	}
 	s_bckp_hold = !on;
 	if (on) {
-		bckp_set(true);
+		/* On backup power a supply that was dropped is not raised ahead
+		 * of need: it comes up with the receiver's rail. */
+		if (!s_on_backup) {
+			bckp_set(true);
+		}
 	} else if (!hw_domain_is_on(HW_DOMAIN_AUX)) {
 		bckp_set(false);
 	}

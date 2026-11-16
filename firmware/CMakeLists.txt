@@ -48,6 +48,9 @@ else()
     target_sources(app PRIVATE src/transport.c)
 endif()
 
+# Installation mode (src/install.c; pure parts in install_core.h).
+target_sources_ifdef(CONFIG_APP_INSTALL_MODE app PRIVATE src/install.c)
+
 # Interactive bring-up rig (board_test.sh) — bench builds only.
 target_sources_ifdef(CONFIG_APP_BOARD_TEST app PRIVATE src/board_test.c)
 
@@ -60,8 +63,11 @@ target_sources_ifdef(CONFIG_APP_LTE_POWER_TEST app PRIVATE src/lte_power_test.c)
 # Backlog buffer for records that could not be sent.
 target_sources(app PRIVATE src/databuf.c)
 # Its overflow on an external flash: the wear-levelled log (host-tested in
-# tests/test_flashlog.py) and the MX25R6435F driver under it.
-target_sources_ifdef(CONFIG_APP_FLASH_BACKLOG app PRIVATE src/flashlog.c src/extflash.c)
+# tests/test_flashlog.py) and the MX25R6435F driver under it.  The driver is
+# built wherever the board has the chip, backlog or not: it puts the chip into
+# deep power-down at boot, and a chip nobody parks sits in standby.
+target_sources_ifdef(CONFIG_APP_FLASH_BACKLOG app PRIVATE src/flashlog.c)
+target_sources_ifdef(CONFIG_APP_BOARD_HAS_EXT_FLASH app PRIVATE src/extflash.c)
 # Warnings/errors captured for the server (see src/dbglog.c).
 target_sources_ifdef(CONFIG_APP_DEBUG_LOG app PRIVATE src/dbglog.c)
 

@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.4.125
+
+### GNSS backup supply: a separate rule on the backup module
+The receiver's backup supply can follow its own off rule while the unit runs on the battery backup module; regular power is unchanged.
+
+- `gx=<def|off|from-to>` rides every reply (UTC hours 0-23, may wrap midnight, from != to). `def`: on backup power the `gw=` window and fixed hour apply as on regular power. `off`: on backup power the supply is never dropped by window or fixed hour. `from-to`: on backup power only this window applies, not `gw=` and not the fixed hour.
+- Default until a reply says otherwise (and for a server that never sends it): keep on, as `gx=off`. Kept in memory only. Applied silently. `gb=0` holds the supply off in every mode.
+- On backup power a dropped GNSS backup supply is not raised again until a fix needs it (a server `gb=1` waits for the receiver's rail).
+- Status: host tests in `tests/test_backup_cutoff.py`; built for v3.3 and v4.0p2; not run on hardware.
+
+### Installation mode
+A unit being fitted (no 12 V, no antenna yet) can be put in installation mode from the app: it holds a connection, raises no alerts, and answers `instreport` and `instenable`.
+
+- `im=<0|1>` rides every reply; the unit converges on it, at runtime, without a reboot. Kept across soft resets in a checksummed `__noinit` note; power loss falls back to `APP_INSTALL_MODE_DEFAULT` (n) until a reply says otherwise. `APP_INSTALL_MODE=n` leaves the code out.
+- In the mode: no sleep or PSM, the modem is retried forever, a status record goes every 10 s (`im=1`) and its reply is read; every alert is dropped at `alert_enqueue()` except the install check's. A part that fails to come up (modem, TLS, GNSS) is noted and retried every 30 s, never fatal.
+- `instreport`: quick self-test sent as `ir=<name>:<1|0|->;...` (v12 ign gps3v3 can3v3 k3v3 k12v can imu ina modem gnss flash backup; rails only tested with 12 V present) and one alert "Install check: N ok, M failed: ...". Repeatable.
+- `instenable`: up to 120 s for a GNSS fix while still polling; `ie=1` and back to the tracker, or `ie=0:nofix` / `ie=0:gnssfail` and stay.
+- No FOTA check runs in the mode.
+- Status: 22 host tests (`tests/test_install.py`); built for the v3.3 bench profile with the mode on and off; not run on hardware.
+
+### Records buffered in the flash are marked
+A record that waited in the external flash backlog is sent with `fl=1`, and the server stores it as `log.flash`, so the use of the tier can be counted over time.
+
+- Server: nullable `log.flash` column (migration `2026-11-12_log_flash.sql`); the tag is left off rather than failing a datagram that has no room for it.
+- The unit also sends `fc=<n>`, the erase cycles of the flash log's most used sector (rated 100,000), whenever it changes and once the log has been opened, which now happens at boot (reading the sector headers, writing nothing; about 0.4 to 0.8 s estimated, not measured) rather than at the first spill; a failed open is left for the first spill to retry; the server keeps it on the device row (`flash_cycles`, `flash_cycles_at`, migration `2026-11-12_device_flash_cycles.sql`) and in `/devices`.
+- Status: host-built only; not run on hardware.
+
+### Flash chip put to sleep on every board that has it
+The external flash is put into deep power-down at boot whenever the board has it (`APP_BOARD_HAS_EXT_FLASH`), not only when the backlog is built. Before, a unit with the chip fitted and `APP_FLASH_BACKLOG` off never parked it, and it sat in standby (5 to 24 uA) for as long as the unit was up.
+
+- The driver is built for the board's chip; its reads, programs, erases and probe stay behind `APP_FLASH_BACKLOG`. With the backlog on, nothing changes: a session still ends with the power-down command. Boards without the chip are unchanged (the car's image has the same section sizes as 0.4.120's).
+- A chip stuck busy still refuses the power-down; not handled.
+- Status: host tests (the driver against the chip model, and a build without the backlog; mutation-checked); built for the bench, for the v4.0p2 config with the backlog off, and for the car. Bench-run on v4.0p2 with the backlog on: the chip is in deep power-down after boot, after the modem's first attach and send, and in the sleep loop. The backlog-off build is not run on hardware.
+
 ## 0.4.120
 
 ### System workqueue stack 1152 -> 2048 bytes
@@ -41,7 +75,7 @@ Fifteen build-time settings can now be overridden per unit from the app; the Kco
 - Status: host tests pass; built; not run on hardware.
 
 ### No false "Command acknowledged: gnssbk"
-The off window's own switch-off came back as `gb=0` and was acked as if the user had sent it. Only a real user change is acked now; status: not built or run.
+The off window's own switch-off came back as `gb=0` and was acked as if the user had sent it. The first `gb=` after a boot (the unit catching up with the server's mirror of its own cut-off) was acked too, which showed after every update. Only a real user change is acked now; status: built, not run on hardware.
 
 ### Hold breaker removed
 The hold breaker (`AT+CFUN=20/21` cycling to break an LTE RRC hold) is gone; it was never any use.

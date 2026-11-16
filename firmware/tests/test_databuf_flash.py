@@ -282,6 +282,7 @@ int h_sim_progs(void) { return sim_progs; }
 
 /* -- the entry points the tests use ---------------------------------------- */
 void h_flash_report(void) { databuf_flash_report(); }
+int32_t h_flash_cycles(void) { return databuf_flash_cycles(); }
 int h_push(const char *s) { return databuf_push_lines(s, strlen(s)); }
 int h_count(void) { return databuf_count(); }
 int h_ring_count(void) { return databuf_ring_count(); }
@@ -503,7 +504,9 @@ def test_records_are_whole_and_stamped_with_their_age_on_the_way_out(db):
     ages = 0
     for i in range(db.L.h_ndg()):
         for line in db.L.h_dg(i).split(b"\n"):
-            assert line.endswith(b",age=%d" % (500 - int(re.search(rb",up=(\d+)", line).group(1))))
+            # a record that came back from the flash carries ",fl=1" after the age
+            age = 500 - int(re.search(rb",up=(\d+)", line).group(1))
+            assert line.endswith(b",age=%d" % age) or line.endswith(b",age=%d,fl=1" % age)
             ages += 1
     assert ages == 100
 
@@ -901,12 +904,15 @@ def test_records_that_cannot_be_read_back_raise_no_alert(so_flash):
 
 # --------------------------------------------------------------------------- the chip's ID, said at boot
 
-def test_a_chip_that_answers_at_boot_says_so_in_one_line_and_raises_nothing(so_flash):
+def test_a_chip_that_answers_at_boot_says_so_and_opens_the_log_and_raises_nothing(so_flash):
     d = DB(so_flash)
+    assert d.L.h_flash_cycles() == -1               # not opened yet
     d.L.h_flash_report()
-    assert d.logs() == ["flash backlog: chip ready, ID C2 28 17 (MX25R6435F)"]
+    assert d.logs() == ["flash backlog: chip ready, ID C2 28 17 (MX25R6435F)",
+                        "flash backlog: 32 sectors, 0 erase cycles used so far"]
     assert d.alerts() == []
-    assert d.L.h_sim_sessions() == 0                # the driver read it at boot: the tier touches no chip here
+    assert d.L.h_flash_cycles() == 0                # the wear counter is known without a spill
+    assert d.L.h_sim_sessions() == 1                # one session to read the headers, nothing written
     d.check_flash_discipline()
 
 

@@ -71,11 +71,16 @@ void hw_domain_notify_set(enum hw_domain d, hw_domain_notify_t cb);
  * supply is dropped now, since the unit is not woken for it.  It comes back
  * with the receiver's rail, the next time anything requests it.  Does nothing
  * without the setting, or while the clock is not valid. */
-void hw_gnss_backup_cutoff(int sleep_s);
+void hw_gnss_backup_cutoff(int sleep_s, bool on_backup);
 
 /* The server's window, in UTC hours, in which the supply is kept off even
  * when the unit is driven (gw=).  -1 for either hour clears it. */
 void hw_gnss_backup_window(int from_utc, int to_utc);
+
+/* The server's rule for a unit on the backup module (gx=): mode is an
+ * enum backup_gx_mode (backup_cutoff.h), from/to the window for the window
+ * mode, else -1.  on_backup in hw_gnss_backup_cutoff() selects it. */
+void hw_gnss_backup_gx(int mode, int from_utc, int to_utc);
 
 /* True while the enable is driven high. */
 bool hw_gnss_backup_is_on(void);
@@ -89,6 +94,11 @@ bool hw_gnss_backup_is_on(void);
 /* The server wants the supply on (gb=1) or dropped (gb=0, held until the
  * ignition comes on).  True when that changed what the unit does. */
 bool hw_gnss_backup_want(bool on);
+
+/* Tell the domain code the backup module is (or no longer is) carrying the
+ * tracker.  While it is, a dropped GNSS backup supply is not raised again
+ * until the receiver's rail needs it, and the gx= rule picks the window. */
+void hw_gnss_backup_on_battery(bool on_backup);
 /* What the unit last was told: false while the supply is held down. */
 bool hw_gnss_backup_wanted(void);
 

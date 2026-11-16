@@ -8,7 +8,9 @@
 #include <zephyr/logging/log.h>
 
 #include "app.h"
+#include "backup_cutoff.h"
 #include "hw_domain.h"
+#include "install.h"
 
 LOG_MODULE_REGISTER(cmd, CONFIG_APP_LOG_LEVEL);
 
@@ -93,6 +95,22 @@ void cmd_run(char *cmd)
     char *tmp;
     long val;
 
+    /* Installation mode: im=<0|1> rides every reply.  Taken out first, so the
+     * rest of the reply is what track_echo() and the matches below always
+     * saw. */
+    install_take_token(cmd);
+
+    /* gx=: the off rule while on the backup module.  Taken out the same way,
+     * silent, not echoed. */
+    {
+        enum backup_gx_mode gm;
+        int gf, gt;
+
+        if (backup_gx_take(cmd, &gm, &gf, &gt)) {
+            hw_gnss_backup_gx(gm, gf, gt);
+        }
+    }
+
     if (!track_echo(cmd)) {
         LOG_INF("cmd: %s", cmd);
     }
@@ -149,7 +167,7 @@ void cmd_run(char *cmd)
 
     /* GNSS receiver backup supply: the server puts gb=<0|1> on every reply.
      * The first one after a boot is the unit catching up, applied silently
-     * (acked only if it changed anything); a later change is the user's, so
+     * (never acked); a later change is the user's, so
      * it is announced, acked, and turning it on asks the next wake for a
      * fresh fix, since the receiver lost what the supply was keeping. */
     tmp = strstr(cmd, "gb=");
@@ -161,9 +179,10 @@ void cmd_run(char *cmd)
         bool changed = hw_gnss_backup_want(want);
 
         if (last < 0) {
-            if (changed) {
-                ack_add("gnssbk");
-            }
+            /* Catching up after a boot: the unit comes up with the supply
+             * on and the server mirrors the cut-off it applied before the
+             * reboot, so a change here is not a command and is not acked. */
+            (void)changed;
         } else if (want != last && changed) {
             /* Only when the reply altered what the unit is doing: the supply
              * the ignition came on with is already on, and the server's
@@ -327,6 +346,19 @@ void cmd_run(char *cmd)
             ack_add(jobs[i].name);
         }
     }
+    /* Installation mode: only meaningful in it (the server refuses them
+     * otherwise); install.c's loop does the work. */
+    if (install_active()) {
+        if (strstr(cmd, "instreport")) {
+            install_request_report();
+            ack_add("instreport");
+        }
+        if (strstr(cmd, "instenable")) {
+            install_request_enable();
+            ack_add("instenable");
+        }
+    }
+
     if (strstr(cmd, "backlog")) {
         job_request(strstr(cmd, "backlog=flush") ? JOB_BACKLOG_FLUSH
                                                  : JOB_BACKLOG);

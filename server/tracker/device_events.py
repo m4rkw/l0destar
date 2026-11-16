@@ -315,10 +315,21 @@ def setting_text(column, value):
         return 'GNSS backup off window starts at %02d:00' % value
     if column == 'gnss_off_hour_to':
         return 'GNSS backup off window ends at %02d:00' % value
+    if column == 'gnss_bk_window':
+        return {0: 'GNSS backup supply kept on while on backup power',
+                1: 'GNSS backup off window on backup power set',
+                2: 'GNSS backup supply follows the regular window on backup power'
+                }.get(value, 'GNSS backup power setting changed')
+    if column == 'gnss_bk_hour_from':
+        return 'GNSS backup off window on backup power starts at %02d:00' % value
+    if column == 'gnss_bk_hour_to':
+        return 'GNSS backup off window on backup power ends at %02d:00' % value
     if column == 'leds':
         return 'LEDs ' + on
     if column == 'gnss_backup':
         return 'GNSS backup supply set to ' + on
+    if column == 'install_mode':
+        return 'Installation mode ' + on
     if column in TUNABLE_TEXT:
         return tunable_text(column, value)
     return 'Setting changed: %s=%s' % (column, value)

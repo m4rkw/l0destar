@@ -55,6 +55,7 @@ between sends.
 """
 
 import datetime
+import json
 import math
 import re
 import threading
@@ -105,6 +106,7 @@ EXTRA_KEYS = {
     'tm':  'track_mode',         # 1 = built in track mode (GNSS off, fast poll)
     'acc': 'imu_burst',          # IMU samples since the previous record
     'mv':  'motion',             # the motion through the gap before this fix
+    'fl':  'flash',              # 1 = the record waited in the external flash
     'rid': 'rec_id',             # the device's own id for this record
     'rsrp': 'rsrp',              # serving cell, dBm (AT%XMONITOR)
     'snr': 'snr',                # serving cell, dB
@@ -214,7 +216,7 @@ LOG_COLUMNS = [
 ] + [column for column, _, _ in OBD_FIELDS.values()] + [
     'combined_speed', 'track_mode', 'imu_burst', 'rec_id', 'wake_ms',
     'attach_ms', 'rsrp', 'snr', 'band',
-    'pathloss', 'rsrq', 'ce_level', 'tx_rep', 'motion',
+    'pathloss', 'rsrq', 'ce_level', 'tx_rep', 'motion', 'flash',
 ]
 
 _TIMESTAMP_RE = re.compile(
@@ -250,6 +252,19 @@ def parse_csv_line(line):
             continue
         if extra.startswith('rst='):
             data['rst'] = extra[4:]
+            continue
+        if extra.startswith('ir='):
+            # Installation check, name:state pairs joined by ';', taken whole.
+            data['install_report'] = extra[3:]
+            continue
+        if extra.startswith('ie='):
+            # Installation enable outcome: 1, or 0:<reason>.
+            data['install_enable'] = extra[3:]
+            continue
+        if extra.startswith('fc='):
+            # Erase cycles of the flash log's most used sector (flash backlog).
+            if extra[3:].isdigit() and len(extra) <= 13:
+                data['flash_cycles'] = int(extra[3:])
             continue
         if extra.startswith('tb='):
             # The built tunable values, code:value pairs joined by ';' like
@@ -425,6 +440,11 @@ def _build_entry(data, device, ip, previous):
     if motion and deadreckon.valid(motion):
         entry['motion'] = motion
 
+    # fl=1: the record was held in the unit's external flash before it was
+    # sent, so the use of the flash backlog can be counted over time.
+    if data.get('flash') == '1':
+        entry['flash'] = 1
+
     # OBD-II data read over the K wire.  Only present when the vehicle has a
     # K interface and the firmware is configured to poll it, and only for the
     # PIDs that ECU actually supports — so every field is independently
@@ -452,6 +472,34 @@ def _build_entry(data, device, ip, previous):
         entry['combined_speed'] = entry['speed']
 
     return entry
+
+
+def _utc_window(hour_from, hour_to, now):
+    """'<from>-<to>' in UTC whole hours for a server-local window, or 'off'
+    when the hours are equal.  The offset used is the one in force at now."""
+    if hour_from == hour_to:
+        return 'off'
+    now = (now or datetime.datetime.now()).astimezone()
+    offset = now.utcoffset()
+    shift = int(offset.total_seconds() // 3600) if offset else 0
+    return '%d-%d' % ((hour_from - shift) % 24, (hour_to - shift) % 24)
+
+
+def gnss_backup_power_token(device, now=None):
+    """The gx= value for ``device``: what the GNSS backup supply does while
+    the unit runs on the backup module.  ``gnss_bk_window`` is 0 (the
+    default) to keep it on, 1 to drop it in its own window (``gnss_bk_hour_*``,
+    server local hours, sent as UTC like gw=) or 2 to follow the regular
+    settings.  Sent as ``off`` (keep on), ``<from>-<to>`` or ``def``."""
+    mode = device.get('gnss_bk_window') or 0
+    if mode == 2:
+        return 'def'
+    if mode != 1:
+        return 'off'
+    hour_from = device.get('gnss_bk_hour_from')
+    hour_to = device.get('gnss_bk_hour_to')
+    return _utc_window(0 if hour_from is None else int(hour_from),
+                       7 if hour_to is None else int(hour_to), now)
 
 
 def gnss_off_window_token(device, now=None):
@@ -1342,10 +1390,121 @@ def process_record(data, device, ip, database=None):
             logs.app.exception('tunables_built update failed for %s',
                                device.get('imei'))
 
+    if ('install_report' in data or 'install_enable' in data) and not history:
+        try:
+            _note_install(database, device, data)
+        except Exception:
+            logs.app.exception('install update failed for %s',
+                               device.get('imei'))
+
+    if 'flash_cycles' in data and not history:
+        try:
+            _note_flash_cycles(database, device, data['flash_cycles'])
+        except Exception:
+            logs.app.exception('flash_cycles update failed for %s',
+                               device.get('imei'))
+
     if 'request_int' in data:
         return device_config(device)
 
     return None
+
+
+_INSTALL_NAME_RE = re.compile(r'^[a-z0-9]{1,8}$')
+INSTALL_MAX_CHECKS = 20
+
+
+def parse_install_report(text):
+    """The checks in an ir= value ('v12:1;ign:0;k12v:-') as a list of
+    {name, ok} (ok True, False or None for not fitted), or None when the
+    value does not parse.  Names are short lowercase words; anything else is
+    refused rather than stored."""
+    if not text or len(text) > 200:
+        return None
+    checks = []
+    for pair in text.split(';'):
+        name, sep, state = pair.partition(':')
+        if (not sep or not _INSTALL_NAME_RE.match(name)
+                or state not in ('1', '0', '-')
+                or len(checks) >= INSTALL_MAX_CHECKS):
+            return None
+        checks.append({'name': name,
+                       'ok': None if state == '-' else state == '1'})
+    return checks or None
+
+
+def parse_install_enable(text):
+    """(ok, detail) from an ie= value ('1' or '0:nofix'), or None."""
+    if text == '1':
+        return True, None
+    if text.startswith('0') and (len(text) == 1 or text[1] == ':'):
+        detail = text[2:]
+        if re.fullmatch(r'[a-z0-9_ ]{0,24}', detail):
+            return False, detail or None
+    return None
+
+
+def install_state(device):
+    """(install_mode, report, enable) as the API shows them: a bool and the
+    two stored JSON objects (None where there is none or it does not parse)."""
+    def load(column):
+        try:
+            value = json.loads(device.get(column) or 'null')
+        except ValueError:
+            return None
+        return value if isinstance(value, dict) else None
+    return (bool(device.get('install_mode')), load('install_report'),
+            load('install_enable'))
+
+
+def _note_install(database, device, data):
+    """File an installation check (ir=) or an enable outcome (ie=) on the
+    device row, and say so in the event log.  A successful enable ends the
+    mode, as the unit does."""
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    if 'install_report' in data:
+        checks = parse_install_report(data['install_report'])
+        if checks is not None:
+            text = json.dumps({'at': now, 'checks': checks})
+            database.query('UPDATE `device` SET `install_report` = %s '
+                           'WHERE `id` = %s', (text, device['id']))
+            device['install_report'] = text
+            bad = [c['name'] for c in checks if c['ok'] is False]
+            device_events.record(
+                database, device['id'], 'result',
+                'Install check: %d ok%s' % (
+                    sum(1 for c in checks if c['ok']),
+                    ', failed: ' + ' '.join(bad) if bad else ''))
+    if 'install_enable' in data:
+        outcome = parse_install_enable(data['install_enable'])
+        if outcome is not None:
+            ok, detail = outcome
+            text = json.dumps({'at': now, 'ok': ok, 'detail': detail})
+            if ok:
+                database.query('UPDATE `device` SET `install_enable` = %s, '
+                               '`install_mode` = 0 WHERE `id` = %s',
+                               (text, device['id']))
+                device['install_mode'] = 0
+            else:
+                database.query('UPDATE `device` SET `install_enable` = %s '
+                               'WHERE `id` = %s', (text, device['id']))
+            device['install_enable'] = text
+            device_events.record(
+                database, device['id'], 'result',
+                'Install enable: fix ok, installation mode off' if ok
+                else 'Install enable: no fix%s' % (
+                    ' (%s)' % detail if detail else ''))
+
+
+def _note_flash_cycles(database, device, cycles):
+    """Keep the flash log's wear the unit reported (fc=) on the device row,
+    and when it was reported, when it differs from what the row holds."""
+    if cycles == device.get('flash_cycles'):
+        return
+    database.query('UPDATE `device` SET `flash_cycles` = %s, '
+                   '`flash_cycles_at` = NOW() WHERE `id` = %s',
+                   (cycles, device['id']))
+    device['flash_cycles'] = cycles
 
 
 def _note_tunables_built(database, device, raw):
@@ -1655,6 +1814,14 @@ def build_response(device, database, log, firmware_version=None):
     # tu=<code>:<value>[;...], or tu=- when none is set.  The unit makes its
     # overrides exactly this set, so a column set back to NULL clears it.
     response += ',tu=%s' % tunables_token(device)
+
+    # Installation mode, last of all: a unit being fitted follows it, and one
+    # that does not know the token ignores it.
+    response += ',im=%d' % (1 if device.get('install_mode') else 0)
+
+    # What the GNSS backup supply does on backup power (gx=): the last token,
+    # so the ones the older tests and units anchor on keep their place.
+    response += ',gx=%s' % gnss_backup_power_token(device)
 
     # The unit that is answered applies what it is told, so the settings in
     # this reply are what it runs from now: filed as applied, ahead of its

@@ -54,13 +54,13 @@ def test_the_table_matches_the_contract():
 
 
 def test_no_tunable_set_is_tu_dash_after_le():
-    assert reply().endswith(',gw=off,le=1,tu=-')
+    assert reply().endswith(',gw=off,le=1,tu=-,im=0,gx=off')
     assert telemetry.tunables_token({'tow_tilt_deg': None, 'obd_alerts': ''}) == '-'
 
 
 def test_some_set_are_listed_in_table_order():
     assert reply(battery_warning_mv=11900, tow_tilt_deg=8, accel_alert_priority=0).endswith(
-        ',le=1,tu=xtt:8;xap:0;xbw:11900')
+        ',le=1,tu=xtt:8;xap:0;xbw:11900,im=0,gx=off')
     # Zero is a value, not "unset".
     assert telemetry.tunables_token({'drive_stream': 0}) == 'xds:0'
 
@@ -71,7 +71,7 @@ def test_all_set_and_the_obd_commas_become_pipes():
                      'xoa:coolant>=95|rpm>6500|stft<-12.5/2;xis:30;xbw:11900;xbp:11000;'
                      'xds:1;xdi:900;xtp:1000;xdd:60;xns:3600;xrp:20;xlw:0')
     assert ',' not in token
-    assert reply(**EVERY).endswith(',le=1,tu=' + token)
+    assert reply(**EVERY).endswith(',le=1,tu=' + token + ',im=0,gx=off')
 
 
 def test_the_reply_stays_small_with_every_tunable_at_its_largest():

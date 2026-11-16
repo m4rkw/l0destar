@@ -57,3 +57,27 @@ def test_the_offset_is_taken_at_reply_time(monkeypatch):
     # The same local window is a different UTC span either side of the change.
     assert token(1, 0, 7, datetime.datetime(2026, 3, 28, 12)) == '0-7'
     assert token(1, 0, 7, datetime.datetime(2026, 3, 30, 12)) == '23-6'
+
+
+def bk(mode, hour_from=None, hour_to=None, now=WINTER):
+    return telemetry.gnss_backup_power_token(
+        {'gnss_bk_window': mode, 'gnss_bk_hour_from': hour_from,
+         'gnss_bk_hour_to': hour_to}, now)
+
+
+def test_backup_power_default_keeps_the_supply_on():
+    assert telemetry.gnss_backup_power_token({}) == 'off'
+    assert bk(0, 0, 7) == 'off'
+    assert bk(None) == 'off'
+
+
+def test_backup_power_can_follow_the_regular_settings():
+    assert bk(2, 0, 7) == 'def'
+
+
+def test_backup_power_own_window_is_sent_in_utc():
+    assert bk(1, 0, 7, WINTER) == '0-7'
+    assert bk(1, 0, 7, SUMMER) == '23-6'
+    assert bk(1, 22, 6, SUMMER) == '21-5'
+    assert bk(1, 4, 4) == 'off'
+    assert bk(1) == '0-7'

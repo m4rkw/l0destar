@@ -95,6 +95,15 @@ CREATE TABLE `device` (
   `gnss_off_hour_from` TINYINT UNSIGNED NOT NULL DEFAULT 0,
   `gnss_off_hour_to`   TINYINT UNSIGNED NOT NULL DEFAULT 7,
 
+  -- The same for when the unit runs on the backup module.  gnss_bk_window:
+  -- 0 = keep the supply on (the default), 1 = drop it in its own window
+  -- (gnss_bk_hour_from/to, server local hours, from = to means none), 2 =
+  -- follow the regular window above.  Sent in every reply as gx=off,
+  -- gx=<from>-<to> (UTC hours) or gx=def.
+  `gnss_bk_window`    TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `gnss_bk_hour_from` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `gnss_bk_hour_to`   TINYINT UNSIGNED NOT NULL DEFAULT 7,
+
   -- Whether the unit's status LEDs may light: 1 = on (the default), 0 = all
   -- dark.  Sent in every reply as le=<0|1>, straight after gw=.
   `leds`               TINYINT(1)       NOT NULL DEFAULT 1,
@@ -147,6 +156,17 @@ CREATE TABLE `device` (
   -- GET /config and /devices show them as tunables_built, and the value in
   -- use (override, else built) as tunables.
   `tunables_built`        VARCHAR(400) DEFAULT NULL,
+
+  -- Installation mode: a unit being fitted (no 12 V or antenna assumed).
+  -- install_report / install_enable are the JSON of its last check (ir=) and
+  -- last enable outcome (ie=); a successful enable clears install_mode.
+  `install_mode`   TINYINT(1)   NOT NULL DEFAULT 0,
+  `install_report` TEXT         DEFAULT NULL,
+  `install_enable` TEXT         DEFAULT NULL,
+
+  -- Wear of the external flash log (fc=), as last reported.
+  `flash_cycles`  INT UNSIGNED  DEFAULT NULL COMMENT 'fc=: erase cycles of the flash log''s most used sector, as last reported',
+  `flash_cycles_at` DATETIME   DEFAULT NULL COMMENT 'when flash_cycles was last changed',
 
   `created_at`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -261,6 +281,9 @@ CREATE TABLE `log` (
   -- see.  Stored as sent and turned into a path only when a journey is drawn
   -- (tracker/deadreckon.py), so a better fit applies to every journey.
   `motion`        VARCHAR(255) DEFAULT NULL COMMENT 'mv=: <gap ds>:<v0 km/h>:<steps>:<end>, see deadreckon.py',
+  -- 1 where the record waited in the unit's external flash (fl=1) before it
+  -- was sent; NULL for every other record.
+  `flash`         TINYINT(1)   DEFAULT NULL COMMENT 'fl=1: the record was buffered in the external flash',
 
   `fw`            VARCHAR(16)  DEFAULT NULL COMMENT 'running firmware version, carried forward',
   `board`         VARCHAR(32)  DEFAULT NULL COMMENT 'board the running build is for (bd=), carried forward while fw is the same',

@@ -846,6 +846,9 @@ config APP_BOARD_HAS_EXT_FLASH
 	  An MX25R6435F on PP3V3 (it must stay powered whenever the nRF9151 is)
 	  with its WP# and RESET# pulled high, on the four pins below.  Says only
 	  that the part is there; APP_FLASH_BACKLOG decides whether it is used.
+	  Either way it is put into deep power-down at boot (src/extflash.c), or it
+	  would draw 5 to 24 uA in standby for as long as the unit is up.  A unit
+	  built without the part sets this to n.
 
 	  If any of the pins is the CAN controller's, the flash is only touched
 	  while the CAN rail is up (extflash.c): the MCP2518FD is on a switched

@@ -371,6 +371,10 @@ bool transport_is_streaming(void);
 void data_reply(uint32_t id, const char *resp);
 
 int  collect_data(int ignition_state);
+/* Installation mode's status record (install.c): the normal record format with
+ * the last known position (0.000000 if none), the battery, IMU and cell
+ * fields, and install_fields().  Returns 1 with a record in data_current. */
+int  collect_install_data(void);
 /* The rid= stamped on the most recently built record.  A record is only
  * identifiable to the server once it has one, so this is how a caller names
  * the record it has just built — see wake_pending.  0 before the first. */
@@ -401,8 +405,12 @@ void     databuf_reset(void);
  * From the main thread's startup, with the other parts that may not answer. */
 #if IS_ENABLED(CONFIG_APP_FLASH_BACKLOG)
 void     databuf_flash_report(void);
+/* The most erase cycles any sector of the flash log has had, or -1 while the
+ * log has not been opened this boot (it opens at the first spill). */
+int32_t  databuf_flash_cycles(void);
 #else
 static inline void databuf_flash_report(void) { }
+static inline int32_t databuf_flash_cycles(void) { return -1; }
 #endif
 /* The drive stream is running (true) or not.  While it is, the backlog keeps
  * records APP_DATABUF_STREAM_GAP_S apart by when they were built, so a stream
@@ -507,6 +515,13 @@ void        fota_report_flush(void);   /* send that verdict once linked */
 int         fota_check(enum fota_ctx ctx);
 
 void alert_enqueue(const char *msg, int priority);
+#if IS_ENABLED(CONFIG_APP_INSTALL_MODE)
+/* Installation mode (install.c): alert_enqueue() drops everything while it is
+ * on; this one is the install check's summary, which must pass.  The drop is
+ * for what was queued before the mode began. */
+void alert_enqueue_install(const char *msg, int priority);
+void alert_drop_queued(void);
+#endif
 int  alert_send(void);
 int  alert_send_standalone(void);
 extern int  alert_count;             /* waiting for a send */
@@ -556,6 +571,12 @@ const char *fatal_last_crash(void); /* "fatal:<reason>@<pc>" once, else NULL */
 /* Hardware modules */
 int  hw_gpio_init(void);
 int  hw_selftest(void);
+/* The switched rails on their own, quietly and without alerts of their own
+ * (hw_domain still raises its usual one, which installation mode drops):
+ * out[] gets 1 ok, 0 failed or -1 not fitted/no sense line for each. */
+enum hw_rail { HW_RAIL_GPS3V3, HW_RAIL_CAN3V3, HW_RAIL_K3V3, HW_RAIL_K12V,
+               HW_RAIL_COUNT };
+void hw_rail_check_all(signed char out[HW_RAIL_COUNT]);
 int  hw_power_init(void);
 bool hw_power_available(void);
 void hw_power_shutdown(void);

@@ -421,9 +421,11 @@ void m_init(void) { extflash_init(); }
 int  m_begin(void) { return extflash_begin(); }
 void m_end(void) { extflash_end(); }
 void m_park(void) { extflash_park(); }
+int  m_boot_check(uint8_t *id) { return extflash_boot_check(id); }
+
+#ifdef CONFIG_APP_FLASH_BACKLOG
 int  m_probe(uint32_t *sectors) { return extflash_probe(sectors); }
 int  m_check(void) { return extflash_check(); }
-int  m_boot_check(uint8_t *id) { return extflash_boot_check(id); }
 
 int m_dev_read(uint32_t a, void *b, size_t n) { const struct flashlog_dev *d = extflash_dev(8); return d->read(d->ctx, a, b, n); }
 int m_dev_prog(uint32_t a, const void *b, size_t n) { const struct flashlog_dev *d = extflash_dev(8); return d->prog(d->ctx, a, b, n); }
@@ -445,12 +447,15 @@ int  m_commit(void) { return flashlog_commit(&fl, &cur); }
 uint32_t m_log_erases(void) { return fl.st.erases; }
 uint32_t m_log_skipped(void) { return fl.st.skipped; }
 int m_log_dead(void) { return fl.dead; }
+#endif
 """
 
 FLASH_PINS = ["-DCONFIG_APP_PIN_FLASH_SCK=21", "-DCONFIG_APP_PIN_FLASH_SDI=20",
               "-DCONFIG_APP_PIN_FLASH_SDO=22", "-DCONFIG_APP_PIN_FLASH_CS=26"]
 COMMON = ["-std=gnu11", "-Wall", "-Wextra", "-Wno-unused-parameter", "-shared", "-fPIC", "-O1",
           "-DCONFIG_APP_LOG_LEVEL=3", "-DCONFIG_APP_BOARD_SPLIT_OBD_DOMAIN=1"]
+# A board with the chip but without the backlog: only the driver's own part is built
+NOTIER = "notier"
 VARIANTS = {
     # the flash on bus pins of its own
     "own": ["-DCONFIG_APP_PIN_CAN_SCK=17", "-DCONFIG_APP_PIN_CAN_SDI=16", "-DCONFIG_APP_PIN_CAN_SDO=18"],
@@ -460,6 +465,8 @@ VARIANTS = {
     "partial": ["-DCONFIG_APP_PIN_CAN_SCK=21", "-DCONFIG_APP_PIN_CAN_SDI=16", "-DCONFIG_APP_PIN_CAN_SDO=18"],
     # no CAN controller fitted: the documented override
     "nocan": ["-DCONFIG_APP_PIN_CAN_SCK=-1", "-DCONFIG_APP_PIN_CAN_SDI=-1", "-DCONFIG_APP_PIN_CAN_SDO=-1"],
+    # the chip on a bus of its own, APP_FLASH_BACKLOG off
+    NOTIER: ["-DCONFIG_APP_PIN_CAN_SCK=17", "-DCONFIG_APP_PIN_CAN_SDI=16", "-DCONFIG_APP_PIN_CAN_SDO=18"],
 }
 
 
@@ -473,10 +480,13 @@ def build(variant, sectors=8, out=None):
         with open(path, "w") as f:
             f.write(text)
     so = os.path.join(d, f"libef_{variant}.so")
-    r = subprocess.run(["cc", *COMMON, f"-DCONFIG_APP_FLASH_BACKLOG_SECTORS={sectors}",
+    tier = variant != NOTIER
+    r = subprocess.run(["cc", *COMMON,
+                        *(["-DCONFIG_APP_FLASH_BACKLOG=1", f"-DCONFIG_APP_FLASH_BACKLOG_SECTORS={sectors}"] if tier else []),
                         *FLASH_PINS, *VARIANTS[variant], "-o", so, "-I", d, "-I", SRC,
                         os.path.join(d, "h.c"), os.path.join(SRC, "extflash.c"),
-                        os.path.join(SRC, "flashlog.c")], capture_output=True, text=True)
+                        *([os.path.join(SRC, "flashlog.c")] if tier else [])],
+                       capture_output=True, text=True)
     if out is not None:
         out.append(r)
     else:
@@ -510,21 +520,22 @@ def load(variant, sectors=8):
     L.m_erases.argtypes = [C.c_int]
     L.m_cmd.restype = C.c_uint32
     L.m_cmd.argtypes = [C.c_int]
-    L.m_probe.argtypes = [C.POINTER(C.c_uint32)]
-    L.m_check.argtypes = []
     L.m_boot_check.argtypes = [C.c_void_p]
-    L.m_dev_read.argtypes = [C.c_uint32, C.c_void_p, C.c_size_t]
-    L.m_dev_prog.argtypes = [C.c_uint32, C.c_char_p, C.c_size_t]
-    L.m_dev_erase.argtypes = [C.c_uint32]
-    L.m_log_init.argtypes = [C.c_uint32, C.c_uint32, C.c_uint32]
-    L.m_append.argtypes = [C.c_char_p, C.c_uint16, C.c_uint32]
-    L.m_pending.restype = C.c_uint32
-    L.m_next.argtypes = [C.c_void_p, C.c_uint16]
     L.m_poke.argtypes = [C.c_uint32, C.c_uint8]
     L.m_peek.argtypes = [C.c_uint32]
     L.m_peek.restype = C.c_uint8
-    L.m_log_erases.restype = C.c_uint32
-    L.m_log_skipped.restype = C.c_uint32
+    if variant != NOTIER:
+        L.m_probe.argtypes = [C.POINTER(C.c_uint32)]
+        L.m_check.argtypes = []
+        L.m_dev_read.argtypes = [C.c_uint32, C.c_void_p, C.c_size_t]
+        L.m_dev_prog.argtypes = [C.c_uint32, C.c_char_p, C.c_size_t]
+        L.m_dev_erase.argtypes = [C.c_uint32]
+        L.m_log_init.argtypes = [C.c_uint32, C.c_uint32, C.c_uint32]
+        L.m_append.argtypes = [C.c_char_p, C.c_uint16, C.c_uint32]
+        L.m_pending.restype = C.c_uint32
+        L.m_next.argtypes = [C.c_void_p, C.c_uint16]
+        L.m_log_erases.restype = C.c_uint32
+        L.m_log_skipped.restype = C.c_uint32
     return L
 
 
@@ -750,6 +761,31 @@ def test_if_the_rail_is_already_up_when_init_runs_the_chip_is_parked_at_once(chi
     c = chip_factory("shared", rail=True, controller=True)
     c.L.m_init()
     assert c.L.m_dp() == 1
+
+
+# a board that has the chip but not the backlog (APP_FLASH_BACKLOG=n) still has it in standby, 5 to 24 uA
+# for as long as the unit is up, unless something puts it to sleep: the driver is built for the board's
+# chip, and only the backlog's own parts need the backlog
+
+def test_on_a_board_with_the_chip_but_no_backlog_it_is_still_parked_at_boot(chip_factory):
+    c = chip_factory("notier")                      # built without CONFIG_APP_FLASH_BACKLOG and without flashlog.c
+    assert c.L.m_dp() == 0
+    c.L.m_init()
+    assert c.L.m_dp() == 1
+    assert commands_sent(c) == {0x9F, 0xB9}         # the ID read and the deep power-down, nothing else
+    assert boot_check(c) == (0, (0xC2, 0x28, 0x17))
+    # and none of the backlog's own code (reads, programs, erases, the probe) is in the image
+    assert not any(hasattr(c.L, name) for name in ("extflash_dev", "extflash_probe", "extflash_check"))
+
+
+def test_the_driver_is_built_and_started_for_a_board_that_has_the_chip_whether_or_not_the_backlog_is():
+    root = os.path.join(SRC, "..")
+    cmake = open(os.path.join(root, "CMakeLists.txt")).read()
+    assert re.search(r"target_sources_ifdef\(CONFIG_APP_BOARD_HAS_EXT_FLASH\s+app\s+PRIVATE\s+src/extflash\.c\)", cmake)
+    assert re.search(r"target_sources_ifdef\(CONFIG_APP_FLASH_BACKLOG\s+app\s+PRIVATE\s+src/flashlog\.c\)", cmake)
+    main = open(os.path.join(SRC, "main.c")).read()
+    guard = re.search(r"#if IS_ENABLED\((\w+)\)\s*(?:/\*(?:(?!\*/).)*\*/\s*)?extflash_init\(\);", main, re.S)
+    assert guard and guard.group(1) == "CONFIG_APP_BOARD_HAS_EXT_FLASH"
 
 
 # --------------------------------------------------------------------------- the shared bus

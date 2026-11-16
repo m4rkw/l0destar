@@ -20,6 +20,15 @@ WRAPPER = """
 #include "backup_cutoff.h"
 int due(long long now_s, long long wake_s, int hour) { return backup_cutoff_due(now_s, wake_s, hour); }
 int win(long long now_s, int from, int to) { return backup_window_contains(now_s, from, to); }
+int drop(int mode, int gxf, int gxt, int gwf, int gwt, int fixed, int on_backup, long long now_s, long long wake_s)
+{ return backup_drop_due(mode, gxf, gxt, gwf, gwt, fixed, on_backup, now_s, wake_s); }
+/* returns mode*10000 + from*100 + to (+1000000 when taken), cmd rewritten in place */
+int take(char *cmd)
+{
+	enum backup_gx_mode m = BACKUP_GX_KEEP; int f = -9, t = -9;
+	int got = backup_gx_take(cmd, &m, &f, &t);
+	return got ? 1000000 + m * 10000 + (f < 0 ? 0 : f) * 100 + (t < 0 ? 0 : t) : 0;
+}
 """
 
 
@@ -41,6 +50,21 @@ def due():
     w.restype = C.c_int
     due_fn = lambda t, wake, hour: bool(fn(int(t.timestamp()), wake, hour))
     due_fn.window = lambda t, a, b: bool(w(int(t.timestamp()), a, b))
+    d = lib.drop
+    d.argtypes = [C.c_int] * 7 + [C.c_longlong] * 2
+    d.restype = C.c_int
+    due_fn.drop = lambda mode, t, wake, on_backup, gx=(-1, -1), gw=(-1, -1), fixed=-1: bool(
+        d(mode, gx[0], gx[1], gw[0], gw[1], fixed, on_backup, int(t.timestamp()), wake))
+    tk = lib.take
+    tk.argtypes = [C.c_char_p]
+    tk.restype = C.c_int
+
+    def take(cmd):
+        buf = C.create_string_buffer(cmd.encode(), 128)
+        r = tk(buf)
+        return r, buf.value.decode()
+
+    due_fn.take = take
     return due_fn
 
 
@@ -120,3 +144,110 @@ def test_no_window_for_equal_or_out_of_range_hours(due):
     assert not due.window(utc(3), -1, -1)
     assert not due.window(utc(3), 0, 24)
     assert not due.window(utc(3), 24, 6)
+
+
+# -- gx=: the rule while on the backup module ---------------------------------
+KEEP, DEF, WIN = 0, 1, 2
+GW = (2, 5)          # the regular window
+FIXED = 0            # the fixed cut-off hour
+
+
+def regular(due, mode, t, wake, **kw):
+    return due.drop(mode, t, wake, False, gw=GW, fixed=FIXED, **kw)
+
+
+def backup(due, mode, t, wake, **kw):
+    return due.drop(mode, t, wake, True, gw=GW, fixed=FIXED, **kw)
+
+
+@pytest.mark.parametrize("mode,gx", [(KEEP, (-1, -1)), (DEF, (-1, -1)), (WIN, (10, 12))])
+def test_regular_power_ignores_the_mode(due, mode, gx):
+    assert regular(due, mode, utc(3), 60, gx=gx)           # in gw
+    assert regular(due, mode, utc(1, 30), 3600, gx=gx)     # gw entered in the sleep
+    assert regular(due, mode, utc(23, 30), 3600, gx=gx)    # fixed hour in the sleep
+    assert not regular(due, mode, utc(7), 600, gx=gx)      # nothing near
+
+
+def test_keep_never_drops_on_backup(due):
+    assert not backup(due, KEEP, utc(3), 60)
+    assert not backup(due, KEEP, utc(1, 30), 3600)
+    assert not backup(due, KEEP, utc(23, 30), 3600)
+    assert not backup(due, KEEP, utc(12), 86400)
+
+
+def test_def_follows_the_regular_rules_on_backup(due):
+    for t, wake in [(utc(3), 60), (utc(1, 30), 3600), (utc(23, 30), 3600), (utc(7), 600),
+                    (utc(12), 86400), (utc(5), 60)]:
+        assert backup(due, DEF, t, wake) == regular(due, DEF, t, wake)
+    assert backup(due, DEF, utc(3), 60)
+    assert backup(due, DEF, utc(23, 30), 3600)
+    assert not backup(due, DEF, utc(7), 600)
+
+
+def test_a_gx_window_replaces_gw_and_the_fixed_hour_on_backup(due):
+    gx = (10, 12)
+    assert backup(due, WIN, utc(11), 60, gx=gx)            # inside
+    assert not backup(due, WIN, utc(12), 60, gx=gx)        # end is exclusive
+    assert not backup(due, WIN, utc(3), 60, gx=gx)         # inside gw only
+    assert not backup(due, WIN, utc(1, 30), 3600, gx=gx)   # gw entered, not gx
+    assert not backup(due, WIN, utc(23, 30), 3600, gx=gx)  # fixed hour ignored
+    assert not backup(due, WIN, utc(7), 600, gx=gx)
+
+
+def test_entering_the_gx_window_during_a_sleep_drops_first(due):
+    gx = (10, 12)
+    assert backup(due, WIN, utc(9, 30), 1800, gx=gx)       # wakes at 10:00
+    assert not backup(due, WIN, utc(9, 30), 1799, gx=gx)
+    assert backup(due, WIN, utc(6), 86400, gx=gx)
+
+
+def test_a_gx_window_may_wrap_midnight(due):
+    gx = (22, 6)
+    assert backup(due, WIN, utc(23), 60, gx=gx)
+    assert backup(due, WIN, utc(0, 30), 60, gx=gx)
+    assert backup(due, WIN, utc(5, 59), 60, gx=gx)
+    assert not backup(due, WIN, utc(6), 60, gx=gx)
+    assert not backup(due, WIN, utc(12), 60, gx=gx)
+    assert backup(due, WIN, utc(21, 30), 1800, gx=gx)      # entering
+
+
+def test_no_gx_window_in_window_mode_drops_nothing(due):
+    assert not backup(due, WIN, utc(3), 3600)
+    assert not backup(due, WIN, utc(23, 30), 3600)
+
+
+def test_without_a_gw_window_or_fixed_hour_def_drops_nothing(due):
+    assert not due.drop(DEF, utc(3), 3600, True)
+
+
+def test_the_default_is_keep(due):
+    # enum value 0, what hw_domain.c starts with
+    assert KEEP == 0
+    assert not backup(due, 0, utc(3), 60)
+    assert not backup(due, 0, utc(23, 30), 3600)
+
+
+def test_gx_token_forms(due):
+    assert due.take("gx=def") == (1010000, "")
+    assert due.take("gx=off") == (1000000, "")
+    assert due.take("gx=22-6") == (1020000 + 2206, "")
+    assert due.take("gx=0-23") == (1020000 + 23, "")
+
+
+def test_gx_token_is_taken_out_wherever_it_sits(due):
+    assert due.take("track=1,gb=1,gx=3-4,gw=2-5") == (1020000 + 304, "track=1,gb=1,gw=2-5")
+    assert due.take("gx=def,gpsfix") == (1010000, "gpsfix")
+    assert due.take("gpsfix,gx=off") == (1000000, "gpsfix")
+
+
+def test_gx_token_invalid_is_dropped_and_ignored(due):
+    for bad in ["gx=5-5", "gx=24-1", "gx=1-24", "gx=-1-3", "gx=", "gx=on", "gx=1-2x", "gx=1-2-3",
+                "gx=abcdefghij"]:
+        assert due.take(bad) == (0, ""), bad
+    assert due.take("a,gx=9-9,b") == (0, "a,b")
+
+
+def test_gx_token_only_at_a_token_start(due):
+    assert due.take("xgx=def") == (0, "xgx=def")
+    assert due.take("gx=def,gx=off") == (1010000, "")      # first valid wins
+    assert due.take("gx=5-5,gx=off") == (1000000, "")

@@ -166,6 +166,9 @@ Values must be whole numbers. The alerts themselves are described in [Configure 
 | `gw` | `gnss_off_window` |
 | `gwf` | `gnss_off_hour_from` |
 | `gwt` | `gnss_off_hour_to` |
+| `gwb` | `gnss_bk_window` (0 keep the GNSS backup supply on while on backup power, 1 own window, 2 follow the regular window) |
+| `gwbf` | `gnss_bk_hour_from` |
+| `gwbt` | `gnss_bk_hour_to` |
 | `le` | `leds` |
 | `isch` | `interval_schedule` (a list of rules or `null`, not a number; see [Reporting schedule](#reporting-schedule)) |
 | `xtt` | `tow_tilt_deg` |
