@@ -61,8 +61,8 @@ import re
 import threading
 import time
 
-from . import (config, db, deadreckon, device_events, firmware,
-               interval_schedule, logs, notify, obd)
+from . import (config, db, deadreckon, deltarec, device_events, firmware,
+               interval_schedule, logs, notify, obd, reply_policy)
 
 # Fixed fields, in wire order, named for the columns they are stored in.  The
 # eleventh is seconds since boot on current firmware; its column kept the
@@ -228,6 +228,10 @@ _TIMESTAMP_RE = re.compile(
 
 def parse_csv_line(line):
     """Parse one telemetry line into a dict of column names to raw strings."""
+    if deltarec.is_marked(line):
+        # A delta record is made whole (deltarec.expand_lines) before it gets
+        # here; one that still carries its marker had nothing to be a delta of.
+        raise ValueError('delta record with no record before it to expand against')
     parts = line.split(',')
     if len(parts) > 1:
         # Rejoin the timestamp, which contains the first comma.
@@ -1842,10 +1846,15 @@ def _notify_report(device, title, body):
 
 # -- response ----------------------------------------------------------------
 
-def build_response(device, database, log, firmware_version=None):
+def build_response(device, database, log, firmware_version=None, gate=None):
     """Build the reply the device reads after a successful send.
 
     Format: ``1,<interval>[,<movement_alarm>][,<commands>][,backup=<n>][,fota=<v>][,track=<0|1>]``.
+
+    The settings from ``backup=`` on are the tail.  ``gate``, when given, is
+    asked with the tail whether to send it; the answer no leaves the short
+    reply, ``1,<interval>,<movement_alarm>[,<commands>]``, which the firmware
+    takes as "nothing new" (reply_policy).  Without a gate every reply is whole.
 
     The leading ``1`` is the ack the firmware checks before clearing its send
     buffer.  Commands are appended as a comma-separated list and deleted as
@@ -1888,7 +1897,8 @@ def build_response(device, database, log, firmware_version=None):
     # the reply and takes it out of the string, so it is never run as a
     # command; firmware from before it passes over it.  Ahead of the advert
     # and the track switch so that those two stay last.
-    response += ',backup=%d' % settings['backup']
+    head = response
+    response = ',backup=%d' % settings['backup']
 
     # The OTA indication rides the command field.
     if firmware_version:
@@ -1932,6 +1942,9 @@ def build_response(device, database, log, firmware_version=None):
     # or the unit has sent OBD values and never a scan (set on that record).
     # The unit acts once per request; the scan's osp= clears it.
     response += ',os=%d' % (1 if device.get('obd_scan') else 0)
+
+    # Whole, or just the head: commands and the interval always go.
+    response = head + (response if gate is None or gate(response) else '')
 
     # The unit that is answered applies what it is told, so the settings in
     # this reply are what it runs from now: filed as applied, ahead of its
@@ -2038,7 +2051,12 @@ def process_lines(device, lines, ip, database, log):
     except Exception:
         log.exception('track mode expiry failed for %s', device.get('imei'))
 
+    # The drive stream sends records after the first of a datagram as deltas
+    # against the one before; make them whole before anything reads them.
+    lines = deltarec.expand_lines(lines)
+
     processed = 0
+    booted = False        # a record said the unit has just started
     boot_wall = None      # worked out on the first L, line, if any
     for line in lines:
         try:
@@ -2107,6 +2125,7 @@ def process_lines(device, lines, ip, database, log):
                 # works for a device whose reverted-to image is too old to
                 # report the failure itself.
                 if parsed.get('fw'):
+                    booted = True
                     firmware.check_running(device, parsed['fw'], database, log)
             processed += 1
         except ValueError as e:
@@ -2128,4 +2147,10 @@ def process_lines(device, lines, ip, database, log):
     if available and available == device.get('fw_blocked'):
         available = None
 
-    return build_response(device, database, log, firmware_version=available)
+    # The settings go back in full to a unit that has just started and when
+    # they have changed; otherwise the reply is the short one (reply_policy).
+    def gate(tail):
+        return reply_policy.gate.full(device['id'], tail, boot=booted)
+
+    return build_response(device, database, log, firmware_version=available,
+                          gate=gate)

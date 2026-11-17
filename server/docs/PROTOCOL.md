@@ -92,6 +92,37 @@ onto every row that omits it. A firmware version costs about ten bytes per
 boot instead of ten bytes per record, and every row is still attributable to a
 build.
 
+### Delta records
+
+The drive stream sends up to four records in a datagram, and most of a record
+repeats the one before it. A record after the first of its datagram may
+therefore be sent as a delta, against the record before it in the same datagram
+(never against another datagram, so a lost, repeated or late one decodes as it
+would have in order):
+
+- `d=1` is among its extras;
+- a fixed field from `spd` on that equals the previous record's is empty:
+  `spd`, `alt`, `hdg`, `hdop`, `sat`, `bat` and `up` are the ones the unit
+  blanks, but any field from the fourth on may be (the timestamp and position
+  are always sent, and so are `ign` and `pon`);
+- an extra of the sticky set that equals the previous record's is not sent:
+  `it`, `mt`, `vs`, `up`, the signal reading (`rsrp`, `snr`, `band`,
+  `pathloss`, `rsrq`, `ce`, `txrep`) and the OBD keys (`orpm`, `ormin`, `ormax`,
+  `oravg`, `ospd`, `ocl`, `oit`, `old`, `oth`, `omaf`, `otim`, `ostft`, `oltft`,
+  `ofs`, `omil`, `odtc` and `o<2 upper-case hex>`);
+- everything else (`ax`..`gz`, `rid`, `age`, `fl`, the cell group, and the
+  compound extras such as `dbg=` and `tb=`) is sent as usual.
+
+The server makes each delta whole (`tracker/deltarec.py`) before anything else
+reads the datagram, so a row is stored exactly as if the whole record had been
+sent. The first record of a datagram is always whole. A record the unit cannot
+express as a delta is sent whole: one that lacks a sticky extra the previous
+record had, since leaving it out would read as "unchanged". A delta with no
+whole record before it in its datagram is refused and logged like any malformed
+record. This is not the carrying forward above: there the server fills in a
+value the unit did not send; here the unit took the reading, it came out the
+same, and the row gets the value it would have been sent with.
+
 `rid` is the device's own id for a record, stored in `rec_id`. It is
 consecutive within a boot, so a gap in it is a record that never arrived, and
 it is seeded at random at each boot, so no two boots reuse the same ids and a
@@ -327,6 +358,17 @@ genuine resting low reading still relays.
 ```
 1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off][,le=<0|1>][,tu=<code>:<value>[;<code>:<value>...]|-][,im=<0|1>][,gx=<from>-<to>|off|def][,os=<0|1>]
 ```
+
+A reply is whole or short. The short one is the first three fields and any
+commands queued for the unit, `1,<interval>,<movement_alarm>[,<commands>]`; the
+whole one adds everything after them, from `backup=` to `os=`. The unit acts only
+on the tokens a reply carries, so a short reply changes nothing it already has.
+The whole reply goes out when it is news (`tracker/reply_policy.py`): to the
+first datagram of a device since the server started, to a datagram carrying
+`fw=` (the unit has just booted), when the tokens differ from those of the last
+whole reply (a setting changed, a version was published), and as a safety net
+once a minute, since UDP can lose a reply that carried a change. Where this
+document says a token rides "every reply", it means every whole one.
 
 Every datagram is answered, and the reply is the receipt: it is bound to the
 request's nonce (see Transport), so the firmware knows exactly which datagram

@@ -15,6 +15,8 @@
 #include "cmd_merge.h"
 #include "hw_domain.h"
 #include "install.h"
+#include "record_delta.h"
+#include "stream_batch.h"
 #include "tunables.h"
 #include "tunables_core.h"
 
@@ -258,6 +260,26 @@ static int read_temp_lean(float *t)
         at = now;
     }
     return err;
+}
+
+/* The accelerometer and gyro change with every record and are a fifth of what
+ * a streamed record weighs.  The stream with no interval limit takes them about
+ * once a second (APP_DRIVE_STREAM_IMU_MS) and does not read the sensor for the
+ * rest; every other record has them. */
+static bool imu_due(void)
+{
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+    static int64_t at = INT64_MIN / 2;
+    int64_t now = k_uptime_get();
+
+    if (s_lean) {
+        if (!stream_due(now, at, CONFIG_APP_DRIVE_STREAM_IMU_MS)) {
+            return false;
+        }
+        at = now;
+    }
+#endif
+    return true;
 }
 
 static int read_vbat_lean(int *mv)
@@ -780,9 +802,11 @@ int collect_data(int ignitionState)
 
     if (n > 0 && n < remaining) data_index += n;
 
+    bool imu = imu_due();
+
     /* Accelerometer */
     int ax, ay, az;
-    if (accel_read(&ax, &ay, &az) == 0) {
+    if (imu && accel_read(&ax, &ay, &az) == 0) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
                      ",ax=%d;ay=%d;az=%d", ax, ay, az);
@@ -793,11 +817,11 @@ int collect_data(int ignitionState)
      * Re-learn the zero-rate bias whenever we're genuinely stopped (good
      * fix, ~0 speed) so the logged rates aren't skewed by the sensor's
      * temperature-dependent offset. */
-    if (g_gnss.sats >= SPEED_MIN_SATS && g_gnss.speed_kmh < GYRO_REST_KMH) {
+    if (imu && g_gnss.sats >= SPEED_MIN_SATS && g_gnss.speed_kmh < GYRO_REST_KMH) {
         accel_gyro_autozero();
     }
     int gx, gy, gz;
-    if (accel_read_gyro(&gx, &gy, &gz) == 0) {
+    if (imu && accel_read_gyro(&gx, &gy, &gz) == 0) {
         n = snprintf(&data_current[data_index],
                      DATA_LIMIT - data_index - 1,
                      ",gx=%d;gy=%d;gz=%d", gx, gy, gz);
@@ -1373,6 +1397,11 @@ void data_reply(uint32_t id, const char *resp)
  * log lines that ride along.  data_current itself is left as the records
  * alone, which is what the backlog takes if the send fails. */
 static char s_tx[UDP_PACKET_SIZE];
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM_DELTA)
+/* What goes on the air when the records are sent as deltas; s_tx keeps them
+ * whole for the backlog and for a datagram sent again. */
+static char s_wire[UDP_PACKET_SIZE];
+#endif
 
 /* When the previous record went out.  A reply from anything sent since then
  * is the evidence that the link is delivering, and the backlog waits for it:
@@ -1510,7 +1539,26 @@ int send_data(void)
         }
     }
 
-    int err = transport_send((const uint8_t *)s_tx, (size_t)tx_len);
+    const uint8_t *wire = (const uint8_t *)s_tx;
+    size_t wire_len = (size_t)tx_len;
+
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM_DELTA)
+    /* The stream that runs without a limit sends the records after the first
+     * as deltas against the one before (record_delta.h), the log lines after
+     * them as they are.  Anything that does not come out shorter, or does not
+     * fit, goes whole. */
+    if (s_lean && transport_is_streaming() && stream_keeps_records && rec_count > 1) {
+        int n = rdelta_encode_batch(s_tx, (size_t)rec_len, s_wire, sizeof(s_wire));
+        int tail = tx_len - rec_len;
+
+        if (n > 0 && n < rec_len && n + tail < (int)sizeof(s_wire)) {
+            memcpy(&s_wire[n], &s_tx[rec_len], (size_t)tail);
+            wire = (const uint8_t *)s_wire;
+            wire_len = (size_t)(n + tail);
+        }
+    }
+#endif
+    int err = transport_send(wire, wire_len);
     if (err == TRANSPORT_HELD && stream_keeps_records) {
         /* The modem did not take it inside the stream's send timeout: busy or
          * full, not a bad socket.  The records wait in the backlog as a shut

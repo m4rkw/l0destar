@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.129
+
+### The drive stream uses about half the data
+In November the car's SIM counted 128 MB in 16 days, about 500 bytes for each of 233,000 streamed records: one datagram a record, a full envelope and headers on the way up, and the server's whole settings (80 bytes) in every reply. Four changes, for the stream that runs as fast as it can; at an interval of a second or more it still sends one whole record a datagram.
+
+- Up to four records in a datagram (`APP_DRIVE_STREAM_BATCH`), sent early enough that the gap between datagrams stays under 900 ms (`APP_DRIVE_STREAM_BATCH_GAP_MS`): four at 6 records a second, two or three at the car's usual 4, one below 2. The live view moves at least 1.1 times a second (1.5 on the bench at 3.8).
+- Each record after the first is a delta against the one before it in the same datagram (`APP_DRIVE_STREAM_DELTA`): what has not changed is left out and the server puts it back (`rst=`, the cell group, `rid` and the rest go as usual). Nothing is carried between datagrams.
+- The server answers with just `1,<interval>,<movement_alarm>[,commands]` unless the settings changed, the unit has just booted, or a minute has passed (server/tracker/reply_policy.py).
+- The accelerometer and gyro are in a record about once a second (`APP_DRIVE_STREAM_IMU_MS`); the other records have no `ax`..`gz`.
+- Needs the server's `deltarec.py` and `reply_policy.py` (both deployed to t first). Together an estimated 55 % off the bytes per record at 3.9 records a second (from the car's own records, not measured on the air); the rest is the stream's rate (`xdi`).
+- Status: host tests (`tests/test_stream_batch.py`, `tests/test_record_delta.py`, which also holds the C encoder to the server's reference byte for byte; mutation-checked) and the server's; built for v4.0p2, v3.3 and the Traccar transport; bench-run on v4.0p2 for 3.4 minutes at 9.5 records a second and 3 minutes at 3.8, with a made-up position and network and every record read back through the server's decoder (1,800 and 300: no differences); not run on the car, nor on its K wire.
+
 ## 0.4.128
 
 ### Whether the interrupt stack ran out before a reset

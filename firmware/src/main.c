@@ -25,6 +25,7 @@
 #include "hw_domain.h"
 #include "pins.h"
 #include "install.h"
+#include "stream_batch.h"
 #if IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_FLASH)
 #include "extflash.h"
 #endif
@@ -441,6 +442,9 @@ static int64_t s_ds_t0_ms;          /* start of the log window (0: no record yet
 static int     s_ds_records;        /* built in it */
 static int     s_ds_stale;          /* ... from the last position, no fix */
 static int64_t s_ds_obd_ms;         /* when the K wire was last polled here */
+static int64_t s_ds_rec_ms;         /* when the last record was built (0: none yet) */
+static struct stream_period s_ds_pe;    /* how long the records take lately (stream_batch.h) */
+static int64_t s_ds_sent_ms;        /* when the last send was decided on (0: none yet) */
 
 static bool drive_stream_wanted(void)
 {
@@ -486,6 +490,8 @@ static void drive_stream_sync(void)
             s_ds_t0_ms = 0;             /* the window opens with the first record */
             s_ds_records = s_ds_stale = 0;
             s_ds_obd_ms = 0;
+            s_ds_rec_ms = s_ds_sent_ms = 0;
+            memset(&s_ds_pe, 0, sizeof(s_ds_pe));
             s_ds_next_ms = 0;
             data_set_lean(DS_RX_HZ > 1);
             if (DS_RX_HZ > 1) {
@@ -517,6 +523,12 @@ static void drive_stream_sync(void)
 
 static void drive_stream_note_record(void)
 {
+    int64_t now = k_uptime_get();
+
+    if (s_ds_rec_ms) {
+        stream_period_note(&s_ds_pe, now, now - s_ds_rec_ms);
+    }
+    s_ds_rec_ms = now;
     s_ds_next_ms = k_uptime_get() + (int64_t)DS_INTERVAL_S * 1000;
     if (s_ds_t0_ms == 0) {
         s_ds_t0_ms = k_uptime_get();
@@ -548,13 +560,14 @@ static void drive_stream_pace(void)
 }
 #endif /* CONFIG_APP_DRIVE_STREAM */
 
-/* Records to buffer before a send: one while streaming, otherwise the
- * configured batch. */
+/* Records to buffer before a send: while streaming one, or with no interval limit
+ * up to APP_DRIVE_STREAM_BATCH (a batch is sent early enough to keep the live
+ * view moving, see stream_batch.h); otherwise the configured batch. */
 static int batch_size(void)
 {
 #if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
     if (s_ds_on) {
-        return 1;
+        return stream_batch_max(DS_INTERVAL_S, CONFIG_APP_DRIVE_STREAM_BATCH);
     }
 #endif
     return BATCH_SIZE;
@@ -3097,20 +3110,54 @@ int main(void)
              * one is counted (data_motion_bytes()), since it would not fit
              * beside a full batch, and send_data() leaves motion off a
              * batch that would not fit the datagram. */
-            if (s_buffered_records >= batch_size()
-                || ignition != 0
-                || previous_ignition == -1
-                || send_int_to_server
-                || !last_send_ok
-                || data_index - data_motion_bytes() >= BATCH_FLUSH_BYTES) {
+            bool flush = s_buffered_records >= batch_size()
+                         || ignition != 0
+                         || previous_ignition == -1
+                         || send_int_to_server
+                         || !last_send_ok
+                         || data_index - data_motion_bytes() >= BATCH_FLUSH_BYTES;
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+            if (s_ds_on && !flush) {
+                /* A batch of the stream with no interval limit.  The server has
+                 * not been told this ignition state yet, or waiting for another
+                 * record would stretch the gap between datagrams past what keeps
+                 * the live view moving: send now.  Otherwise on to the next
+                 * record, which is what the stream does after a send too. */
+                flush = s_record_ignition != previous_ignition ||
+                        stream_batch_flush(s_buffered_records, batch_size(),
+                                           k_uptime_get() - s_ds_sent_ms, stream_period_est(&s_ds_pe),
+                                           CONFIG_APP_DRIVE_STREAM_BATCH_GAP_MS);
+#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
+                /* The K wire's poll takes half a second and runs right after a
+                 * send (below).  Due now, the records held go first rather than
+                 * waiting it out. */
+                flush = flush || k_uptime_get() - s_ds_obd_ms >= DS_OBD_EVERY_MS;
+#endif
+            }
+#endif
+            if (flush) {
                 s_state = STATE_SEND;
-            } else {
+            }
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+            else if (s_ds_on) {
+                s_state = STATE_GPS_COLLECT;
+            }
+#endif
+            else {
                 s_state = STATE_IDLE;
             }
             break;
         }
 
         case STATE_SEND:
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
+            if (s_ds_on) {
+                /* The gap that matters is from one datagram to the next, and
+                 * that is from one decision to send to the next: it holds the
+                 * send, what comes before it and whatever follows it. */
+                s_ds_sent_ms = k_uptime_get();
+            }
+#endif
             read_udp_response =
                 (previous_ignition == -1
                  || previous_ignition != ignition

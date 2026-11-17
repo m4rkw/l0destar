@@ -1758,6 +1758,69 @@ config APP_DRIVE_STREAM_SEND_TIMEOUT_MS
 	  clears what the modem is holding.  Sends outside the stream keep the
 	  10 s.  0 keeps 10 s for the stream too.
 
+config APP_DRIVE_STREAM_BATCH
+	int "Most records in a datagram while the stream has no interval limit"
+	depends on APP_DRIVE_STREAM
+	default 4
+	range 1 4
+	help
+	  Each streamed record used to be a datagram of its own, and the datagram
+	  was most of its cost: the envelope and the IP and UDP headers on the way
+	  up, and a reply on the way back, about 210 bytes of a record's 430 on a
+	  metered SIM.  The stream that runs as fast as it can (no interval limit)
+	  now sends up to this many records together.
+
+	  A stream under an interval of a second or more stays at one record a
+	  datagram, whatever this says.  Nor does a batch slow the live view: it
+	  goes as soon as waiting for another record would stretch the gap between
+	  datagrams past APP_DRIVE_STREAM_BATCH_GAP_MS, so at the usual 3 to 6
+	  records a second it holds two to four (two or three at the car's 4).
+	  1 sends every record alone.
+
+config APP_DRIVE_STREAM_BATCH_GAP_MS
+	int "Longest the gap between two datagrams of the stream may grow (ms)"
+	depends on APP_DRIVE_STREAM
+	default 900
+	range 200 1000
+	help
+	  What keeps batching from slowing the live view: a batch is sent when
+	  the next record, taken to be as slow as the slowest of the last second
+	  or two (some, such as the one that reads the modem's temperature and
+	  supply, take twice as long as the rest), would come after this much time
+	  has passed since the previous send was decided on.  900 keeps the view
+	  moving at least 1.1 times a second.
+
+config APP_DRIVE_STREAM_DELTA
+	bool "Leave out of a streamed record what the one before it already said"
+	depends on APP_DRIVE_STREAM
+	default y
+	help
+	  In a datagram of several records, each after the first is sent as a
+	  delta against the one before it: the altitude, HDOP, satellite count and
+	  the like when they have not changed are left empty, and the die
+	  temperatures, supply, signal reading and OBD figures that have not
+	  changed are not sent (src/record_delta.h, server/docs/PROTOCOL.md).  The
+	  server makes each whole again before it reads it.  Nothing is carried
+	  between datagrams, so a lost or repeated one costs nothing extra.  Only
+	  the stream with no interval limit does it; the backlog and a datagram
+	  sent again keep whole records.
+
+	  Needs a server that reads deltas (tracker/deltarec.py).  Without it the
+	  unit would send records the server could not read: turn this off first.
+
+config APP_DRIVE_STREAM_IMU_MS
+	int "Longest between the accelerometer and gyro in the streamed records (ms)"
+	depends on APP_DRIVE_STREAM
+	default 900
+	range 0 5000
+	help
+	  The accelerometer and gyro readings change with every record and are
+	  about a fifth of what a streamed record weighs.  The stream that runs as
+	  fast as it can puts them in a record about once a second instead of in
+	  all of them (900 allows for the timing of the records), and does not read
+	  the sensor for the others.  0 puts them in every record.  The stream
+	  under an interval is a record a second or slower and keeps them in all.
+
 config APP_DATABUF_SLOTS
 	int "Telemetry records held when the link is down"
 	default 32
