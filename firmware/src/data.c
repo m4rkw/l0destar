@@ -14,6 +14,7 @@
 #include "backup_log.h"
 #include "cmd_merge.h"
 #include "hw_domain.h"
+#include "imu_gate.h"
 #include "install.h"
 #include "record_delta.h"
 #include "stream_batch.h"
@@ -263,23 +264,22 @@ static int read_temp_lean(float *t)
 }
 
 /* The accelerometer and gyro change with every record and are a fifth of what
- * a streamed record weighs.  The stream with no interval limit takes them about
- * once a second (APP_DRIVE_STREAM_IMU_MS) and does not read the sensor for the
- * rest; every other record has them. */
+ * a streamed record weighs.  The stream with no interval limit takes them every
+ * record or about every xim ms (tunable, APP_DRIVE_STREAM_IMU_MS), or not at
+ * all (xia); with them off an impact still puts them in the next record (xic).
+ * See imu_gate.h.  Every other record has them. */
+static struct imu_gate s_imu_gate = IMU_GATE_INIT;
+
+void data_impact_note(void)
+{
+    imu_gate_impact(&s_imu_gate);
+}
+
 static bool imu_due(void)
 {
-#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
-    static int64_t at = INT64_MIN / 2;
-    int64_t now = k_uptime_get();
-
-    if (s_lean) {
-        if (!stream_due(now, at, CONFIG_APP_DRIVE_STREAM_IMU_MS)) {
-            return false;
-        }
-        at = now;
-    }
-#endif
-    return true;
+    return imu_gate_due(&s_imu_gate, s_lean, k_uptime_get(),
+                        tun_drive_stream_accel(), tun_drive_stream_accel_ms(),
+                        tun_drive_stream_impact());
 }
 
 static int read_vbat_lean(int *mv)
@@ -303,15 +303,15 @@ static int read_vbat_lean(int *mv)
 
 /* -- data collection ------------------------------------------------------ */
 
-/* The settings the unit runs, "<int>:<ma>:<backup>:<track>" (ap=), and the
- * text last sent. */
+/* The settings the unit runs, "<int>:<ma>:<backup>:0" (ap=), and the
+ * text last sent.  The last field was the track mode, which is gone; it stays so
+ * the server reads the same four fields from every unit. */
 static char s_ap_sent[40];
 
 static void ap_string(char *ap, size_t size)
 {
     snprintf(ap, size, "%d:%d:%d:%d", g_settings.loop_interval,
-             (int)g_settings.movement_alarm, g_settings.backup_interval,
-             (int)g_settings.track_mode);
+             (int)g_settings.movement_alarm, g_settings.backup_interval, 0);
 }
 
 /* The fields every record type ends with. */
@@ -402,7 +402,7 @@ static void append_sync_fields(void)
                  ",rid=%u", s_last_rec_id);
     if (n > 0) data_index += n;
 
-    /* The settings the unit is running, "ap=<int>:<ma>:<backup>:<track>": on
+    /* The settings the unit is running, "ap=<int>:<ma>:<backup>:0": on
      * the first record after a boot and whenever one changes, so a setting
      * the server sent shows as applied.  Sent again until it fits. */
     {
@@ -891,8 +891,7 @@ int collect_data(int ignitionState)
      * close to the same offset everywhere.  See SIGNAL_SAMPLE_MS.
      *
      * Only while registered — there is nothing to measure otherwise — and
-     * never in track mode, which builds two records a second and skips
-     * every AT command for exactly that reason. */
+     * only. */
     if (network_ready && SIGNAL_SAMPLE_MS > 0 &&
         k_uptime_get() - g_cell.signal_ms >= SIGNAL_SAMPLE_MS) {
         modem_read_signal();
@@ -1008,136 +1007,6 @@ int collect_data(int ignitionState)
     return 1;
 }
 
-#if IS_ENABLED(CONFIG_APP_TRACK_MODE)
-/* Track-mode record.  Same CSV head as collect_data() so the server needs
- * no second parser, but nothing here waits: the position is the last fix
- * before GNSS was stopped (or 0,0 on a unit that never had one — the page
- * hides the map in this mode), the speed is the ECU's, and the time is the
- * modem clock.  The extras carry tm=1 to mark the row, the fast OBD poll,
- * and acc=<burst>: the IMU samples batched since the previous record, one
- * ax/ay/az/gx/gy/gz group per sample separated by ':'.
- *
- * Skipped on purpose versus the normal record: the modem temperature and
- * VSYS reads (AT commands that cost tens of milliseconds and change on a
- * timescale of minutes) and the cell fields except on their normal dirty
- * flag.  Always returns 1: this mode's whole point is a record every cycle. */
-int collect_track_data(void)
-{
-    float v = battery_sample_with_engine_check();
-    char now_iso[40];
-    int n;
-
-    /* Built from the last fix, not a new one: the run of live fixes, and
-     * any gap it was measuring, ends here. */
-    data_gap_reset();
-
-    if (data_index > 0 && data_index < DATA_LIMIT - 1) {
-        data_current[data_index++] = '\n';
-    }
-
-    const char *lat = g_gnss.lat_str[0] ? g_gnss.lat_str : "0.000000";
-    const char *lon = g_gnss.lon_str[0] ? g_gnss.lon_str : "0.000000";
-    float speed = 0.0f;
-#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
-    int obd_kmh = obd_speed_kmh();
-    if (obd_kmh >= 0) speed = (float)obd_kmh;
-#endif
-
-    n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
-        "%s,%s,%s,%.2f,%.2f,%.2f,%ld,%ld,%.2f,%d,%lld,%d",
-        clock_timestamp(now_iso, sizeof(now_iso)), lat, lon,
-        (double)speed, (double)g_gnss.altitude_m,
-        (double)g_gnss.heading_deg,
-        0L, 0L,
-        (double)v,
-        1,                                  /* ignition is on by definition */
-        k_uptime_get() / 1000,
-        powered_on ? 1 : 0);
-    if (n > 0 && n < DATA_LIMIT - data_index - 1) data_index += n;
-
-    /* Instantaneous IMU reading, as on every record, so the page's slow
-     * panels keep working unchanged. */
-    int ax, ay, az;
-    if (accel_read(&ax, &ay, &az) == 0) {
-        n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
-                     ",ax=%d;ay=%d;az=%d", ax, ay, az);
-        if (n > 0) data_index += n;
-    }
-    int gx, gy, gz;
-    if (accel_read_gyro(&gx, &gy, &gz) == 0) {
-        n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
-                     ",gx=%d;gy=%d;gz=%d", gx, gy, gz);
-        if (n > 0) data_index += n;
-    }
-    float imu_temp;
-    if (accel_read_temp(&imu_temp) == 0) {
-        n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
-                     ",it=%.1f", (double)imu_temp);
-        if (n > 0) data_index += n;
-    }
-
-    if (g_cell.valid && g_cell.dirty) {
-        n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
-                     ",mcc=%d;mnc=%d;lac=%u;cid=%u;cl=0;rat=%s",
-                     g_cell.mcc, g_cell.mnc, g_cell.tac, g_cell.cid,
-                     modem_rat());
-        if (n > 0) data_index += n;
-        g_cell.dirty = false;
-    }
-
-    n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
-                 ",tm=1");
-    if (n > 0) data_index += n;
-
-#if IS_ENABLED(CONFIG_APP_KLINE_TELEMETRY)
-    struct obd_snapshot obd;
-
-    if (obd_poll_fast(&obd) == 0) {
-        n = obd_append(&data_current[data_index],
-                       DATA_LIMIT - data_index - 1, &obd);
-        if (n > 0) data_index += n;
-    }
-#endif
-
-    /* The IMU burst.  Bounded by what the datagram has room for as well as
-     * by the sample cap: the envelope and a margin for the fields after
-     * this one are reserved first, and the burst stops at the last sample
-     * that fits rather than being cut mid-number. */
-#if CONFIG_APP_TRACK_IMU_SAMPLES > 0
-    struct accel_sample smp[CONFIG_APP_TRACK_IMU_SAMPLES];
-    int cnt = accel_fifo_drain_samples(smp, CONFIG_APP_TRACK_IMU_SAMPLES);
-
-    if (cnt > 0) {
-        int limit = UDP_PACKET_SIZE - 64 - 96;      /* envelope + tail */
-        if (limit > DATA_LIMIT - 1) limit = DATA_LIMIT - 1;
-
-        int start = data_index;
-        for (int i = 0; i < cnt; i++) {
-            n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
-                         "%s%d/%d/%d/%d/%d/%d", i ? ":" : ",acc=",
-                         smp[i].ax, smp[i].ay, smp[i].az,
-                         smp[i].gx, smp[i].gy, smp[i].gz);
-            if (n <= 0 || data_index + n >= limit) {
-                data_current[data_index] = '\0';
-                if (i == 0) data_index = start;
-                break;
-            }
-            data_index += n;
-        }
-    }
-#endif
-
-    n = snprintf(&data_current[data_index], DATA_LIMIT - data_index - 1,
-                 ",up=%lld", k_uptime_get() / 1000);
-    if (n > 0) data_index += n;
-
-    append_sync_fields();
-    data_current[data_index] = '\0';
-    last_record_stale = !g_gnss.valid;
-    return 1;
-}
-#endif /* CONFIG_APP_TRACK_MODE */
-
 #if IS_ENABLED(CONFIG_APP_INSTALL_MODE)
 /* Installation mode's status record.  Not collect_data(): that one waits for a
  * fix and drops the record without one, and a unit being fitted has none.  The
@@ -1224,7 +1093,7 @@ int data_send_line(const char *line)
  * command once it has put it in a reply, and this is the only copy.  The
  * newest reply goes first, since cmd_run acts on the first of each field it
  * finds, and a waiting copy of a field the newest one also carries (the
- * settings that ride every reply: fota=, track=, gw=, le=, ...) is dropped
+ * settings that ride every reply: fota=, gb=, gw=, le=, ...) is dropped
  * (cmd_merge.h). */
 static void pending_cmd_dropped(const char *item, size_t len)
 {
@@ -1336,7 +1205,7 @@ static void reply_apply(const char *resp)
             if (interval >= 0) g_settings.loop_interval = interval;
             if (ma >= 0)       g_settings.movement_alarm = (int8_t)ma;
         }
-        /* The backup interval rides every reply like track=, but is applied
+        /* The backup interval rides every reply like fota=, but is applied
          * as it lands, like the two above.  Nothing on the device sets it,
          * so there is no change of its own for a reply to overwrite and it
          * does not wait on send_int_to_server.  1 to 9 become 10, as for
@@ -1580,10 +1449,7 @@ int send_data(void)
     dbglog_sent(transport_sent_id());
 
     /* The modem has the datagram; the records are held until the server
-     * answers for them, and go again if it does not.  Not in track mode:
-     * its records carry an IMU burst too big for the backlog's slots, and a
-     * second copy of a one-second sample, a minute late, is not worth the
-     * airtime. */
+     * answers for them, and go again if it does not. */
     if (!transport_is_streaming() || stream_keeps_records) {
         databuf_sent(transport_sent_id(), s_tx, (size_t)rec_len);
     }

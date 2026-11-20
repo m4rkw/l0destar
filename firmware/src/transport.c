@@ -101,7 +101,7 @@ static bool s_recheck;
 static int  s_recheck_after = RECHECK_SENDS;
 static int  s_silent_sends;      /* registered sends since the last reply */
 static int64_t s_silent_since_ms;
-/* Track mode: hold the RRC connection between sends. */
+/* The drive stream: hold the RRC connection between sends. */
 static bool s_streaming;
 /* The drive stream's short send timeout is on (transport_set_short_send). */
 static bool s_short_send;

@@ -16,7 +16,7 @@ Avoid:
 
 Fix it so it cannot move: cable ties around the enclosure to an existing loom or bracket, or foam mounting tape on a clean surface. Wrap it in felt or foam tape if it could rattle. Do not leave it hanging on its cables, and support the harness close to the connector so the connector does not carry the weight of the wires.
 
-Choose whatever orientation is convenient, then leave it alone. While parked, the tracker raises a tilt alert when its attitude changes from the one it had when it went to sleep, and the track-mode dashboard learns which way the vehicle's forward axis points for each device. Both assume the unit stays where it was fitted.
+Choose whatever orientation is convenient, then leave it alone. While parked, the tracker raises a tilt alert when its attitude changes from the one it had when it went to sleep, and the web page's g-force readings are measured against gravity as it was resting. Both assume the unit stays where it was fitted.
 
 The enclosure is a 3D-printed prototype and a parked car gets hot. Print it in a material that tolerates the temperatures inside the vehicle; behind the dashboard is cooler than on top of it.
 

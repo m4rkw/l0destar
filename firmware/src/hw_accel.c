@@ -408,6 +408,25 @@ int accel_disable_wake_int(void)
 	return 0;
 }
 
+/* Everything off: no interrupt routing, no FIFO, accelerometer and gyro in
+ * power-down (a few uA).  The low-voltage lockout's state.  The next
+ * accel_disable_wake_int() (or accel_enable_wake_int()) sets the sensors up
+ * again from here. */
+int accel_power_down(void)
+{
+	if (!s_ok) return -1;
+
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_MD1_CFG, 0x00);
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_TAP_CFG2, 0x00);
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_TAP_CFG0, 0x00);
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x00);
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, 0x00);
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL1_XL, 0x00);
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL2_G, 0x00);
+	s_fifo_awake = false;
+	return 0;
+}
+
 /* -- crash (high-g) interrupt, used while awake ----------------------------- */
 
 int accel_crash_int_enable(int threshold_mg)
@@ -632,52 +651,6 @@ int accel_fifo_service(void)
 	int ngy = 0;
 
 	return fifo_read(&ngy) < 0 ? -EIO : ngy;
-}
-
-/* Track mode: hand the ring's contents over as samples rather than as
- * impact statistics.  Reads every word batched since the last drain, so
- * calling it once a cycle turns the FIFO into a 26 Hz stream with no thread
- * of its own and no interrupt.  The impact drain above still works between
- * calls — it just sees the samples since this last ran, which, with the
- * crash check made at the top of every cycle, is the cycle the hit was in.
- *
- * With more samples than `max` the pick is evenly spaced across the whole
- * interval rather than the newest N, so a slow cycle thins the stream
- * instead of leaving a hole at its start.  Gyro words are paired with accel
- * words by arrival order; both are batched at the same rate. */
-int accel_fifo_drain_samples(struct accel_sample *out, int max)
-{
-	if (!s_ok || !out || max <= 0) return -1;
-
-	int ngy = 0;
-	int nxl = fifo_read(&ngy);
-
-	if (nxl < 0) {
-		return -EIO;
-	}
-	if (nxl == 0) {
-		return 0;
-	}
-
-	int count = nxl < max ? nxl : max;
-	float mg = s_mg_per_lsb;
-
-	for (int k = 0; k < count; k++) {
-		int i = (int)(((int64_t)k * nxl) / count);   /* evenly spaced */
-		int j = i < ngy ? i : ngy - 1;
-
-		out[k].ax = (int16_t)(s_fifo_xl[i][0] * mg);
-		out[k].ay = (int16_t)(s_fifo_xl[i][1] * mg);
-		out[k].az = (int16_t)(s_fifo_xl[i][2] * mg);
-		if (j >= 0) {
-			out[k].gx = (int16_t)(s_fifo_gy[j][0] - s_gyro_bias_x);
-			out[k].gy = (int16_t)(s_fifo_gy[j][1] - s_gyro_bias_y);
-			out[k].gz = (int16_t)(s_fifo_gy[j][2] - s_gyro_bias_z);
-		} else {
-			out[k].gx = out[k].gy = out[k].gz = 0;
-		}
-	}
-	return count;
 }
 
 int accel_fifo_drain_impact(struct accel_impact *out)

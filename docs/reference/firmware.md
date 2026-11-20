@@ -8,7 +8,7 @@ constants compiled in from `src/config.h`.
 Values describe firmware 0.4.x as of September 2026. Paths are
 relative to the `firmware/` directory of your clone.
 
-Settings the server sends to a running device, such as the engine-off interval and track mode,
+Settings the server sends to a running device, such as the engine-off interval and the backup-power interval,
 are on [Device settings and commands](device-settings.md).
 
 ## Configuration files
@@ -165,7 +165,8 @@ token of a reply, held in RAM, so after a reboot the built value holds until the
 `APP_TOW_TILT_DEG`, `APP_PARKED_IMPACT_MG`, `APP_IMPACT_IMMEDIATE_MG`, `APP_ACCEL_ALERT_PRIORITY`,
 `APP_ACCEL_ALERT_BACKOFF_S`, `APP_OBD_ALERTS`, `APP_IGNITION_ON_SLEEP_INTERVAL`,
 `APP_BATTERY_WARNING_MV`, `APP_BATTERY_POWEROFF_MV`, `APP_DRIVE_STREAM` (can only switch off a
-build that has it), `APP_DRIVE_STREAM_INTERVAL_S`, `APP_TRACK_PERIOD_MS`, `APP_DATABUF_DRAIN_S`,
+build that has it), `APP_DRIVE_STREAM_INTERVAL_S`, `APP_DRIVE_STREAM_IMU_MS`, `APP_DRIVE_STREAM_ACCEL`,
+`APP_DRIVE_STREAM_IMPACT`, `APP_DATABUF_DRAIN_S`,
 `APP_NETWORK_SEARCH_TIMEOUT`, `APP_RESP_POLL_S` and `APP_LED_ACCEL_WAKE`. An override outside the
 range the server accepts is ignored. See [Device settings](device-settings.md).
 
@@ -229,11 +230,13 @@ same decision see [Hardware](hardware.md#interface-selection-pads).
 | `APP_DRIVE_STREAM_INTERVAL_S` | int, 0-900 | `0` | Seconds between records while the engine runs; 0 is as fast as the unit can. With 0 the receiver is asked for 10 fixes a second so one is always waiting, and the rate is what a pass costs: the bench built and sent 3.4 to 3.6 a second without the K wire, which takes a share. With N of 1 or more at most one record goes every N seconds (the latest fix; the receiver stays at 1 Hz). From 30 s up the connection is not held: it is released between sends and the modem may enter PSM. Falling short is not reported; every 30 s the log says only how many records came from the last position |
 | `APP_DRIVE_STREAM_FIX_WAIT_S` | int | `5` | Longest a streamed record waits for a fix before it is built from the last position (flagged `cl=1`) so the stream does not go quiet; with no position yet it waits for the first fix |
 | `APP_DRIVE_STREAM_WINDOW_MS` | int, 0-5000 | `250` | Depends on `APP_DRIVE_STREAM`. The stream sends no more datagrams than `APP_DATABUF_UNACKED_SLOTS` can track answers for. With every slot waiting a record waits this long for a reply to free one, then is held in the backlog (spaced by `APP_DATABUF_STREAM_GAP_S`) and goes with it when the link answers, instead of being pushed into a stalled modem until `send()` blocks for ten seconds. The rate is then what the link answers: six slots at a second's round trip are six datagrams a second. A slot is also freed when a later send's reply has overtaken it, or its socket has been closed; with nothing answered, one send in three seconds goes anyway. `0` turns it off |
-| `APP_DRIVE_STREAM_SEND_TIMEOUT_MS` | int, 0-10000 | `2000` | Depends on `APP_DRIVE_STREAM`. Longest a streamed send waits for the modem to take the datagram. `send()` blocks while the modem is not delivering, and the loop that builds the records is the one waiting, so a stall of 10 to 15 s left a hole of that size in the track that neither the backlog nor the flash could fill. A send not taken in time is given up: its records wait in the backlog (as for a shut `APP_DRIVE_STREAM_WINDOW_MS` window), nothing counts as a failed send, and the next send tries again; the third in a row replaces the socket. Sends outside the drive stream (track mode included) keep the 10 s. `0` keeps 10 s for the stream too |
+| `APP_DRIVE_STREAM_SEND_TIMEOUT_MS` | int, 0-10000 | `2000` | Depends on `APP_DRIVE_STREAM`. Longest a streamed send waits for the modem to take the datagram. `send()` blocks while the modem is not delivering, and the loop that builds the records is the one waiting, so a stall of 10 to 15 s left a hole of that size in the track that neither the backlog nor the flash could fill. A send not taken in time is given up: its records wait in the backlog (as for a shut `APP_DRIVE_STREAM_WINDOW_MS` window), nothing counts as a failed send, and the next send tries again; the third in a row replaces the socket. Sends outside the drive stream keep the 10 s. `0` keeps 10 s for the stream too |
 | `APP_DRIVE_STREAM_BATCH` | int, 1-4 | `4` | Depends on `APP_DRIVE_STREAM`. Most records in a datagram while the stream has no interval limit (`APP_DRIVE_STREAM_INTERVAL_S` 0, or `xdi` 0). Each streamed record was a datagram of its own, and the datagram (envelope, IP and UDP headers, and the server's reply) was about 210 of a record's 430 bytes on the air. A batch is sent early enough that the gap between datagrams stays under `APP_DRIVE_STREAM_BATCH_GAP_MS`, so at 6 records a second it holds four, at the car's usual 4 two or three, and below 2 a second each record goes alone. A stream under an interval of a second or more is always one record a datagram. `1` turns it off |
 | `APP_DRIVE_STREAM_BATCH_GAP_MS` | int, 200-1000 | `900` | Depends on `APP_DRIVE_STREAM`. Longest the gap between two datagrams of the stream may grow: a batch is sent when the next record, taken to be as slow as the slowest of the last second or two (the one that reads the modem's temperature and supply is twice the rest), would come after this much time has passed since the previous send was decided on. 900 keeps the live view moving at least 1.1 times a second |
 | `APP_DRIVE_STREAM_DELTA` | bool | `y` | Depends on `APP_DRIVE_STREAM`. In a datagram of several records each after the first is sent as a delta against the one before: altitude, HDOP, satellites, battery and `up` that have not changed are left empty, and the die temperatures, supply, signal reading and OBD figures that have not changed are not sent. The server makes each whole again (`tracker/deltarec.py`), so a row is stored as if the whole record had been sent. Nothing is carried between datagrams; the backlog and a datagram sent again keep whole records. About a third off a streamed record's text. Needs a server that reads deltas: turn it off before a build meets an older one |
-| `APP_DRIVE_STREAM_IMU_MS` | int, 0-5000 | `900` | Depends on `APP_DRIVE_STREAM`. Longest between the accelerometer and gyro in the records of the stream with no interval limit (they are a fifth of a record and change every time); the sensor is not read for the others. `0` puts them in every record. The stream under an interval keeps them in all |
+| `APP_DRIVE_STREAM_IMU_MS` | int, 0-5000 | `0` | Depends on `APP_DRIVE_STREAM` and `APP_DRIVE_STREAM_ACCEL`. Longest gap between accelerometer and gyro readings in streamed records. `0`, the default, puts them in every record, whatever the stream rate; a larger value leaves them out of the records in between (they are a fifth of a record and change every time) and the sensor is not read for those. Runtime tunable `xim` |
+| `APP_DRIVE_STREAM_ACCEL` | bool | `y` | Depends on `APP_DRIVE_STREAM`. Put the accelerometer and gyro in the stream at all. `n` leaves `ax` to `gz` out of streamed records and does not read the sensor for them. Runtime tunable `xia` |
+| `APP_DRIVE_STREAM_IMPACT` | bool | `y` | Depends on `APP_DRIVE_STREAM`. While `APP_DRIVE_STREAM_ACCEL` is off, still capture an impact: the record that follows the impact detection, and its alert, carry the accelerometer and gyro readings. No effect while the stream's accelerometer is on. Runtime tunable `xic` |
 | `APP_ASSISTNOW` | bool | `y` | Depends on `APP_BOARD_HAS_EXT_GNSS` and `APP_FOTA`. When the receiver comes up with fewer than five ephemerides and no fix, asks the update server (`APP_FOTA_HOST`, over the same TLS as the manifest) for u-blox AssistNow orbits and gives them to the receiver with the time from the modem's clock. A receiver that has found nothing yet is also given the modem's time and the position of the last fix as soon as it is configured, whether or not it asks (the position is kept in RAM, so not across a reset). The server registers the receiver with u-blox and downloads the orbits; see [AssistNow](../server/configuration.md#assistnow-orbit-assistance). Costs about 14 KB of RAM. |
 | `APP_ASSISTNOW_GNSS` | string | `"gps,gal"` | Constellations asked for, in order of priority; the server cuts what it sends to the buffer a whole constellation at a time |
 | `APP_ASSISTNOW_BUF_SIZE` | int | `10240` | Bytes for the whole HTTPS response, headers included |
@@ -343,7 +346,7 @@ Set `APP_TRACCAR` to report to a [Traccar](https://www.traccar.org) server with 
 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
-| `APP_TRACCAR` | bool | `n` | Report to Traccar. Traccar cannot set the engine-off interval, the backup-power interval, the movement alarm or track mode, advertise updates, or keep the device log; its *custom* command reaches the tracker's command parser |
+| `APP_TRACCAR` | bool | `n` | Report to Traccar. Traccar cannot set the engine-off interval, the backup-power interval, or the movement alarm, advertise updates, or keep the device log; its *custom* command reaches the tracker's command parser |
 | `APP_TRACCAR_HOST` | string | `""` | The Traccar server. Required when `APP_TRACCAR` is set: the build fails with it empty |
 | `APP_TRACCAR_PORT` | int, 1-65535 | `5055` | The port of Traccar's OsmAnd listener (`osmand.port` in `traccar.xml`), not the web interface's 8082 |
 | `APP_TRACCAR_ID` | string | `""` | The identifier the device reports under; empty is the IMEI |
@@ -457,15 +460,6 @@ Discovery, run once per vehicle with the ignition on (see
 | `APP_KLINE_DTC` | bool | `n` | Depends on `APP_KLINE_IDENT`. Also read stored, pending and permanent fault codes |
 
 `APP_L_SEND_ENABLED` is under [Fitted hardware and power domains](#fitted-hardware-and-power-domains).
-
-### Track mode
-
-| Symbol | Type | Default | Meaning |
-|---|---|---|---|
-| `APP_TRACK_MODE` | bool | `y` | Build track mode: while the server has it switched on and the ignition is on, stop GNSS and send the ECU's fast-moving values with a burst of IMU samples on a fixed period, keeping the radio connected |
-| `APP_TRACK_PERIOD_MS` | int, 200-5000 | `1000` | Shortest time between records. The K-wire poll itself takes 400-500ms, so 500 gives an uneven two records a second |
-| `APP_TRACK_IMU_SAMPLES` | int, 0-32 | `24` | IMU samples carried per record, from the 26Hz FIFO; `0` sends only the instantaneous reading |
-| `APP_TRACK_RESP_INTERVAL_S` | int, 1-120 | `10` | How often a reply is read in track mode, which is how the device learns the mode has been switched off |
 
 ### Telemetry batching and backlog
 

@@ -28,7 +28,12 @@ int  tun_battery_warning_mv(void);
 int  tun_battery_poweroff_mv(void);
 bool tun_drive_stream(void);
 int  tun_drive_stream_interval_s(void);
-int  tun_track_period_ms(void);
+/* Longest gap between accel/gyro readings in streamed records (0 = every record). */
+int  tun_drive_stream_accel_ms(void);
+/* Accel/gyro in the drive stream at all. */
+bool tun_drive_stream_accel(void);
+/* With it off, still capture an impact (the record and alert carry ax..gz). */
+bool tun_drive_stream_impact(void);
 int  tun_databuf_drain_s(void);
 int  tun_network_search_s(void);
 int  tun_resp_poll_s(void);

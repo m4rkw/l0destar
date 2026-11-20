@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.130
+
+### A flat car battery puts the unit into a lockout
+
+A parked unit whose car battery reads under the power-off level (`xbp`, 11.8 V) at a timed wake used to skip the send and carry on with the accelerometer, tilt and timer wakes armed. It now goes dark until the key is on and the rail is back.
+- Never on the backup module: a rail in the backup band skips it as before.
+- Modem powered down, every rail and the GNSS backup supply off, accelerometer and gyro in power-down, INA228 shut down.
+- The ignition is the only interrupt left armed: no movement or tilt wake. The rail is read every 40 s, and a rail back at `xbp` ends the lockout without the key.
+- On a key wake it does nothing but read the rail every 2 s while the line is on (and 5 s after it drops, for the starter). At or above `xbp` it carries on as a key-on; line off with the rail still low, it goes back to sleep.
+- Checked on every sleep pass (the 30 s tilt poll) and on every key wake, as well as at a timed wake.
+- Status: builds for v3.3; not run on hardware.
+
+### Track mode is gone; the drive stream's accelerometer is tunable
+Track mode (`APP_TRACK_*`, the server's `track=`, `tm=`/`acc=` records, `TRACK_MODE.md`) is removed; the drive stream does what it did. Units on an old image may still send `tm=`/`acc=` records and a server may still send `track=`: both are ignored.
+
+- `xim` (`APP_DRIVE_STREAM_IMU_MS`, 0..5000, **default 0**): longest gap between accel/gyro readings (`ax`..`gz`) in streamed records; 0 = every record. Was 900.
+- `xia` (`APP_DRIVE_STREAM_ACCEL`, default y): accel/gyro in the stream at all; 0 leaves them out and does not read the sensor for them.
+- `xic` (`APP_DRIVE_STREAM_IMPACT`, default y): with `xia` 0, the next streamed record after a detected impact carries `ax`..`gz`; the impact alert is unchanged (peaks, gyro, duration).
+- `tu=`/`tb=` order: `... xds xdi xim xia xic xdd xns xrp xlw`; `xtp` is gone.
+- The `ap=` settings field keeps its fourth (track) value, always 0.
+- Status: host tests (`tests/test_imu_gate.py`, `tests/test_tunables.py`); built for v4.0p2 and v3.3; not run on hardware.
+
 ## 0.4.129
 
 ### The drive stream uses about half the data

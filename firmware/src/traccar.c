@@ -87,7 +87,7 @@ BUILD_ASSERT(sizeof(CONFIG_APP_TRACCAR_HOST) > 1,
 static int s_sock = -1;
 static struct sockaddr_in s_server;
 static bool s_resolved;
-/* Track mode: hold the RRC connection between sends. */
+/* The drive stream: hold the RRC connection between sends. */
 static bool s_streaming;
 /* Set when a batch got through; cleared when data.c reads the ack. */
 static bool s_acked;
@@ -269,7 +269,6 @@ static const struct {
     { "it",    "imuTemp",       1   },
     { "vs",    "battery",       1   },   /* the SiP's own supply, not the car's */
     { "rst",   "resetCause",    1   },
-    { "tm",    "trackMode",     1   },
     { "rid",   "recordId",      1   },
     { "rsrp",  "rssi",          1   },   /* Traccar's name for serving-cell power */
     { "snr",   "snr",           1   },
@@ -293,10 +292,8 @@ static const struct {
 };
 
 /* Extras that mean nothing to Traccar: the settings sync and its request
- * flag, the duplicate of the uptime field, the track-mode IMU burst (a
- * kilobyte of raw samples, past the request-line limit and no use as an
- * attribute) and the compound debug counters. */
-static const char *const s_dropped[] = { "int", "ma", "ri", "up", "acc", "dbg" };
+ * flag, the duplicate of the uptime field, and the compound debug counters. */
+static const char *const s_dropped[] = { "int", "ma", "ri", "up", "dbg" };
 
 static void encode_extra(struct query *q, const char *key, const char *val,
                          bool *stale, const char *cell[4])
@@ -402,7 +399,7 @@ static int encode_record(struct query *q, char *line)
 
     if (ts > 0) q_fmt(q, "timestamp", "%lld", (long long)ts);
 
-    /* A position of exactly 0,0 is a track-mode record on a unit that has
+    /* A position of exactly 0,0 is a record from a unit that has
      * never had a fix.  Left out, Traccar attaches the last one it holds. */
     if (strtod(f[2], NULL) != 0.0 || strtod(f[3], NULL) != 0.0) {
         q_str(q, "lat", f[2]);
@@ -817,7 +814,7 @@ static int request(bool last)
 {
     /* Release assistance.  The whole request is one send, so the hint
      * covers it: the modem waits for the response and then drops the RRC
-     * connection — unless more requests follow, or streaming (track mode)
+     * connection — unless more requests follow, or streaming
      * keeps it up for the next record. */
     int rai = (s_streaming || !last) ? RAI_ONGOING : RAI_ONE_RESP;
     zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));

@@ -46,14 +46,15 @@ the unit in every reply as tu=.
     accel_alert_backoff_s=0-86400  ignition_on_sleep_s=10-600
     battery_warning_mv=11000-12500 battery_poweroff_mv=10500-12200 (below warning)
     drive_stream=0|1               drive_stream_interval_s=0-900
-    track_period_ms=200-5000       databuf_drain_s=1-600
+    drive_stream_accel_ms=0-5000   drive_stream_accel=0|1
+    drive_stream_impact=0|1        databuf_drain_s=1-600
     network_search_s=60-86400      resp_poll_s=5-600
     led_accel_wake=0|1
     obd_alerts=<rule>[|<rule>...]  e.g. obd_alerts='coolant>=95|rpm>6500'
                                    (| for the comma, which separates commands)
 
 Also applied immediately rather than queued, because every response carries it
-to the device (as track mode does) and a queued copy would be undone by the
+to the device and a queued copy would be undone by the
 next one:
 
     backup_interval=<seconds>
@@ -67,10 +68,6 @@ next one:
                            comma ends a command); "default" clears it.  The
                            interval sent follows it by the (server local) time
                            of day; see docs/reference/device-settings.md.
-
-Track mode is switched from the map page or POST /api/1.0/trackmode rather than
-queued here: every reply already carries the server's switch, so a queued
-track= would be undone by the next one.
 
 fota-retry is both halves of a manual retry: it clears the version withheld
 from this device after a failed update, then queues the bare `fota` command,

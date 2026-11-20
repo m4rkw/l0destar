@@ -6,7 +6,7 @@
  * drain, or a modem that held its datagrams and delivered the answers in one
  * burst), and the server deletes a command once it has put it in a reply, so
  * what is waiting is the only copy and is kept, behind the newest reply's.
- * The settings that ride every reply (fota=, track=, gw=, le=, ...) come again
+ * The settings that ride every reply (fota=, gb=, gw=, le=, ...) come again
  * with the next one and only the newest value counts, so a waiting copy of one
  * is dropped, not kept beside it.  Keeping the ones nobody had listed filled
  * the 128-byte buffer: every further reply then logged "server command
@@ -27,7 +27,9 @@
 typedef void (*cmd_merge_drop_t)(const char *item, size_t len);
 
 /* The fields that are state, not events: only what the newest reply says about
- * them counts, whether or not it says anything, so a waiting copy goes. */
+ * them counts, whether or not it says anything, so a waiting copy goes.
+ * track= is no longer acted on but a server that still sends it must not fill
+ * the buffer with stale copies. */
 static inline bool cmd_merge_is_state(const char *item, size_t len)
 {
 	static const char *const keys[] = { "fota=", "track=", "gb=", "im=", "gx=" };

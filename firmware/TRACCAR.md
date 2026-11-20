@@ -60,7 +60,7 @@ other tracker; the rest keep the record's key.
 | Record field | Traccar | Notes |
 |---|---|---|
 | `ts` | `timestamp` | Unix seconds, UTC. Omitted for a record built before the clock was set, and Traccar uses the time of receipt |
-| `lat`, `lon` | `lat`, `lon` | Omitted when both are exactly 0 (a track-mode record on a unit that has never had a fix); Traccar then attaches the last position it holds |
+| `lat`, `lon` | `lat`, `lon` | Omitted when both are exactly 0 (a record from a unit that has never had a fix); Traccar then attaches the last position it holds |
 | `spd` | `speed` | Converted from km/h to knots, which is what the protocol takes |
 | `alt`, `hdg` | `altitude`, `bearing` | |
 | `hdop` | `hdop` | Unscaled (the record carries HDOP × 10). Omitted when 0 |
@@ -78,7 +78,6 @@ other tracker; the rest keep the record's key.
 | `mt`, `it` | `deviceTemp`, `imuTemp` | °C |
 | `vs` | `battery` | The nRF9151's supply rail, volts |
 | `ax`..`gz` | `ax`..`gz` | Accelerometer in milli-g, gyro in raw LSB, as in the record |
-| `tm` | `trackMode` | |
 | `rid` | `recordId` | The device's own id for the record: consecutive within a boot, seeded at random at each one, so a gap is a record that never arrived |
 | `rsrp`, `snr`, `band` | `rssi`, `snr`, `band` | Serving cell, dBm / dB / LTE band. `rssi` is Traccar's name for serving-cell power |
 | `wt` | `wakeRecordId` + `wakeMs` + `wakeAttachMs` | Milliseconds awake for the send of record `wakeRecordId`, an earlier one, and how much of that was the LTE attach. Traccar has no way to amend a position it has already stored, so the pair goes out as two attributes of the record carrying them and the reader joins them on `recordId`; filing the duration against this record would say it took that long to send this one, which is the one thing it does not mean |
@@ -90,7 +89,6 @@ other tracker; the rest keep the record's key.
 | `otim`, `ostft`, `oltft` | `timingAdvance`, `shortFuelTrim`, `longFuelTrim` | × 10 unscaled |
 | `ofs`, `omil`, `odtc` | `fuelStatus`, `mil`, `dtcCount` | |
 | `int`, `ma`, `ri` | — | The settings sync with the l0destar server |
-| `acc` | — | The track-mode IMU burst: a kilobyte of raw samples, past the request-line limit and no use as an attribute |
 | `dbg` | — | |
 
 Anything the record carries that is not in the table goes out under its own
@@ -142,8 +140,6 @@ l0destar server.
   in RAM. The interval on backup power (`APP_BACKUP_LOOP_INTERVAL`) is set
   the same way by the server and has no command, so with Traccar it stays
   at its build value.
-- **Track mode** is switched on by the l0destar server's response and has no
-  Traccar equivalent.
 - **Firmware updates.** The l0destar server advertises new builds on every
   response; Traccar cannot. The power-on check still runs against
   `APP_FOTA_HOST` if one is set — with none, the check is skipped and updates

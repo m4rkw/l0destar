@@ -140,7 +140,7 @@ Each device's settings live in its `device` row. The first four are sent to the 
 | `backup_int` | `0` | `backup_interval=<seconds>` command, or `backup` in `POST /api/1.0/config` | Timed-report interval in seconds while the inline battery backup module is carrying the tracker, sent as `backup=`; 0 means the engine-off interval applies then too. |
 | `interval_schedule` | NULL | `interval_schedule=<json>` command (`\|` for each comma, `default` clears it), or `isch` in `POST /api/1.0/config` | Optional engine-off reporting schedule: up to 8 rules of `{"days": [0-6, Monday is 0], "from": "HH:MM", "to": "HH:MM", "int": seconds}` in server local time, first match wins, `int` 0 or 10-86400. The interval sent in every reply is the first rule in force now, else `int`, shortened so a long sleep does not pass the start of a shorter period. Added by `2026-11-10_interval_schedule.sql`. See [Reporting schedule](device-settings.md#reporting-schedule). |
 | `movement_alarm` | `1` | `movealarm=0` or `movealarm=1` command, or `ma` | Movement alarm flag, reported back by the tracker. Current firmware does not act on it. |
-| `track_mode` | `0` | the web interface, or `POST /api/1.0/trackmode` | Track mode switch. Cleared at ignition off, or when the device is next heard from after more than an hour of silence. |
+| `track_mode` | `0` | nothing | Unused. Track mode was removed; the column stays so an old database needs no destructive migration. A unit still on an old image may send `tm=` and `acc=` in its records, which are stored in the `log` columns `track_mode` and `imu_burst` but not shown. |
 | `alarm` | `0` | `alarm=0` or `alarm=1`, or `al` | Notify when the ignition comes on. |
 | `garage` | `0` | `garage=0` or `garage=1`, or `ga` | The vehicle is expected to move: priority 2 alerts are sent at priority 0 and the home check does not alert for it. |
 | `overnight_alarm` | `0` | `overnightalarm=0` or `overnightalarm=1`, or `oa` | Notify when the ignition comes on inside the overnight window. |
@@ -153,7 +153,7 @@ Each device's settings live in its `device` row. The first four are sent to the 
 | `gnss_bk_hour_from` | `0` | `gnss_bk_hour_from=<hour>`, or `gwbf` | Start of the backup-power window (0-23, server local time; may wrap midnight). Used when `gnss_bk_window` is 1. |
 | `gnss_bk_hour_to` | `7` | `gnss_bk_hour_to=<hour>`, or `gwbt` | End of the backup-power window (0-23). No window when equal to the start. |
 | `leds` | `1` | `leds=0` or `leds=1`, or `le` | Whether the tracker's status LEDs may light (1) or stay all dark (0). Sent on every reply as `le=`, after `gw=`. |
-| *(runtime tunables)* | NULL | the column name, for example `tow_tilt_deg=8`, or the `/config` code | Seventeen optional overrides of values the firmware is built with: `tow_tilt_deg` (`xtt`), `parked_impact_mg` (`xpi`), `impact_immediate_mg` (`xii`), `accel_alert_priority` (`xap`), `accel_alert_backoff_s` (`xab`), `obd_alerts` (`xoa`), `obd_pids` (`xop`), `ignition_on_sleep_s` (`xis`), `battery_warning_mv` (`xbw`), `battery_poweroff_mv` (`xbp`), `drive_stream` (`xds`), `drive_stream_interval_s` (`xdi`), `track_period_ms` (`xtp`), `databuf_drain_s` (`xdd`), `network_search_s` (`xns`), `resp_poll_s` (`xrp`) and `led_accel_wake` (`xlw`). NULL means no override: the unit keeps the value it was built with. The non-NULL ones are sent on every reply as `tu=`, after `le=`. Ranges, the `obd_alerts` rule syntax and clearing a value are in [Runtime tunables](device-settings.md#runtime-tunables). Not a setting but the companion column `tunables_built` (VARCHAR(400), NULL until reported) holds the built values the unit reports as `tb=`; migration `2026-11-10_device_tunables_built.sql` adds it. |
+| *(runtime tunables)* | NULL | the column name, for example `tow_tilt_deg=8`, or the `/config` code | Nineteen optional overrides of values the firmware is built with: `tow_tilt_deg` (`xtt`), `parked_impact_mg` (`xpi`), `impact_immediate_mg` (`xii`), `accel_alert_priority` (`xap`), `accel_alert_backoff_s` (`xab`), `obd_alerts` (`xoa`), `obd_pids` (`xop`), `ignition_on_sleep_s` (`xis`), `battery_warning_mv` (`xbw`), `battery_poweroff_mv` (`xbp`), `drive_stream` (`xds`), `drive_stream_interval_s` (`xdi`), `drive_stream_accel_ms` (`xim`), `drive_stream_accel` (`xia`), `drive_stream_impact` (`xic`), `databuf_drain_s` (`xdd`), `network_search_s` (`xns`), `resp_poll_s` (`xrp`) and `led_accel_wake` (`xlw`). NULL means no override: the unit keeps the value it was built with. The non-NULL ones are sent on every reply as `tu=`, after `le=`. Ranges, the `obd_alerts` rule syntax and clearing a value are in [Runtime tunables](device-settings.md#runtime-tunables). Not a setting but the companion column `tunables_built` (VARCHAR(400), NULL until reported) holds the built values the unit reports as `tb=`; migration `2026-11-10_device_tunables_built.sql` adds it. |
 | `obd_scan` | 0 | `obd_scan=1` (command), `"obd_scan": 1` (`/config`) | Requests a rescan of the car's supported OBD PIDs. Sent on every reply as `os=` (the last token) until the unit answers with `osp=`, which clears it and fills `obd_supported` / `obd_supported_at`. Also set by the server on the first record with OBD values from a device that never scanned. The selection is the `obd_pids` tunable above. See [OBD PIDs](device-settings.md#obd-pids); migration `2026-11-16_obd_pid_selection.sql` adds the columns. |
 
 An `int=` or `movealarm=` command is queued for the tracker, which applies it and reports the new value; `POST /api/1.0/config` changes the column directly and the next reply carries it. Either way the `int` and `movement_alarm` columns follow what the tracker reports. The server-side settings take effect immediately, and so does `backup_interval=`: it is written to the column rather than queued, because every reply carries it and a queued copy would be undone by the next one. The tracker never reports it back. What each setting does on the tracker, and every command, is in [Device settings and commands](device-settings.md#commands).
@@ -249,7 +249,7 @@ Fills `device.fw` and `device.board` for devices that reported a version before 
 backfill_device_events.py [--apply --before 'YYYY-MM-DD HH:MM:SS'] [--device ID ...] [--app-log /var/log/tracker/app.log] [--config config.yaml]
 ```
 
-Fills `device_event`, the event log behind `GET /api/1.0/devices/events`, for the time before the server recorded events itself. From the `log` table it takes ignition changes, reboots (`rst=`) and firmware changes, each under a key that is the record's own time, so the server's live entry for the same record is never doubled. From the app log it takes updates staged, commands delivered and alerts; from `device_report` and `net_scan_at` the latest result of each kind. The server's own entries for those carry no matching key, so `--before` is required with `--apply`: give it the time the server started recording events itself, and nothing newer than that is taken. Command queueing, settings, track mode and fault codes were never recorded anywhere, so nothing is restored for them. It shows what it would do and writes nothing without `--apply`, and can be run again. It needs `migrations/2026-11-06_device_event.sql` first.
+Fills `device_event`, the event log behind `GET /api/1.0/devices/events`, for the time before the server recorded events itself. From the `log` table it takes ignition changes, reboots (`rst=`) and firmware changes, each under a key that is the record's own time, so the server's live entry for the same record is never doubled. From the app log it takes updates staged, commands delivered and alerts; from `device_report` and `net_scan_at` the latest result of each kind. The server's own entries for those carry no matching key, so `--before` is required with `--apply`: give it the time the server started recording events itself, and nothing newer than that is taken. Command queueing, settings and fault codes were never recorded anywhere, so nothing is restored for them. It shows what it would do and writes nothing without `--apply`, and can be run again. It needs `migrations/2026-11-06_device_event.sql` first.
 
 ## Log files
 
@@ -290,12 +290,13 @@ Deleting a `device` row deletes its `log`, `journey`, `dtc`, `command` and `devi
 
 | Migration | Adds |
 |---|---|
-| `2026-09-06_track_mode.sql` | the track mode switch, and the track mode columns of `log` |
+| `2026-09-06_track_mode.sql` | the track mode switch, and the track mode columns of `log` (track mode has since been removed; the columns stay, unused) |
 | `2026-09-12_fota_state.sql` | per-device update state, so a failing image is not downloaded over and over |
 | `2026-09-14_device_nonce.sql` | replay protection that survives a restart |
 | `2026-11-01_log_board.sql` | the board a build is for (`log.board`), beside the firmware version |
 | `2026-11-01_device_fw_board.sql` | the firmware version and board a device is running, on its own row (`device.fw`, `device.board`) |
 | `2026-11-06_device_event.sql` | the device event log (`device_event`) |
+| `2026-11-18_drive_stream_accel.sql` | the three drive-stream accelerometer tunables (`drive_stream_accel_ms`, `drive_stream_accel`, `drive_stream_impact`); nothing about the removed track mode is dropped |
 
 ## HTTP endpoints
 
@@ -325,7 +326,6 @@ For a logged-in browser. Read endpoints choose the device from `imei` or `device
 | `GET /api/1.0/status` | A device's settings, firmware version and last contact. |
 | `GET /api/1.0/journeys` | Completed journeys, newest first (`page`, and `per_page` up to 200). |
 | `GET /api/1.0/journey/<id>/points` | Every record of one journey. |
-| `GET` or `POST /api/1.0/trackmode` | Read or set the track mode switch (`{"on": 1}`). |
 | `GET /ws/carpos` | WebSocket stream of new records for a device. |
 
 ### Automation API

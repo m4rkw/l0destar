@@ -17,6 +17,9 @@ import re
 
 MAX_SELECTED = 12
 DEFAULT_SELECTION = ['0C', '05']
+# What may be picked before the car has been scanned: the default two and
+# vehicle speed, which every OBD-II car answers.
+UNSCANNED_SELECTABLE = ['0C', '05', '0D']
 SUPPORTED_MAX_CHARS = 56        # 7 words of 8 hex digits: PIDs 0x01-0xE0
 
 # Kept by name so the catalogue below reads as a table.
@@ -189,10 +192,10 @@ def effective_selection(device, built=None):
 
 
 def selectable(supported):
-    """The PIDs that may be selected: only the default ones until a scan has
+    """The PIDs that may be selected: only UNSCANNED_SELECTABLE until a scan has
     said what the car supports, then the supported ones the catalogue knows."""
     if supported is None:
-        return list(DEFAULT_SELECTION)
+        return list(UNSCANNED_SELECTABLE)
     known = {entry['pid'] for entry in catalogue()}
     return [pid for pid in supported if pid in known]
 

@@ -28,24 +28,22 @@ static void locate_now(void)
     send_data();
 }
 
-/* True for a command that is only the track=<0|1> (and gb=<0|1>) the server
- * puts on every reply (Track mode, below), saying what the device already
- * has. */
-static bool track_echo(const char *cmd)
+/* True for a command that is only the gb=<0|1> (and the off window gw=...) the
+ * server puts on every reply, saying what the device already has.  A leading
+ * track=<0|1> from a server that still sends it is skipped: the mode is gone
+ * from the firmware. */
+static bool gb_echo(const char *cmd)
 {
-    if (strncmp(cmd, "track=", 6) != 0 ||
-        (cmd[6] != '0' && cmd[6] != '1') ||
-        (cmd[6] == '1') != (g_settings.track_mode != 0)) {
+    if (strncmp(cmd, "track=", 6) == 0 && (cmd[6] == '0' || cmd[6] == '1') &&
+        (cmd[7] == ',' || cmd[7] == '\0')) {
+        cmd += cmd[7] == ',' ? 8 : 7;
+    }
+    if (strncmp(cmd, "gb=", 3) != 0 || (cmd[3] != '0' && cmd[3] != '1')) {
         return false;
     }
-    if (cmd[7] == '\0') {
-        return true;
-    }
-    /* ",gb=<0|1>", then the off window (",gw=...") if the server sends one. */
-    return strncmp(cmd + 7, ",gb=", 4) == 0 &&
-           (cmd[11] == '0' || cmd[11] == '1') &&
-           (cmd[12] == '\0' || strncmp(cmd + 12, ",gw=", 4) == 0) &&
-           (cmd[11] == '1') == hw_gnss_backup_wanted();
+    /* "gb=<0|1>", then the off window (",gw=...") if the server sends one. */
+    return (cmd[4] == '\0' || strncmp(cmd + 4, ",gw=", 4) == 0) &&
+           (cmd[3] == '1') == hw_gnss_backup_wanted();
 }
 
 /* Names of the commands run since the last record carried them (ak=).  Small
@@ -96,7 +94,7 @@ void cmd_run(char *cmd)
     long val;
 
     /* Installation mode: im=<0|1> rides every reply.  Taken out first, so the
-     * rest of the reply is what track_echo() and the matches below always
+     * rest of the reply is what gb_echo() and the matches below always
      * saw. */
     install_take_token(cmd);
 
@@ -115,7 +113,7 @@ void cmd_run(char *cmd)
         }
     }
 
-    if (!track_echo(cmd)) {
+    if (!gb_echo(cmd)) {
         LOG_INF("cmd: %s", cmd);
     }
 
@@ -145,28 +143,6 @@ void cmd_run(char *cmd)
                          : "movement alarm OFF",
                       0);
         ack_add("movealarm");
-    }
-
-    /* Track mode.  The server puts track=<0|1> on every response so the
-     * device converges on its setting after a reboot or a missed reply;
-     * only a change is acted on, so the routine repeat is silent. */
-    tmp = strstr(cmd, "track=");
-    if (tmp && IS_ENABLED(CONFIG_APP_TRACK_MODE)) {
-        int8_t want = atoi(tmp + strlen("track=")) ? 1 : 0;
-        if (want && ignition != 0) {
-            /* Track mode is meaningless with the ignition off, and the
-             * server clears its switch at key-off anyway; a track=1 seen
-             * now is stale (a reply to the final record, or a switch left
-             * on by a page that was never revisited).  Not adopted, so a
-             * key-on does not start in the mode before the server has had
-             * a chance to say otherwise, and not announced. */
-            LOG_INF("track=1 with ignition off — ignored");
-        } else if (want != g_settings.track_mode) {
-            g_settings.track_mode = want;
-            LOG_INF("track mode %s", want ? "ON" : "OFF");
-            alert_enqueue(want ? "track mode ON" : "track mode OFF", 0);
-            ack_add("track");
-        }
     }
 
     /* GNSS receiver backup supply: the server puts gb=<0|1> on every reply.
@@ -321,12 +297,11 @@ void cmd_run(char *cmd)
         ack_add("config");
         char msg[160];
         snprintf(msg, sizeof(msg),
-                 "fw=%s board=%s int=%d ma=%d tm=%d backup=%d bat=%.1fV "
+                 "fw=%s board=%s int=%d ma=%d backup=%d bat=%.1fV "
                  "ign=%s up=%llus",
                  fota_version(), fota_board_id(),
                  g_settings.loop_interval,
                  (int)g_settings.movement_alarm,
-                 (int)g_settings.track_mode,
                  g_settings.backup_interval,
                  (double)battery_v,
                  (ignition == 0) ? "on" : "off",

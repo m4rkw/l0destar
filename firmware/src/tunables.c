@@ -14,10 +14,20 @@ LOG_MODULE_REGISTER(tun, CONFIG_APP_LOG_LEVEL);
 #else
 #define BUILT_DS_IV 0
 #endif
-#if IS_ENABLED(CONFIG_APP_TRACK_MODE)
-#define BUILT_TRACK_MS CONFIG_APP_TRACK_PERIOD_MS
+#ifdef CONFIG_APP_DRIVE_STREAM_IMU_MS
+#define BUILT_DS_IMU_MS CONFIG_APP_DRIVE_STREAM_IMU_MS
 #else
-#define BUILT_TRACK_MS 1000
+#define BUILT_DS_IMU_MS 0
+#endif
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM_ACCEL) || !defined(CONFIG_APP_DRIVE_STREAM)
+#define BUILT_DS_ACCEL 1
+#else
+#define BUILT_DS_ACCEL 0
+#endif
+#if IS_ENABLED(CONFIG_APP_DRIVE_STREAM_IMPACT) || !defined(CONFIG_APP_DRIVE_STREAM)
+#define BUILT_DS_IMPACT 1
+#else
+#define BUILT_DS_IMPACT 0
 #endif
 #ifdef CONFIG_APP_OBD_ALERTS
 #define BUILT_OBD_ALERTS CONFIG_APP_OBD_ALERTS
@@ -42,7 +52,9 @@ static const int32_t s_built[TUN_N_INT] = {
 	[TUN_XBP] = CONFIG_APP_BATTERY_POWEROFF_MV,
 	[TUN_XDS] = IS_ENABLED(CONFIG_APP_DRIVE_STREAM),
 	[TUN_XDI] = BUILT_DS_IV,
-	[TUN_XTP] = BUILT_TRACK_MS,
+	[TUN_XIM] = BUILT_DS_IMU_MS,
+	[TUN_XIA] = BUILT_DS_ACCEL,
+	[TUN_XIC] = BUILT_DS_IMPACT,
 	[TUN_XDD] = CONFIG_APP_DATABUF_DRAIN_S,
 	[TUN_XNS] = CONFIG_APP_NETWORK_SEARCH_TIMEOUT,
 	[TUN_XRP] = CONFIG_APP_RESP_POLL_S,
@@ -128,7 +140,9 @@ int  tun_battery_warning_mv(void)    { return get(TUN_XBW); }
 int  tun_battery_poweroff_mv(void)   { return get(TUN_XBP); }
 bool tun_drive_stream(void)          { return get(TUN_XDS) != 0; }
 int  tun_drive_stream_interval_s(void) { return get(TUN_XDI); }
-int  tun_track_period_ms(void)       { return get(TUN_XTP); }
+int  tun_drive_stream_accel_ms(void) { return get(TUN_XIM); }
+bool tun_drive_stream_accel(void)    { return get(TUN_XIA) != 0; }
+bool tun_drive_stream_impact(void)   { return get(TUN_XIC) != 0; }
 int  tun_databuf_drain_s(void)       { return get(TUN_XDD); }
 int  tun_network_search_s(void)      { return get(TUN_XNS); }
 int  tun_resp_poll_s(void)           { return get(TUN_XRP); }

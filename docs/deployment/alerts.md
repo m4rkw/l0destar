@@ -120,7 +120,6 @@ The self-test and rail alerts mean a hardware fault; the [board test](../assembl
 | `fota: check queued` | 0 | `fota` |
 | `fota: updates inhibited` | 0 | `fota`, on a unit built with `CONFIG_APP_FOTA_INHIBIT` |
 | `rebooting` | 0 | `reboot` |
-| `track mode ON`, `track mode OFF` | 0 | Track mode switched from the web page |
 
 What each command does is in [Commands](../reference/device-settings.md#commands).
 

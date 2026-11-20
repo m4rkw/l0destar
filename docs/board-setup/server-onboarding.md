@@ -32,7 +32,7 @@ Reopen the console, which the reset disconnects. Once the modem has registered, 
 ```text
 <inf> main: imei=350000000000000
 <inf> transport: sent 332 bytes
-<inf> data: resp: 1,0,1,track=0
+<inf> data: resp: 1,0,1
 <inf> main: entering sleep
 ```
 
@@ -65,12 +65,11 @@ The address in `udp.log` is your mobile operator's, not the SIM's own.
 | `int` | `0` | Engine-off timed wake interval, in seconds. `0` means no timed wakes: the device still wakes on ignition, movement, knocks and tilt. |
 | `backup_int` | `0` | Timed-report interval in seconds while the inline battery backup module is carrying the tracker. `0` means the engine-off interval applies then too. |
 | `ma` | `1` | The movement alarm flag. Firmware 0.4.x reports it but does not act on it: movement, impact and tilt alerts are raised either way. |
-| `track_mode` | `0` | Track mode, switched on per session from the web page. |
 | `alarm` | `0` | Server alert whenever the ignition comes on. |
 | `garage` | `0` | Marks a vehicle expected to be moved, downgrading urgent alerts. |
 | `overnight_alarm` | `0` | Server alert when the ignition comes on overnight (23:00 to 06:00 unless changed). |
 
-`int`, `backup_int`, `ma` and `track_mode` travel to the device in every reply; the other three only change what the server does. To change them use `command.py` or the API - every setting and command is in [device settings and commands](../reference/device-settings.md), and what `int` costs in battery is worked out in [deployment configuration](../deployment/configuration.md). For example, to have a parked vehicle report every hour:
+`int`, `backup_int` and `ma` travel to the device in every reply; the other three only change what the server does. To change them use `command.py` or the API - every setting and command is in [device settings and commands](../reference/device-settings.md), and what `int` costs in battery is worked out in [deployment configuration](../deployment/configuration.md). For example, to have a parked vehicle report every hour:
 
 ```sh
 sudo docker exec l0destar python tools/command.py 350000000000000 int=3600
@@ -84,7 +83,7 @@ Enrol each device the same way. Every device has its own IMEI, its own key and i
 
 - Give each a name you will recognise in an alert.
 - The web interface lists them all on its device page and opens the map for whichever you choose; see [web interface and API](web-interface.md).
-- API calls that only read can fall back to a default device, but calls that change anything - settings, commands, track mode - must name the device.
+- API calls that only read can fall back to a default device, but calls that change anything - settings, commands - must name the device.
 
 ## Managing devices
 

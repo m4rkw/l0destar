@@ -82,7 +82,7 @@ static int64_t s_last_send_ms;
 static int     s_buffered_records;
 /* When a server reply was last read.  While moving, sends normally do not
  * wait for one; this is what bounds how long a setting changed on the
- * server (track mode, interval) takes to reach a driving device. */
+ * server (interval) takes to reach a driving device. */
 static int64_t s_last_resp_ms;
 
 /* -- ignition wake interrupt ----------------------------------------------- */
@@ -354,6 +354,7 @@ static void crash_check(void)
                  src, ax, ay, az, (double)g_gnss.speed_kmh);
     }
     LOG_WRN("%s", msg);
+    data_impact_note();
     alert_enqueue(msg, accel_alert_priority());
     alert_send();
 }
@@ -423,9 +424,7 @@ static int  s_coast_iters;
  * connection: it is released between sends as in normal driving, so the
  * modem can reach PSM and no data is spent keeping the link up.  With none
  * the receiver is faster than a cycle, a fix is always waiting, and the rate
- * is the cycle's: a build, a send and the K wire's share.
- *
- * Track mode (do_track) has its own, and the sync below leaves it alone. */
+ * is the cycle's: a build, a send and the K wire's share. */
 #if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
 #define DS_INTERVAL_S   s_ds_iv     /* 0: no limit; tun_drive_stream_interval_s() latched at stream start */
 #define DS_HOLD_MAX_S   30          /* an interval this long or more does not hold the connection */
@@ -448,8 +447,7 @@ static int64_t s_ds_sent_ms;        /* when the last send was decided on (0: non
 
 static bool drive_stream_wanted(void)
 {
-    return ignition == 0 && engine_running && !s_coasting && tun_drive_stream() &&
-           !(IS_ENABLED(CONFIG_APP_TRACK_MODE) && g_settings.track_mode);
+    return ignition == 0 && engine_running && !s_coasting && tun_drive_stream();
 }
 
 /* Said over the last window only if records had to be built from the last
@@ -510,13 +508,11 @@ static void drive_stream_sync(void)
             }
         }
     }
-    /* Compared with the transport's own flag, not a copy: track mode sets and
-     * clears it too, and leaves it clear. */
+    /* Compared with the transport's own flag, not a copy. */
     if (transport_is_streaming() != hold) {
         transport_set_streaming(hold);
         stream_keeps_records = hold;
-        /* Only this stream can hold a record a send gave up on; track mode's
-         * are too big for the backlog. */
+        /* Only this stream can hold a record a send gave up on. */
         transport_set_short_send(hold);
     }
 }
@@ -1061,18 +1057,127 @@ static bool backup_cut_confirm(float *v)
  * mounted.  One switch for both, so they cannot drift apart. */
 #define SLEEP_D6D_TAMPER 0
 
+/* The sleep loop's way out on a key: the radio, the receiver and the rails
+ * come up and the main loop takes over in IDLE. */
+static void sleep_key_on(void)
+{
+    LOG_INF("wake: ignition ON");
+    atomic_set(&s_report_owed, 0);
+    ignition = 0;
+    s_key_wake = true;
+    movement_reset();
+    ign_irq_disable();
+    accel_irq_disable();
+    LOG_INF("wake: INA228 wake");
+    hw_power_wake();
+    LOG_INF("wake: aux power on");
+    hw_aux_power_on();
+    led_on();
+    nbiot_fallback_end();
+    LOG_INF("wake: modem connect");
+    modem_connect();
+    LOG_INF("wake: GNSS start");
+    gnss_start();
+    s_state = STATE_IDLE;
+}
+
+/* One reading of the rail: a car battery (never the backup module) under the
+ * power-off level. */
+static bool rail_low(void)
+{
+    hw_power_wake();
+    float v = battery_read_voltage();
+    hw_power_shutdown();
+    return v > 0.0f && v < BATTERY_POWEROFF_LEVEL && !battery_on_backup(v);
+}
+
+/* Low-voltage lockout.  A car battery (not the backup module: on_backup never
+ * gets here) that has fallen under the power-off level is not asked for
+ * anything more.  Every rail goes off, the modem is powered down, the
+ * accelerometer and gyro go into power-down and the only interrupt left
+ * armed is the ignition's.  The unit then sleeps with no movement wake, only
+ * a rail look every LOCKOUT_RECHECK_S, until the rail is back or the key is on.
+ *
+ * On that wake it does nothing but read the rail: while the line holds on
+ * (and for the crank window after it drops, since the starter pulls the line
+ * out) it reads once every LOCKOUT_POLL_MS, and the moment the rail reads at
+ * or above the power-off level the unit carries on as a key-on.  The line
+ * off for good with the rail still low puts it back to sleep.  Returns true
+ * for a key-on with the rail recovered (the caller takes the key), false
+ * when the rail recovered without one, or is on the backup module (the
+ * caller carries on sleeping normally). */
+#define LOCKOUT_POLL_MS 2000
+#define LOCKOUT_RECHECK_S 40
+
+static bool low_battery_lockout(void)
+{
+    transport_teardown();
+    modem_power_off();
+    hw_can_power_off();
+    hw_aux_power_off();
+    hw_gnss_backup_drop();
+    led_all_off();
+    accel_irq_disable();    /* INT1 off, routing cleared ... */
+    accel_power_down();     /* ... and both sensors in power-down */
+    hw_power_shutdown();
+
+    for (;;) {
+        k_sem_reset(&s_wake_sem);
+        ign_irq_enable();
+        if (atomic_get(&s_ign_int_flag)) {
+            k_sem_give(&s_wake_sem);
+        }
+        console_suspend();
+        /* The ignition ends the wait at once; failing that, the rail is
+         * looked at every LOCKOUT_RECHECK_S, so a battery that comes back on
+         * its own (a charger, a supply put right) ends the lockout without
+         * the key. */
+        for (int waited = 0; waited < LOCKOUT_RECHECK_S;
+             waited += WATCHDOG_SLEEP_SLICE_S) {
+            if (k_sem_take(&s_wake_sem,
+                           K_SECONDS(WATCHDOG_SLEEP_SLICE_S)) == 0) {
+                break;
+            }
+            watchdog_kick();
+        }
+        bool by_key = atomic_clear(&s_ign_int_flag) != 0;
+
+        hw_power_wake();
+        /* A look on the timer with the line off needs no crank wait. */
+        int64_t off_since = (!by_key && ignition_read() != 0)
+                                ? k_uptime_get() - IGN_CRANK_MAX_MS - 1 : -1;
+        float   v;
+
+        for (;;) {
+            watchdog_kick();
+            v = battery_read_voltage();
+            if (v <= 0.0f || v >= BATTERY_POWEROFF_LEVEL ||
+                battery_on_backup(v)) {
+                break;
+            }
+            if (ignition_read() == 0) {
+                off_since = -1;
+            } else if (off_since < 0) {
+                off_since = k_uptime_get();
+            } else if (k_uptime_get() - off_since > IGN_CRANK_MAX_MS) {
+                break;
+            }
+            k_msleep(LOCKOUT_POLL_MS);
+        }
+        if (v > 0.0f && v < BATTERY_POWEROFF_LEVEL && !battery_on_backup(v)) {
+            hw_power_shutdown();    /* still low, the line is off: back to sleep */
+            continue;
+        }
+        console_resume();
+        LOG_INF("battery %.2fV: lockout over", (double)v);
+        return ignition_read() == 0;
+    }
+}
+
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
     data_gap_reset();
-    /* Track mode ends with the drive.  The server drops its switch on the
-     * ignition-off record, so this only keeps the two in step: without it
-     * the next key-on would start in the mode and stay there until the
-     * first reply (up to APP_TRACK_RESP_INTERVAL_S) said otherwise. */
-    if (g_settings.track_mode) {
-        LOG_INF("track mode off: ignition off");
-        g_settings.track_mode = 0;
-    }
     /* No fault-code read here: sleep is only ever entered with the ignition
      * off, and the engine ECU is unpowered then, so the read would time out
      * and an empty report would wrongly clear live faults.  Codes raised
@@ -1365,25 +1470,25 @@ static void do_sleep(void)
             }
             ign_before = ignition_read();
         }
+        /* The rail, every pass and on every key: a car battery under the
+         * power-off level locks the unit out before anything else starts. */
+        if (rail_low()) {
+            console_resume();
+            LOG_WRN("battery under %.2fV - lockout until the key is on and "
+                    "the rail is back", (double)BATTERY_POWEROFF_LEVEL);
+            if (low_battery_lockout()) {
+                sleep_key_on();
+                return;
+            }
+            accel_read_baseline();
+            accel_snapshot_tilt_ref();
+            accel_irq_enable();
+            ign_before = ignition_read();
+            telemetry_remaining = telemetry_interval_once();
+            continue;
+        }
         if (key_wake) {
-            LOG_INF("wake: ignition ON");
-            atomic_set(&s_report_owed, 0);
-            ignition = 0;
-            s_key_wake = true;
-            movement_reset();
-            ign_irq_disable();
-            accel_irq_disable();
-            LOG_INF("wake: INA228 wake");
-            hw_power_wake();
-            LOG_INF("wake: aux power on");
-            hw_aux_power_on();
-            led_on();
-            nbiot_fallback_end();
-            LOG_INF("wake: modem connect");
-            modem_connect();
-            LOG_INF("wake: GNSS start");
-            gnss_start();
-            s_state = STATE_IDLE;
+            sleep_key_on();
             return;
         }
 
@@ -1759,9 +1864,18 @@ static void do_sleep(void)
                 LOG_INF("battery %.2fV: backup power, reporting", (double)v);
             }
             if (!on_backup && !forced && v > 0 && v < BATTERY_POWEROFF_LEVEL) {
-                LOG_WRN("battery %.2fV < poweroff", (double)v);
-                hw_power_shutdown();
-                telemetry_remaining = BATTERY_CHECK_INTERVAL;
+                LOG_WRN("battery %.2fV < poweroff - lockout until the key is "
+                        "on and the rail is back", (double)v);
+                if (low_battery_lockout()) {
+                    sleep_key_on();
+                    return;
+                }
+                /* Recovered without a key: sleep as before. */
+                accel_read_baseline();
+                accel_snapshot_tilt_ref();
+                accel_irq_enable();
+                ign_before = ignition_read();
+                telemetry_remaining = telemetry_interval_once();
                 continue;
             }
             if (!on_backup && !forced && v > 0 && v < SLEEP_SAFETY_VOLTAGE) {
@@ -2156,9 +2270,8 @@ static void do_ignition_sleep(void)
                  * above, so the awake variant puts it back on failure. */
                 fota_check(FOTA_CTX_AWAKE);
 
-                /* Or switched track mode on: the main loop picks it up. */
-                if ((IS_ENABLED(CONFIG_APP_TRACK_MODE) && g_settings.track_mode) ||
-                    install_active()) {     /* installation mode: likewise */
+                /* Or switched installation mode on: the main loop picks it up. */
+                if (install_active()) {
                     s_state = STATE_IDLE;
                     return;
                 }
@@ -2169,125 +2282,6 @@ static void do_ignition_sleep(void)
         status_delay(1000);
     }
 }
-
-/* ========================================================================= */
-/*  Track mode — GNSS off, ECU + IMU streamed at a fast cadence              */
-/* ========================================================================= */
-#if IS_ENABLED(CONFIG_APP_TRACK_MODE)
-/* Entered from the main loop whenever the server has switched track mode on
- * and the ignition is on; runs until either changes.
- *
- * The receiver is stopped for the duration: the position is not what this
- * mode is for, and with GNSS out of the way the radio is LTE's outright, so
- * the socket is held and the RRC connection kept up between sends instead
- * of being released after each one (transport_set_streaming).  Each cycle
- * builds one record — last fix, the fast OBD poll, an IMU burst — sends it,
- * and idles out the rest of APP_TRACK_PERIOD_MS.  The K-wire poll is the
- * bulk of a cycle at ~400-500 ms; the send is tens of milliseconds.
- *
- * Only every APP_TRACK_RESP_INTERVAL_S is the server's reply waited for,
- * which costs a round trip and is how track=0 gets back to the device.
- *
- * Key-off ends it the way the other awake loops end: one final record from
- * the cached position with the ignition state, then sleep.  A switch-off
- * from the server hands back to the normal state machine with GNSS
- * resumed, and the next cycle re-acquires. */
-static void do_track(void)
-{
-    const int64_t period_ms = tun_track_period_ms();
-    const int64_t resp_ms   = (int64_t)CONFIG_APP_TRACK_RESP_INTERVAL_S * 1000;
-    int64_t last_resp = k_uptime_get() - resp_ms;   /* read the first reply */
-    int64_t last_log = 0;
-    int sent = 0;
-
-    LOG_INF("track mode: GNSS off, one record per %lld ms", period_ms);
-    data_gap_reset();
-    gnss_stop();
-    transport_set_streaming(true);
-    led_idle();
-    if (g_cell.mcc == 0) modem_update_cell_info();
-
-    while (g_settings.track_mode) {
-        int64_t t0 = k_uptime_get();
-
-        watchdog_kick();
-        crash_check();
-#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
-        obd_service();
-#endif
-        jobs_service();
-        if (power_reboot) {
-            reboot_now();
-        }
-
-        ignition = (char)ignition_read();
-        if (ignition != 0) {
-            LOG_INF("track mode: ignition OFF — sending final position");
-            transport_set_streaming(false);
-            use_cached_gps = true;
-            read_udp_response = false;
-            force_record = true;
-            int have_record = collect_data(ignition);
-            force_record = false;
-            if (have_record > 0) {
-                /* Not streaming any more, so held until answered for; the
-                 * socket stays for do_sleep() to collect the reply. */
-                send_data();
-            }
-            data_reset();
-            previous_ignition = ignition;
-            engine_running = false;
-            s_state = STATE_SLEEP;
-            return;
-        }
-
-        bool want_resp = (t0 - last_resp) >= resp_ms;
-
-        read_udp_response = want_resp;
-        if (collect_track_data() > 0) {
-            send_data();
-            if (last_send_ok) {
-                previous_ignition = ignition;
-                s_last_send_ms = k_uptime_get();
-                sent++;
-            }
-            if (want_resp) {
-                last_resp = k_uptime_get();
-                s_last_resp_ms = last_resp;
-            }
-            /* From any reply: every one is read now, and the server deletes
-             * a command once it has put it in one. */
-            if (pending_server_cmd[0] != '\0') {
-                cmd_run(pending_server_cmd);
-                pending_server_cmd[0] = '\0';
-                if (alert_count > 0) alert_send();
-            }
-            if (!last_send_ok) {
-                modem_recover();
-            }
-        }
-        data_reset();
-
-        if (k_uptime_get() - last_log >= 30000) {
-            LOG_INF("track: %d records, %d rpm, %.1f km/h, %.2fV, cycle %lld ms",
-                    sent, engine_rpm_or_na(), (double)vehicle_speed_kmh(),
-                    (double)battery_v, k_uptime_get() - t0);
-            last_log = k_uptime_get();
-        }
-
-        int64_t spent = k_uptime_get() - t0;
-        if (spent < period_ms) {
-            status_delay((long)(period_ms - spent));
-        }
-    }
-
-    LOG_INF("track mode off — resuming GNSS");
-    transport_set_streaming(false);
-    transport_close();
-    gnss_resume();
-    s_state = STATE_IDLE;
-}
-#endif /* CONFIG_APP_TRACK_MODE */
 
 /* ========================================================================= */
 /*  main                                                                     */
@@ -2760,18 +2754,6 @@ int main(void)
         if (power_reboot) {
             reboot_now();
         }
-
-#if IS_ENABLED(CONFIG_APP_TRACK_MODE)
-        /* Track mode takes over every awake state.  Not STATE_SEND: a record
-         * is buffered there and goes out first, and with BATCH_SIZE 1 the
-         * loop is back here a moment later. */
-        if (g_settings.track_mode && ignition == 0 && network_ready &&
-            (s_state == STATE_IDLE || s_state == STATE_GPS_COLLECT ||
-             s_state == STATE_IGNITION_SLEEP)) {
-            do_track();
-            continue;
-        }
-#endif
 
         switch (s_state) {
         case STATE_IDLE: {

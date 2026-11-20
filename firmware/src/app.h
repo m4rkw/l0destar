@@ -28,9 +28,6 @@ struct app_settings {
      * back.  See report_interval() in main.c. */
     int     backup_interval;
     int8_t  movement_alarm;
-    /* Set from the server's response (track=<0|1>); never persisted.  See
-     * do_track() in main.c and APP_TRACK_MODE. */
-    int8_t  track_mode;
     uint8_t psk[32];
 };
 
@@ -127,14 +124,16 @@ extern bool  last_record_stale;
  * stream's normal fallback, so the receiver driver does not warn about it.
  * stream_keeps_records holds the
  * records of a streamed send until the server's reply comes back, as a send
- * that is not streamed does; track mode leaves it off, its records being too
- * big for the backlog's slots. */
+ * that is not streamed does. */
 extern int   collect_fix_wait_ms;
 extern bool  stream_keeps_records;
 /* Lean: the modem's temperature and supply, AT commands that cost tens of
  * milliseconds each for figures that move over minutes, are read at most once
  * a second instead of for every record.  For a stream above 1 Hz. */
 void data_set_lean(bool on);
+/* The awake impact detection fired: with the drive stream's accelerometer off
+ * (xia) and impact capture on (xic), the next streamed record carries ax..gz. */
+void data_impact_note(void);
 extern bool  powered_on;
 extern char  ignition;
 extern int8_t previous_ignition;
@@ -346,7 +345,7 @@ void transport_close(void);
 void transport_set_streaming(bool on);
 /* The drive stream's short send timeout (APP_DRIVE_STREAM_SEND_TIMEOUT_MS) on
  * or off.  Only the drive stream turns it on: its records can wait in the
- * backlog when a send is given up, track mode's cannot.  Off with streaming. */
+ * backlog when a send is given up.  Off with streaming. */
 void transport_set_short_send(bool on);
 /* Drop the socket, hint or no hint: before the modem is powered off or
  * reset, and when a send has failed on it. */
@@ -395,9 +394,6 @@ int  data_send_line(const char *line);   /* one raw line as its own datagram */
  * Stops at the first round that frees nothing.  For before a planned restart,
  * with the radio up.  Returns the datagrams sent. */
 int  data_send_logs(int timeout_ms, int max_datagrams);
-/* Track-mode record: no GNSS wait, last known position, the fast OBD poll and
- * an IMU burst (tm=1, acc=...).  Returns 1 with a record in data_current. */
-int  collect_track_data(void);
 
 /* -- backlog buffer (src/databuf.c) ----------------------------------------
  * Holds records that could not be sent, so a radio outage delays the track
@@ -677,7 +673,7 @@ void kline_dtc_string(uint16_t v, char *out);   /* 6 bytes: "P0133" + NUL */
 /* The poll: RPM, speed, throttle and load every call, plus one of the
  * slow-moving PIDs in rotation — four or five exchanges (~0.5 s) rather than
  * thirteen — merged into a live snapshot.  obd_poll_fast() always goes to
- * the bus (track mode, one per record); obd_snapshot_take() copies the
+ * the bus; obd_snapshot_take() copies the
  * snapshot and polls first only if it is more than a second old (normal
  * records, which the fix-wait tick has usually just refreshed). */
 int  obd_poll_fast(struct obd_snapshot *s);
@@ -818,17 +814,6 @@ int  accel_fifo_enable(void);
 int  accel_fifo_disable(void);
 int  accel_fifo_drain_impact(struct accel_impact *out);
 
-/* One IMU sample out of the FIFO ring: accel in milli-g at the current
- * full-scale, gyro as bias-corrected raw LSB at +/-250 dps — the same units
- * as accel_read() / accel_read_gyro(), so the server scales them alike. */
-struct accel_sample {
-    int16_t ax, ay, az;
-    int16_t gx, gy, gz;
-};
-/* Drain everything batched since the last drain and return up to `max`
- * samples, evenly spaced across the interval when there were more.  Returns
- * the count written, or negative.  Samples arrive at 26 Hz (FIFO_SAMPLE_MS). */
-int  accel_fifo_drain_samples(struct accel_sample *out, int max);
 #define ACCEL_FIFO_SAMPLE_MS 38
 /* Drain the FIFO for the dead reckoning alone (every drain feeds it): a
  * no-op unless the awake configuration is batching the gyro.  Returns the
@@ -884,7 +869,7 @@ static inline void dr_fifo_service(void) { }
 /* Bytes of mv= fields in data_current, which the batch's flush threshold
  * leaves out: the motion must never make a batch go early. */
 int  data_motion_bytes(void);
-/* The drive's run of live fixes is over (sleep, track mode): the next fix
+/* The drive's run of live fixes is over (sleep): the next fix
  * starts a new one rather than ending a gap from before. */
 void data_gap_reset(void);
 
@@ -894,6 +879,7 @@ int  accel_confirm_peak_mg(void);
 void accel_get_movement_info(int *tilt_tenths, int *delta_mg);
 int  accel_enable_wake_int(void);
 int  accel_disable_wake_int(void);
+int  accel_power_down(void);
 void movement_reset(void);
 
 #endif /* APP_H_ */

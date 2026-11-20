@@ -7,7 +7,7 @@ The tracker takes its settings from the server on every reply it reads, runs the
 The server answers every datagram it accepts with a single line:
 
 ```text
-1,<int>,<ma>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>]
+1,<int>,<ma>[,<commands>][,backup=<seconds>][,fota=<version>]
 ```
 
 | Part | Meaning |
@@ -18,13 +18,12 @@ The server answers every datagram it accepts with a single line:
 | `<commands>` | Every command queued for the device, comma-separated; they leave the queue as they are sent |
 | `backup=<seconds>` | The device's backup interval, on every reply: the timed-report interval while the inline battery backup module is carrying the tracker, `0` for "the same as `<int>`" |
 | `fota=<version>` | The newest build published for this device, when there is one that has not been withheld after a failed update |
-| `track=0` or `track=1` | The track mode switch, on every reply |
 
 When the tracker reads a reply it:
 
 1. applies `<int>` and `<ma>` - unless it has changed them itself since its last record, in which case it sends its own values (`int=<n>;ma=<n>`) with its next record and the server adopts them;
 2. applies `backup=` as it reads it, and takes it out of what follows: it is a setting, not a command, and unlike `<int>` the tracker never reports it back, because nothing on the tracker changes it;
-3. acts on everything else after `<ma>`: the queued commands, the update advert (`fota=`) and the track mode switch (`track=`).
+3. acts on everything else after `<ma>`: the queued commands, and the update advert (`fota=`).
 
 It reads at most 127 characters after `<ma>`, so do not queue more than a few commands at once.
 
@@ -33,7 +32,6 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 - an engine-off interval of 900 seconds, so that one lost reply cannot leave a parked unit silent;
 - no backup interval (`CONFIG_APP_BACKUP_LOOP_INTERVAL`, 0 by default), so the engine-off interval applies on backup power too;
 - the movement alarm flag from `CONFIG_APP_MOVEMENT_ALARM` (off by default);
-- track mode off.
 
 ## Settings
 
@@ -43,14 +41,12 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 | Reporting schedule | `<int>` | `device.interval_schedule` | none | Optional JSON rules that make the engine-off interval depend on the time of day and the day of the week; no schedule means `device.int` always applies. Set with `isch` in `POST /api/1.0/config` or `interval_schedule=<json>`; see [Reporting schedule](#reporting-schedule) |
 | Backup interval | `backup=` | `device.backup_int` | `0` | Seconds between timed reports while the inline backup module is carrying the tracker; `0` means the engine-off interval applies then too. Set with `backup_interval=<seconds>` or `backup` in `POST /api/1.0/config`; see [Reporting interval on backup power](../deployment/configuration.md#reporting-interval-on-backup-power) |
 | Movement alarm | `<ma>` | `device.movement_alarm` | `1` | Stored, synced and reported, but not acted on by firmware 0.4.x |
-| Track mode | `track=` | `device.track_mode` | `0` | GNSS off, engine and IMU data streamed quickly |
 | Device LEDs | `le=` | `device.leds` | `1` | `1` lets the status LEDs light, `0` keeps them all dark. Sent on every reply straight after `gw=`; set with `leds=<0\|1>` or `le` in `POST /api/1.0/config` |
-| Runtime tunables | `tu=` | 17 nullable `device` columns, [below](#runtime-tunables) | NULL | Optional overrides of values the firmware is built with. NULL means no override: the unit keeps the value it was built with. Sent on every reply straight after `le=` as `tu=<code>:<value>[;...]` (`tu=-` when none is set) |
+| Runtime tunables | `tu=` | 19 nullable `device` columns, [below](#runtime-tunables) | NULL | Optional overrides of values the firmware is built with. NULL means no override: the unit keeps the value it was built with. Sent on every reply straight after `le=` as `tu=<code>:<value>[;...]` (`tu=-` when none is set) |
 | Update advert | `fota=` | per-device manifest | - | See [OTA updates](../board-setup/ota-updates.md) |
 
 - A timed report while parked sends the last known position. GNSS is only started for it when movement has been detected since the previous one, or when the tracker has had no fix since it started. Ignition, movement, impact and tilt wake the tracker whatever the interval is.
 - Movement, impact and tilt alerts are raised whatever the movement alarm flag says. Use the priority settings in [Configure alerts](../deployment/alerts.md) to quieten them.
-- Track mode is switched from the web page (see [Web interface and API](../board-setup/web-interface.md)). The server clears it when the ignition goes off, or when a device is heard from after an hour of silence, and the tracker ignores `track=1` while the ignition is off.
 
 ### Reporting schedule
 
@@ -80,7 +76,6 @@ A queued command waits until the tracker next reads a reply.
 |---|---|---|
 | Driving | At ignition changes, while the vehicle is reported stationary, and at least every `APP_RESP_POLL_S` (30 seconds) | about 30 seconds |
 | Ignition on, engine off | Every `APP_IGNITION_ON_SLEEP_INTERVAL` (30 seconds) | about 30 seconds |
-| Track mode | Every `APP_TRACK_RESP_INTERVAL_S` (10 seconds) | about 10 seconds |
 | Parked, interval above 0 | On every timed report | the interval |
 | Parked, interval 0 | Not until the ignition comes on, or a timed report scheduled after movement | the next drive |
 
@@ -119,7 +114,6 @@ A request to queue a command must name the device, with `imei`, `device_id` or a
 | `config` | Reports its firmware version and board, settings, battery, ignition and uptime. | `fw=<version> board=<id> int=<n> ma=<n> tm=<n> backup=<n> bat=<volts>V ign=<on or off> up=<seconds>s` |
 | `fota` | Checks for an update at once, or once the engine stops if it is running, ignoring the retry holdoff and clearing any version it had given up on. | `fota: check queued`, or `fota: updates inhibited` on a unit built with `CONFIG_APP_FOTA_INHIBIT` |
 | `reboot` | Restarts the next time its main loop runs: straight away while driving, at engine start or key-off when the ignition is on with the engine off, and at the next ignition-on for a parked unit. | `rebooting` |
-| `track=0`, `track=1` | Sent by the server on every reply. Acted on only when it changes the mode; `track=1` is ignored while the ignition is off. | `track mode OFF`, `track mode ON` |
 | `fota=<version>` | Sent by the server on every reply while a build is published for the device and not withheld. The tracker compares it with its own version and downloads only a newer one. | None; see the `fota:` alerts |
 
 - The tracker finds each command by its name anywhere in the reply, so the order does not matter and a command runs at most once per reply.
@@ -183,7 +177,9 @@ Values must be whole numbers. The alerts themselves are described in [Configure 
 | `xbp` | `battery_poweroff_mv` |
 | `xds` | `drive_stream` |
 | `xdi` | `drive_stream_interval_s` |
-| `xtp` | `track_period_ms` |
+| `xim` | `drive_stream_accel_ms` |
+| `xia` | `drive_stream_accel` |
+| `xic` | `drive_stream_impact` |
 | `xdd` | `databuf_drain_s` |
 | `xns` | `network_search_s` |
 | `xrp` | `resp_poll_s` |
@@ -220,7 +216,9 @@ These are values the firmware is normally built with (Kconfig options). Each can
 | `battery_poweroff_mv` | `xbp` | 10500-12200 mV | `APP_BATTERY_POWEROFF_MV` | must be below `battery_warning_mv` when both are set |
 | `drive_stream` | `xds` | 0 or 1 | `APP_DRIVE_STREAM` | - |
 | `drive_stream_interval_s` | `xdi` | 0-900 s | `APP_DRIVE_STREAM_INTERVAL_S` | 0 = as fast as possible, otherwise at most one record every N s |
-| `track_period_ms` | `xtp` | 200-5000 ms | `APP_TRACK_PERIOD_MS` | - |
+| `drive_stream_accel_ms` | `xim` | 0-5000 ms | `APP_DRIVE_STREAM_IMU_MS` | longest gap between accelerometer/gyro readings in streamed records; 0 = every record (the built default) |
+| `drive_stream_accel` | `xia` | 0 or 1 | `APP_DRIVE_STREAM_ACCEL` | accelerometer/gyro in the drive stream at all; 0 leaves `ax` to `gz` out of streamed records and the sensor unread for them |
+| `drive_stream_impact` | `xic` | 0 or 1 | `APP_DRIVE_STREAM_IMPACT` | impact capture while `drive_stream_accel` is 0: the record after a detected impact, and its alert, carry the accelerometer/gyro readings. No effect while it is 1 |
 | `databuf_drain_s` | `xdd` | 1-600 s | `APP_DATABUF_DRAIN_S` | - |
 | `network_search_s` | `xns` | 60-86400 s | `APP_NETWORK_SEARCH_TIMEOUT` | - |
 | `resp_poll_s` | `xrp` | 5-600 s | `APP_RESP_POLL_S` | - |
@@ -237,8 +235,8 @@ These are values the firmware is normally built with (Kconfig options). Each can
 
 Which Mode 01 PIDs the unit captures from the car, and what the car supports. The unit reads only the selected PIDs, so a short selection is also a lighter bus and smaller records.
 
-- **Selection** is the `obd_pids` column (tunable `xop`): up to 12 PIDs, in the order you give, sent in `tu=` as concatenated 2-digit hex (`xop:0C050B`, no separators). NULL means the firmware default `APP_OBD_PIDS`, `0C05`: engine speed (`0C`) and coolant temperature (`05`). `GET /api/1.0/obd/pids` lists the PIDs that can be selected, with name, unit and scale; a PID outside it is refused with HTTP 400, as is a 13th PID. Duplicates are dropped.
-- **Setting it.** `POST /api/1.0/config` with `"obd_pids": "0C,05,0B"` (or a JSON list, or `"xop": "0C050B"`); `"default"`, `null`, `""` or `[]` clear it. The `command` endpoint takes `obd_pids=0C|05|0B` (`|` for the comma) or `obd_pids=default`. Once the car's supported PIDs are known (below), a PID the car does not support is refused with HTTP 400 and a message naming it; before the first scan any catalogue PID is accepted.
+- **Selection** is the `obd_pids` column (tunable `xop`): up to 12 PIDs, in the order you give, sent in `tu=` as concatenated 2-digit hex (`xop:0C050B`, no separators). NULL means the firmware default `APP_OBD_PIDS`, `0C05`: engine speed (`0C`) and coolant temperature (`05`). `GET /api/1.0/obd/pids` lists the PIDs in the catalogue, with name, unit and scale, and `obd_selectable` in `/config` and `/devices` the ones that can be picked now; a PID outside it is refused with HTTP 400, as is a 13th PID. Duplicates are dropped.
+- **Setting it.** `POST /api/1.0/config` with `"obd_pids": "0C,05,0B"` (or a JSON list, or `"xop": "0C050B"`); `"default"`, `null`, `""` or `[]` clear it. The `command` endpoint takes `obd_pids=0C|05|0B` (`|` for the comma) or `obd_pids=default`. Once the car's supported PIDs are known (below), a PID the car does not support is refused with HTTP 400 and a message naming it; before the first scan only engine speed (`0C`), coolant temperature (`05`) and vehicle speed (`0D`) are accepted; the message lists them.
 - **Reading it.** `GET /api/1.0/config` and each `GET /api/1.0/devices` row carry `obd_pids` (the selection in use, a list of hex strings: the override, else the value the unit reported being built with, else `["0C","05"]`) and `obd_pids_default` (true when it is not an override). The raw value is `xop` (a string, `null` for none) in `/config` and under `tunables`.
 - **Supported PIDs.** The unit scans the car's support bitmaps (PID `00`, `20`, ... chained while the last bit is set) and sends them once as `osp=`. The server keeps them on `device.obd_supported` (hex, 8 digits per 32 PIDs, VARCHAR(64)) with the time in `obd_supported_at`, and logs "OBD supported PIDs scanned: N PIDs". The API shows `obd_supported` (a list of hex PIDs, `null` if never scanned; the chain PIDs `20`, `40`, ... are left out), `obd_supported_at` and `obd_scan`. A car may report PIDs the catalogue lacks: they are listed but cannot be selected.
 - **When it scans.** The unit scans with the engine running (RPM above 0), not merely with the ignition on, because some ECUs report fewer PIDs with the engine stopped; a wanted scan waits until it is. The first one happens by itself: the first record with OBD values from a device that never scanned sets `obd_scan`. To scan again (a different car, a changed ECU) `POST /api/1.0/config` `{"obd_scan": 1}` (or the command `obd_scan=1`); `obd_scan` reads true until the result arrives, and `0` withdraws the request.

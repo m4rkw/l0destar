@@ -77,7 +77,6 @@ void install_set(bool on, const char *why)
     install_crumb_store(&s_crumb, on);
     LOG_INF("installation mode %s (%s)", on ? "on" : "off", why);
     if (on) {
-        g_settings.track_mode = 0;     /* ends do_track(); nothing else to stop here */
         alert_drop_queued();
     } else {
         s_report_req = s_enable_req = false;

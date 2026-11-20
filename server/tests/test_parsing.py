@@ -318,7 +318,7 @@ def test_dtc_pattern():
     assert not telemetry.DTC_RE.match('P01334')
 
 
-# -- track mode --------------------------------------------------------------
+# -- track mode (removed; a unit on an old image still sends tm=/acc=) --------
 
 BURST = '12/-30/998/114/0/-3:15/-28/1001/100/2/-4'
 
@@ -345,15 +345,6 @@ def test_malformed_burst_is_dropped_not_stored():
     assert 'imu_burst' not in e
 
 
-def test_burst_unpacks_with_gyro_in_dps():
-    from tracker.web import devices
-    samples = devices.imu_burst(BURST)
-    assert samples == [[12, -30, 998, 1.0, 0.0, -0.03],
-                       [15, -28, 1001, 0.88, 0.02, -0.04]]
-    assert devices.imu_burst(None) is None
-    assert devices.imu_burst('') is None
-
-
 class _NoCommands:
     def all(self, *args):
         return []
@@ -368,14 +359,12 @@ class _Quiet:
         pass
 
 
-def test_response_carries_track_switch():
-    off = telemetry.build_response({'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1},
-                                   _NoCommands(), _Quiet())
-    on = telemetry.build_response({'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1,
-                                   'track_mode': 1}, _NoCommands(), _Quiet(),
-                                  firmware_version='0.4.22')
-    assert off.endswith(',track=0,gw=off,le=1,tu=-,im=0,gx=off,os=0')
-    assert on.endswith(',fota=0.4.22,track=1,gw=off,le=1,tu=-,im=0,gx=off,os=0')
+def test_response_has_no_track_token():
+    off = telemetry.build_response({'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1,
+                                    'track_mode': 1}, _NoCommands(), _Quiet(),
+                                   firmware_version='0.4.22')
+    assert 'track' not in off
+    assert off.endswith(',backup=0,fota=0.4.22,gw=off,le=1,tu=-,im=0,gx=off,os=0')
 
 
 class _Commands:
@@ -398,15 +387,15 @@ def test_response_carries_the_backup_interval_on_every_reply():
     device = {'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1, 'backup_int': 1800}
 
     assert telemetry.build_response(device, _NoCommands(), _Quiet()) == \
-        '1,60,1,backup=1800,track=0,gw=off,le=1,tu=-,im=0,gx=off,os=0'
-    # After the commands, ahead of the advert and the track switch, which stay last.
-    assert telemetry.build_response(dict(device, track_mode=1), _NoCommands(), _Quiet(),
+        '1,60,1,backup=1800,gw=off,le=1,tu=-,im=0,gx=off,os=0'
+    # After the commands, ahead of the advert, which stays last.
+    assert telemetry.build_response(device, _NoCommands(), _Quiet(),
                                     firmware_version='0.4.79') == \
-        '1,60,1,backup=1800,fota=0.4.79,track=1,gw=off,le=1,tu=-,im=0,gx=off,os=0'
+        '1,60,1,backup=1800,fota=0.4.79,gw=off,le=1,tu=-,im=0,gx=off,os=0'
 
     queue = _Commands('locate')
     assert telemetry.build_response(device, queue, _Quiet()) == \
-        '1,60,1,locate,backup=1800,track=0,gw=off,le=1,tu=-,im=0,gx=off,os=0'
+        '1,60,1,locate,backup=1800,gw=off,le=1,tu=-,im=0,gx=off,os=0'
     assert queue.deleted
 
 
@@ -416,9 +405,9 @@ def test_response_says_so_when_there_is_no_backup_interval():
     unset = {'id': 1, 'imei': 'x', 'int': 60, 'movement_alarm': 1}
 
     assert telemetry.build_response(unset, _NoCommands(), _Quiet()) == \
-        '1,60,1,backup=0,track=0,gw=off,le=1,tu=-,im=0,gx=off,os=0'
+        '1,60,1,backup=0,gw=off,le=1,tu=-,im=0,gx=off,os=0'
     assert telemetry.build_response(dict(unset, backup_int=None), _NoCommands(),
-                                    _Quiet()) == '1,60,1,backup=0,track=0,gw=off,le=1,tu=-,im=0,gx=off,os=0'
+                                    _Quiet()) == '1,60,1,backup=0,gw=off,le=1,tu=-,im=0,gx=off,os=0'
 
 
 def test_backup_interval_cannot_be_mistaken_for_a_command_by_the_firmware():
@@ -431,51 +420,6 @@ def test_backup_interval_cannot_be_mistaken_for_a_command_by_the_firmware():
     # Likewise the command that sets it, which must never be queued for the
     # device by a server that does not know it.
     assert not any(name in 'backup_interval=1800' for name in names)
-
-
-class _SwitchDB:
-    """Enough of a database for the track-mode clearing paths."""
-
-    def __init__(self, latest_stamp=None):
-        self.latest_stamp = latest_stamp
-        self.updates = []
-
-    def one(self, sql, params=None):
-        if 'FROM `log`' in sql:
-            return ({'id': 1, 'timestamp': self.latest_stamp}
-                    if self.latest_stamp else None)
-        return None
-
-    def all(self, sql, params=None):
-        # The latest-row lookup reads the last few rows' ids and times first.
-        if 'FROM `log`' in sql and self.latest_stamp:
-            return [{'id': 1, 'timestamp': self.latest_stamp}]
-        return []
-
-    def query(self, sql, params=None):
-        self.updates.append((sql, params))
-        return 1
-
-
-def test_track_mode_expires_after_silence():
-    import datetime
-    device = {'id': 7, 'imei': 'x', 'track_mode': 1}
-    fresh = _SwitchDB(datetime.datetime.now() - datetime.timedelta(minutes=5))
-    telemetry.expire_track_mode(device, fresh)
-    assert device['track_mode'] == 1 and not fresh.updates
-
-    stale = _SwitchDB(datetime.datetime.now() - datetime.timedelta(hours=2))
-    telemetry.expire_track_mode(device, stale)
-    assert device['track_mode'] == 0
-    assert 'track_mode` = 0' in stale.updates[0][0]
-
-
-def test_track_mode_expiry_leaves_an_off_switch_alone():
-    import datetime
-    device = {'id': 7, 'imei': 'x', 'track_mode': 0}
-    stale = _SwitchDB(datetime.datetime.now() - datetime.timedelta(hours=2))
-    telemetry.expire_track_mode(device, stale)
-    assert not stale.updates
 
 
 def test_backup_changes_are_kept_whole_and_not_a_column():

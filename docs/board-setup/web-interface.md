@@ -37,7 +37,7 @@ The device list shows every enrolled device by name, with its registration, IMEI
 The top of the page shows:
 
 - The vehicle's **registration**, or its name if it has none.
-- Links: **gps** opens the last position in Google Maps; **history**, **track** and **logout**; and **devices**, back to the device list, when more than one device is enrolled.
+- Links: **gps** opens the last position in Google Maps; **history** and **logout**; and **devices**, back to the device list, when more than one device is enrolled.
 - The mobile **operator** and radio technology (`CATM1` for LTE-M), and the **battery voltage**. The voltage turns red when the vehicle is moving with the ignition on but no charging is detected - worth checking the alternator.
 - The **date and time** the latest record reached the server.
 - **Speed** in mph: the ECU's own figure when the device reports one, GNSS otherwise.
@@ -65,18 +65,6 @@ Built from the accelerometer and gyroscope. Because the tracker can be mounted i
 
 Choose a journey to replay it: the route is drawn on the map and the vehicle moves along it, with the panels showing what was recorded at each point. The controls stop the replay and return to the live view, skip back or forward ten points, pause, and scrub with the slider.
 
-### Track mode
-
-Track mode is for track days and bench runs. **track** asks for confirmation and then switches it on for that vehicle: the tracker stops GNSS, polls the ECU continuously and sends a record about once a second with a burst of motion samples, and the map is replaced by a dashboard - RPM with a redline bar, speed, throttle and load, a friction circle and a 60 second trace of RPM, throttle and g, and tiles for the slower values, battery, data rate and the age of the latest record.
-
-- The device picks up the switch the next time it reads a reply - within about 30 seconds with the ignition on - and the dashboard shows "waiting for the device to enter track mode" until then.
-- It only works with the ignition on, and most of the dashboard needs a K-wire build with OBD telemetry.
-- It ends by itself when the ignition goes off. If the device lost power or coverage before it could report that, the server clears the switch when it next hears from the device after more than an hour of silence. Either way, switch it on again for each session.
-- The dashboard learns which way is forward from the first firm braking or acceleration (it shows "orienting… brake or accelerate" until then) and remembers it in your browser for that vehicle.
-
-!!! danger "Drive safely"
-    Track mode is for closed circuits, private land and the bench. On a public road obey the law and keep your eyes on the road, not on the dashboard - its figures are for looking at afterwards. You alone are responsible for how you drive.
-
 ## HTTP API
 
 All responses are JSON with `"status": "ok"`, or `"status": "error"` and a `"message"`.
@@ -84,7 +72,7 @@ All responses are JSON with `"status": "ok"`, or `"status": "error"` and a `"mes
 ### Which device a request is about
 
 - Requests that only read data use the device named by `imei` or `device_id` (in the query string or the JSON body), or by the `X-Imei` header. When they name none they use `default_device`, then the only enrolled device.
-- Requests that change something - `POST /api/1.0/config`, `POST /api/1.0/command` and `POST /api/1.0/trackmode` - must name the device with `imei`, `device_id` or `X-Imei`, and fail with `imei or device_id required` otherwise.
+- Requests that change something - `POST /api/1.0/config` and `POST /api/1.0/command` - must name the device with `imei`, `device_id` or `X-Imei`, and fail with `imei or device_id required` otherwise.
 - A request that names a device that is not enrolled fails with `device not found`. It never falls back to another vehicle.
 
 ### Browser endpoints
@@ -93,13 +81,12 @@ These use the signed-in session, and are what the web page itself calls. Without
 
 | Endpoint | Returns |
 |---|---|
-| `GET /api/1.0/devices` | Every device: `id`, `imei`, `name`, `registration`, `last_seen`, `latitude`, `longitude`, `speed`, `battery_level`, `ignition_state`, `fw`, `board`, `rat`, `operator`, `track_mode`. |
+| `GET /api/1.0/devices` | Every device: `id`, `imei`, `name`, `registration`, `last_seen`, `latitude`, `longitude`, `speed`, `battery_level`, `ignition_state`, `fw`, `board`, `rat`, `operator`. |
 | `GET /api/1.0/devices/events` | The device's event log, newest first, as `events` (below): `limit` (default 200, at most 500) and `before` (the `id` of the oldest event you already have). |
-| `GET /api/1.0/carpos` | The latest `position`, the resting accelerometer reading (`accel_baseline`) and the `track_mode` switch. |
+| `GET /api/1.0/carpos` | The latest `position`, the resting accelerometer reading (`accel_baseline`). |
 | `GET /api/1.0/status` | The device's IMEI, name, synced settings (`int`, `ma`), firmware version, board and last-seen time. |
 | `GET /api/1.0/journeys` | Completed journeys, newest first: `page` (from 0) and `per_page` (default 50, at most 200). |
 | `GET /api/1.0/journey/<id>/points` | Every point of one journey. With `imei`, an error if the journey belongs to another device. |
-| `GET /api/1.0/trackmode`, `POST /api/1.0/trackmode` | Read, or set with `{"imei": "...", "on": 1}`, the track mode switch. |
 | `GET /ws/carpos?imei=<imei>` | The live WebSocket stream (below). |
 
 ### Automation endpoints
@@ -115,7 +102,7 @@ A token is not limited to particular devices or actions: anything holding one ca
 | Endpoint | What it does |
 |---|---|
 | `GET /api/1.0/track` | Redirects to a map at the device's last position: an Apple Maps link by default, Google Maps with `google=1`. With `return=1` it returns `{"url": ...}` instead of redirecting. |
-| `GET /api/1.0/config` | The device's settings: `int`, `backup` (interval on backup power), `ma`, `al` (alarm), `ga` (garage), `oa` (overnight alarm), `oaf` and `oat` (overnight window hours), `gw` (GNSS backup off window), `gwf` and `gwt` (its start and end hours, server local time), `le` (device LEDs on/off), `isch` (the engine-off reporting schedule: a list of rules, `null` if none) and `interval_now` (the interval the server would send at this moment), and the runtime tunables `xtt`, `xpi`, `xii`, `xap`, `xab`, `xoa`, `xis`, `xbw`, `xbp`, `xds`, `xdi`, `xtp`, `xdd`, `xns`, `xrp` and `xlw`, each a value or `null` (no override: the unit keeps the value it was built with). It also returns `tunables_built` (what the unit reported it was built with, by code, `null` if unknown) and `tunables` (the value in use: the override, else the built value, else `null`), both objects keyed by those codes. |
+| `GET /api/1.0/config` | The device's settings: `int`, `backup` (interval on backup power), `ma`, `al` (alarm), `ga` (garage), `oa` (overnight alarm), `oaf` and `oat` (overnight window hours), `gw` (GNSS backup off window), `gwf` and `gwt` (its start and end hours, server local time), `le` (device LEDs on/off), `isch` (the engine-off reporting schedule: a list of rules, `null` if none) and `interval_now` (the interval the server would send at this moment), and the runtime tunables `xtt`, `xpi`, `xii`, `xap`, `xab`, `xoa`, `xis`, `xbw`, `xbp`, `xds`, `xdi`, `xim`, `xia`, `xic`, `xdd`, `xns`, `xrp` and `xlw`, each a value or `null` (no override: the unit keeps the value it was built with). It also returns `tunables_built` (what the unit reported it was built with, by code, `null` if unknown) and `tunables` (the value in use: the override, else the built value, else `null`), both objects keyed by those codes. |
 | `POST /api/1.0/config` | Sets any of those fields. `isch` takes a list of rules, or `null` or `[]` to clear it; an invalid schedule gets a 400 and a message (see [Reporting schedule](../reference/device-settings.md#reporting-schedule)). Other values must be whole numbers: 0 or 1 for the switches, 0-23 for the hours; the runtime tunables have their own ranges, `null` clears one, and `xoa` is text (see [Runtime tunables](../reference/device-settings.md#runtime-tunables)). `GET /api/1.0/devices` also lists `gnss_off_window`, `gnss_off_hour_from`, `gnss_off_hour_to`, `leds`, `interval_schedule` (the rules or `null`), `interval_now` and the runtime tunables (under their column names, `null` when unset) and the same `tunables_built` and `tunables` objects as `/config` for each device. |
 | `POST /api/1.0/command` | Queues a command for the device, or applies a server-side setting. |
 | `POST /api/1.0/home` | The home check (below). |
@@ -163,11 +150,11 @@ sudo docker exec l0destar python tools/command.py 350000000000000 locate
 
 `at` is the server's local time. `type` is `firmware`, `ignition`, `command`, `reboot`, `result`, `setting` or `other`, and `text` is a short line for people. `limit` sets the page size (default 200, at most 500); to read further back, pass `before` with the `id` of the oldest event you have. A bad value fails with `limit must be a whole number from 1 to 500` or `before must be an event id`.
 
-The log has an event for ignition on and off; a firmware update staged, applied or failed; a command queued, collected by the device, answered, cancelled, replaced or expired; a reboot, with the reset cause; a setting changed (reporting interval, alarms, garage mode, GNSS backup supply, track mode); a result arriving (network scan, self test, status, location and so on); a fault code raised or cleared; and an alert the device sent. The device waking, and a setting merely being applied by the device, are not logged. Events are never pruned. `tools/backfill_device_events.py` fills in the time before the server kept the log, as far as the `log` table and the app log go (see [server reference](../reference/server.md)).
+The log has an event for ignition on and off; a firmware update staged, applied or failed; a command queued, collected by the device, answered, cancelled, replaced or expired; a reboot, with the reset cause; a setting changed (reporting interval, alarms, garage mode, GNSS backup supply); a result arriving (network scan, self test, status, location and so on); a fault code raised or cleared; and an alert the device sent. The device waking, and a setting merely being applied by the device, are not logged. Events are never pruned. `tools/backfill_device_events.py` fills in the time before the server kept the log, as far as the `log` table and the app log go (see [server reference](../reference/server.md)).
 
 ### Live stream
 
-`/ws/carpos?imei=<imei>` is the WebSocket the map page uses. It needs a signed-in session, so it is for browsers rather than scripts. On connecting it sends the latest record, then every new record as it arrives, each as the `position` object that `carpos` returns - coordinates, speeds, heading, timestamp, battery, ignition, operator, the OBD and IMU readings, and in track mode the unpacked motion burst - but not `carpos`'s `accel_baseline`. When nothing new has arrived for 10 seconds it sends `{"ping": true, "track_mode": 0}`, carrying the track mode switch, so the connection is not dropped.
+`/ws/carpos?imei=<imei>` is the WebSocket the map page uses. It needs a signed-in session, so it is for browsers rather than scripts. On connecting it sends the latest record, then every new record as it arrives, each as the `position` object that `carpos` returns - coordinates, speeds, heading, timestamp, battery, ignition, operator, the OBD and IMU readings - but not `carpos`'s `accel_baseline`. When nothing new has arrived for 10 seconds it sends `{"ping": true}` so the connection is not dropped.
 
 ### Home check
 

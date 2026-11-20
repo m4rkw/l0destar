@@ -204,28 +204,6 @@ def obd_extra(raw):
             if isinstance(v, (int, float)) and not isinstance(v, bool)} or None
 
 
-def imu_burst(raw):
-    """A track-mode record's IMU burst as a list of [ax, ay, az, gx, gy, gz]:
-    accel in milli-g, gyro in deg/s, oldest first, 26 Hz.  None when the
-    row has none."""
-    if not raw:
-        return None
-    out = []
-    for group in raw.split(':'):
-        parts = group.split('/')
-        if len(parts) != 6:
-            continue
-        try:
-            v = [int(x) for x in parts]
-        except ValueError:
-            continue
-        out.append([v[0], v[1], v[2],
-                    round(v[3] * GYRO_DPS_PER_LSB, 2),
-                    round(v[4] * GYRO_DPS_PER_LSB, 2),
-                    round(v[5] * GYRO_DPS_PER_LSB, 2)])
-    return out or None
-
-
 def accel_baseline(device, database=None):
     """Gravity as the resting device sees it: the mean accel vector over the
     last twenty stationary records.  The page subtracts it from live samples
@@ -245,13 +223,11 @@ def accel_baseline(device, database=None):
     return {'x': to_float(row['x']), 'y': to_float(row['y']), 'z': to_float(row['z'])}
 
 
-def position(row, database=None, track_mode=None):
+def position(row, database=None):
     """Serialise a log row into the shape the map understands.
 
     Shared by the polling endpoint, the journey replay and the live stream so
     the client has one format to parse whichever way a point reached it.
-    ``track_mode`` is the device's switch, when the caller knows it; the
-    live paths pass it so the page can change view on any message.
     """
     stamp = row.get('timestamp')
     out = {
@@ -271,9 +247,6 @@ def position(row, database=None, track_mode=None):
                                        database=database) or '',
         'rat': row.get('rat') or '',
         'cell_location': row.get('cell_location') or 0,
-        # Whether this record was built in track mode, and its IMU burst.
-        'track': 1 if row.get('track_mode') else 0,
-        'imu': imu_burst(row.get('imu_burst')),
     }
     # ECU readings on K-wire builds, null otherwise.  The map uses the RPM
     # ahead of voltage to call the engine running and shows the rest.
@@ -287,8 +260,6 @@ def position(row, database=None, track_mode=None):
         if value is not None and column.startswith('gyro_'):
             value = round(to_float(value) * GYRO_DPS_PER_LSB, 2)
         out[column] = _nullable_float(value)
-    if track_mode is not None:
-        out['track_mode'] = 1 if track_mode else 0
     return out
 
 
@@ -345,7 +316,6 @@ def config_state(device, database=None):
             'int': device.get('ap_int'),
             'ma': device.get('ap_ma'),
             'backup': device.get('ap_backup'),
-            'track': device.get('ap_track'),
             'at': _stamp(device['ap_at']),
         }
     last_ack = None
@@ -396,7 +366,7 @@ def obd_state(device):
     the selection in use (the override, else what the unit reported it was
     built with, else the default 0C,05) and ``obd_pids_default`` whether it is
     not an override; ``obd_supported`` the PIDs the last scan found (null if
-    never scanned), ``obd_supported_at`` when, ``obd_selectable`` the PIDs a picker may offer (the defaults until a scan, then the supported ones), ``obd_scan`` whether a scan is
+    never scanned), ``obd_supported_at`` when, ``obd_selectable`` the PIDs a picker may offer (engine speed, coolant and vehicle speed until a scan, then the supported ones), ``obd_scan`` whether a scan is
     wanted and not yet answered."""
     pids, default = obd.effective_selection(
         device, tunables_built(device).get('xop'))
@@ -438,7 +408,6 @@ def summary(device, database=None, log=None):
         'rat': log.get('rat') or '',
         'operator': db.lookup_operator(log.get('mcc'), log.get('mnc'),
                                        database=database) or '',
-        'track_mode': 1 if device.get('track_mode') else 0,
         'gnss_off_window': device.get('gnss_off_window') or 0,
         'gnss_off_hour_from': device.get('gnss_off_hour_from') or 0,
         'gnss_off_hour_to': (7 if device.get('gnss_off_hour_to') is None

@@ -18,14 +18,16 @@ EVERY = {
     'obd_alerts': 'coolant>=95,rpm>6500,stft<-12.5/2', 'obd_pids': '0C050B',
     'ignition_on_sleep_s': 30, 'battery_warning_mv': 11900,
     'battery_poweroff_mv': 11000, 'drive_stream': 1, 'drive_stream_interval_s': 900,
-    'track_period_ms': 1000, 'databuf_drain_s': 60, 'network_search_s': 3600,
+    'drive_stream_accel_ms': 0, 'drive_stream_accel': 1, 'drive_stream_impact': 1,
+    'databuf_drain_s': 60, 'network_search_s': 3600,
     'resp_poll_s': 20, 'led_accel_wake': 0,
 }
 CODES = {'tow_tilt_deg': 'xtt', 'parked_impact_mg': 'xpi', 'impact_immediate_mg': 'xii',
          'accel_alert_priority': 'xap', 'accel_alert_backoff_s': 'xab',
          'obd_alerts': 'xoa', 'obd_pids': 'xop', 'ignition_on_sleep_s': 'xis', 'battery_warning_mv': 'xbw',
          'battery_poweroff_mv': 'xbp', 'drive_stream': 'xds', 'drive_stream_interval_s': 'xdi',
-         'track_period_ms': 'xtp', 'databuf_drain_s': 'xdd', 'network_search_s': 'xns',
+         'drive_stream_accel_ms': 'xim', 'drive_stream_accel': 'xia', 'drive_stream_impact': 'xic',
+         'databuf_drain_s': 'xdd', 'network_search_s': 'xns',
          'resp_poll_s': 'xrp', 'led_accel_wake': 'xlw'}
 
 
@@ -69,7 +71,7 @@ def test_all_set_and_the_obd_commas_become_pipes():
     token = telemetry.tunables_token(EVERY)
     assert token == ('xtt:8;xpi:900;xii:700;xap:-1;xab:86400;'
                      'xoa:coolant>=95|rpm>6500|stft<-12.5/2;xop:0C050B;xis:30;xbw:11900;xbp:11000;'
-                     'xds:1;xdi:900;xtp:1000;xdd:60;xns:3600;xrp:20;xlw:0')
+                     'xds:1;xdi:900;xim:0;xia:1;xic:1;xdd:60;xns:3600;xrp:20;xlw:0')
     assert ',' not in token
     assert reply(**EVERY).endswith(',le=1,tu=' + token + ',im=0,gx=off,os=0')
 
@@ -142,7 +144,7 @@ def test_config_post_sets_and_clears_with_null(client, web, bearer):
 @pytest.mark.parametrize('field, value', [
     ('xtt', 31), ('xtt', -1), ('xpi', 299), ('xpi', 2501), ('xii', 1201), ('xap', 3),
     ('xap', -3), ('xab', 86401), ('xis', 9), ('xis', 601), ('xbw', 10999), ('xbw', 12501),
-    ('xbp', 10499), ('xbp', 12201), ('xds', 2), ('xdi', 901), ('xtp', 199), ('xtp', 5001),
+    ('xbp', 10499), ('xbp', 12201), ('xds', 2), ('xdi', 901), ('xim', -1), ('xim', 5001), ('xia', 2), ('xic', 2),
     ('xdd', 0), ('xns', 59), ('xrp', 4), ('xlw', 2),
     ('xtt', 'abc'), ('xtt', 1.5), ('xtt', True), ('xtt', ''), ('xtt', 'default'),
     ('xoa', 7), ('xoa', 'coolant'), ('xoa', 'a>1;b>2'), ('xoa', 'a>1|b>2'),
@@ -230,7 +232,16 @@ def test_command_checks_the_battery_pair(client, web, bearer):
     ('drive_stream_interval_s', 5, 'Drive stream limited to one record every 5 s'),
     ('drive_stream_interval_s', 0, 'Drive stream not limited'),
     ('drive_stream_interval_s', None, 'Drive stream limit back to the built value'),
-    ('track_period_ms', 1000, 'Track period set to 1000 ms'),
+    ('drive_stream_accel_ms', 0, 'Drive-stream accelerometer interval set to 0 ms'),
+    ('drive_stream_accel_ms', 250, 'Drive-stream accelerometer interval set to 250 ms'),
+    ('drive_stream_accel_ms', None, 'Drive-stream accelerometer interval back to the built value'),
+    ('drive_stream_accel', 1, 'Drive-stream accelerometer enabled'),
+    ('drive_stream_accel', 0, 'Drive-stream accelerometer disabled'),
+    ('drive_stream_accel', None, 'Drive-stream accelerometer back to the built value'),
+    ('drive_stream_impact', 1, 'Impact capture while the accelerometer is off enabled'),
+    ('drive_stream_impact', 0, 'Impact capture while the accelerometer is off disabled'),
+    ('drive_stream_impact', None,
+     'Impact capture while the accelerometer is off back to the built value'),
     ('databuf_drain_s', 60, 'Data buffer drain set to 60 s'),
     ('network_search_s', 3600, 'Network search timeout set to 3600 s'),
     ('resp_poll_s', 20, 'Response poll set to 20 s'),
@@ -248,7 +259,7 @@ def test_every_tunable_has_wording():
 # -- tb=: the values the unit was built with ----------------------------------------
 
 TB = ('xtt:8;xpi:900;xii:700;xap:-1;xab:86400;xoa:coolant>=95|rpm>6500;xop:0C05;xis:30;'
-      'xbw:11900;xbp:11000;xds:1;xdi:900;xtp:1000;xdd:60;xns:3600;xrp:20;xlw:0')
+      'xbw:11900;xbp:11000;xds:1;xdi:900;xim:0;xia:1;xic:1;xdd:60;xns:3600;xrp:20;xlw:0')
 
 
 def test_tb_parses_every_code_and_turns_pipes_into_commas():

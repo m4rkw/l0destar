@@ -260,7 +260,9 @@ TUNABLE_TEXT = {
     'battery_poweroff_mv': ('Battery power-off', 'set to %s mV'),
     'drive_stream': ('Drive stream', None),
     'drive_stream_interval_s': ('Drive stream limit', None),
-    'track_period_ms': ('Track period', 'set to %s ms'),
+    'drive_stream_accel_ms': ('Drive-stream accelerometer interval', 'set to %s ms'),
+    'drive_stream_accel': ('Drive-stream accelerometer', None),
+    'drive_stream_impact': ('Impact capture while the accelerometer is off', None),
     'databuf_drain_s': ('Data buffer drain', 'set to %s s'),
     'network_search_s': ('Network search timeout', 'set to %s s'),
     'resp_poll_s': ('Response poll', 'set to %s s'),
@@ -280,6 +282,11 @@ def tunable_text(column, value):
     if column == 'drive_stream_interval_s':
         return ('Drive stream limited to one record every %d s' % value if value
                 else 'Drive stream not limited')
+    if column == 'drive_stream_accel':
+        return 'Drive-stream accelerometer ' + ('enabled' if value else 'disabled')
+    if column == 'drive_stream_impact':
+        return ('Impact capture while the accelerometer is off '
+                + ('enabled' if value else 'disabled'))
     if how is None:
         return '%s %s' % (label, 'on' if value else 'off')
     return '%s %s' % (label, how % value)
@@ -340,11 +347,6 @@ def setting_text(column, value):
     if column in TUNABLE_TEXT:
         return tunable_text(column, value)
     return 'Setting changed: %s=%s' % (column, value)
-
-
-def track_mode_text(on, why=None):
-    text = 'Track mode ' + ('on' if on else 'off')
-    return '%s (%s)' % (text, why) if why else text
 
 
 def backup_supply_text(on):

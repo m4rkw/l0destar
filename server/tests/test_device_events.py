@@ -429,13 +429,6 @@ def test_setting_text(column, value, text):
     assert ev.setting_text(column, value) == text
 
 
-def test_track_mode_text():
-    assert ev.track_mode_text(True) == 'Track mode on'
-    assert ev.track_mode_text(False) == 'Track mode off'
-    assert ev.track_mode_text(False, 'ignition off') == 'Track mode off (ignition off)'
-    assert ev.track_mode_text(False, 'idle 7300 s') == 'Track mode off (idle 7300 s)'
-
-
 def test_backup_supply_text():
     assert ev.backup_supply_text(True) == 'GNSS backup supply on'
     assert ev.backup_supply_text(False) == 'GNSS backup supply off'

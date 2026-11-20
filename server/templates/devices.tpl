@@ -33,7 +33,7 @@
               <br><span class="dim">{{ d.imei }}</span>
             </td>
             <td>{{ d.age }}{% if d.last_seen %}<br><span class="dim">{{ d.last_seen }}</span>{% endif %}</td>
-            <td>{{ d.state }}{% if d.track_mode %}<br><span class="dim">track mode</span>{% endif %}</td>
+            <td>{{ d.state }}</td>
             <td>{% if d.battery_level is not none %}{{ '%.2f' % d.battery_level }}v{% else %}-{% endif %}</td>
             <td>{% if d.speed is not none %}{{ d.speed | round(0) | int }} mph{% else %}-{% endif %}</td>
             <td>{{ d.fw or '-' }}{% if d.board %}<br><span class="dim">{{ d.board }}</span>{% endif %}</td>

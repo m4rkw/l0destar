@@ -73,6 +73,10 @@ void hw_domain_notify_set(enum hw_domain d, hw_domain_notify_t cb);
  * without the setting, or while the clock is not valid. */
 void hw_gnss_backup_cutoff(int sleep_s, bool on_backup);
 
+/* Drops the receiver's backup supply now, whatever the window says (the
+ * low-voltage lockout).  The next receiver start raises it again. */
+void hw_gnss_backup_drop(void);
+
 /* The server's window, in UTC hours, in which the supply is kept off even
  * when the unit is driven (gw=).  -1 for either hour clears it. */
 void hw_gnss_backup_window(int from_utc, int to_utc);

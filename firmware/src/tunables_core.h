@@ -31,7 +31,9 @@ enum tun_key {
 	TUN_XBP,	/* battery power-off, mV */
 	TUN_XDS,	/* drive stream on/off */
 	TUN_XDI,	/* drive stream interval, s (0 = as fast as possible) */
-	TUN_XTP,	/* track period, ms */
+	TUN_XIM,	/* drive stream accel/gyro: longest gap, ms (0 = every record) */
+	TUN_XIA,	/* drive stream accel/gyro at all */
+	TUN_XIC,	/* impact capture while the stream's accel is off */
 	TUN_XDD,	/* databuf drain, s */
 	TUN_XNS,	/* network search timeout, s */
 	TUN_XRP,	/* response poll, s */
@@ -56,7 +58,9 @@ static const struct {
 	[TUN_XBP] = {"xbp", 10500, 12200},
 	[TUN_XDS] = {"xds", 0, 1},
 	[TUN_XDI] = {"xdi", 0, 900},
-	[TUN_XTP] = {"xtp", 200, 5000},
+	[TUN_XIM] = {"xim", 0, 5000},
+	[TUN_XIA] = {"xia", 0, 1},
+	[TUN_XIC] = {"xic", 0, 1},
 	[TUN_XDD] = {"xdd", 1, 600},
 	[TUN_XNS] = {"xns", 60, 86400},
 	[TUN_XRP] = {"xrp", 5, 600},
@@ -195,15 +199,16 @@ static inline int32_t tun_table_get(const struct tun_table *t, enum tun_key k,
 	return v;
 }
 
-/* The built values as the "tb=" record field, in the tu= grammar: all fifteen
+/* The built values as the "tb=" record field, in the tu= grammar: all seventeen
  * integer keys plus xoa (commas sent as '|', "xoa:" when empty) and xop (the
  * PID selection, "xop:" when empty), ';'-separated in the order xtt xpi xii
- * xap xab xoa xop xis xbw xbp xds xdi xtp xdd xns xrp xlw.  Worst case with
- * every integer in its limits, a 120-char xoa and a 24-char xop is 280 bytes
+ * xap xab xoa xop xis xbw xbp xds xdi xim xia xic xdd xns xrp xlw.
+ * Worst case with every integer in its limits, a 120-char xoa and a 24-char
+ * xop is 292 bytes
  * plus the NUL; TUN_BUILT_BUF leaves room for a few out-of-range Kconfig
  * values.  Returns the length, or -1 (out[0] = '\0') if it does not fit or the
  * xoa / xop is longer than TUN_OA_MAX / TUN_OP_MAX. */
-#define TUN_BUILT_BUF 304
+#define TUN_BUILT_BUF 320
 
 static inline int tun_format_built(char *out, size_t cap, const int32_t built[TUN_N_INT],
 				   const char *oa, const char *op)

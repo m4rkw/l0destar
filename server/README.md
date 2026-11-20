@@ -168,7 +168,7 @@ an older dump, gets every migration, skipping any change it already has. From a
 checkout:
 
 ```
-mysql -u root -p tracker < migrations/2026-09-06_track_mode.sql
+mysql -u root -p tracker < migrations/2026-11-18_drive_stream_accel.sql
 ```
 
 ## Operating
@@ -211,7 +211,6 @@ anything holding one can queue a command, so treat one as console-equivalent.
 | `GET /api/1.0/journey/<id>/points` | session | one journey's track |
 | `GET /api/1.0/devices` | session | every device with its latest record |
 | `GET /api/1.0/status` | session | settings, firmware, last seen |
-| `GET,POST /api/1.0/trackmode` | session | read or set the track-mode switch (`{"on": 1}`) |
 | `GET /ws/carpos` | session | live position stream |
 | `GET /api/1.0/track` | bearer | redirect to a map at the last fix |
 | `GET,POST /api/1.0/config` | bearer | read and write device settings |
@@ -220,8 +219,8 @@ anything holding one can queue a command, so treat one as console-equivalent.
 
 A request names its device with `imei` or `device_id`, in the query string or
 a JSON body, or with an `X-Imei` header. A read that names none is answered
-for `default_device`, or for the only enrolled device; a `POST` to `config`,
-`command` or `trackmode` always has to name one. A named device that is not
+for `default_device`, or for the only enrolled device; a `POST` to `config`
+or `command` always has to name one. A named device that is not
 enrolled is an error, never another vehicle's data.
 
 The web UI itself is `/devices`, every vehicle with its last record, and

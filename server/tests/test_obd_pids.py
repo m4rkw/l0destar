@@ -343,14 +343,18 @@ def test_post_refuses_an_unsupported_pid_once_scanned(client, web, bearer):
     assert post(client, '/config', bearer, obd_pids='0C,05,0F').get_json()['status'] == 'ok'
 
 
-def test_only_the_defaults_are_selectable_before_a_scan(client, web, bearer):
+def test_only_speed_and_the_defaults_are_selectable_before_a_scan(client, web, bearer):
     assert post(client, '/config', bearer, obd_pids='0C,05').get_json()['status'] == 'ok'
+    assert post(client, '/config', bearer, obd_pids='0C,0D').get_json()['status'] == 'ok'
     r = post(client, '/config', bearer, obd_pids='2F,5E')
-    assert r.status_code == 400 and 'not selectable until' in r.get_json()['message']
+    message = r.get_json()['message']
+    assert r.status_code == 400 and 'not selectable until' in message
+    assert 'only 0C, 05, 0D so far' in message
 
 
-def test_selectable_is_the_defaults_then_the_supported_ones():
-    assert obd.selectable(None) == ['0C', '05']
+def test_selectable_is_speed_and_the_defaults_then_the_supported_ones():
+    assert obd.selectable(None) == ['0C', '05', '0D']
+    assert obd.DEFAULT_SELECTION == ['0C', '05']
     assert obd.selectable(['0C', '0B', 'FF']) == ['0C', '0B']
 
 

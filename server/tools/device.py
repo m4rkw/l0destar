@@ -119,7 +119,6 @@ def show(args):
          '%ds' % device['backup_int'] if device.get('backup_int')
          else '0 (same as the engine-off interval)'),
         ('movement alarm', device['movement_alarm']),
-        ('track mode', device['track_mode']),
         ('ignition alarm', device['alarm']),
         ('garage', device['garage']),
         ('overnight alarm', '%s, %s:00 to %s:00' % (

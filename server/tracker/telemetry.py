@@ -30,7 +30,7 @@ is on a record sent long after it was built — from the backlog, or again after
 its first datagram went unanswered.  It is filed at the time it was built
 rather than on arrival, and when something newer is already stored it is
 history: it takes its place in the track and does nothing a live record would
-(no ignition alert, no journey change, no settings or track-mode change).
+(no ignition alert, no journey change, no settings change).
 
 Everything after the twelve fixed fields is an "extras" group: comma-separated
 groups of ``key=value`` pairs joined by semicolons.  Extras are optional and
@@ -103,7 +103,7 @@ EXTRA_KEYS = {
     'it':  'imu_temp',           # degrees C
     'vs':  'vsys',               # SiP supply rail, volts (not vehicle battery)
     'dr':  'dead_reckoning',
-    'tm':  'track_mode',         # 1 = built in track mode (GNSS off, fast poll)
+    'tm':  'track_mode',         # old units only: 1 = built in the removed track mode
     'acc': 'imu_burst',          # IMU samples since the previous record
     'mv':  'motion',             # the motion through the gap before this fix
     'fl':  'flash',              # 1 = the record waited in the external flash
@@ -137,12 +137,6 @@ WAKE_BAND_RANGE = (1, 255)
 # server's view of a unit's settings tracks what the unit actually applied.
 DEVICE_SYNC_KEYS = ['int', 'movement_alarm']
 
-# Track mode ends with the drive: the switch is cleared by the ignition-off
-# record, and — for a device that never sent one — once nothing has been
-# heard for this long.  Otherwise a switch left on by a page that was never
-# revisited would put the next drive, or a rebooted device, into the mode.
-TRACK_MODE_IDLE_SECONDS = 3600
-
 # Fields that describe a slowly-changing condition rather than this instant.
 # When absent, the previous row's value is carried forward.
 STICKY_KEYS = ('mcc', 'mnc', 'lac', 'cid', 'rat', 'fw')
@@ -161,11 +155,13 @@ PER_PACKET_KEYS = (
     'rsrp', 'snr', 'band', 'pathloss', 'rsrq', 'ce_level', 'tx_rep',
 )
 
-# Track mode (firmware TRACK_MODE.md).  A record built with GNSS off carries
-# tm=1 and acc=<burst>: one ax/ay/az/gx/gy/gz group per IMU sample, groups
-# joined by ':', oldest first, 26 Hz — accel in milli-g, gyro in raw LSB.
-# The burst is stored verbatim and unpacked on the way out (devices.py); it
-# is validated against this shape so nothing but integers reaches the row.
+# Track mode is gone (the switch, the track= reply token), but a unit still on
+# an old image sends tm=1 and acc=<burst> in records built in it: one
+# ax/ay/az/gx/gy/gz group per IMU sample, groups joined by ':', oldest first,
+# 26 Hz — accel in milli-g, gyro in raw LSB.  Both are still stored (history,
+# and the old units, keep working); the burst is stored verbatim and unpacked
+# on the way out (devices.py), validated against this shape so nothing but
+# integers reaches the row.
 IMU_BURST_RE = re.compile(r'^-?\d+(/-?\d+){5}(:-?\d+(/-?\d+){5})*$')
 IMU_BURST_MAX = 4000
 
@@ -324,7 +320,7 @@ def parse_csv_line(line):
                 data['backup_changes'] = value
                 continue
             if key == 'ap':
-                # <int>:<ma>:<backup>:<track> -- the settings the unit is
+                # <int>:<ma>:<backup>[:<track>] -- the settings the unit is
                 # running now, sent after a boot and whenever one changes.
                 data['applied'] = value
                 continue
@@ -565,7 +561,9 @@ TUNABLES = [
     ('xbp', 'battery_poweroff_mv', 10500, 12200),
     ('xds', 'drive_stream', 0, 1),
     ('xdi', 'drive_stream_interval_s', 0, 900),
-    ('xtp', 'track_period_ms', 200, 5000),
+    ('xim', 'drive_stream_accel_ms', 0, 5000),
+    ('xia', 'drive_stream_accel', 0, 1),
+    ('xic', 'drive_stream_impact', 0, 1),
     ('xdd', 'databuf_drain_s', 1, 600),
     ('xns', 'network_search_s', 60, 86400),
     ('xrp', 'resp_poll_s', 5, 600),
@@ -1246,15 +1244,17 @@ def _store_applied(database, device, data, entry):
     if raw:
         try:
             ints = [int(part) for part in raw.split(':')]
-            if len(ints) != 4:
+            # int:ma:backup, and from a unit still on an old image a fourth
+            # field (the removed track mode), which is read and dropped.
+            if len(ints) not in (3, 4):
                 raise ValueError(raw)
         except ValueError:
             logs.app.warning('unparsable ap=%r from %s', raw,
                              device.get('imei', '?'))
         else:
             assignments += ['`ap_int` = %s', '`ap_ma` = %s', '`ap_backup` = %s',
-                            '`ap_track` = %s', '`ap_at` = %s']
-            values += ints + [now]
+                            '`ap_at` = %s']
+            values += ints[:3] + [now]
 
     acks = [name for name in (data.get('acks') or '').split('|') if name]
     if entry.get('rst') == 'sw' and \
@@ -1392,12 +1392,6 @@ def process_record(data, device, ip, database=None):
 
     _store_wake_figure(database, device, data, entry.get('rec_id'))
     _store_wake_signal(database, device, data, entry.get('rec_id'))
-
-    # Ignition off ends track mode; see TRACK_MODE_IDLE_SECONDS.  Not for
-    # history: that drive is over, and a newer one may be in the mode.
-    if (entry['ignition_state'] == 0 and device.get('track_mode')
-            and not history):
-        clear_track_mode(device, database, 'ignition off')
 
     # Mirror config the device reported back onto its row — from a live
     # record only, since a late one can carry a setting since changed.
@@ -1626,38 +1620,6 @@ def _note_tunables_built(database, device, raw):
     device['tunables_built'] = text
 
 
-def clear_track_mode(device, database, why):
-    database.query('UPDATE `device` SET `track_mode` = 0 WHERE `id` = %s',
-                   (device['id'],))
-    if device.get('track_mode'):
-        device_events.record(database, device['id'], 'setting',
-                             device_events.track_mode_text(False, why))
-    device['track_mode'] = 0
-    logs.app.info('track mode off for %s: %s', device.get('imei'), why)
-
-
-def expire_track_mode(device, database):
-    """Clear a switch left on for a device that has gone quiet.
-
-    The ignition-off record is the normal end; this catches a device that
-    lost power or coverage before sending one, so the switch does not wait
-    for the next drive to be found still on."""
-    if not device.get('track_mode'):
-        return
-    row = _latest_row(database, device['id'])
-    stamp = row.get('timestamp') if row else None
-    if isinstance(stamp, str):
-        try:
-            stamp = datetime.datetime.strptime(stamp, '%Y-%m-%d %H:%M:%S.%f')
-        except ValueError:
-            stamp = datetime.datetime.strptime(stamp, '%Y-%m-%d %H:%M:%S')
-    if stamp is None:
-        return
-    idle = (datetime.datetime.now() - stamp).total_seconds()
-    if idle > TRACK_MODE_IDLE_SECONDS:
-        clear_track_mode(device, database, 'idle %d s' % int(idle))
-
-
 def device_config(device):
     """The settings the device syncs, with their defaults."""
     movement_alarm = device.get('movement_alarm')
@@ -1849,7 +1811,7 @@ def _notify_report(device, title, body):
 def build_response(device, database, log, firmware_version=None, gate=None):
     """Build the reply the device reads after a successful send.
 
-    Format: ``1,<interval>[,<movement_alarm>][,<commands>][,backup=<n>][,fota=<v>][,track=<0|1>]``.
+    Format: ``1,<interval>[,<movement_alarm>][,<commands>][,backup=<n>][,fota=<v>]``.
 
     The settings from ``backup=`` on are the tail.  ``gate``, when given, is
     asked with the tail whether to send it; the answer no leaves the short
@@ -1896,7 +1858,7 @@ def build_response(device, database, log, firmware_version=None, gate=None):
     # missed a reply converges on it.  The firmware applies it as it reads
     # the reply and takes it out of the string, so it is never run as a
     # command; firmware from before it passes over it.  Ahead of the advert
-    # and the track switch so that those two stay last.
+    # so that it stays last.
     head = response
     response = ',backup=%d' % settings['backup']
 
@@ -1904,13 +1866,8 @@ def build_response(device, database, log, firmware_version=None, gate=None):
     if firmware_version:
         response += ',fota=%s' % firmware_version
 
-    # Track mode rides the same way, on every response, so a device that
-    # rebooted or missed a reply converges on the setting.  The firmware
-    # acts only on a change, so the repeat costs nothing but the bytes.
-    response += ',track=%d' % (1 if device.get('track_mode') else 0)
-
     # The GNSS backup supply state, once known (the unit reported it or the
-    # API set it), on every reply like track=.  The unit follows it; a change
+    # API set it), on every reply like backup=.  The unit follows it; a change
     # after the first one it sees is announced with an alert and an ack.
     if device.get('gnss_backup') in (0, 1):
         response += ',gb=%d' % device['gnss_backup']
@@ -1954,9 +1911,8 @@ def build_response(device, database, log, firmware_version=None, gate=None):
     try:
         database.query(
             'UPDATE `device` SET `ap_int` = %s, `ap_ma` = %s, `ap_backup` = %s, '
-            '`ap_track` = %s, `ap_at` = NOW() WHERE `id` = %s',
-            (settings['int'], settings['ma'], settings['backup'],
-             1 if device.get('track_mode') else 0, device['id']),
+            '`ap_at` = NOW() WHERE `id` = %s',
+            (settings['int'], settings['ma'], settings['backup'], device['id']),
         )
     except Exception:
         logs.app.exception('applied settings update failed for %s', device.get('imei'))
@@ -2042,14 +1998,6 @@ def process_lines(device, lines, ip, database, log):
     worse outcome.
     """
     from . import firmware
-
-    # A device heard from after a long silence with the switch still on.
-    # Checked before the batch is stored, since the batch is what ends the
-    # silence.
-    try:
-        expire_track_mode(device, database)
-    except Exception:
-        log.exception('track mode expiry failed for %s', device.get('imei'))
 
     # The drive stream sends records after the first of a datagram as deltas
     # against the one before; make them whole before anything reads them.

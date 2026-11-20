@@ -642,6 +642,13 @@ void hw_gnss_backup_cutoff(int sleep_s, bool on_backup)
 	}
 }
 
+void hw_gnss_backup_drop(void)
+{
+	if (!hw_domain_is_on(HW_DOMAIN_AUX)) {
+		bckp_set(false);
+	}
+}
+
 /* The server's word on the supply.  True when it changed what the unit does:
  * dropped now (or as soon as the receiver is done), or supplied again. */
 bool hw_gnss_backup_want(bool on)

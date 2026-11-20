@@ -11,10 +11,10 @@ Every send prints the records it carries and the size of the datagram. When the 
 ```text
 <inf> data: [1/1] 13/09/26,11:02:01.000000+00,51.500000,-0.100000,0.00,31.00,90.00,9,9,12.41,1,512,0,...
 <inf> transport: sent 212 bytes
-<inf> data: resp: 1,0,1,track=0
+<inf> data: resp: 1,0,1
 ```
 
-Each record starts with the clock (UTC), latitude, longitude, speed (km/h), altitude, heading, HDOP in tenths, satellites, battery voltage, ignition (`1` on), seconds since the firmware started and a power-on flag. The `key=value` extras after that are described in the [telemetry protocol](https://github.com/m4rkw/l0destar/blob/master/server/docs/PROTOCOL.md). A reply always starts with `1`, then the engine-off interval and the movement alarm flag, then any queued commands, the backup interval (`backup=`), an update advert and the track mode switch.
+Each record starts with the clock (UTC), latitude, longitude, speed (km/h), altitude, heading, HDOP in tenths, satellites, battery voltage, ignition (`1` on), seconds since the firmware started and a power-on flag. The `key=value` extras after that are described in the [telemetry protocol](https://github.com/m4rkw/l0destar/blob/master/server/docs/PROTOCOL.md). A reply always starts with `1`, then the engine-off interval and the movement alarm flag, then any queued commands, the backup interval (`backup=`), an update advert and a few more switches.
 
 The device does not wait for a reply after every send - while driving it mostly does not - so switch pin 5 on with the supply below 13.0V: in that state it sends and reads a reply about every 30 seconds.
 

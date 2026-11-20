@@ -80,7 +80,7 @@ def test_devices_api_describes_each_device(client, logged_in, device, second_dev
     assert set(listed[CAR]) == {
         'id', 'imei', 'name', 'registration', 'last_seen', 'latitude',
         'longitude', 'speed', 'battery_level', 'ignition_state', 'fw', 'board',
-        'rat', 'operator', 'track_mode',
+        'rat', 'operator',
     }
     car, van = listed[CAR], listed[VAN]
     assert (car['name'], car['registration']) == ('Car', 'AB12CDE')
@@ -164,33 +164,24 @@ def test_writes_must_name_their_device(client, logged_in, bearer, device):
                        headers=bearer).get_json()['message'] == required
     assert client.post('/api/1.0/command', json={'command': 'locate'},
                        headers=bearer).get_json()['message'] == required
-    assert client.post('/api/1.0/trackmode',
-                       json={'on': 1}).get_json()['message'] == required
     unchanged = db.lookup_device(imei=CAR)
-    assert (unchanged['int'], unchanged['track_mode']) == (3600, 0)
+    assert unchanged['int'] == 3600
     assert db.web.one('SELECT COUNT(*) AS `n` FROM `command`')['n'] == 0
 
     assert client.post('/api/1.0/config', json={'imei': CAR, 'int': 60},
                        headers=bearer).get_json()['status'] == 'ok'
     assert client.post('/api/1.0/command', json={'command': 'locate'},
                        headers=dict(bearer, **{'X-Imei': CAR})).get_json()['status'] == 'ok'
-    assert client.post('/api/1.0/trackmode?imei=%s' % CAR,
-                       json={'on': 1}).get_json()['track_mode'] == 1
-    changed = db.lookup_device(imei=CAR)
-    assert (changed['int'], changed['track_mode']) == (60, 1)
+    assert db.lookup_device(imei=CAR)['int'] == 60
     assert db.web.one('SELECT COUNT(*) AS `n` FROM `command`')['n'] == 1
 
-    # Reading the switch back may still fall back.
-    assert client.get('/api/1.0/trackmode').get_json()['track_mode'] == 1
 
-
-def test_switching_track_mode_is_audited(client, logged_in, device):
+def test_track_mode_is_gone(client, logged_in, device):
     assert client.post('/api/1.0/trackmode?imei=%s' % CAR,
-                       json={'on': 1}).get_json()['track_mode'] == 1
-    with open(logs.AUDIT_PATH) as f:
-        last = f.read().splitlines()[-1]
-    assert 'tester' in last
-    assert last.endswith('[trackmode] - on=1 imei=%s' % CAR)
+                       json={'on': 1}).status_code == 404
+    assert client.get('/api/1.0/trackmode').status_code == 404
+    body = client.get('/api/1.0/carpos?imei=%s' % CAR).get_json()
+    assert 'track_mode' not in body
 
 
 def test_journey_points_stay_with_their_device(client, logged_in, device, second_device):

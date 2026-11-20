@@ -16,7 +16,7 @@ from . import devices, sock
 from .auth import current_user
 
 POLL_INTERVAL = 1.0
-TRACK_POLL_INTERVAL = 0.25
+STREAM_POLL_INTERVAL = 0.25
 PING_INTERVAL = 10.0
 # A stream stays open for as long as its page does, so checking the account
 # only at connect would let a removed or locked user go on watching a vehicle
@@ -72,16 +72,9 @@ def carpos(ws):
                     break
                 last_account_check = time.time()
 
-            # The track-mode switch, read fresh on every pass — a primary-key
-            # lookup, four times a second at most — so a row is never stamped
-            # with a value the page has already moved on from.
-            switch = handle.one(
-                'SELECT `track_mode` FROM `device` WHERE `id` = %s', (device['id'],))
-            track_mode = 1 if switch and switch.get('track_mode') else 0
-
-            # Every row since the last one, oldest first.  Track mode writes
-            # two a second, each with its own IMU burst, so skipping to the
-            # newest would drop samples.  On first connect only the newest
+            # Every row since the last one, oldest first.  A streaming drive
+            # writes several a second, so skipping to the newest would drop
+            # points.  On first connect only the newest
             # row is wanted; see opening().  A late row arriving after that
             # carries gsm_ts, and the page leaves it off the screen.
             if last_id == 0:
@@ -97,25 +90,20 @@ def carpos(ws):
             for row in rows:
                 resume_from = max(resume_from, row['id'])
                 ws.send(json.dumps(
-                    devices.position(row, database=handle, track_mode=track_mode),
+                    devices.position(row, database=handle),
                     separators=(',', ':')))
                 last_send = time.time()
             last_id = resume_from
             if not rows and time.time() - last_send >= PING_INTERVAL:
                 # The client drops and reconnects if it hears nothing for a
                 # while, which is how it recovers from a proxy silently
-                # dropping an idle connection.  Keep it fed.  The switch
-                # rides on the ping too, so a toggled page with a silent
-                # device still changes view.
-                ws.send(json.dumps({'ping': True, 'track_mode': track_mode},
-                                   separators=(',', ':')))
+                # dropping an idle connection.  Keep it fed.
+                ws.send(json.dumps({'ping': True}, separators=(',', ':')))
                 last_send = time.time()
 
-            # Track-mode records arrive twice a second; a quarter-second
-            # poll keeps the page within a frame of them.  A streaming drive
-            # is the same: while rows are arriving, look again in a quarter
-            # of a second rather than a second.
-            time.sleep(TRACK_POLL_INTERVAL if track_mode or rows else POLL_INTERVAL)
+            # A streaming drive: while rows are arriving, look again in a
+            # quarter of a second rather than a second.
+            time.sleep(STREAM_POLL_INTERVAL if rows else POLL_INTERVAL)
     except Exception:
         logs.app.debug('websocket closed', exc_info=True)
     finally:

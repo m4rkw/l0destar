@@ -1,7 +1,7 @@
 """When a reply carries the device's whole configuration and when it is short.
 
 Every datagram is answered, and the answer used to carry everything the unit
-might need to converge on (``backup= fota= track= gb= gw= le= tu= im= gx= os=``,
+might need to converge on (``backup= fota= gb= gw= le= tu= im= gx= os=``,
 about 80 bytes for the car).  The drive stream sends several datagrams a second
 and every one of them paid for it, in both directions of a metered SIM: the
 reply was a third of the stream's traffic.

@@ -58,7 +58,6 @@ These are the settings most worth reviewing for a particular vehicle. Every symb
 | `CONFIG_APP_FOTA_MIN_BATTERY_MV` | 12000 | Update downloads wait until the battery is above this |
 | `CONFIG_APP_BACKUP_SUPPLY` | n | Set `y` on a tracker fed through the inline battery backup module, so its ~9V rail is treated as backup power rather than a flat battery |
 | `CONFIG_APP_BATCH_SIZE` | 3 | Records per datagram while driving |
-| `CONFIG_APP_TRACK_MODE` | y | Set `n` if track mode should not be available for this vehicle |
 
 ## K-wire vehicle discovery
 
@@ -216,9 +215,5 @@ sudo docker exec l0destar python tools/command.py 350000000000000 backup_interva
 - **It applies only while the module is carrying the tracker.** The report that announces the cut goes out as soon as the cut is seen, whatever the interval is, and the next is due one backup interval after it. When car power returns, `car power restored` goes out as soon as the tracker sees the rail back (within about 30 seconds) and the engine-off interval takes over again.
 - **It also works with `int` 0.** A vehicle that makes no timed reports on its own battery can still report on a schedule while the module carries it.
 - **A confirmed movement on backup power** cuts the countdown to four hours if the backup interval is longer, so the next report is no more than four hours away. The setting itself is not lowered, so the interval after that is the backup interval again.
-- **It reaches the tracker in every reply**, like track mode, and is never reported back. After a restart the tracker has no backup interval (`CONFIG_APP_BACKUP_LOOP_INTERVAL`, default 0) until the first reply brings it. A tracker whose firmware or server predates the setting ignores it and keeps the engine-off interval.
+- **It reaches the tracker in every reply** and is never reported back. After a restart the tracker has no backup interval (`CONFIG_APP_BACKUP_LOOP_INTERVAL`, default 0) until the first reply brings it. A tracker whose firmware or server predates the setting ignores it and keeps the engine-off interval.
 - **The usual limits apply.** A tracker with no network on a timed report backs off as usual, doubling the wait on backup power as on car power. Both are held to `CONFIG_APP_NO_SIGNAL_MAX_INTERVAL`, a day by default, so a longer backup interval, like a longer `int`, is a day.
-
-## Track mode
-
-Track mode is not set per vehicle: it is switched on from the web page for a session and ends when the ignition goes off. It is built in by default; set `CONFIG_APP_TRACK_MODE=n` in a device's section if it should not be available for that vehicle. See [Web interface and API](../board-setup/web-interface.md), and the driving note in [Deployment: read this first](read-this-first.md).

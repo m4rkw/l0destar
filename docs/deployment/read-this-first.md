@@ -42,7 +42,7 @@ Connecting the tracker's CAN or K-wire lines to the vehicle's diagnostic socket 
 
 ## Driving
 
-Do not look at the web interface while you are driving. Track mode is for closed circuits, private land and the bench; on a public road, obey the law and the conditions and keep your eyes on the road. The full warning is at the top of [TRACK_MODE.md](https://github.com/m4rkw/l0destar/blob/master/firmware/TRACK_MODE.md).
+Do not look at the web interface while you are driving. On a public road, obey the law and the conditions and keep your eyes on the road.
 
 ## Not a safety or theft-recovery system
 

@@ -42,7 +42,7 @@ COMMAND_CONFLICTS = {
 # spend radio time to no purpose.
 #
 # backup_interval is the odd one out: the device does act on it, but it gets it
-# from the backup= field every response carries (like track mode), so setting
+# from the backup= field every response carries, so setting
 # it is writing the column, and a queued command would only be undone by the
 # next response.  Its name keeps clear of "int=", which the firmware finds
 # anywhere in a command string.
@@ -270,36 +270,9 @@ def carpos():
     if not row:
         return error('no records for device')
     return ok({
-        'position': devices.position(row, track_mode=device.get('track_mode')),
+        'position': devices.position(row),
         'accel_baseline': devices.accel_baseline(device),
-        'track_mode': 1 if device.get('track_mode') else 0,
     })
-
-
-@bp.route('/trackmode', methods=['GET', 'POST'])
-@login_required
-def trackmode():
-    """The track-mode switch (firmware TRACK_MODE.md).
-
-    POST ``{"on": 0|1}`` sets it and has to name the device; the device picks
-    it up from its next reply, which while driving is at most APP_RESP_POLL_S
-    away and in the mode at most APP_TRACK_RESP_INTERVAL_S.  GET reads it.
-    """
-    device, failure = _device(allow_default=request.method == 'GET')
-    if failure:
-        return failure
-    if request.method == 'POST':
-        data = request.get_json(silent=True) or {}
-        on = 1 if data.get('on') else 0
-        db.web.query('UPDATE `device` SET `track_mode` = %s WHERE `id` = %s',
-                     (on, device['id']))
-        if bool(device.get('track_mode')) != bool(on):
-            device_events.record(db.web, device['id'], 'setting',
-                                 device_events.track_mode_text(bool(on)))
-        device['track_mode'] = on
-        # Switching a vehicle's GNSS off is worth a line in the audit log.
-        audit('trackmode', 'on=%d imei=%s' % (on, device['imei']))
-    return ok({'track_mode': 1 if device.get('track_mode') else 0})
 
 
 @bp.route('/journeys', methods=['GET'])
@@ -364,7 +337,7 @@ def journey_points(journey_id):
     rows = db.web.all(
         'SELECT `latitude`, `longitude`, `speed`, `combined_speed`, `altitude`, '
         '`heading`, `timestamp`, `gsm_timestamp`, `ignition_state`, '
-        '`battery_level`, `mcc`, `mnc`, `rat`, `cell_location`, `track_mode`, '
+        '`battery_level`, `mcc`, `mnc`, `rat`, `cell_location`, '
         '`rec_id`, `satellites`, `hdop`, `obd_speed`, `motion`, `obd_extra`, '
         + ', '.join('`%s`' % c for c in
                     devices.OBD_LIVE_COLUMNS + devices.IMU_LIVE_COLUMNS)

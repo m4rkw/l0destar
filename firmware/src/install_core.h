@@ -116,7 +116,7 @@ static inline size_t install_summary(const struct install_item *it, int n,
  * Takes every "im=<0|1>" token (at the start or after a comma, ending at a
  * comma or the end) out of cmd.  Returns the value of the first, or -1 when
  * there is none or its value is not 0 or 1 (that token is then left alone).
- * The server sends it on every reply, like track= and gb=, so it is removed
+ * The server sends it on every reply, like gb= and gx=, so it is removed
  * here: what is left is exactly what cmd_run saw before it existed. */
 static inline int install_take_im(char *cmd)
 {

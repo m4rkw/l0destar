@@ -60,7 +60,7 @@ With one tracker enrolled, the web interface and the read-only API use it automa
 default_device: '350000000000000'
 ```
 
-Leave it unset unless you want a particular vehicle to open by default. Requests that change something - settings, commands, the track mode switch - always have to name their device, whatever this is set to.
+Leave it unset unless you want a particular vehicle to open by default. Requests that change something - settings and commands - always have to name their device, whatever this is set to.
 
 ## Listeners
 

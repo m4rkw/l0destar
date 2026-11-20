@@ -15,11 +15,11 @@ import pytest
 
 SRC = os.environ.get("GNSS_SRC", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
-KEYS = ["xtt", "xpi", "xii", "xap", "xab", "xis", "xbw", "xbp", "xds", "xdi", "xtp", "xdd", "xns", "xrp", "xlw"]
+KEYS = ["xtt", "xpi", "xii", "xap", "xab", "xis", "xbw", "xbp", "xds", "xdi", "xim", "xia", "xic", "xdd", "xns", "xrp", "xlw"]
 BUILT = dict(xtt=6, xpi=800, xii=700, xap=2, xab=300, xis=30, xbw=11900, xbp=11800, xds=0, xdi=0,
-             xtp=1000, xdd=60, xns=300, xrp=30, xlw=0)
+             xim=0, xia=1, xic=1, xdd=60, xns=300, xrp=30, xlw=0)
 LIMITS = dict(xtt=(0, 30), xpi=(300, 2500), xii=(0, 1200), xap=(-2, 2), xab=(0, 86400), xis=(10, 600),
-              xbw=(11000, 12500), xbp=(10500, 12200), xds=(0, 1), xdi=(0, 900), xtp=(200, 5000),
+              xbw=(11000, 12500), xbp=(10500, 12200), xds=(0, 1), xdi=(0, 900), xim=(0, 5000), xia=(0, 1), xic=(0, 1),
               xdd=(1, 600), xns=(60, 86400), xrp=(5, 600), xlw=(0, 1))
 
 WRAPPER = r"""
@@ -230,10 +230,10 @@ def test_long_garbage_is_safe(lib):
 
 # -- tb=: the built values as a record field ---------------------------------
 
-TB_ORDER = ["xtt", "xpi", "xii", "xap", "xab", "xoa", "xop", "xis", "xbw", "xbp", "xds", "xdi", "xtp", "xdd", "xns", "xrp", "xlw"]
+TB_ORDER = ["xtt", "xpi", "xii", "xap", "xab", "xoa", "xop", "xis", "xbw", "xbp", "xds", "xdi", "xim", "xia", "xic", "xdd", "xns", "xrp", "xlw"]
 
 
-def fmt(lib, oa, cap=304, op="0C05"):
+def fmt(lib, oa, cap=320, op="0C05"):
     lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p, C.c_char_p]
     for i, k in enumerate(KEYS):
         lib.set_built(i, BUILT[k])
@@ -258,9 +258,9 @@ def test_tb_empty_xoa(lib):
 
 def test_tb_negative(lib):
     lib.set_built(KEYS.index("xap"), -2)
-    buf = C.create_string_buffer(304)
+    buf = C.create_string_buffer(320)
     lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p, C.c_char_p]
-    assert lib.fmt_built(buf, 304, b"", b"0C05") > 0
+    assert lib.fmt_built(buf, 320, b"", b"0C05") > 0
     assert b"xap:-2;" in buf.value
     lib.set_built(KEYS.index("xap"), 2)
 
@@ -270,10 +270,10 @@ def test_tb_worst_case_fits(lib):
     assert len(oa) == 120
     for i, k in enumerate(KEYS):
         lib.set_built(i, LIMITS[k][1] if k != "xap" else -2)
-    buf = C.create_string_buffer(304)
+    buf = C.create_string_buffer(320)
     lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p, C.c_char_p]
-    n = lib.fmt_built(buf, 304, oa.encode(), b"0C" * 12)
-    assert 0 < n <= 280 and n == len(buf.value)
+    n = lib.fmt_built(buf, 320, oa.encode(), b"0C" * 12)
+    assert 0 < n <= 292 and n == len(buf.value)
     assert buf.value.decode().count("|") == oa.count(",")
 
 

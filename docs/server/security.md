@@ -6,7 +6,7 @@ A tracking server knows where your vehicles are, when they are parked at home an
 
 - Every position, ignition change, battery reading and ECU value the trackers have sent, for as long as you keep it.
 - Each device's pre-shared key. With a key, that device's captured telemetry can be decrypted and forged.
-- The ability to queue commands, change settings and switch track mode on every tracker.
+- The ability to queue commands, change settings on every tracker.
 - Login sessions, passkey public keys and API tokens.
 - Firmware images, and the manifests that decide which image each tracker installs.
 

@@ -24,7 +24,7 @@ Three places still say something:
     same time.  The device keeps only the latest of each, so that is all there is.
 
 Nothing else was ever recorded.  Commands queued, cancelled or replaced,
-settings changed, track mode switched and fault codes raised left no trace
+settings changed and fault codes raised left no trace
 anywhere, so there is nothing to restore for them.  A log row with no device
 time (from before the column existed) cannot be keyed and is not read.
 

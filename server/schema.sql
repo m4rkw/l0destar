@@ -30,7 +30,9 @@ CREATE TABLE `device` (
   `int`           INT UNSIGNED NOT NULL DEFAULT 0  COMMENT 'reporting interval, seconds',
   `backup_int`    INT UNSIGNED NOT NULL DEFAULT 0  COMMENT 'reporting interval while the backup module carries the supply, seconds; 0 = the same as int; sent as backup=<n> on every response',
   `movement_alarm` TINYINT(1)  NOT NULL DEFAULT 1  COMMENT 'wake and report on accelerometer trigger',
-  `track_mode`    TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'GNSS off, ECU+IMU streamed fast; sent as track=<0|1> on every response',
+  -- track_mode is unused: track mode was removed, nothing reads or writes the
+  -- column.  It stays so old databases and old tooling keep working.
+  `track_mode`    TINYINT(1)   NOT NULL DEFAULT 0  COMMENT 'unused (track mode was removed)',
 
   -- Update state.  An image that boots but never confirms itself is reverted
   -- by MCUboot; without somewhere to remember that, the server would go on
@@ -52,7 +54,7 @@ CREATE TABLE `device` (
   `ap_int`        INT          DEFAULT NULL,
   `ap_ma`         TINYINT      DEFAULT NULL,
   `ap_backup`     INT          DEFAULT NULL,
-  `ap_track`      TINYINT      DEFAULT NULL,
+  `ap_track`      TINYINT      DEFAULT NULL,  -- unused since track mode was removed
   `ap_at`         DATETIME     DEFAULT NULL,
   `ack_cmd`       VARCHAR(48)  DEFAULT NULL,
   `ack_at`        DATETIME     DEFAULT NULL,
@@ -141,7 +143,15 @@ CREATE TABLE `device` (
   `drive_stream`          TINYINT DEFAULT NULL,
   -- xdi: APP_DRIVE_STREAM_INTERVAL_S, seconds, 0-900 (0 = as fast as possible)
   `drive_stream_interval_s` SMALLINT UNSIGNED DEFAULT NULL,
-  -- xtp: APP_TRACK_PERIOD_MS, ms, 200-5000
+  -- xim: APP_DRIVE_STREAM_IMU_MS, ms, 0-5000: longest gap between accel/gyro
+  -- readings in streamed records (0 = every record)
+  `drive_stream_accel_ms` SMALLINT DEFAULT NULL,
+  -- xia: APP_DRIVE_STREAM_ACCEL, 0 or 1: accel/gyro in the drive stream at all
+  `drive_stream_accel`    TINYINT DEFAULT NULL,
+  -- xic: APP_DRIVE_STREAM_IMPACT, 0 or 1: impact capture while xia is 0
+  `drive_stream_impact`   TINYINT DEFAULT NULL,
+  -- xtp: track_period_ms is unused: track mode was removed.  The column stays
+  -- (nothing reads or writes it) so no database needs a destructive migration.
   `track_period_ms`       SMALLINT DEFAULT NULL,
   -- xdd: APP_DATABUF_DRAIN_S, seconds, 1-600
   `databuf_drain_s`       SMALLINT DEFAULT NULL,
@@ -332,9 +342,10 @@ CREATE TABLE `log` (
   -- What the interface shows: the ECU's road speed when reported, else GNSS.
   `combined_speed`  DECIMAL(6,2) DEFAULT NULL COMMENT 'mph',
 
-  -- Track mode (firmware TRACK_MODE.md): the record was built with GNSS
-  -- off, and carries the IMU samples batched since the previous one.
-  `track_mode`      TINYINT(1)   DEFAULT NULL COMMENT '1 when built in track mode (tm=1)',
+  -- Track mode was removed from the firmware and server, but a unit still on
+  -- an old image sends tm=1 and acc=<burst> in records built in it; both are
+  -- still stored so history and old units keep working.
+  `track_mode`      TINYINT(1)   DEFAULT NULL COMMENT 'old units: 1 when built in the removed track mode (tm=1)',
   `imu_burst`       TEXT         DEFAULT NULL COMMENT 'acc=: ax/ay/az/gx/gy/gz per sample at 26 Hz, samples joined by :',
 
   PRIMARY KEY (`id`),

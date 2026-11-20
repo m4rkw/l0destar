@@ -23,7 +23,7 @@
  *
  * POLLING
  * -------
- * One poll shape serves both the normal cadence and track mode: the PIDs
+ * One poll shape serves both the normal cadence and the drive stream: the PIDs
  * that move on a timescale a driver can see (RPM and speed always, throttle
  * and load when wanted) every call, and one of the slow-moving ones in
  * rotation, so a call is a few exchanges rather than a dozen.  Which PIDs are

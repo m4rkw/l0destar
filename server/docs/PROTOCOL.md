@@ -29,8 +29,6 @@ ts,lat,lon,spd,alt,hdg,hdop,sat,bat,ign,up,pon[,extras...]
 | `up` | seconds since boot, the same figure as the `up=` extra. Stored in the `waketime` column, whose name is older than the field's current meaning |
 | `pon` | the device's powered-on flag; the server derives its own `powered_on` from the ignition transition |
 
-Records built in track mode send `0` for `hdop` and `sat`, and `1` for `ign`.
-
 The timestamp is always UTC: the firmware converts the modem's clock, appends microseconds and writes the offset as `+00`.
 
 ### Extras
@@ -67,8 +65,8 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `otim`, `ostft`, `oltft` | timing advance and fuel trims, × 10 | per-packet |
 | `ofs`, `omil`, `odtc` | fuel system status bitmap, MIL lamp, stored code count | per-packet |
 | `o<2hex>` | any other selected PID, `o0B=95`: the wire integer is `round(value * scale)` by the catalogue (`GET /api/1.0/obd/pids`, tracker/obd.py); stored in `log.obd_extra` as JSON `{"0B": 95.0}`, unknown PIDs dropped. A key is sent only when its PID is selected (`xop`) | per-packet |
-| `tm` | 1 = built in track mode: GNSS off, position is the last fix, speed the ECU's | per-packet |
-| `acc` | IMU burst: `ax/ay/az/gx/gy/gz` per sample, samples joined by `:`, oldest first, 26 Hz; accel milli-g, gyro raw LSB | per-packet |
+| `tm` | old units only: 1 = built in the removed track mode. Still stored (`log.track_mode`), not used or shown | per-packet |
+| `acc` | old units only: IMU burst of the removed track mode, `ax/ay/az/gx/gy/gz` per sample, samples joined by `:`, oldest first, 26 Hz. Still stored verbatim (`log.imu_burst`), not shown | per-packet |
 | `rid` | the device's own id for this record, consecutive within a boot | per-packet |
 | `age` | seconds between the device building the record and sending it — only on a record sent late | per-packet, not stored |
 | `fl` | `1` on a record that was held in the unit's external flash before it was sent (the flash backlog); stored as `log.flash` | per-record |
@@ -82,7 +80,7 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `band` | LTE band in use | per-packet |
 | `wt` | `<rid>:<ms>[:<attach_ms>]` — how long the device was awake for the send of record `<rid>`, and how much of that was the LTE attach | retrospective |
 | `bk` | `<state>:<age_s>[\|<state>:<age_s>...]` — each change of the GNSS receiver's backup supply (V_BCKP) on a board that switches it, oldest first: 1 supplied, 0 dropped, and how long before this record was built it changed. Boot is not a change and is not reported (the server holds the state and answers `gb=`); a cut-off during the night is told by the next record. The newest is kept on the device row (`gnss_backup`, dated record time minus age) unless the API set it later | retrospective |
-| `ap` | `<int>:<ma>:<backup>:<track>` — the settings the unit is running, sent on the first record after a boot and whenever one changes (a setting the server sent shows as applied). Kept on the device row (`ap_*`) | live |
+| `ap` | `<int>:<ma>:<backup>` (an old unit adds `:<track>`, read and dropped) — the settings the unit is running, sent on the first record after a boot and whenever one changes (a setting the server sent shows as applied). Kept on the device row (`ap_*`) | live |
 | `ak` | `<name>\|<name>...` — commands the unit has run since the last record that said so (`int`, `movealarm`, `track`, `movereset`, `locate`, `locatenow`, `tomtom`, `tomtomnow`, `gpsfix`, `netscan`, `selftest`, `status`, `gnssstat`, `backlog`, `sleep`, `logdump`, `gnssbk`, `fota`, `config`). Kept as `ack_cmd` / `ack_at`; a restart with `rst=sw` and an unchanged `fw=` is filed as `reboot` | live |
 | `mv` | `<gap>:<v0>:<steps>:<end>` — the motion through the gap between the previous record's fix and this one's (0.4.68): ECU speed and gyro heading change for each second of it | per-packet, stored as sent |
 
@@ -145,7 +143,7 @@ record is filed at the time it was built (`timestamp` is arrival time less
 place. When something built later is already stored it is *history*: it
 fills in the track, and journey distances are summed in time order so it
 adds no detour, but it does nothing a live record would — no ignition-on
-alert, no journey opened or closed, no settings or track-mode change. A late
+alert, no journey opened or closed, no settings change. A late
 record that is still the newest, such as an ignition-off recorded during an
 outage and sent when the network came back, is the latest state and acts
 like one, at the time it happened.
@@ -356,7 +354,7 @@ genuine resting low reading still relays.
 ## Response
 
 ```
-1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,track=<0|1>][,gb=<0|1>][,gw=<from>-<to>|off][,le=<0|1>][,tu=<code>:<value>[;<code>:<value>...]|-][,im=<0|1>][,gx=<from>-<to>|off|def][,os=<0|1>]
+1,<interval>,<movement_alarm>[,<commands>][,backup=<seconds>][,fota=<version>][,gb=<0|1>][,gw=<from>-<to>|off][,le=<0|1>][,tu=<code>:<value>[;<code>:<value>...]|-][,im=<0|1>][,gx=<from>-<to>|off|def][,os=<0|1>]
 ```
 
 A reply is whole or short. The short one is the first three fields and any
@@ -379,7 +377,7 @@ carries both the interval and movement_alarm.
 
 `backup=` is the reporting interval for a tracker running on the inline battery
 backup module (`device`.`backup_int`; 0 means the interval above applies then
-too). It is sent on every reply, as `track=` is, so a device that rebooted or
+too). It is sent on every reply, so a device that rebooted or
 missed a reply converges on it. The firmware applies it as it reads the reply
 and takes it out of the commands, and uses it only while the module is carrying
 the tracker; firmware from before 0.4.79 passes over it. Unlike the interval it
@@ -429,7 +427,9 @@ unit is built with, after `le=` on every reply: the non-NULL columns as
 `xpi` parked_impact_mg, `xii` impact_immediate_mg, `xap` accel_alert_priority,
 `xab` accel_alert_backoff_s, `xoa` obd_alerts, `xop` obd_pids, `xis` ignition_on_sleep_s,
 `xbw` battery_warning_mv, `xbp` battery_poweroff_mv, `xds` drive_stream, `xdi`
-drive_stream_interval_s, `xtp` track_period_ms, `xdd` databuf_drain_s, `xns`
+drive_stream_interval_s, `xim` drive_stream_accel_ms (0-5000, 0 = every record),
+`xia` drive_stream_accel (0/1), `xic` drive_stream_impact (0/1, impact capture
+while `xia` is 0), `xdd` databuf_drain_s, `xns`
 network_search_s, `xrp` resp_poll_s, `xlw` led_accel_wake; or `tu=-` when
 every column is NULL. A NULL column is no override: the unit keeps its built
 value, so the unit makes its overrides exactly the listed pairs and anything
@@ -442,12 +442,12 @@ clamps again. A reply without `tu=` (an older server) leaves the unit's
 overrides as they are. The API sets them by column name in
 POST /api/1.0/command (not queued, `<name>=default` clears) and by code in
 /api/1.0/config (`null` clears). Example:
-`1,3600,1,track=0,gw=off,le=1,tu=xtt:8;xoa:coolant>=95|rpm>6500;xbw:11900`.
+`1,3600,1,backup=0,gw=off,le=1,tu=xtt:8;xoa:coolant>=95|rpm>6500;xbw:11900`.
 
 `tb=` is a record field (not a reply token), sent by the unit in the record
 that carries `fw=` and `bd=`, once per boot until a reply lands: the values
 the unit was BUILT with (the compiled-in defaults, not the current overrides),
-in the `tu=` grammar - `<code>:<value>` pairs joined by `;` for all seventeen
+in the `tu=` grammar - `<code>:<value>` pairs joined by `;` for all nineteen
 codes, `xoa` commas sent as `|`, an empty `xoa` as `xoa:`. Because the pairs
 contain `;` the server takes the field whole. It stores the text, normalised to
 the pairs that parsed (unknown codes and non-integer values dropped), in

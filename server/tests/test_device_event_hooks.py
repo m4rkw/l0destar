@@ -458,43 +458,6 @@ def test_an_acknowledgement_event_that_cannot_be_written_changes_nothing():
     assert any('ack_cmd' in w[0] for w in handle.writes)
 
 
-# -- track mode -----------------------------------------------------------------------------------
-
-def test_clearing_track_mode_is_an_event_with_the_reason():
-    handle = Handle()
-    device = {'id': 1, 'imei': IMEI, 'track_mode': 1}
-    telemetry.clear_track_mode(device, handle, 'ignition off')
-    assert [e[:2] for e in handle.events] == [('setting', 'Track mode off (ignition off)')]
-    assert device['track_mode'] == 0
-    assert 'UPDATE `device`' in handle.writes[0][0]
-
-
-def test_clearing_a_switch_that_is_already_off_is_no_event():
-    handle = Handle()
-    telemetry.clear_track_mode({'id': 1, 'imei': IMEI, 'track_mode': 0}, handle, 'ignition off')
-    telemetry.clear_track_mode({'id': 1, 'imei': IMEI}, handle, 'ignition off')
-    assert handle.events == []
-
-
-def test_an_idle_expiry_says_how_long():
-    stale = Handle({'ORDER BY `id` DESC LIMIT 50': [{'id': 1, 'timestamp': datetime.datetime.now()
-                                                     - datetime.timedelta(hours=2)}],
-                    'SELECT * FROM `log`': {'id': 1, 'timestamp': datetime.datetime.now()
-                                            - datetime.timedelta(hours=2)}})
-    device = {'id': 1, 'imei': IMEI, 'track_mode': 1}
-    telemetry.expire_track_mode(device, stale)
-    (event,) = stale.events
-    assert event[0] == 'setting' and event[1].startswith('Track mode off (idle 72')
-    assert event[1].endswith(' s)')
-
-
-def test_a_track_mode_event_that_cannot_be_written_changes_nothing():
-    handle = Handle(broken=True)
-    device = {'id': 1, 'imei': IMEI, 'track_mode': 1}
-    telemetry.clear_track_mode(device, handle, 'ignition off')
-    assert device['track_mode'] == 0
-
-
 # -- fault codes ------------------------------------------------------------------------------------
 
 def test_raised_and_cleared_fault_codes_are_events():
@@ -960,27 +923,3 @@ def test_a_refused_config_is_no_event(client, web, bearer):
 def test_an_event_that_cannot_be_written_does_not_fail_the_config(client, web, bearer):
     web.broken = True
     assert post(client, '/config', bearer, int=900).get_json() == {'status': 'ok'}
-
-
-# -- trackmode
-
-def test_switching_track_mode_is_an_event_when_it_changes(logged_in, web):
-    assert logged_in.post('/api/1.0/trackmode', json={'imei': IMEI, 'on': 1}).status_code == 200
-    assert texts(web) == ['Track mode on']
-    web.device['track_mode'] = 1
-    logged_in.post('/api/1.0/trackmode', json={'imei': IMEI, 'on': 1})
-    assert texts(web) == ['Track mode on']                        # already on
-    logged_in.post('/api/1.0/trackmode', json={'imei': IMEI, 'on': 0})
-    assert texts(web) == ['Track mode on', 'Track mode off']
-    assert {e[0] for e in web.events} == {'setting'}
-
-
-def test_reading_track_mode_is_no_event(logged_in, web):
-    logged_in.get('/api/1.0/trackmode?imei=' + IMEI)
-    assert web.events == []
-
-
-def test_a_track_mode_event_that_cannot_be_written_does_not_fail_the_switch(logged_in, web):
-    web.broken = True
-    response = logged_in.post('/api/1.0/trackmode', json={'imei': IMEI, 'on': 1})
-    assert response.get_json() == {'status': 'ok', 'track_mode': 1}

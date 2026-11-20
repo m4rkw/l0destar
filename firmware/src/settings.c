@@ -30,7 +30,6 @@ static void settings_defaults(void)
                                     : ENGINE_OFF_BOOT_INTERVAL;
     g_settings.backup_interval = BACKUP_LOOP_INTERVAL;
     g_settings.movement_alarm = DEFAULT_MOVEMENT_ALARM;
-    g_settings.track_mode     = 0;      /* the server switches it on */
 
     const char *psk_hex = CONFIG_APP_PSK_HEX;
     if (!psk_hex || psk_hex[0] == '\0') {
@@ -51,8 +50,7 @@ void settings_load(void)
 void settings_print(void)
 {
     LOG_INF("apn=%s user=%s", g_settings.apn, g_settings.user);
-    LOG_INF("int=%d ma=%d tm=%d backup=%d", g_settings.loop_interval,
-            (int)g_settings.movement_alarm, (int)g_settings.track_mode,
-            g_settings.backup_interval);
+    LOG_INF("int=%d ma=%d backup=%d", g_settings.loop_interval,
+            (int)g_settings.movement_alarm, g_settings.backup_interval);
     LOG_INF("imei=%s", g_settings.imei[0] ? g_settings.imei : "(unset)");
 }

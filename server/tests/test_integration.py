@@ -743,7 +743,7 @@ def test_backup_interval_rides_every_reply(device, database):
     for minute in (1, 2):
         response = send(device, record(minute, 51.5, -0.1, 0))
         assert keyed(response)['backup'] == '1800'
-        assert response.endswith(',track=0')       # the switch stays last
+        assert 'track=' not in response        # the track-mode switch is gone
 
     # The device does not report it back, so nothing it sends can change it.
     send(device, record(3, 51.5, -0.1, 0, extras=',int=900;ma=1;backup=60'))
@@ -1133,9 +1133,17 @@ def test_applied_settings_and_acks_are_kept_on_the_device_row(device, database):
     telemetry.process_lines(device, [line], '203.0.113.7', db.web, logs.udp)
     row = database.one('SELECT `ap_int`, `ap_ma`, `ap_backup`, `ap_track`, `ap_at`, '
                        '`ack_cmd`, `ack_at` FROM `device` WHERE `id` = %s', (device['id'],))
-    assert (row['ap_int'], row['ap_ma'], row['ap_backup'], row['ap_track']) == (3600, 1, 900, 0)
+    # The fourth field (the removed track mode) is read and dropped.
+    assert (row['ap_int'], row['ap_ma'], row['ap_backup'], row['ap_track']) == (3600, 1, 900, None)
     assert row['ap_at'] and row['ack_at']
     assert row['ack_cmd'] == 'locatenow'
+
+    # A unit without the track field reports three.
+    line = record(1, 51.5, -0.1, 0) + ',ap=600:0:300'
+    telemetry.process_lines(device, [line], '203.0.113.7', db.web, logs.udp)
+    row = database.one('SELECT `ap_int`, `ap_ma`, `ap_backup` FROM `device` WHERE `id` = %s',
+                       (device['id'],))
+    assert (row['ap_int'], row['ap_ma'], row['ap_backup']) == (600, 0, 300)
 
 
 def test_a_command_queued_too_long_ago_is_not_delivered(device, database):
@@ -1242,32 +1250,31 @@ def test_the_api_writes_events_and_the_endpoint_reads_them(client, device, datab
                 json={'imei': device['imei'], 'command': 'locatenow'})
     client.post(base + '/config', headers=bearer,
                 json={'imei': device['imei'], 'int': 900, 'ma': 1})
-    client.post(base + '/trackmode', json={'imei': device['imei'], 'on': 1})
-    client.post(base + '/trackmode', json={'imei': device['imei'], 'on': 1})
     assert events(database, device) == [
         ('command', 'Command queued: locate'), ('command', 'Command replaced: locate'),
         ('command', 'Command queued: locatenow'), ('setting', 'GNSS backup supply set to on'),
         ('setting', 'Ignition alarm on'), ('command', 'Command cancelled: locatenow'),
-        ('setting', 'Report interval set to 900 s'), ('setting', 'Track mode on')]
+        ('setting', 'Report interval set to 900 s')]
 
     response = client.get(base + '/devices/events?device_id=%d&limit=3' % device['id'])
     body = response.get_json()
     assert response.status_code == 200 and body['status'] == 'ok'
     assert [e['text'] for e in body['events']] == [
-        'Track mode on', 'Report interval set to 900 s', 'Command cancelled: locatenow']
+        'Report interval set to 900 s', 'Command cancelled: locatenow',
+        'Ignition alarm on']
     assert set(body['events'][0]) == {'id', 'at', 'type', 'text'}
 
     older = client.get(base + '/devices/events?device_id=%d&limit=2&before=%d'
                        % (device['id'], body['events'][-1]['id'])).get_json()
     assert [e['text'] for e in older['events']] == [
-        'Ignition alarm on', 'GNSS backup supply set to on']
+        'GNSS backup supply set to on', 'Command queued: locatenow']
 
 
-def test_track_mode_ending_with_the_ignition_is_an_event(device, database):
+def test_old_track_mode_flag_is_left_alone_by_an_ignition_off(device, database):
     database.query('UPDATE `device` SET `track_mode` = 1 WHERE `id` = %s', (device['id'],))
     device = db.lookup_device(imei=device['imei'])
     send(device, record(0, 51.5, -0.1, 0))
-    assert events(database, device, 'setting') == [('setting', 'Track mode off (ignition off)')]
+    assert events(database, device, 'setting') == []
 
 
 def test_the_event_endpoint_refuses_what_it_cannot_use(client, device, logged_in):
