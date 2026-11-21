@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.133
+
+### Log thread stack 768 -> 2048 bytes
+The log thread's 768-byte default is too small for the capture backend's repeat flush: a bench stress run (30 identical warnings with negative numbers, then a different long line) peaked at 776 bytes, and a 768-byte image HardFaulted on the ordinary sleep-entry log burst. That fault comes from TF-M, so no crash note is kept and the unit resets as a plain `rst=wdt`, the same signature as the car's unexplained freezes.
+- `CONFIG_LOG_PROCESS_THREAD_STACK_SIZE=2048` in `prj.conf`, for every board. The system workqueue was already 2048.
+- Costs 1280 bytes of RAM.
+- Status: bench-measured (2048 passed the same run); not yet run on the car.
+
+### A failed reconnect reports the real error
+`transport_open` and the send retry read `errno` after closing the socket, so a failed connect or retry could return the close's error, or 0, and look like success. They now keep the error from the failing call.
+
 ## 0.4.132
 
 ### Weak-signal send hold

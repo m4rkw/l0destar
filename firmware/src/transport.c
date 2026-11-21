@@ -335,10 +335,11 @@ int transport_open(void)
     int err = MCM_SOCK(MCM_SOCK_CONN, zsock_connect(s_sock, (struct sockaddr *)&s_server,
                             sizeof(s_server)));
     if (err) {
-        LOG_ERR("connect: %d", errno);
+        int e = errno;
+        LOG_ERR("connect: %d", e);
         MCM_SOCK(MCM_SOCK_CLOSE, zsock_close(s_sock));
         s_sock = -1;
-        return -errno;
+        return -e;
     }
 
     s_sndtimeo_ms = 0;
@@ -469,9 +470,10 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
         MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai)));
         watchdog_kick();
         if (MCM_SOCK(MCM_SOCK_SEND, zsock_send(s_sock, buf, total, 0)) < 0) {
-            LOG_ERR("send retry failed: %d", errno);
+            int re = errno;
+            LOG_ERR("send retry failed: %d", re);
             transport_teardown();
-            return -errno;
+            return -re;
         }
     }
     s_held = 0;
