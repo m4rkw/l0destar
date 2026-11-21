@@ -38,6 +38,9 @@ enum tun_key {
 	TUN_XNS,	/* network search timeout, s */
 	TUN_XRP,	/* response poll, s */
 	TUN_XLW,	/* LED on accel wake */
+	TUN_XWR,	/* weak-signal send hold: RSRP at or below this, dBm (0 = off) */
+	TUN_XWS,	/* weak-signal send hold: SNR at or below this, dB */
+	TUN_XWM,	/* weak-signal send hold: longest hold, s */
 	TUN_N_INT
 };
 
@@ -65,6 +68,11 @@ static const struct {
 	[TUN_XNS] = {"xns", 60, 86400},
 	[TUN_XRP] = {"xrp", 5, 600},
 	[TUN_XLW] = {"xlw", 0, 1},
+	/* xwr: -140..-100 dBm, or 0 for off.  The parser takes a range, so the
+	 * -99..-1 in between is accepted and read as off (weak_hold.h). */
+	[TUN_XWR] = {"xwr", -140, 0},
+	[TUN_XWS] = {"xws", -20, 5},
+	[TUN_XWM] = {"xwm", 5, 600},
 };
 
 /* The poweroff level may be at most this far under the warning level. */
@@ -199,16 +207,16 @@ static inline int32_t tun_table_get(const struct tun_table *t, enum tun_key k,
 	return v;
 }
 
-/* The built values as the "tb=" record field, in the tu= grammar: all seventeen
+/* The built values as the "tb=" record field, in the tu= grammar: all twenty
  * integer keys plus xoa (commas sent as '|', "xoa:" when empty) and xop (the
  * PID selection, "xop:" when empty), ';'-separated in the order xtt xpi xii
- * xap xab xoa xop xis xbw xbp xds xdi xim xia xic xdd xns xrp xlw.
+ * xap xab xoa xop xis xbw xbp xds xdi xim xia xic xdd xns xrp xlw xwr xws xwm.
  * Worst case with every integer in its limits, a 120-char xoa and a 24-char
- * xop is 292 bytes
+ * xop is 317 bytes
  * plus the NUL; TUN_BUILT_BUF leaves room for a few out-of-range Kconfig
  * values.  Returns the length, or -1 (out[0] = '\0') if it does not fit or the
  * xoa / xop is longer than TUN_OA_MAX / TUN_OP_MAX. */
-#define TUN_BUILT_BUF 320
+#define TUN_BUILT_BUF 352
 
 static inline int tun_format_built(char *out, size_t cap, const int32_t built[TUN_N_INT],
 				   const char *oa, const char *op)

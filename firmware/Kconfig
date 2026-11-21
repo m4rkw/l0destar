@@ -2053,6 +2053,23 @@ config APP_ISR_STACK_MARK
 	  Excluded with INIT_STACKS, whose own fill of the stack at boot would
 	  hide the peak.
 
+config APP_MODEM_CALL_MARK
+	bool "Report which modem library call a watchdog reset caught the firmware in"
+	default y
+	help
+	  Some freezes in registration loss end in a plain rst=wdt: no stall
+	  note, no freeze note, so the CPU was stuck where the watchdog's early
+	  warning cannot run, probably waiting on or inside the nrf_modem
+	  library.  Each call into it (sockets, AT commands, lte_lc_*, the
+	  library's init and shutdown, the GNSS calls, the event handlers) leaves
+	  a mark in noinit RAM on the way in and clears it on the way out.
+
+	  rst= then carries mc:<name> after a watchdog reset, a lock-up or a
+	  crash that left a call entered: mc:send, mc:recv, mc:at-cfun,
+	  mc:lte-normal, mc:hnd-reg and so on.  Nothing is added when no call
+	  was entered, after a power cut or a pin reset.  Costs a few stores
+	  per call and 64 bytes of RAM.
+
 # --- captured warnings/errors ----------------------------------------------
 
 config APP_DEBUG_LOG
@@ -2139,5 +2156,57 @@ config APP_MODEM_STUCK_RESET_S
 	  library, which discards everything it knows about local cells and
 	  forces a full band scan afterwards, so it should almost never
 	  happen.
+
+config APP_WEAK_HOLD
+	bool "Hold sends while the serving cell is very weak"
+	default n
+	help
+	  The car's firmware has frozen inside a socket send (hardware watchdog,
+	  rst=wdt+mc:send) with the serving cell at -119 dBm RSRP, SNR -8 on
+	  band 20, just before a cell change or loss of registration.  With
+	  this on, an ordinary send made while the signal is at or below
+	  APP_WEAK_HOLD_RSRP_DBM, or at or below APP_WEAK_HOLD_SNR_DB, is not
+	  handed to the modem: its records wait in the backlog (RAM, and the
+	  flash where the board has it) exactly as those of a send the modem
+	  did not take do, and go with the first send after the signal
+	  recovers.  After APP_WEAK_HOLD_MAX_S seconds of holding one send goes
+	  out anyway.
+
+	  Applies to the drive stream and to the ordinary sends of an awake
+	  vehicle.  Not to a parked wake, to a send that carries an alert, to
+	  the record of an ignition change or to anything FOTA or a command
+	  answers with.  The signal is read at most every ten seconds while
+	  the hold is on; a reading older than 20 s holds nothing.
+
+	  The code is always built in: with this off the unit starts with the
+	  hold off and the server turns it on with the tunable xwr (the
+	  device's weak_hold_rsrp_dbm).  This is the value a unit starts with.
+
+config APP_WEAK_HOLD_RSRP_DBM
+	int "Hold sends at or below this RSRP (dBm)"
+	default -115
+	range -140 -100
+	help
+	  Weak when the serving cell's RSRP is at or below this.  Only counts
+	  with APP_WEAK_HOLD on at build time.  Run-time override: tunable xwr
+	  (0 turns the hold off).
+
+config APP_WEAK_HOLD_SNR_DB
+	int "... or at or below this SNR (dB)"
+	default -6
+	range -20 5
+	help
+	  Weak when the serving cell's SNR is at or below this, whatever the
+	  RSRP.  An SNR of 0 is also what the modem reports when it gives none,
+	  so it is never counted.  Run-time override: tunable xws.
+
+config APP_WEAK_HOLD_MAX_S
+	int "Longest a send is held (seconds)"
+	default 60
+	range 5 600
+	help
+	  After this long without a send one goes out whatever the signal, so
+	  the server is not starved and another failure is not masked; the hold
+	  can start again a few seconds later.  Run-time override: tunable xwm.
 
 source "Kconfig.zephyr"

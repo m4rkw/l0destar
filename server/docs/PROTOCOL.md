@@ -56,7 +56,7 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `vs` | SiP supply rail, volts | per-packet |
 | `dr` | `1`: no fix of its own, so the position is the last fix run forward by ECU speed and gyro heading (firmware 0.4.75+) | per-packet |
 | `dbg` | debug counters — only after a fault | per-packet |
-| `rst` | reset cause — only after a reset | per-packet |
+| `rst` | reset cause — only after a reset: the reset-register flags (`pin`, `sw`, `bor`, `por`, `wdt`, `lockup`, ...) joined by `+`, then notes the firmware left: `fatal:<reason>@<pc>`, `stall:<addr>/...`, `fz:<pc>/<lr>[/i<irq>]`, `mc:<name>` (after a watchdog reset, lock-up or crash: the modem library call the unit was in, e.g. `mc:send`, `mc:at-cfun`, `mc:lte-normal`, `mc:hnd-reg`; absent when none was in progress), `isr:<bytes>`. Only the part before the first `:` of each is used as a flag, so unknown tokens are harmless; the column is VARCHAR(64) | per-packet |
 | `orpm`, `ormin`, `ormax`, `oravg` | engine RPM, and its min/max/mean over the cycle | per-packet |
 | `ospd` | ECU road speed, km/h | per-packet |
 | `ocl`, `oit` | coolant and intake temperature, °C | per-packet |
@@ -417,6 +417,19 @@ every reply straight after `gw=`: `le=1` (the default) lets them light, `le=0`
 keeps them all dark. The API sets it (`leds=<0|1>` in POST /api/1.0/command,
 not queued; `le` in /api/1.0/config).
 
+Two alerts are raised by the server when it stores a live record (never for
+backlog behind a newer one), and are not part of the reply. A *dropout*: ignition
+on in this record and the one before, and their `gsm_timestamp`s are
+`device.alert_dropout_s` (default 30, 0 = off, else 5-3600) or more apart; at
+most one Pushover alert per device per 10 minutes, but every one is a device event.
+A *watchdog reset*: `rst=` names `wdt` or `lockup` (not plain `sw` or `pin`);
+it carries the gap when the previous record was in the same drive, and such a
+record raises no dropout alert. `device.alert_reset` (default 1) switches it;
+`alert_dropout_priority` and `alert_reset_priority` (-2..2, default 0) are the
+Pushover priorities. API names are the column names: `alert_dropout_s`,
+`alert_dropout_priority`, `alert_reset`, `alert_reset_priority` in /api/1.0/config
+and /api/1.0/devices, and as commands (not queued; `default` restores).
+
 `im=` is installation mode: 1 while `device.install_mode` is set. A unit in that mode polls every 10 s and acts on the `instreport` / `instenable` commands, which the API accepts only while the mode is on.
 
 `os=` (always last) says whether a supported-PID scan is wanted: 1 while `device.obd_scan` is set. It is set by the app (`obd_scan`) and by the server on the first record with OBD values from a device with no scan on file, and cleared by the scan's `osp=`. The unit scans once per request, with the engine running (RPM > 0), and holds it only in RAM.
@@ -430,7 +443,8 @@ unit is built with, after `le=` on every reply: the non-NULL columns as
 drive_stream_interval_s, `xim` drive_stream_accel_ms (0-5000, 0 = every record),
 `xia` drive_stream_accel (0/1), `xic` drive_stream_impact (0/1, impact capture
 while `xia` is 0), `xdd` databuf_drain_s, `xns`
-network_search_s, `xrp` resp_poll_s, `xlw` led_accel_wake; or `tu=-` when
+network_search_s, `xrp` resp_poll_s, `xlw` led_accel_wake, `xwr` weak_hold_rsrp_dbm (-140..-100 dBm, 0 = off),
+`xws` weak_hold_snr_db (-20..5), `xwm` weak_hold_max_s (5-600); or `tu=-` when
 every column is NULL. A NULL column is no override: the unit keeps its built
 value, so the unit makes its overrides exactly the listed pairs and anything
 not listed goes back to the built value. Values are integers except `xoa`, a
@@ -447,7 +461,7 @@ POST /api/1.0/command (not queued, `<name>=default` clears) and by code in
 `tb=` is a record field (not a reply token), sent by the unit in the record
 that carries `fw=` and `bd=`, once per boot until a reply lands: the values
 the unit was BUILT with (the compiled-in defaults, not the current overrides),
-in the `tu=` grammar - `<code>:<value>` pairs joined by `;` for all nineteen
+in the `tu=` grammar - `<code>:<value>` pairs joined by `;` for all twenty-two
 codes, `xoa` commas sent as `|`, an empty `xoa` as `xoa:`. Because the pairs
 contain `;` the server takes the field whole. It stores the text, normalised to
 the pairs that parsed (unknown codes and non-integer values dropped), in

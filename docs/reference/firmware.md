@@ -167,7 +167,8 @@ token of a reply, held in RAM, so after a reboot the built value holds until the
 `APP_BATTERY_WARNING_MV`, `APP_BATTERY_POWEROFF_MV`, `APP_DRIVE_STREAM` (can only switch off a
 build that has it), `APP_DRIVE_STREAM_INTERVAL_S`, `APP_DRIVE_STREAM_IMU_MS`, `APP_DRIVE_STREAM_ACCEL`,
 `APP_DRIVE_STREAM_IMPACT`, `APP_DATABUF_DRAIN_S`,
-`APP_NETWORK_SEARCH_TIMEOUT`, `APP_RESP_POLL_S` and `APP_LED_ACCEL_WAKE`. An override outside the
+`APP_NETWORK_SEARCH_TIMEOUT`, `APP_RESP_POLL_S`, `APP_LED_ACCEL_WAKE` and `APP_WEAK_HOLD_RSRP_DBM`,
+`APP_WEAK_HOLD_SNR_DB`, `APP_WEAK_HOLD_MAX_S`. An override outside the
 range the server accepts is ignored. See [Device settings](device-settings.md).
 
 ### Board selection
@@ -430,6 +431,10 @@ The alerts these settings shape are listed in the
 | `APP_ACCEL_ALERT_BACKOFF_S` | int, 0-86400 | `300` | After one of those alerts, send any others within this many seconds at `APP_ACCEL_ALERT_BACKOFF_PRIORITY`; `0` disables. The window is fixed, not sliding |
 | `APP_ACCEL_ALERT_BACKOFF_PRIORITY` | int, -2 to 2 | `0` | Priority inside that window |
 | `APP_LED_ACCEL_WAKE` | bool | `n` | Blink the status LEDs when a parked wake qualifies as movement, tilt or an impact. Handy while installing; off by default because it costs battery and shows where the unit is |
+| `APP_WEAK_HOLD` | bool | `n` | Hold ordinary sends while the serving cell is very weak: the records wait in the backlog (RAM, flash where fitted) and go when the signal recovers. This is only the value a unit starts with (on or off); the code is always built, and the server turns it on with `xwr`. Applies to the drive stream and an awake vehicle's sends, not to parked wakes, alerts, ignition-change records, commands or FOTA |
+| `APP_WEAK_HOLD_RSRP_DBM` | int, -140 to -100 | `-115` | Weak when the RSRP is at or below this (only with `APP_WEAK_HOLD`). Run-time: `xwr`, 0 = off |
+| `APP_WEAK_HOLD_SNR_DB` | int, -20 to 5 | `-6` | ... or when the SNR is at or below this. An SNR of 0 is never counted. Run-time: `xws` |
+| `APP_WEAK_HOLD_MAX_S` | int, 5-600 | `60` | Longest a send is held; then one goes out anyway and the hold can start again 5 s later. Run-time: `xwm` |
 
 ### K-wire
 
@@ -503,6 +508,7 @@ backlog itself have not run.
 | `APP_DEBUG_LOG_PER_RECORD` | int, 0-1000 | `600` | Most log bytes appended to one record; the rest waits for the next |
 | `APP_WDT_FREEZE_CAPTURE` | bool | `y` | Depends on `TASK_WDT_HW_FALLBACK`. Leaves the nRF watchdog driver's own interrupt out (`WDT_NRFX_NO_IRQ`) and takes the watchdog's early warning, about 60 µs before a reset, at the highest interrupt priority. After a watchdog reset that no thread's missed kick explains (the kernel's timer stopped) the next boot reports where the CPU was: `rst=wdt+fz:<pc>/<lr>[/i<irq>]` and five `previous boot froze:` log lines (the interrupted code's registers, active and pending interrupts, the system timer's registers, the stack above the frame); look the addresses up in the map file of the image that was running. Reaches a handler stuck at the system timer's level or below, and a thread under BASEPRI 0x40 or more; not a handler at the modem IPC's level (hardware level 1), `irq_lock()`, PRIMASK or a lock-up, which leave no note. Costs nothing while the unit runs |
 | `APP_ISR_STACK_MARK` | bool | `y` | Not with `INIT_STACKS`. Fills the interrupt stack (`ISR_STACK_SIZE`, 2 KB) with a pattern at boot and reads it back after the next reset. If that stack runs out, the secure side (TF-M) halts the CPU and the hardware watchdog resets the chip up to 12 s later, which reads as a plain `rst=wdt` with no note, as a stopped kernel timer does. `rst=` then carries `isr:<bytes>`, the deepest the handlers went, after a reset nothing planned (watchdog, lock-up, or a crash, stall or freeze note) and after any reset when the peak was half the stack or more; those also log `previous boot: interrupt stack peak <n> of <size> bytes`, marked `(full)` within 128 bytes of the limit. A power cut, a pin reset or a new image leaves nothing to read. Costs a 2 KB fill at boot and about 40 bytes of RAM |
+| `APP_MODEM_CALL_MARK` | bool | `y` | Marks each call into the modem library (sockets, `nrf_modem_at_*`, `lte_lc_*` and `modem_info`, library init and shutdown, `nrf_modem_gnss_*`, the lte event handler) in retained RAM on the way in and clears it on the way out. After a watchdog reset, a lock-up or a crash that left a mark set, `rst=` carries `mc:<name>`: `send`, `recv`, `conn`, `sock`, `close`, `opt`, `dns`, `at-<cmd>` (first four letters, e.g. `at-cfun`), `lte-normal`, `lte-offline`, `lte-func`, `lib-init`, `lib-shut`, `gnss-start`, `hnd-<event>` (`hnd-reg`, `hnd-psm`, ...). With several calls set it names the newest and logs each. Nothing is added when none was in progress, after a power cut or a pin reset. 64 bytes of RAM |
 
 ### Modem recovery
 

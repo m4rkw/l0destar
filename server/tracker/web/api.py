@@ -59,6 +59,11 @@ SERVER_SIDE_SETTINGS = {
     'gnss_bk_hour_from': 'gnss_bk_hour_from',
     'gnss_bk_hour_to': 'gnss_bk_hour_to',
     'leds': 'leds',
+    # Alerts the server raises from the records it stores; see ALERT_DEFAULTS.
+    'alert_dropout_s': 'alert_dropout_s',
+    'alert_dropout_priority': 'alert_dropout_priority',
+    'alert_reset': 'alert_reset',
+    'alert_reset_priority': 'alert_reset_priority',
     'backup_interval': 'backup_int',
     # Rescan of the car's supported OBD PIDs: 1 asks for one (the unit does it
     # with the engine running and answers with osp=), 0 withdraws the request.
@@ -91,13 +96,22 @@ CONFIG_FIELDS = {
     'gwbf': 'gnss_bk_hour_from',
     'gwbt': 'gnss_bk_hour_to',
     'le': 'leds',
+    'alert_dropout_s': 'alert_dropout_s',
+    'alert_dropout_priority': 'alert_dropout_priority',
+    'alert_reset': 'alert_reset',
+    'alert_reset_priority': 'alert_reset_priority',
     'obd_scan': 'obd_scan',
     **{code: column for code, column, _, _ in telemetry.TUNABLES},
 }
 
 # Intervals the unit would raise to this anyway (the cell behind them is
 # finite): 0 means off, anything from 1 to 9 is refused.
-NONZERO_MINIMUM = {'int': 10, 'backup_int': 10}
+NONZERO_MINIMUM = {'int': 10, 'backup_int': 10, 'alert_dropout_s': 5}
+
+# The dropout and watchdog-reset alerts' settings and what each is without
+# one ("default" restores it).  alert_dropout_s 0 = dropout alerts off.
+ALERT_DEFAULTS = {'alert_dropout_s': 30, 'alert_dropout_priority': 0,
+                  'alert_reset': 1, 'alert_reset_priority': 0}
 
 # The values each setting's column can hold.
 SETTING_RANGES = {
@@ -116,6 +130,10 @@ SETTING_RANGES = {
     'gnss_bk_hour_from': (0, 23),
     'gnss_bk_hour_to': (0, 23),
     'leds': (0, 1),
+    'alert_dropout_s': (0, 3600),
+    'alert_dropout_priority': (-2, 2),
+    'alert_reset': (0, 1),
+    'alert_reset_priority': (-2, 2),
     'obd_scan': (0, 1),
     **telemetry.TUNABLE_RANGES,
 }
@@ -130,6 +148,9 @@ def _setting(column, value):
     rejects it."""
     if isinstance(value, bool):
         return None
+    if column in ALERT_DEFAULTS and isinstance(value, str) \
+            and value.strip() == 'default':
+        return ALERT_DEFAULTS[column]
     if isinstance(value, str) and re.fullmatch(r'\s*[+-]?\d+\s*', value):
         value = int(value)
     if not isinstance(value, int):
@@ -465,7 +486,8 @@ def get_config():
     if failure:
         return failure
 
-    defaults = {'ma': 1, 'oaf': 23, 'oat': 6, 'gwt': 7, 'le': 1}
+    defaults = {'ma': 1, 'oaf': 23, 'oat': 6, 'gwt': 7, 'le': 1,
+                **ALERT_DEFAULTS}
     result = {}
     for key, column in CONFIG_FIELDS.items():
         value = device.get(column)

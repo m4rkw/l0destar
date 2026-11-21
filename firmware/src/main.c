@@ -3168,7 +3168,7 @@ int main(void)
             /* The socket is kept after the send, not closed: the server's
              * reply is what says the records arrived, and it lands on it.
              * The release hint set on the send is what frees the radio. */
-            send_data();
+            send_data_live(previous_ignition == -1 || previous_ignition != ignition);
             if (!transport_is_streaming()) {
                 k_msleep(200);
             }

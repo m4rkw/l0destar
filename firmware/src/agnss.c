@@ -23,6 +23,7 @@
 #include <net/nrf_cloud_agnss.h>
 
 #include "app.h"
+#include "modem_call_mark.h"
 
 LOG_MODULE_REGISTER(agnss, CONFIG_APP_LOG_LEVEL);
 
@@ -87,15 +88,15 @@ static int get_serving_cell(struct lte_lc_cell *cell)
 	int err;
 	char buf[MODEM_INFO_MAX_RESPONSE_SIZE];
 
-	err = modem_info_string_get(MODEM_INFO_CELLID, buf, sizeof(buf));
+	err = MCM_LTE(MCM_LTE_INFO, modem_info_string_get(MODEM_INFO_CELLID, buf, sizeof(buf)));
 	if (err < 0) return err;
 	cell->id = strtol(buf, NULL, 16);
 
-	err = modem_info_string_get(MODEM_INFO_AREA_CODE, buf, sizeof(buf));
+	err = MCM_LTE(MCM_LTE_INFO, modem_info_string_get(MODEM_INFO_AREA_CODE, buf, sizeof(buf)));
 	if (err < 0) return err;
 	cell->tac = strtol(buf, NULL, 16);
 
-	err = modem_info_string_get(MODEM_INFO_OPERATOR, buf, sizeof(buf));
+	err = MCM_LTE(MCM_LTE_INFO, modem_info_string_get(MODEM_INFO_OPERATOR, buf, sizeof(buf)));
 	if (err < 0) return err;
 	cell->mnc = strtol(&buf[3], NULL, 10);
 	buf[3] = '\0';
@@ -139,8 +140,8 @@ static void dns_thread(void *p1, void *p2, void *p3)
 		struct zsock_addrinfo *res = NULL;
 
 		k_sem_take(&s_dns_go, K_FOREVER);
-		s_dns_err = zsock_getaddrinfo(CONFIG_NRF_CLOUD_REST_HOST_NAME,
-					      "443", &hints, &res);
+		s_dns_err = MCM_SOCK2(MCM_SOCK_DNS, zsock_getaddrinfo(CONFIG_NRF_CLOUD_REST_HOST_NAME,
+					      "443", &hints, &res));
 		if (res) {
 			zsock_freeaddrinfo(res);
 		}
@@ -184,7 +185,7 @@ static int agnss_resolve(void)
 
 int agnss_init(void)
 {
-	int err = modem_info_init();
+	int err = MCM_LTE(MCM_LTE_INFO, modem_info_init());
 	if (err) {
 		LOG_ERR("modem_info_init: %d", err);
 		return err;

@@ -110,6 +110,16 @@ CREATE TABLE `device` (
   -- dark.  Sent in every reply as le=<0|1>, straight after gw=.
   `leds`               TINYINT(1)       NOT NULL DEFAULT 1,
 
+  -- Alerts the server raises from the records it stores (never sent to the
+  -- unit).  alert_dropout_s: seconds without a record in a drive (ignition on
+  -- before and after) that raises a dropout alert, 0 = off, else 5-3600.
+  -- alert_reset: alert when a record reports a watchdog or CPU-lockup reset.
+  -- The priorities are Pushover's, -2 to 2.
+  `alert_dropout_s`        SMALLINT UNSIGNED NOT NULL DEFAULT 30,
+  `alert_dropout_priority` TINYINT          NOT NULL DEFAULT 0,
+  `alert_reset`            TINYINT(1)       NOT NULL DEFAULT 1,
+  `alert_reset_priority`   TINYINT          NOT NULL DEFAULT 0,
+
   -- The engine-off reporting schedule: JSON list of up to 8 rules {"days":
   -- [0-6, Monday is 0], "from": "HH:MM", "to": "HH:MM", "int": seconds}, server
   -- local time, first match wins (int 0 = no timed reports, else 10-86400).
@@ -161,6 +171,13 @@ CREATE TABLE `device` (
   `resp_poll_s`           SMALLINT DEFAULT NULL,
   -- xlw: APP_LED_ACCEL_WAKE, 0 or 1
   `led_accel_wake`        TINYINT DEFAULT NULL,
+  -- xwr: APP_WEAK_HOLD_RSRP_DBM, dBm, -140..-100, or 0 for off: hold ordinary
+  -- sends while the serving cell's RSRP is at or below this (SNR too, xws)
+  `weak_hold_rsrp_dbm`    SMALLINT DEFAULT NULL,
+  -- xws: APP_WEAK_HOLD_SNR_DB, dB, -20..5: ... or its SNR is at or below this
+  `weak_hold_snr_db`      TINYINT DEFAULT NULL,
+  -- xwm: APP_WEAK_HOLD_MAX_S, seconds, 5-600: longest a send is held
+  `weak_hold_max_s`       SMALLINT DEFAULT NULL,
   -- The values the unit says it is built with (tb=), raw: <code>:<value>[;...]
   -- in the tu= grammar, xoa's commas as '|'.  NULL until it has reported.
   -- GET /config and /devices show them as tunables_built, and the value in

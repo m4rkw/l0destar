@@ -331,6 +331,20 @@ def test_ignition_text():
     ('sw+stall:1', 'Rebooted (software)'),
     ('brownout', 'Rebooted'),
     ('+', 'Rebooted'),
+    # The modem call a frozen unit was in (mc:<name>).
+    ('wdt+mc:send', 'Rebooted (watchdog, stuck in modem send)'),
+    ('pin+sw+wdt+mc:recv+isr:300', 'Rebooted (watchdog, stuck in modem receive)'),
+    ('wdt+mc:at-cfun', 'Rebooted (watchdog, stuck in modem AT command CFUN)'),
+    ('wdt+mc:hnd-reg', 'Rebooted (watchdog, stuck in modem registration event handler)'),
+    ('wdt+mc:hnd-40', 'Rebooted (watchdog, stuck in modem event handler 40)'),
+    ('wdt+mc:lte-normal', 'Rebooted (watchdog, stuck in modem radio on)'),
+    ('wdt+mc:newname', 'Rebooted (watchdog, stuck in modem newname)'),
+    ('wdt+stall:4aa02/3e254+mc:send', 'Rebooted (watchdog, stalled, stuck in modem send)'),
+    ('lockup+mc:lib-init', 'Rebooted (CPU lockup, stuck in modem library init)'),
+    ('wdt+mc:', 'Rebooted (watchdog)'),
+    # Only a watchdog or lockup says it; the token alone is not a reset flag.
+    ('sw+mc:send', 'Rebooted (software)'),
+    ('mc:send', 'Rebooted'),
 ])
 def test_reset_text(rst, text):
     assert ev.reset_text(rst) == text

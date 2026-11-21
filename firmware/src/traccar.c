@@ -57,6 +57,7 @@
 #include <zephyr/app_version.h>
 
 #include "app.h"
+#include "modem_call_mark.h"
 
 LOG_MODULE_REGISTER(traccar, CONFIG_APP_LOG_LEVEL);
 
@@ -516,7 +517,7 @@ static int resolve(void)
     /* The modem's resolver, which can sit on a query for tens of seconds
      * when the link is marginal: a full watchdog window to itself. */
     watchdog_kick();
-    int err = zsock_getaddrinfo(TRACCAR_HOST, port_str, &hints, &res);
+    int err = MCM_SOCK(MCM_SOCK_DNS, zsock_getaddrinfo(TRACCAR_HOST, port_str, &hints, &res));
     watchdog_kick();
     if (err) {
         LOG_ERR("getaddrinfo(%s): %d", TRACCAR_HOST, err);
@@ -536,11 +537,11 @@ static int tls_setup(int sock)
      * when the connection has to be made again. */
     uint8_t cache = TLS_SESSION_CACHE_ENABLED;
 
-    if (zsock_setsockopt(sock, SOL_TLS, TLS_PEER_VERIFY, &verify, sizeof(verify)) ||
-        zsock_setsockopt(sock, SOL_TLS, TLS_SEC_TAG_LIST, tags, sizeof(tags)) ||
-        zsock_setsockopt(sock, SOL_TLS, TLS_SESSION_CACHE, &cache, sizeof(cache)) ||
-        zsock_setsockopt(sock, SOL_TLS, TLS_HOSTNAME, TRACCAR_HOST,
-                         strlen(TRACCAR_HOST))) {
+    if (MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(sock, SOL_TLS, TLS_PEER_VERIFY, &verify, sizeof(verify))) ||
+        MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(sock, SOL_TLS, TLS_SEC_TAG_LIST, tags, sizeof(tags))) ||
+        MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(sock, SOL_TLS, TLS_SESSION_CACHE, &cache, sizeof(cache))) ||
+        MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(sock, SOL_TLS, TLS_HOSTNAME, TRACCAR_HOST,
+                         strlen(TRACCAR_HOST)))) {
         LOG_ERR("TLS setup: %d", errno);
         return -errno;
     }
@@ -555,8 +556,8 @@ static int set_timeouts(int sock, int ms)
     };
 
     /* The send timeout also bounds connect(). */
-    if (zsock_setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) ||
-        zsock_setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) {
+    if (MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv))) ||
+        MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))) {
         return -errno;
     }
     return 0;
@@ -571,8 +572,8 @@ static int connect_server(void)
         if (err) return err;
     }
 
-    int sock = zsock_socket(AF_INET, SOCK_STREAM,
-                            TRACCAR_USE_TLS ? IPPROTO_TLS_1_2 : IPPROTO_TCP);
+    int sock = MCM_SOCK(MCM_SOCK_SOCKET, zsock_socket(AF_INET, SOCK_STREAM,
+                            TRACCAR_USE_TLS ? IPPROTO_TLS_1_2 : IPPROTO_TCP));
     if (sock < 0) {
         LOG_ERR("socket: %d", errno);
         return -errno;
@@ -581,15 +582,15 @@ static int connect_server(void)
     int err = TRACCAR_USE_TLS ? tls_setup(sock) : 0;
     if (!err) err = set_timeouts(sock, CONNECT_TIMEOUT_MS);
     if (err) {
-        zsock_close(sock);
+        MCM_SOCK(MCM_SOCK_CLOSE, zsock_close(sock));
         return err;
     }
 
     watchdog_kick();
-    if (zsock_connect(sock, (struct sockaddr *)&s_server, sizeof(s_server))) {
+    if (MCM_SOCK(MCM_SOCK_CONN, zsock_connect(sock, (struct sockaddr *)&s_server, sizeof(s_server)))) {
         err = -errno;
         LOG_ERR("connect %s:%d: %d", TRACCAR_HOST, TRACCAR_PORT, errno);
-        zsock_close(sock);
+        MCM_SOCK(MCM_SOCK_CLOSE, zsock_close(sock));
         /* The address may have moved: look it up again next time. */
         s_resolved = false;
         return err;
@@ -619,14 +620,14 @@ void transport_close(void)
     /* The exchange is over: let the radio go, keep the connection. */
     if (s_sock >= 0) {
         int rai = RAI_NO_DATA;
-        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+        MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai)));
     }
 }
 
 void transport_teardown(void)
 {
     if (s_sock >= 0) {
-        zsock_close(s_sock);
+        MCM_SOCK(MCM_SOCK_CLOSE, zsock_close(s_sock));
         s_sock = -1;
     }
 }
@@ -644,7 +645,7 @@ static int rd_fill(struct reader *r)
     if (r->pos < r->len) return 0;
     r->pos = r->len = 0;
 
-    ssize_t n = zsock_recv(s_sock, s_rx, sizeof(s_rx), 0);
+    ssize_t n = MCM_SOCK(MCM_SOCK_RECV, zsock_recv(s_sock, s_rx, sizeof(s_rx), 0));
     if (n < 0) return errno == EAGAIN ? -ETIMEDOUT : -errno;
     if (n == 0) return -ECONNRESET;      /* closed under us */
     r->len = (size_t)n;
@@ -800,7 +801,7 @@ static int read_response(void)
 static int send_all(const char *buf, size_t len)
 {
     while (len > 0) {
-        ssize_t n = zsock_send(s_sock, buf, len, 0);
+        ssize_t n = MCM_SOCK(MCM_SOCK_SEND, zsock_send(s_sock, buf, len, 0));
         if (n < 0) return -errno;
         buf += n;
         len -= (size_t)n;
@@ -817,7 +818,7 @@ static int request(bool last)
      * connection — unless more requests follow, or streaming
      * keeps it up for the next record. */
     int rai = (s_streaming || !last) ? RAI_ONGOING : RAI_ONE_RESP;
-    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+    MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai)));
 
     int n = snprintf(s_req, sizeof(s_req),
                      "GET %s HTTP/1.1\r\n"

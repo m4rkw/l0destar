@@ -36,6 +36,11 @@ Settings the server acts on, applied immediately and never sent to the device:
     gnss_off_hour_from=0-23
     gnss_off_hour_to=0-23
     leds=0|1               device status LEDs on/off
+    alert_dropout_s=<s>    alert when a drive's records stop for this long
+                           (0 = off, else 5-3600, default 30)
+    alert_dropout_priority=-2..2   Pushover priority of dropout alerts (0)
+    alert_reset=0|1        alert on a watchdog / CPU-lockup reset (default 1)
+    alert_reset_priority=-2..2     Pushover priority of reset alerts (0)
 
 Runtime tunables, overrides of values the firmware is built with.  Unset (NULL)
 means the unit keeps its built value: clear one with `<name>=default`.  Sent to
@@ -50,6 +55,8 @@ the unit in every reply as tu=.
     drive_stream_impact=0|1        databuf_drain_s=1-600
     network_search_s=60-86400      resp_poll_s=5-600
     led_accel_wake=0|1
+    weak_hold_rsrp_dbm=-140..-100 (0 = off)   weak_hold_snr_db=-20..5
+    weak_hold_max_s=5-600
     obd_alerts=<rule>[|<rule>...]  e.g. obd_alerts='coolant>=95|rpm>6500'
                                    (| for the comma, which separates commands)
 

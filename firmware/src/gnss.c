@@ -14,6 +14,7 @@
 #include <nrf_modem_gnss.h>
 
 #include "app.h"
+#include "modem_call_mark.h"
 
 LOG_MODULE_REGISTER(gnss, CONFIG_APP_LOG_LEVEL);
 
@@ -118,8 +119,8 @@ static void on_gnss_event(int event)
     switch (event) {
     case NRF_MODEM_GNSS_EVT_PVT: {
         struct nrf_modem_gnss_pvt_data_frame pvt;
-        if (nrf_modem_gnss_read(&pvt, sizeof(pvt),
-                                NRF_MODEM_GNSS_DATA_PVT) != 0) {
+        if (MCM_GNSS(MCM_GNSS_READ, nrf_modem_gnss_read(&pvt, sizeof(pvt),
+                                NRF_MODEM_GNSS_DATA_PVT)) != 0) {
             return;
         }
 
@@ -169,8 +170,8 @@ static void on_gnss_event(int event)
         blocked_end();
         break;
     case NRF_MODEM_GNSS_EVT_AGNSS_REQ:
-        if (nrf_modem_gnss_read(&s_agnss_req, sizeof(s_agnss_req),
-                                NRF_MODEM_GNSS_DATA_AGNSS_REQ) == 0) {
+        if (MCM_GNSS(MCM_GNSS_READ, nrf_modem_gnss_read(&s_agnss_req, sizeof(s_agnss_req),
+                                NRF_MODEM_GNSS_DATA_AGNSS_REQ)) == 0) {
             s_agnss_needed = true;
             LOG_INF("A-GNSS data requested (flags=0x%02x)",
                     s_agnss_req.data_flags);
@@ -186,13 +187,13 @@ static void on_gnss_event(int event)
 
 int gnss_init(void)
 {
-    int err = nrf_modem_gnss_event_handler_set(on_gnss_event);
+    int err = MCM_GNSS(MCM_GNSS_CFG, nrf_modem_gnss_event_handler_set(on_gnss_event));
     if (err) {
         LOG_ERR("event_handler_set: %d", err);
         return err;
     }
-    nrf_modem_gnss_fix_interval_set(1);
-    nrf_modem_gnss_fix_retry_set(0);
+    MCM_GNSS(MCM_GNSS_CFG, nrf_modem_gnss_fix_interval_set(1));
+    MCM_GNSS(MCM_GNSS_CFG, nrf_modem_gnss_fix_retry_set(0));
     LOG_INF("init ok");
     return 0;
 }
@@ -205,7 +206,7 @@ int gnss_start(void)
     blocked_end();
     atomic_set(&s_starved_epochs, 0);
     k_sem_reset(&s_fix_sem);
-    int err = nrf_modem_gnss_start();
+    int err = MCM_GNSS(MCM_GNSS_START, nrf_modem_gnss_start());
     if (err) LOG_ERR("start: %d", err);
     return err;
 }
@@ -214,7 +215,7 @@ int gnss_stop(void)
 {
     /* No UNBLOCKED comes for a receiver that is off. */
     blocked_end();
-    return nrf_modem_gnss_stop();
+    return MCM_GNSS(MCM_GNSS_STOP, nrf_modem_gnss_stop());
 }
 
 int gnss_resume(void)
@@ -223,7 +224,7 @@ int gnss_resume(void)
     blocked_end();
     atomic_set(&s_starved_epochs, 0);
     k_sem_reset(&s_fix_sem);
-    int err = nrf_modem_gnss_start();
+    int err = MCM_GNSS(MCM_GNSS_START, nrf_modem_gnss_start());
     if (err) LOG_ERR("resume: %d", err);
     return err;
 }
@@ -396,7 +397,7 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
         if (starved >= GNSS_PRIO_STARVED_EPOCHS &&
             (prio_at_ms == 0 || now - prio_at_ms >= GNSS_PRIO_WINDOW_MS)) {
             atomic_set(&s_starved_epochs, 0);
-            if (nrf_modem_gnss_prio_mode_enable() == 0) {
+            if (MCM_GNSS(MCM_GNSS_PRIO, nrf_modem_gnss_prio_mode_enable()) == 0) {
                 prio_at_ms = now;
                 if (!prio_logged) {
                     prio_logged = true;
@@ -447,7 +448,7 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
         }
     }
 
-    nrf_modem_gnss_prio_mode_disable();
+    MCM_GNSS(MCM_GNSS_PRIO, nrf_modem_gnss_prio_mode_disable());
     s_last_wait_ms = (int32_t)(k_uptime_get() - entered_ms);
 
     if (err == -EINTR) {
@@ -483,11 +484,11 @@ int gnss_collect(int timeout_ms, struct gnss_fix *out)
                 cold ? "cold" : "warm", s_tracked_sv,
                 s_blocked ? ", blocked by LTE" : "",
                 (int)atomic_get(&s_starved_epochs));
-        nrf_modem_gnss_stop();
+        MCM_GNSS(MCM_GNSS_STOP, nrf_modem_gnss_stop());
         k_msleep(500);
         s_have_fix = false;
         k_sem_reset(&s_fix_sem);
-        nrf_modem_gnss_start();
+        MCM_GNSS(MCM_GNSS_START, nrf_modem_gnss_start());
         out->valid = false;
         return err;
     }

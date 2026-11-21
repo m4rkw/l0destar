@@ -38,6 +38,12 @@ int  tun_databuf_drain_s(void);
 int  tun_network_search_s(void);
 int  tun_resp_poll_s(void);
 bool tun_led_accel_wake(void);
+/* Weak-signal send hold (weak_hold.h): hold at or below this RSRP in dBm
+ * (-140..-100; 0 or above -100 = the hold is off), or at or below this SNR in
+ * dB, for at most this many seconds. */
+int  tun_weak_hold_rsrp_dbm(void);
+int  tun_weak_hold_snr_db(void);
+int  tun_weak_hold_max_s(void);
 
 /* The built values as "tb=" text (tunables_core.h); returns the length or -1. */
 int tun_built_string(char *out, size_t cap);

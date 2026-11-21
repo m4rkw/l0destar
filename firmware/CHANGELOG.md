@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.132
+
+### Weak-signal send hold
+The car's firmware has frozen inside a socket send (`rst=wdt+mc:send`) with the serving cell at -119 dBm / SNR -8 just before a cell change. While the signal is that weak an ordinary send is not made: its records wait in the backlog, as an outage's do, and go when the signal recovers.
+- `xwr` (`APP_WEAK_HOLD_RSRP_DBM`, -140..-100 dBm, **0 = off**), `xws` (`APP_WEAK_HOLD_SNR_DB`, -20..5 dB) and `xwm` (`APP_WEAK_HOLD_MAX_S`, 5..600 s, default 60). Held when the RSRP **or** the SNR is at or below its threshold.
+- `APP_WEAK_HOLD` (default n) is only the built default: the hold is off until `xwr` is set.
+- The drive stream and an awake vehicle's sends. Not parked wakes, FOTA, commands, ignition-change records, or any send with an alert queued.
+- After `xwm` of holding one send goes out anyway; the hold stays off for 5 s, then can start again.
+- The signal is read every 10 s while it is on; a reading older than 20 s holds nothing. Nothing is logged.
+- Status: host tests (`tests/test_weak_hold.py`); server columns `weak_hold_rsrp_dbm`, `weak_hold_snr_db`, `weak_hold_max_s` (migration `2026-11-21_weak_signal_hold.sql`); not run on hardware.
+
+### A watchdog reset names the modem call it froze in
+A freeze in registration loss or a weak cell that ends in a plain `rst=wdt` (no stall note, no freeze note) left nothing to go on: the CPU was stuck where the watchdog's early warning cannot run, probably in the modem library. Every call into it now leaves a mark in retained RAM and clears it on return; after a watchdog reset, a lock-up or a crash that left one set, `rst=` carries `mc:<name>`.
+- `APP_MODEM_CALL_MARK` (default y): marks the socket calls, `nrf_modem_at_*` (named by the command's first four letters), `lte_lc_*`, modem library init and shutdown, `nrf_modem_gnss_*` and the lte event handler (by event type). 64 bytes of RAM, a few stores per call, nothing logged while it works.
+- Tokens: `mc:send`, `recv`, `conn`, `sock`, `close`, `opt`, `dns`, `poll`; `mc:at-cfun` and so on; `mc:lte-normal`, `lte-offline`, `lte-func`, ...; `mc:lib-init`, `lib-shut`; `mc:gnss-start`, ...; `mc:hnd-reg`, `hnd-psm`, `hnd-cell`, ...
+- Nothing is added when no call was set, or after a power cut or pin reset. With several set it names the newest, and the boot log lists it as an ERR line.
+- The server reads it: `Rebooted (watchdog, stuck in modem send)`.
+- Status: host tests (`tests/test_modem_call_mark.py`, `tests/test_dbglog.py`); built for v4.0p2, v3.3 and v3.4; not run on hardware.
+
 ## 0.4.130
 
 ### A flat car battery puts the unit into a lockout

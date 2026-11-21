@@ -128,6 +128,13 @@ def show(args):
             device.get('gnss_off_window', 0), device.get('gnss_off_hour_from', 0),
             device.get('gnss_off_hour_to', 7))),
         ('device LEDs', 'on' if device.get('leds', 1) else 'off'),
+        ('dropout alert', 'off' if device.get('alert_dropout_s') == 0 else
+         '%ds, priority %d' % (
+             30 if device.get('alert_dropout_s') is None
+             else device['alert_dropout_s'],
+             device.get('alert_dropout_priority') or 0)),
+        ('watchdog reset alert', 'off' if device.get('alert_reset') == 0 else
+         'priority %d' % (device.get('alert_reset_priority') or 0)),
         ('runtime tunables', ' '.join(
             '%s=%s' % (column, device[column]) for column in TUNABLE_COLUMNS
             if device.get(column) is not None) or 'none (built values)'),

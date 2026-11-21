@@ -34,6 +34,7 @@
 #include <zephyr/net/socket.h>
 
 #include "app.h"
+#include "modem_call_mark.h"
 #include "send_policy.h"
 
 LOG_MODULE_REGISTER(transport, CONFIG_APP_LOG_LEVEL);
@@ -144,7 +145,7 @@ static void apply_send_timeout(void)
         .tv_sec  = ms / 1000,
         .tv_usec = (ms % 1000) * 1000,
     };
-    if (zsock_setsockopt(s_sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv))) {
+    if (MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(s_sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)))) {
         LOG_WRN("SO_SNDTIMEO: %d — sends can block", errno);
         return;
     }
@@ -239,7 +240,7 @@ int transport_poll(void)
     /* Bounded, so a socket that keeps returning something unusable cannot
      * hold the loop; whatever is left is read on the next look. */
     for (int i = 0; i < 2 * SENT_TRACK; i++) {
-        int n = zsock_recv(s_sock, s_rx, sizeof(s_rx), ZSOCK_MSG_DONTWAIT);
+        int n = MCM_SOCK(MCM_SOCK_RECV, zsock_recv(s_sock, s_rx, sizeof(s_rx), ZSOCK_MSG_DONTWAIT));
 
         if (n < 0) {
             if (errno != EAGAIN) {
@@ -278,7 +279,7 @@ static int transport_resolve(void)
      * when the link is marginal.  Nothing to slice, so bracket it with
      * kicks: the lookup gets a full watchdog window to itself. */
     watchdog_kick();
-    int err = zsock_getaddrinfo(SERVER_HOST, port_str, &hints, &res);
+    int err = MCM_SOCK(MCM_SOCK_DNS, zsock_getaddrinfo(SERVER_HOST, port_str, &hints, &res));
     watchdog_kick();
 
     bool recheck = s_resolved;
@@ -325,17 +326,17 @@ int transport_open(void)
         if (err) return err;
     }
 
-    s_sock = zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    s_sock = MCM_SOCK(MCM_SOCK_SOCKET, zsock_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
     if (s_sock < 0) {
         LOG_ERR("socket: %d", errno);
         return -errno;
     }
 
-    int err = zsock_connect(s_sock, (struct sockaddr *)&s_server,
-                            sizeof(s_server));
+    int err = MCM_SOCK(MCM_SOCK_CONN, zsock_connect(s_sock, (struct sockaddr *)&s_server,
+                            sizeof(s_server)));
     if (err) {
         LOG_ERR("connect: %d", errno);
-        zsock_close(s_sock);
+        MCM_SOCK(MCM_SOCK_CLOSE, zsock_close(s_sock));
         s_sock = -1;
         return -errno;
     }
@@ -354,8 +355,8 @@ void transport_close(void)
 
     if (s_sock >= 0) {
         int rai = RAI_NO_DATA;
-        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
-        zsock_close(s_sock);
+        MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai)));
+        MCM_SOCK(MCM_SOCK_CLOSE, zsock_close(s_sock));
         s_sock = -1;
         SOCKET_CLOSED();
     }
@@ -364,7 +365,7 @@ void transport_close(void)
 void transport_teardown(void)
 {
     if (s_sock >= 0) {
-        zsock_close(s_sock);
+        MCM_SOCK(MCM_SOCK_CLOSE, zsock_close(s_sock));
         s_sock = -1;
         SOCKET_CLOSED();
     }
@@ -435,7 +436,7 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
      * gets the antenna back.  Streaming keeps the connection up for the
      * next send instead. */
     int rai = s_streaming ? RAI_ONGOING : RAI_ONE_RESP;
-    zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+    MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai)));
 
     bool dropped = false;
 
@@ -450,7 +451,7 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
     watchdog_kick();
     int64_t send_ms = k_uptime_get();
 
-    if (!dropped && zsock_send(s_sock, buf, total, 0) < 0) {
+    if (!dropped && MCM_SOCK(MCM_SOCK_SEND, zsock_send(s_sock, buf, total, 0)) < 0) {
         int e = errno;
 
         if (send_policy_hold(e, s_short_send, STREAM_SEND_TIMEOUT_MS, &s_held,
@@ -465,9 +466,9 @@ int transport_send(const uint8_t *plaintext, size_t pt_len)
         transport_teardown();
         err = transport_open();
         if (err) return err;
-        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai));
+        MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(s_sock, SOL_SOCKET, SO_RAI, &rai, sizeof(rai)));
         watchdog_kick();
-        if (zsock_send(s_sock, buf, total, 0) < 0) {
+        if (MCM_SOCK(MCM_SOCK_SEND, zsock_send(s_sock, buf, total, 0)) < 0) {
             LOG_ERR("send retry failed: %d", errno);
             transport_teardown();
             return -errno;
@@ -526,9 +527,9 @@ int transport_recv_response(char *out_plaintext, size_t out_len, int timeout_ms)
             .tv_sec  = left / 1000,
             .tv_usec = (left % 1000) * 1000,
         };
-        zsock_setsockopt(s_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        MCM_SOCK(MCM_SOCK_OPT, zsock_setsockopt(s_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)));
 
-        int n = zsock_recv(s_sock, s_rx, sizeof(s_rx), 0);
+        int n = MCM_SOCK(MCM_SOCK_RECV, zsock_recv(s_sock, s_rx, sizeof(s_rx), 0));
 
         if (n < 0) {
             int err = errno;

@@ -166,6 +166,11 @@ const char *watchdog_last_freeze(void) { return T_FREEZE; }
 #ifndef T_ISR
 #define T_ISR NULL
 #endif
+#ifndef T_MC
+#define T_MC NULL
+#endif
+static int g_mc_calls, g_mc_unplanned;
+const char *modem_call_mark_last(bool unplanned) { g_mc_calls++; g_mc_unplanned = unplanned; return T_MC; }
 static int g_isr_calls, g_isr_unplanned;
 const char *isr_mark_last(bool unplanned) { g_isr_calls++; g_isr_unplanned = unplanned; return T_ISR; }
 
@@ -184,6 +189,8 @@ int  h_unsealed(void) { return g_unsealed; }
 const char *h_reset_cause(void) { return dbglog_reset_cause(); }
 int h_isr_calls(void) { return g_isr_calls; }
 int h_isr_unplanned(void) { return g_isr_unplanned; }
+int h_mc_calls(void) { return g_mc_calls; }
+int h_mc_unplanned(void) { return g_mc_unplanned; }
 
 void h_capture(const char *line, int len, int64_t ms) { capture(line, (uint8_t)len, ms); }
 int  h_take(char *out, int max) { return dbglog_take(out, (size_t)max); }
@@ -1132,7 +1139,7 @@ def test_garbage_under_the_sanitisers_where_the_toolchain_has_them():
 WDT, SW = 1 << 4, 1 << 1
 
 
-def cause_info(hw=0, crash=None, stall=None, freeze=None, isr=None):
+def cause_info(hw=0, crash=None, stall=None, freeze=None, isr=None, mc=None):
     """dbglog_reset_cause() for one combination of what the hardware, fatal.c,
     watchdog.c and isr_mark.c report: a build per combination, since it is composed
     once per boot.  Gives the text, how often isr_mark_last() was asked and what it
@@ -1141,7 +1148,8 @@ def cause_info(hw=0, crash=None, stall=None, freeze=None, isr=None):
     write_stubs(d)
     so = os.path.join(d, "libcause.so")
     defs = [f"-DHW_CAUSE={hw}"]
-    for name, val in (("T_CRASH", crash), ("T_STALL", stall), ("T_FREEZE", freeze), ("T_ISR", isr)):
+    for name, val in (("T_CRASH", crash), ("T_STALL", stall), ("T_FREEZE", freeze), ("T_ISR", isr),
+                      ("T_MC", mc)):
         if val is not None:
             defs.append('-D%s="%s"' % (name, val))
     cmd = ["cc", *CFLAGS, "-DCONFIG_APP_DATABUF_UNACKED_SLOTS=6", *defs, "-shared", "-fPIC",
@@ -1153,6 +1161,7 @@ def cause_info(hw=0, crash=None, stall=None, freeze=None, isr=None):
     got = L.h_reset_cause()
     again = L.h_reset_cause()                       # cached: the same text, no second look
     assert again == got
+    cause_info.mc = (L.h_mc_calls(), bool(L.h_mc_unplanned()))
     return (None if got is None else got.decode()), L.h_isr_calls(), L.h_isr_unplanned()
 
 
@@ -1238,3 +1247,30 @@ def test_any_note_of_a_fault_makes_it_unplanned_whatever_the_register_says(note)
     kw = {note: "x:1"}
     assert asked(hw=SW, **kw)
     assert asked(hw=0, **kw)
+
+
+# -- the modem call a stuck unit was in -----------------------------------------------------------
+
+def test_the_modem_call_follows_the_freeze_note_and_comes_before_the_stack_peak():
+    assert cause(hw=WDT, mc="mc:send") == "wdt+mc:send"
+    assert cause(hw=WDT, stall="stall:4aa02/3e254", mc="mc:at-cfun") == "wdt+stall:4aa02/3e254+mc:at-cfun"
+    assert cause(hw=WDT, freeze="fz:48a78/3e254", mc="mc:hnd-reg", isr="isr:300") == \
+        "wdt+fz:48a78/3e254+mc:hnd-reg+isr:300"
+
+
+def test_without_a_modem_call_nothing_is_added():
+    assert cause(hw=WDT) == "wdt"
+
+
+def test_the_modem_call_is_asked_about_once_and_only_a_watchdog_lockup_or_crash_is_unplanned():
+    for hw, kw, want in ((WDT, {}, True), (LOCKUP, {}, True), (SW, {}, False), (PIN, {}, False),
+                         (SW, {"crash": "fatal:2@3e99c"}, True)):
+        cause_info(hw=hw, **kw)
+        calls, unplanned = cause_info.mc
+        assert calls == 1 and unplanned is want, (hw, kw)
+
+
+def test_the_modem_call_is_cut_to_fit_not_overrun():
+    got = cause(hw=WDT | SW, crash="fatal:2@3e99c735", stall="stall:4aa02/3e254/49722/48a78",
+                freeze="fz:48a78/3e254/i479", mc="mc:lte-offline", isr="isr:2010")
+    assert len(got) <= 63 and got.startswith("sw+wdt+fatal:2@3e99c735+stall:")

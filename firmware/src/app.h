@@ -457,6 +457,11 @@ void     databuf_deliver(int timeout_ms, int budget_ms, bool (*stop)(void));
 int      databuf_stamp(const char *in, size_t len, char *out, size_t cap);
 void data_reset(void);
 int  send_data(void);
+/* send_data() for the sends of an awake vehicle, which a very weak serving
+ * cell may hold back in the backlog (weak_hold.h, tunable xwr).  `urgent`
+ * (the record of an ignition change) is sent whatever the signal.  Every other
+ * send_data() caller is exempt: parked wakes, commands, FOTA, install mode. */
+int  send_data_live(bool urgent);
 
 /* -- captured warnings/errors (src/dbglog.c) --------------------------------
  * A log backend keeps WRN/ERR lines in RAM (kept across a warm reset);
@@ -579,6 +584,11 @@ const char *watchdog_last_freeze(void);
  * after one nothing planned (unplanned) and after any when it was half full or
  * more, with a log line for those; else NULL (isr_mark.c, isr_mark.h) */
 const char *isr_mark_last(bool unplanned);
+/* "mc:<name>" once: the modem library call the firmware was in when the last
+ * reset came, when unplanned (a watchdog reset, a lock-up or a crash) and a
+ * call was still entered; else NULL, with a log line per such call (modem_call_mark.c,
+ * modem_call_mark.h) */
+const char *modem_call_mark_last(bool unplanned);
 
 void reboot_now(void);
 void status_delay(long ms);   /* watchdog-aware sleep */

@@ -568,6 +568,10 @@ TUNABLES = [
     ('xns', 'network_search_s', 60, 86400),
     ('xrp', 'resp_poll_s', 5, 600),
     ('xlw', 'led_accel_wake', 0, 1),
+    # -140..-100 dBm, or 0 for off; -99..-1 is accepted and also reads as off.
+    ('xwr', 'weak_hold_rsrp_dbm', -140, 0),
+    ('xws', 'weak_hold_snr_db', -20, 5),
+    ('xwm', 'weak_hold_max_s', 5, 600),
 ]
 TUNABLE_COLUMNS = [column for _, column, _, _ in TUNABLES]
 # Text tunables, which have no numeric range.
@@ -710,6 +714,71 @@ def _ignition_alerts(device, entry, now):
                 '%s overnight ignition on, battery %sV' % (device['name'], battery),
                 priority=priority,
             )
+
+
+# Dropout alerts: at most one per device in this long (one worker process, so
+# a dict will do; a restart forgets, which only allows one more alert).
+DROPOUT_ALERT_INTERVAL_S = 600
+_last_dropout_alert = {}
+
+
+def _gsm_datetime(value):
+    if isinstance(value, datetime.datetime):
+        return value
+    text = str(value)
+    if '.' in text:
+        return datetime.datetime.strptime(text[:26], '%Y-%m-%d %H:%M:%S.%f')
+    return datetime.datetime.strptime(text[:19], '%Y-%m-%d %H:%M:%S')
+
+
+def _dropout_and_reset_alerts(database, device, previous, entry, built):
+    """Alerts for a live record that follows a hole in a drive or reports a
+    watchdog reset.  Both only mean something against a previous record of the
+    same drive (ignition on in both).  A record carrying a watchdog or lockup
+    reset raises only the reset alert, which carries the gap."""
+    name = device.get('name') or device.get('imei') or '?'
+    gap = None
+    if (previous is not None and entry['ignition_state'] == 1
+            and str(previous['ignition_state']) == '1'):
+        try:
+            gap = int(round((_gsm_datetime(entry['gsm_timestamp'])
+                             - _gsm_datetime(previous['gsm_timestamp'])
+                             ).total_seconds()))
+        except (TypeError, ValueError, KeyError):
+            gap = None
+        if gap is not None and gap < 0:
+            gap = None
+
+    cause = device_events.watchdog_cause(entry.get('rst'))
+    if cause:
+        if device.get('alert_reset', 1) in (None, 1, True):
+            text = '%s reset: %s' % (name, cause)
+            if gap is not None:
+                text += ', %d s without data' % gap
+            if entry.get('fw'):
+                text += ' (fw %s)' % entry['fw']
+            notify.send(text, priority=device.get('alert_reset_priority') or 0)
+        return
+
+    threshold = device.get('alert_dropout_s')
+    threshold = 30 if threshold is None else int(threshold)
+    if gap is None or threshold == 0 or gap < threshold:
+        return
+    start = _gsm_datetime(previous['gsm_timestamp'])
+    end = _gsm_datetime(entry['gsm_timestamp'])
+    device_events.record(
+        database, device['id'], 'other',
+        'Dropout: %d s without data' % gap, built,
+        device_events.ref('dropout', entry['gsm_timestamp']))
+    now = time.monotonic()
+    last = _last_dropout_alert.get(device['id'])
+    if last is not None and now - last < DROPOUT_ALERT_INTERVAL_S:
+        return
+    _last_dropout_alert[device['id']] = now
+    notify.send('%s dropout: %d s without data (%s-%s)'
+                % (name, gap, start.strftime('%H:%M:%S'),
+                   end.strftime('%H:%M:%S')),
+                priority=device.get('alert_dropout_priority') or 0)
 
 
 def _update_journey(database, device, entry, log_id, powered_on):
@@ -1357,6 +1426,12 @@ def process_record(data, device, ip, database=None):
         'INSERT INTO `log` (%s) VALUES (%s)' % (columns, placeholders), values
     )
     _note_log_events(database, device, previous, entry, built)
+
+    if not history:
+        try:
+            _dropout_and_reset_alerts(database, device, previous, entry, built)
+        except Exception:
+            logs.app.exception('dropout alert failed for %s', device.get('imei'))
 
     # History fills in a journey's track (its miles are summed in time
     # order) but opens and closes nothing: a late ignition-on record would

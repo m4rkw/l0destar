@@ -37,6 +37,7 @@ target_sources(app PRIVATE
     src/led.c
     src/watchdog.c
     src/isr_mark.c
+    src/modem_call_mark.c
     src/reboot.c
     src/fatal.c
 )

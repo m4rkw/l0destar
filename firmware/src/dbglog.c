@@ -940,6 +940,16 @@ const char *dbglog_reset_cause(void)
                             pos ? "+" : "", freeze);
         }
 
+        /* Or, when the CPU was stuck where that cannot run, the modem
+         * library call it was in (a mark on every call, cleared on return). */
+        const char *mcall = modem_call_mark_last(
+            (raw & (RESET_WATCHDOG | RESET_CPU_LOCKUP)) != 0 || crash);
+
+        if (mcall && pos < sizeof(s_cause)) {
+            pos += snprintf(s_cause + pos, sizeof(s_cause) - pos, "%s%s",
+                            pos ? "+" : "", mcall);
+        }
+
         /* Or that the interrupt stack ran out, which the secure side answers
          * with a halt that only the watchdog ends: also a plain wdt.  After a
          * reset nothing planned its peak is always given, whatever it was. */

@@ -15,6 +15,7 @@
 
 #include "app.h"
 #include "ca_cert.h"
+#include "modem_call_mark.h"
 
 LOG_MODULE_REGISTER(modem, CONFIG_APP_LOG_LEVEL);
 
@@ -266,7 +267,7 @@ static void ncell_report(const struct lte_lc_cells_info *info);
 static bool netscan_collect(const struct lte_lc_cells_info *info);
 #endif
 
-static void lte_handler(const struct lte_lc_evt *evt)
+static void lte_handler_body(const struct lte_lc_evt *evt)
 {
     switch (evt->type) {
     case LTE_LC_EVT_NW_REG_STATUS: {
@@ -361,9 +362,18 @@ static void lte_handler(const struct lte_lc_evt *evt)
     }
 }
 
+/* Every event the library delivers: a mark for as long as the handler runs, so
+ * that a freeze inside one is named by its event type (modem_call_mark.h). */
+static void lte_handler(const struct lte_lc_evt *evt)
+{
+    MCM_ENTER(MCM_C_HND, (uint8_t)(evt->type + 1));
+    lte_handler_body(evt);
+    MCM_LEAVE(MCM_C_HND);
+}
+
 int modem_init(void)
 {
-    int err = nrf_modem_lib_init();
+    int err = MCM_CALL(MCM_C_INIT, MCM_INIT_INIT, NULL, nrf_modem_lib_init());
     if (err && err != -EALREADY) {
         LOG_ERR("nrf_modem_lib_init: %d", err);
         return err;
@@ -491,19 +501,19 @@ static void apply_system_mode(void)
         want_pref = LTE_LC_SYSTEM_MODE_PREFER_NBIOT;
     }
     if (used) {
-        nrf_modem_at_printf("AT%%XBANDLOCK=2,\"\",\"%s\"",
+        MCM_AT_PRINTF("AT%%XBANDLOCK=2,\"\",\"%s\"",
                             CONFIG_LTE_LOCK_BAND_LIST);
     } else {
-        nrf_modem_at_printf("AT%%XBANDLOCK=2,\"\",\"8\"");
+        MCM_AT_PRINTF("AT%%XBANDLOCK=2,\"\",\"8\"");
     }
     LOG_WRN("NB-IoT test: bands %s", used ? CONFIG_LTE_LOCK_BAND_LIST : "8");
 #endif
 
-    if (lte_lc_system_mode_get(&mode, &pref) == 0 &&
+    if (MCM_LTE(MCM_LTE_SYSMODE, lte_lc_system_mode_get(&mode, &pref)) == 0 &&
         mode == want && pref == want_pref) {
         return;
     }
-    int err = lte_lc_system_mode_set(want, want_pref);
+    int err = MCM_LTE(MCM_LTE_SYSMODE, lte_lc_system_mode_set(want, want_pref));
 
     if (err) {
         LOG_WRN("system mode %s: %d",
@@ -521,7 +531,7 @@ static void apply_link_settings(void)
 
     /* +COPS selection mode persists in modem NVM across power cycles; force
      * automatic PLMN selection in case a manual selection was ever stored. */
-    nrf_modem_at_printf("AT+COPS=0");
+    MCM_AT_PRINTF("AT+COPS=0");
 
 #if IS_ENABLED(CONFIG_APP_PSM_PROBE)
     /* Ask, so the network has something to answer.  This does not adopt PSM:
@@ -532,33 +542,33 @@ static void apply_link_settings(void)
      * Set before CFUN=1, like everything else here — +CPSMS after attach
      * would not reach this registration. */
     {
-        int psm_err = lte_lc_psm_param_set_seconds(CONFIG_APP_PSM_TAU_S,
-                                                   CONFIG_APP_PSM_ACTIVE_S);
+        int psm_err = MCM_LTE(MCM_LTE_PSM, lte_lc_psm_param_set_seconds(CONFIG_APP_PSM_TAU_S,
+                                                   CONFIG_APP_PSM_ACTIVE_S));
         if (psm_err) {
             LOG_WRN("PSM params rejected: %d", psm_err);
         } else {
-            psm_err = lte_lc_psm_req(true);
+            psm_err = MCM_LTE(MCM_LTE_PSM, lte_lc_psm_req(true));
             if (psm_err) {
                 LOG_WRN("PSM request failed: %d", psm_err);
             }
         }
     }
 #else
-    nrf_modem_at_printf("AT+CPSMS=0");
+    MCM_AT_PRINTF("AT+CPSMS=0");
 #endif
-    nrf_modem_at_printf("AT%%XEDRX=0");
-    nrf_modem_at_printf("AT+CEDRXS=0,4");
+    MCM_AT_PRINTF("AT%%XEDRX=0");
+    MCM_AT_PRINTF("AT+CEDRXS=0,4");
 
     /* Enable Rel-14 features (incl. RAI) and request RAI URC on registration.
      * Both must be issued before CFUN=1 (which lte_lc_connect does). */
     char at_resp[64];
     int at_err;
-    at_err = nrf_modem_at_cmd(at_resp, sizeof(at_resp),
+    at_err = MCM_AT_CMD(at_resp, sizeof(at_resp),
                               "AT%%REL14FEAT=1,1,1,1,1");
     if (at_err) {
         LOG_WRN("%%REL14FEAT: %d", at_err);
     }
-    at_err = nrf_modem_at_cmd(at_resp, sizeof(at_resp), "AT%%RAI=2");
+    at_err = MCM_AT_CMD(at_resp, sizeof(at_resp), "AT%%RAI=2");
     if (at_err) {
         LOG_WRN("%%RAI=2: %d", at_err);
     } else {
@@ -573,7 +583,7 @@ const char *modem_rat(void)
 {
     enum lte_lc_lte_mode mode;
 
-    if (lte_lc_lte_mode_get(&mode) != 0) {
+    if (MCM_LTE(MCM_LTE_MODE, lte_lc_lte_mode_get(&mode)) != 0) {
         return "UNKNOWN";
     }
     switch (mode) {
@@ -587,7 +597,7 @@ bool modem_is_nbiot(void)
 {
     enum lte_lc_lte_mode mode;
 
-    return lte_lc_lte_mode_get(&mode) == 0 && mode == LTE_LC_LTE_MODE_NBIOT;
+    return MCM_LTE(MCM_LTE_MODE, lte_lc_lte_mode_get(&mode)) == 0 && mode == LTE_LC_LTE_MODE_NBIOT;
 }
 
 /* Wait for registration by polling, feeding the watchdog every second.
@@ -655,7 +665,7 @@ int modem_rescan_plmn(int timeout_s)
     s_connected = false;
     network_ready = false;
 
-    int err = lte_lc_offline();
+    int err = MCM_LTE(MCM_LTE_OFFLINE, lte_lc_offline());
     if (err) {
         LOG_WRN("lte_lc_offline: %d", err);
     }
@@ -663,7 +673,7 @@ int modem_rescan_plmn(int timeout_s)
 
     apply_link_settings();
 
-    err = lte_lc_normal();
+    err = MCM_LTE(MCM_LTE_NORMAL, lte_lc_normal());
     if (err) {
         LOG_ERR("lte_lc_normal: %d", err);
         return err;
@@ -708,7 +718,7 @@ int modem_radio_up(void)
      * its own periodic search. */
     enum lte_lc_func_mode mode;
 
-    if (lte_lc_func_mode_get(&mode) == 0 &&
+    if (MCM_LTE(MCM_LTE_FUNC, lte_lc_func_mode_get(&mode)) == 0 &&
         mode == LTE_LC_FUNC_MODE_NORMAL) {
         LOG_INF("radio already up — leaving the search to the modem");
         return 0;
@@ -722,7 +732,7 @@ int modem_radio_up(void)
 
     apply_link_settings();
 
-    int err = lte_lc_normal();
+    int err = MCM_LTE(MCM_LTE_NORMAL, lte_lc_normal());
 
     if (err) {
         LOG_ERR("lte_lc_normal: %d", err);
@@ -786,7 +796,7 @@ void modem_power_off(void)
     s_psm_asleep = false;
 #endif
 
-    int err = lte_lc_power_off();
+    int err = MCM_LTE(MCM_LTE_PWROFF, lte_lc_power_off());
 
     if (err) {
         LOG_WRN("lte_lc_power_off: %d", err);
@@ -811,7 +821,8 @@ static int offline_kicked(int cap_s)
 {
     k_sem_reset(&s_offline_sem);
 
-    int err = nrf_modem_at_cmd_async(offline_resp, "AT+CFUN=4");
+    int err = MCM_CALL(MCM_C_AT, MCM_AT_ANY, "AT+CFUN=4",
+                       nrf_modem_at_cmd_async(offline_resp, "AT+CFUN=4"));
 
     if (err) {
         return err;
@@ -835,7 +846,7 @@ int modem_nbiot_fallback(bool on)
     /* Off or offline: the next bring-up applies it, for nothing. */
     enum lte_lc_func_mode mode;
 
-    if (lte_lc_func_mode_get(&mode) != 0 ||
+    if (MCM_LTE(MCM_LTE_FUNC, lte_lc_func_mode_get(&mode)) != 0 ||
         mode != LTE_LC_FUNC_MODE_NORMAL) {
         LOG_WRN("%s (radio down: applied at the next bring-up)",
                 on ? "NB-IoT fallback on" : "back to LTE-M only");
@@ -899,12 +910,12 @@ int modem_connect(void)
     }
 
     char resp[128];
-    if (nrf_modem_at_cmd(resp, sizeof(resp), "AT+CEDRXRDP") == 0) {
+    if (MCM_AT_CMD(resp, sizeof(resp), "AT+CEDRXRDP") == 0) {
         char *nl = strchr(resp, '\r');
         if (nl) *nl = '\0';
         LOG_INF("eDRX: %s", resp);
     }
-    if (nrf_modem_at_cmd(resp, sizeof(resp), "AT+CPSMS?") == 0) {
+    if (MCM_AT_CMD(resp, sizeof(resp), "AT+CPSMS?") == 0) {
         char *nl = strchr(resp, '\r');
         if (nl) *nl = '\0';
         LOG_INF("PSM: %s", resp);
@@ -916,7 +927,7 @@ int modem_connect(void)
 
 int modem_get_imei(char *out, size_t out_len)
 {
-    int err = nrf_modem_at_cmd(out, out_len, "AT+CGSN");
+    int err = MCM_AT_CMD(out, out_len, "AT+CGSN");
     if (err) {
         LOG_ERR("AT+CGSN: %d", err);
         return err;
@@ -929,7 +940,7 @@ int modem_get_imei(char *out, size_t out_len)
 int modem_get_network_status(void)
 {
     enum lte_lc_nw_reg_status status;
-    int err = lte_lc_nw_reg_status_get(&status);
+    int err = MCM_LTE(MCM_LTE_REG, lte_lc_nw_reg_status_get(&status));
     if (err) return err;
     switch (status) {
     case LTE_LC_NW_REG_REGISTERED_HOME:    return 1;
@@ -941,13 +952,14 @@ int modem_get_network_status(void)
 void modem_set_apn(const char *apn)
 {
     if (!apn || apn[0] == '\0') return;
-    int err = nrf_modem_at_printf("AT+CGDCONT=0,\"IP\",\"%s\"", apn);
+    int err = MCM_AT_PRINTF("AT+CGDCONT=0,\"IP\",\"%s\"", apn);
     if (err) LOG_WRN("CGDCONT: %d", err);
 }
 
 int modem_at(const char *cmd, char *resp, size_t resp_len)
 {
-    return nrf_modem_at_cmd(resp, resp_len, "%s", cmd);
+    return MCM_CALL(MCM_C_AT, MCM_AT_ANY, cmd,
+                    nrf_modem_at_cmd(resp, resp_len, "%s", cmd));
 }
 
 /* One field of a %XMONITOR line, 0-based after the "%XMONITOR: " prefix, with
@@ -1051,7 +1063,7 @@ static void read_conn_eval(void)
 
     g_cell.conn_valid = false;
 
-    int err = lte_lc_conn_eval_params_get(&p);
+    int err = MCM_LTE(MCM_LTE_EVAL, lte_lc_conn_eval_params_get(&p));
 
     if (err) {
         LOG_DBG("conn eval unavailable (%d)", err);
@@ -1157,7 +1169,7 @@ static void read_neighbours(void)
 
     k_sem_reset(&s_ncell_sem);
 
-    int err = lte_lc_neighbor_cell_measurement(&params);
+    int err = MCM_LTE(MCM_LTE_NCELL, lte_lc_neighbor_cell_measurement(&params));
 
     if (err) {
         LOG_WRN("neighbour scan refused: %d", err);
@@ -1174,7 +1186,7 @@ static void read_neighbours(void)
     }
     LOG_WRN("neighbour scan did not report in %ds",
             CONFIG_APP_NCELLMEAS_TIMEOUT_S);
-    (void)lte_lc_neighbor_cell_measurement_cancel();
+    (void)MCM_LTE(MCM_LTE_NCANCEL, lte_lc_neighbor_cell_measurement_cancel());
 }
 #endif
 
@@ -1260,7 +1272,7 @@ static int netscan_pass(enum lte_lc_neighbor_search_type type)
     k_sem_reset(&s_netscan_sem);
     s_netscan_armed = true;
 
-    int err = lte_lc_neighbor_cell_measurement(&params);
+    int err = MCM_LTE(MCM_LTE_NCELL, lte_lc_neighbor_cell_measurement(&params));
 
     if (err) {
         s_netscan_armed = false;
@@ -1273,7 +1285,7 @@ static int netscan_pass(enum lte_lc_neighbor_search_type type)
         watchdog_kick();
     }
     s_netscan_armed = false;
-    (void)lte_lc_neighbor_cell_measurement_cancel();
+    (void)MCM_LTE(MCM_LTE_NCANCEL, lte_lc_neighbor_cell_measurement_cancel());
     return -ETIMEDOUT;
 }
 
@@ -1352,7 +1364,7 @@ int modem_read_signal(void)
 
     g_cell.signal_valid = false;
 
-    if (nrf_modem_at_cmd(resp, sizeof(resp), "AT%%XMONITOR") != 0) {
+    if (MCM_AT_CMD(resp, sizeof(resp), "AT%%XMONITOR") != 0) {
         return -EIO;
     }
 
@@ -1416,13 +1428,13 @@ int modem_update_cell_info(void)
 
     (void)modem_read_signal();
 
-    int err = nrf_modem_at_printf("AT+COPS=3,2");
+    int err = MCM_AT_PRINTF("AT+COPS=3,2");
     if (err) {
         LOG_WRN("AT+COPS=3,2: %d", err);
         return err;
     }
 
-    err = nrf_modem_at_cmd(resp, sizeof(resp), "AT+COPS?");
+    err = MCM_AT_CMD(resp, sizeof(resp), "AT+COPS?");
     if (err) {
         LOG_WRN("AT+COPS?: %d", err);
         return err;
@@ -1453,7 +1465,7 @@ int modem_refresh_plmn(void)
     if (g_cell.plmn_cid == g_cell.cid) {
         return 0;
     }
-    if (nrf_modem_at_cmd(resp, sizeof(resp), "AT%%XMONITOR") != 0) {
+    if (MCM_AT_CMD(resp, sizeof(resp), "AT%%XMONITOR") != 0) {
         return -EIO;
     }
     if (!xmon_field(resp, 0, field, sizeof(field))) {
@@ -1474,7 +1486,7 @@ int modem_refresh_plmn(void)
 int modem_read_temp(float *temp_c)
 {
     int raw;
-    int ret = nrf_modem_at_scanf("AT%XTEMP?", "%%XTEMP: %d", &raw);
+    int ret = MCM_AT_SCANF("AT%XTEMP?", "%%XTEMP: %d", &raw);
     if (ret != 1) {
         return -EIO;
     }
@@ -1507,7 +1519,7 @@ int modem_read_temp(float *temp_c)
 int modem_read_vbat(int *mv)
 {
     int val;
-    int ret = nrf_modem_at_scanf("AT%XVBAT", "%%XVBAT: %d", &val);
+    int ret = MCM_AT_SCANF("AT%XVBAT", "%%XVBAT: %d", &val);
     if (ret != 1) {
         return -EIO;
     }
@@ -1622,11 +1634,11 @@ int modem_recover(void)
         s_failing_since = 0;
         s_connected = false;
         network_ready = false;
-        nrf_modem_lib_shutdown();
+        MCM_CALL(MCM_C_INIT, MCM_INIT_SHUT, NULL, nrf_modem_lib_shutdown());
         watchdog_kick();
         k_msleep(1000);
 
-        int err = nrf_modem_lib_init();
+        int err = MCM_CALL(MCM_C_INIT, MCM_INIT_INIT, NULL, nrf_modem_lib_init());
 
         watchdog_kick();
         if (err && err != -EALREADY) {
@@ -1653,7 +1665,7 @@ int modem_recover(void)
         s_last_escalation = now;
         s_connected = false;
         network_ready = false;
-        lte_lc_offline();
+        MCM_LTE(MCM_LTE_OFFLINE, lte_lc_offline());
         k_msleep(2000);
         watchdog_kick();
 

@@ -420,6 +420,13 @@ def summary(device, database=None, log=None):
         'gnss_bk_hour_to': (7 if device.get('gnss_bk_hour_to') is None
                             else device['gnss_bk_hour_to']),
         'leds': 0 if device.get('leds') == 0 else 1,
+        # Alerts the server raises itself, as effective values: a dropout
+        # (seconds without data in a drive, 0 = off) and a watchdog reset.
+        **{column: default if device.get(column) is None else device[column]
+           for column, default in (('alert_dropout_s', 30),
+                                   ('alert_dropout_priority', 0),
+                                   ('alert_reset', 1),
+                                   ('alert_reset_priority', 0))},
         # The engine-off reporting schedule (a list of rules, null if none)
         # and the interval the server would send now.
         'interval_schedule': interval_schedule.loads(device.get('interval_schedule')),

@@ -196,14 +196,72 @@ _RESET_WORDS = (('wdt', 'watchdog'), ('lockup', 'CPU lockup'),
                 ('sw', 'software'), ('pin', 'hardware reset'))
 
 
+def watchdog_cause(rst):
+    """'watchdog' or 'CPU lockup' when a record's rst= value names one of
+    them (wdt first when both), else None: plain 'sw' and 'pin' are not."""
+    names = {part.split(':')[0] for part in (rst or '').split('+') if part}
+    for key, word in _RESET_WORDS[:2]:
+        if key in names:
+            return word
+    return None
+
+
+# The modem library call a frozen unit was in (rst= token mc:<name>, firmware
+# modem_call_mark.h), in words.  Names not listed read as they are.
+_MODEM_CALLS = {
+    'sock': 'socket open', 'conn': 'connect', 'send': 'send', 'sendto': 'send',
+    'recv': 'receive', 'poll': 'poll', 'close': 'socket close',
+    'opt': 'socket option', 'dns': 'DNS lookup',
+    'lte-sysmode': 'system mode', 'lte-func': 'functional mode',
+    'lte-normal': 'radio on', 'lte-offline': 'radio off',
+    'lte-pwroff': 'power off', 'lte-psm': 'PSM setup', 'lte-mode': 'LTE mode',
+    'lte-reg': 'registration status', 'lte-eval': 'connection evaluation',
+    'lte-ncell': 'cell scan', 'lte-ncancel': 'cell scan cancel',
+    'lte-info': 'modem info',
+    'lib-init': 'library init', 'lib-shut': 'library shutdown',
+    'gnss-read': 'GNSS read', 'gnss-start': 'GNSS start',
+    'gnss-stop': 'GNSS stop', 'gnss-cfg': 'GNSS setup',
+    'gnss-prio': 'GNSS priority mode',
+}
+_HANDLER_EVENTS = {
+    'reg': 'registration', 'psm': 'PSM', 'edrx': 'eDRX', 'rrc': 'RRC',
+    'cell': 'cell', 'mode': 'LTE mode', 'tau': 'TAU warning',
+    'ncell': 'cell scan', 'sleepw': 'sleep warning', 'sleepx': 'sleep exit',
+    'sleep': 'sleep', 'mevt': 'modem event', 'rai': 'RAI',
+}
+
+
+def modem_call_text(rst):
+    """'send', 'AT command CFUN', 'registration event handler' ... from the
+    mc:<name> token of a record's rst= value, else None."""
+    for part in (rst or '').split('+'):
+        if not part.startswith('mc:') or len(part) == 3:
+            continue
+        name = part[3:]
+        if name.startswith('at-'):
+            return 'AT command %s' % name[3:].upper()
+        if name.startswith('hnd-'):
+            event = name[4:]
+            if event in _HANDLER_EVENTS:
+                return '%s event handler' % _HANDLER_EVENTS[event]
+            return 'event handler %s' % event
+        return _MODEM_CALLS.get(name, name)
+    return None
+
+
 def reset_text(rst):
     """'Rebooted (watchdog)' from a record's rst= value, e.g. 'pin+sw+wdt' or
-    'wdt+stall:4aa02/3e254'.  Bare 'Rebooted' when no flag is known."""
+    'wdt+stall:4aa02/3e254'.  Bare 'Rebooted' when no flag is known.  A
+    watchdog reset or lockup that names the modem call the unit was in adds it:
+    'Rebooted (watchdog, stuck in modem send)'."""
     names = {part.split(':')[0] for part in (rst or '').split('+') if part}
     for key, word in _RESET_WORDS:
         if key in names:
             if key == 'wdt' and 'stall' in names:
                 word += ', stalled'
+            call = modem_call_text(rst) if key in ('wdt', 'lockup') else None
+            if call:
+                word += ', stuck in modem ' + call
             return 'Rebooted (%s)' % word
     return 'Rebooted'
 
@@ -267,6 +325,9 @@ TUNABLE_TEXT = {
     'network_search_s': ('Network search timeout', 'set to %s s'),
     'resp_poll_s': ('Response poll', 'set to %s s'),
     'led_accel_wake': ('Wake-on-motion LED', None),
+    'weak_hold_rsrp_dbm': ('Weak-signal send hold', None),
+    'weak_hold_snr_db': ('Weak-signal hold SNR threshold', 'set to %s dB'),
+    'weak_hold_max_s': ('Weak-signal hold limit', 'set to %s s'),
 }
 
 
@@ -287,6 +348,9 @@ def tunable_text(column, value):
     if column == 'drive_stream_impact':
         return ('Impact capture while the accelerometer is off '
                 + ('enabled' if value else 'disabled'))
+    if column == 'weak_hold_rsrp_dbm':
+        return ('Weak-signal send hold at RSRP %s dBm or below' % value
+                if value <= -100 else 'Weak-signal send hold off')
     if how is None:
         return '%s %s' % (label, 'on' if value else 'off')
     return '%s %s' % (label, how % value)
@@ -337,6 +401,15 @@ def setting_text(column, value):
         return 'GNSS backup off window on backup power ends at %02d:00' % value
     if column == 'leds':
         return 'LEDs ' + on
+    if column == 'alert_dropout_s':
+        return ('Dropout alert threshold set to %d s' % value if value
+                else 'Dropout alerts disabled')
+    if column == 'alert_dropout_priority':
+        return 'Dropout alert priority set to %d' % value
+    if column == 'alert_reset':
+        return 'Watchdog reset alerts ' + ('enabled' if value else 'disabled')
+    if column == 'alert_reset_priority':
+        return 'Watchdog reset alert priority set to %d' % value
     if column == 'gnss_backup':
         return 'GNSS backup supply set to ' + on
     if column == 'install_mode':

@@ -20,6 +20,7 @@
 #include "stream_batch.h"
 #include "tunables.h"
 #include "tunables_core.h"
+#include "weak_hold.h"
 
 LOG_MODULE_REGISTER(data, CONFIG_APP_LOG_LEVEL);
 
@@ -892,8 +893,16 @@ int collect_data(int ignitionState)
      *
      * Only while registered — there is nothing to measure otherwise — and
      * only. */
-    if (network_ready && SIGNAL_SAMPLE_MS > 0 &&
-        k_uptime_get() - g_cell.signal_ms >= SIGNAL_SAMPLE_MS) {
+    int64_t sample_ms = SIGNAL_SAMPLE_MS;
+
+    /* The weak-signal send hold acts on this reading, so while it is on the
+     * reading is kept fresher than the records alone need. */
+    if (weak_hold_enabled(tun_weak_hold_rsrp_dbm()) &&
+        (sample_ms == 0 || sample_ms > WEAK_HOLD_SAMPLE_MS)) {
+        sample_ms = WEAK_HOLD_SAMPLE_MS;
+    }
+    if (network_ready && sample_ms > 0 &&
+        k_uptime_get() - g_cell.signal_ms >= sample_ms) {
         modem_read_signal();
     }
 
@@ -1295,6 +1304,31 @@ static int send_failed(bool counts)
     return 0;
 }
 
+/* The weak-signal send hold (weak_hold.h) is for the sends of an awake
+ * vehicle: send_data_live() turns it on for the one send_data() it makes. */
+static struct weak_hold s_weak;
+static bool s_weak_scope;
+
+/* True to keep this send back: the signal is weak, and nothing in it is
+ * urgent.  A queued alert rides the send and goes out at once; a send that
+ * failed is being retried by modem_recover(); a window that is shut is the
+ * window's own hold. */
+static bool weak_signal_hold(void)
+{
+    if (!s_weak_scope || alert_count > 0 || !last_send_ok) {
+        return false;
+    }
+
+    int rsrp_thr = tun_weak_hold_rsrp_dbm();
+    int64_t age = k_uptime_get() - g_cell.signal_ms;
+    bool weak = weak_hold_is_weak(g_cell.signal_valid, age,
+                                  g_cell.rsrp_dbm, g_cell.snr_db, rsrp_thr,
+                                  tun_weak_hold_snr_db());
+
+    return weak_hold_decide(&s_weak, k_uptime_get(), weak,
+                            (int64_t)tun_weak_hold_max_s() * 1000);
+}
+
 int send_data(void)
 {
     /* Replies that came in since the last send are receipts; sends that
@@ -1351,6 +1385,15 @@ int send_data(void)
         return 0;
     }
 #endif
+
+    /* Very weak serving cell: not handed to the modem, which has frozen the
+     * firmware inside send() in that state.  The records wait in the backlog
+     * as an outage's do (RAM, and the flash where there is one), the log
+     * lines in their own buffer, and nothing counts as a failed send. */
+    if (weak_signal_hold()) {
+        databuf_push_lines(data_current, (size_t)data_index);
+        return 0;
+    }
 
     /* The records, each marked with its age if it is not fresh — one held
      * through an outage says when it was built (see databuf_stamp) — then
@@ -1480,6 +1523,16 @@ int send_data(void)
     send_int_to_server = false;
     alert_send();
     return 1;
+}
+
+int send_data_live(bool urgent)
+{
+    s_weak_scope = !urgent;
+
+    int r = send_data();
+
+    s_weak_scope = false;
+    return r;
 }
 
 /* The log lines on their own, for before a planned restart.  Reuses s_tx:

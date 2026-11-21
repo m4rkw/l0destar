@@ -42,6 +42,8 @@ Settings live in the tracker's RAM. After a restart, until the first reply arriv
 | Backup interval | `backup=` | `device.backup_int` | `0` | Seconds between timed reports while the inline backup module is carrying the tracker; `0` means the engine-off interval applies then too. Set with `backup_interval=<seconds>` or `backup` in `POST /api/1.0/config`; see [Reporting interval on backup power](../deployment/configuration.md#reporting-interval-on-backup-power) |
 | Movement alarm | `<ma>` | `device.movement_alarm` | `1` | Stored, synced and reported, but not acted on by firmware 0.4.x |
 | Device LEDs | `le=` | `device.leds` | `1` | `1` lets the status LEDs light, `0` keeps them all dark. Sent on every reply straight after `gw=`; set with `leds=<0\|1>` or `le` in `POST /api/1.0/config` |
+| Dropout alert | none (server only) | `device.alert_dropout_s`, `alert_dropout_priority` | `30`, `0` | A Pushover alert when a record in a drive (ignition on in it and in the one before) comes more than this many seconds after the previous one: `<name> dropout: <N> s without data (HH:MM:SS-HH:MM:SS)`. `0` turns it off, otherwise 5-3600. At most one alert per device per 10 minutes, but every dropout is in the event log. Priority is Pushover's, -2 to 2. Set with `alert_dropout_s=<s>` / `alert_dropout_priority=<n>` (`default` restores) or the same names in `POST /api/1.0/config` |
+| Watchdog reset alert | none (server only) | `device.alert_reset`, `alert_reset_priority` | `1`, `0` | A Pushover alert when a record reports a watchdog or CPU-lockup reset (`rst=` containing `wdt` or `lockup`, not plain `sw` or `pin`): `<name> reset: watchdog`, with `, <N> s without data` when the previous record was in the same drive. A reset record raises this alert only, never a dropout alert too. Set with `alert_reset=<0\|1>` / `alert_reset_priority=<n>` or the same names in `POST /api/1.0/config` |
 | Runtime tunables | `tu=` | 19 nullable `device` columns, [below](#runtime-tunables) | NULL | Optional overrides of values the firmware is built with. NULL means no override: the unit keeps the value it was built with. Sent on every reply straight after `le=` as `tu=<code>:<value>[;...]` (`tu=-` when none is set) |
 | Update advert | `fota=` | per-device manifest | - | See [OTA updates](../board-setup/ota-updates.md) |
 
@@ -184,6 +186,9 @@ Values must be whole numbers. The alerts themselves are described in [Configure 
 | `xns` | `network_search_s` |
 | `xrp` | `resp_poll_s` |
 | `xlw` | `led_accel_wake` |
+| `xwr` | `weak_hold_rsrp_dbm` |
+| `xws` | `weak_hold_snr_db` |
+| `xwm` | `weak_hold_max_s` |
 
 A `POST` must name the device, and every value must be an integer (the runtime tunables below can also be `null`, and `xoa` is text):
 
@@ -223,7 +228,11 @@ These are values the firmware is normally built with (Kconfig options). Each can
 | `network_search_s` | `xns` | 60-86400 s | `APP_NETWORK_SEARCH_TIMEOUT` | - |
 | `resp_poll_s` | `xrp` | 5-600 s | `APP_RESP_POLL_S` | - |
 | `led_accel_wake` | `xlw` | 0 or 1 | `APP_LED_ACCEL_WAKE` | - |
+| `weak_hold_rsrp_dbm` | `xwr` | -140 to -100 dBm, or 0 | `APP_WEAK_HOLD_RSRP_DBM` (on only with `APP_WEAK_HOLD`) | weak-signal send hold: while the serving cell's RSRP is at or below this, ordinary sends wait in the backlog; 0 = hold off (the built default); a value from -99 to -1 is accepted and also means off. See below |
+| `weak_hold_snr_db` | `xws` | -20 to 5 dB | `APP_WEAK_HOLD_SNR_DB` | the hold also applies when the SNR is at or below this (the hold applies on RSRP **or** SNR; only while `xwr` is on); an SNR of 0 is never counted, it is also what the modem reports when it gives none |
+| `weak_hold_max_s` | `xwm` | 5-600 s | `APP_WEAK_HOLD_MAX_S` | longest a send is held; then one goes out anyway, and the hold can start again 5 s later |
 
+- **Weak-signal send hold** (`xwr`, `xws`, `xwm`): the car's firmware has frozen inside a socket send (watchdog reset `rst=wdt+mc:send`) with the serving cell at about -119 dBm RSRP / SNR -8 shortly before a cell change. With the hold on, the unit does not call the modem's send while the signal is that weak: the records wait in the backlog (RAM, and the flash on boards that have it) like those of an outage and go with the first send after the signal recovers, in order and with their ages. It applies to the drive stream and the ordinary sends of an awake vehicle, not to parked wakes, commands, FOTA, the record of an ignition change or any send that has an alert queued (alerts go out at once). The reading is the serving cell's own (`rsrp=`/`snr=` of the records); while the hold is on it is refreshed every 10 s, and one older than 20 s holds nothing. After `weak_hold_max_s` of holding, one send goes out whatever the signal, and the hold stays off for 5 s so it can be answered. Off by default: set `weak_hold_rsrp_dbm=-115` (and optionally `weak_hold_snr_db=-6`) to turn it on.
 - `GET /api/1.0/config` shows each as its value or `null` (the override only); `GET /api/1.0/devices` lists them under their column names. Both also carry two objects keyed by code: `tunables_built` (the values the unit reported it was built with, `null` for any it has not reported) and `tunables` (the value in use: the override if set, else the built value, else `null`). Use `tunables` to show what a unit really runs; `xoa` is a string with real commas, `""` for no rules.
 - The unit reports its built values itself, as `tb=` in the record that carries `fw=` and `bd=` (once per boot, the built `CONFIG_APP_*` values, not the current overrides). The server keeps the text in `device`.`tunables_built` (VARCHAR(400), NULL until reported) only when it parses; unknown codes and bad values are ignored. Built values are not held to the override ranges.
 - `POST /api/1.0/config` takes them by code. A whole number outside the range, a non-integer, or text where a number is expected is refused with HTTP 400, as is a `battery_poweroff_mv` that is not below `battery_warning_mv` once the change is applied (the stored value of the other one counts when only one is posted). `null` clears one back to NULL; for `xoa`, `""` clears it too.

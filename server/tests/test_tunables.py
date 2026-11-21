@@ -21,6 +21,7 @@ EVERY = {
     'drive_stream_accel_ms': 0, 'drive_stream_accel': 1, 'drive_stream_impact': 1,
     'databuf_drain_s': 60, 'network_search_s': 3600,
     'resp_poll_s': 20, 'led_accel_wake': 0,
+    'weak_hold_rsrp_dbm': -115, 'weak_hold_snr_db': -6, 'weak_hold_max_s': 60,
 }
 CODES = {'tow_tilt_deg': 'xtt', 'parked_impact_mg': 'xpi', 'impact_immediate_mg': 'xii',
          'accel_alert_priority': 'xap', 'accel_alert_backoff_s': 'xab',
@@ -28,7 +29,8 @@ CODES = {'tow_tilt_deg': 'xtt', 'parked_impact_mg': 'xpi', 'impact_immediate_mg'
          'battery_poweroff_mv': 'xbp', 'drive_stream': 'xds', 'drive_stream_interval_s': 'xdi',
          'drive_stream_accel_ms': 'xim', 'drive_stream_accel': 'xia', 'drive_stream_impact': 'xic',
          'databuf_drain_s': 'xdd', 'network_search_s': 'xns',
-         'resp_poll_s': 'xrp', 'led_accel_wake': 'xlw'}
+         'resp_poll_s': 'xrp', 'led_accel_wake': 'xlw',
+         'weak_hold_rsrp_dbm': 'xwr', 'weak_hold_snr_db': 'xws', 'weak_hold_max_s': 'xwm'}
 
 
 class Bare:
@@ -71,7 +73,7 @@ def test_all_set_and_the_obd_commas_become_pipes():
     token = telemetry.tunables_token(EVERY)
     assert token == ('xtt:8;xpi:900;xii:700;xap:-1;xab:86400;'
                      'xoa:coolant>=95|rpm>6500|stft<-12.5/2;xop:0C050B;xis:30;xbw:11900;xbp:11000;'
-                     'xds:1;xdi:900;xim:0;xia:1;xic:1;xdd:60;xns:3600;xrp:20;xlw:0')
+                     'xds:1;xdi:900;xim:0;xia:1;xic:1;xdd:60;xns:3600;xrp:20;xlw:0;xwr:-115;xws:-6;xwm:60')
     assert ',' not in token
     assert reply(**EVERY).endswith(',le=1,tu=' + token + ',im=0,gx=off,os=0')
 
@@ -146,6 +148,7 @@ def test_config_post_sets_and_clears_with_null(client, web, bearer):
     ('xap', -3), ('xab', 86401), ('xis', 9), ('xis', 601), ('xbw', 10999), ('xbw', 12501),
     ('xbp', 10499), ('xbp', 12201), ('xds', 2), ('xdi', 901), ('xim', -1), ('xim', 5001), ('xia', 2), ('xic', 2),
     ('xdd', 0), ('xns', 59), ('xrp', 4), ('xlw', 2),
+    ('xwr', -141), ('xwr', 1), ('xws', -21), ('xws', 6), ('xwm', 4), ('xwm', 601),
     ('xtt', 'abc'), ('xtt', 1.5), ('xtt', True), ('xtt', ''), ('xtt', 'default'),
     ('xoa', 7), ('xoa', 'coolant'), ('xoa', 'a>1;b>2'), ('xoa', 'a>1|b>2'),
     ('xoa', 'a>1,'), ('xoa', 'a>1,b>' + '9' * 120), ('xoa', 'rpm>1é'),
@@ -247,6 +250,13 @@ def test_command_checks_the_battery_pair(client, web, bearer):
     ('resp_poll_s', 20, 'Response poll set to 20 s'),
     ('led_accel_wake', 1, 'Wake-on-motion LED on'),
     ('led_accel_wake', None, 'Wake-on-motion LED back to the built value'),
+    ('weak_hold_rsrp_dbm', -115, 'Weak-signal send hold at RSRP -115 dBm or below'),
+    ('weak_hold_rsrp_dbm', 0, 'Weak-signal send hold off'),
+    ('weak_hold_rsrp_dbm', None, 'Weak-signal send hold back to the built value'),
+    ('weak_hold_snr_db', -6, 'Weak-signal hold SNR threshold set to -6 dB'),
+    ('weak_hold_snr_db', None, 'Weak-signal hold SNR threshold back to the built value'),
+    ('weak_hold_max_s', 60, 'Weak-signal hold limit set to 60 s'),
+    ('weak_hold_max_s', None, 'Weak-signal hold limit back to the built value'),
 ])
 def test_setting_text(column, value, text):
     assert ev.setting_text(column, value) == text
@@ -259,7 +269,7 @@ def test_every_tunable_has_wording():
 # -- tb=: the values the unit was built with ----------------------------------------
 
 TB = ('xtt:8;xpi:900;xii:700;xap:-1;xab:86400;xoa:coolant>=95|rpm>6500;xop:0C05;xis:30;'
-      'xbw:11900;xbp:11000;xds:1;xdi:900;xim:0;xia:1;xic:1;xdd:60;xns:3600;xrp:20;xlw:0')
+      'xbw:11900;xbp:11000;xds:1;xdi:900;xim:0;xia:1;xic:1;xdd:60;xns:3600;xrp:20;xlw:0;xwr:-115;xws:-6;xwm:60')
 
 
 def test_tb_parses_every_code_and_turns_pipes_into_commas():

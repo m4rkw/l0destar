@@ -624,7 +624,7 @@ def test_late_ignition_on_raises_no_alert_or_journey(device, database, monkeypat
     alerts = []
     monkeypatch.setattr(telemetry.notify, 'send',
                         lambda message, **kw: alerts.append(message))
-    database.query('UPDATE `device` SET `alarm` = 1 WHERE `id` = %s', (device['id'],))
+    database.query('UPDATE `device` SET `alarm` = 1, `alert_dropout_s` = 0 WHERE `id` = %s', (device['id'],))
     device = db.lookup_device(imei=device['imei'])
 
     send(device, record(0, 51.50, -0.1, 0, extras=',rid=1'))
@@ -1166,6 +1166,10 @@ def events(database, device, kind=None):
 
 
 def test_ignition_changes_are_events(device, database):
+    # Minutes apart is a dropout by default; this is about ignition.
+    database.query('UPDATE `device` SET `alert_dropout_s` = 0 WHERE `id` = %s',
+                   (device['id'],))
+    device = db.lookup_device(imei=device['imei'])
     send(device, record(0, 51.5, -0.1, 0), record(1, 51.5, -0.1, 1),
          record(2, 51.5, -0.1, 1), record(3, 51.5, -0.1, 0))
     assert events(database, device) == [('ignition', 'Ignition on'), ('ignition', 'Ignition off')]
@@ -1348,3 +1352,62 @@ def test_tunables_api_round_trip(client, device, database, bearer):
     if listed.status_code == 200:
         mine = [d for d in listed.get_json()['devices'] if d['imei'] == device['imei']]
         assert mine[0]['tow_tilt_deg'] is None and 'obd_alerts' in mine[0]
+
+
+# -- dropout and watchdog-reset alerts ---------------------------------------
+
+def test_alert_settings_api_round_trip(client, device, database, bearer):
+    base = '/api/1.0/config?imei=%s' % device['imei']
+    got = client.get(base, headers=bearer).get_json()
+    assert (got['alert_dropout_s'], got['alert_dropout_priority'],
+            got['alert_reset'], got['alert_reset_priority']) == (30, 0, 1, 0)
+
+    posted = client.post('/api/1.0/config', headers=bearer, json={
+        'imei': device['imei'], 'alert_dropout_s': 60,
+        'alert_dropout_priority': 1, 'alert_reset': 0,
+        'alert_reset_priority': -1})
+    assert posted.get_json()['status'] == 'ok'
+    got = client.get(base, headers=bearer).get_json()
+    assert (got['alert_dropout_s'], got['alert_dropout_priority'],
+            got['alert_reset'], got['alert_reset_priority']) == (60, 1, 0, -1)
+    texts = [r['text'] for r in database.all('SELECT `text` FROM `device_event`')]
+    assert 'Dropout alert threshold set to 60 s' in texts
+    assert 'Watchdog reset alerts disabled' in texts
+
+    response = client.post('/api/1.0/command', headers=bearer, json={
+        'imei': device['imei'], 'command': 'alert_dropout_s=default,alert_reset=1,locate'})
+    assert response.get_json()['status'] == 'ok'
+    assert db.lookup_device(imei=device['imei'])['alert_dropout_s'] == 30
+    assert [r['command'] for r in database.all('SELECT `command` FROM `command`')] == ['locate']
+
+    for body in ({'alert_dropout_s': 3}, {'alert_reset': 5},
+                 {'alert_reset_priority': 3}):
+        bad = client.post('/api/1.0/config', headers=bearer,
+                          json=dict(body, imei=device['imei']))
+        assert bad.status_code == 400
+
+    listed = client.get('/api/1.0/devices', headers=bearer)
+    if listed.status_code == 200:
+        mine = [d for d in listed.get_json()['devices'] if d['imei'] == device['imei']]
+        assert mine[0]['alert_dropout_s'] == 30 and mine[0]['alert_reset'] == 1
+
+
+def test_dropout_alert_raised_once_stored(device, database, monkeypatch):
+    alerts = []
+    monkeypatch.setattr(telemetry.notify, 'send',
+                        lambda message, **kw: alerts.append(message))
+    telemetry._last_dropout_alert.clear()
+    send(device, record(0, 51.50, -0.1, 1, extras=',rid=1'))
+    send(device, record(1, 51.51, -0.1, 1, extras=',rid=2'))
+    assert alerts == ['Car dropout: 60 s without data (00:00:00-00:01:00)']
+    events = [r['text'] for r in database.all('SELECT `text` FROM `device_event`')]
+    assert 'Dropout: 60 s without data' in events
+
+
+def test_watchdog_reset_alert_once_stored(device, database, monkeypatch):
+    alerts = []
+    monkeypatch.setattr(telemetry.notify, 'send',
+                        lambda message, **kw: alerts.append(message))
+    send(device, record(0, 51.50, -0.1, 1, extras=',rid=1'))
+    send(device, record(1, 51.51, -0.1, 1, extras=',rid=2,rst=wdt+isr:352'))
+    assert alerts == ['Car reset: watchdog, 60 s without data']
