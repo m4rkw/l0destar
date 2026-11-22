@@ -595,6 +595,13 @@ const char *modem_call_mark_last(bool unplanned);
 void reboot_now(void);
 void status_delay(long ms);   /* watchdog-aware sleep */
 const char *fatal_last_crash(void); /* "fatal:<reason>@<pc>" once, else NULL */
+/* Records the threads' stacks for the next boot's overflow check; a no-op
+ * unless CONFIG_APP_STACK_NOTE (fatal.c, stack_note.h) */
+#if IS_ENABLED(CONFIG_APP_STACK_NOTE)
+void fatal_stack_register(void);
+#else
+static inline void fatal_stack_register(void) {}
+#endif
 
 /* Hardware modules */
 int  hw_gpio_init(void);

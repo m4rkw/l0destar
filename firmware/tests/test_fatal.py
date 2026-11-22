@@ -84,6 +84,24 @@ LOG_CTRL_H = r"""
 #endif
 """
 
+HWINFO_H = r"""
+#ifndef STUB_HWINFO_H
+#define STUB_HWINFO_H
+#include <stdint.h>
+#define RESET_WATCHDOG (1U << 5)
+#define RESET_CPU_LOCKUP (1U << 7)
+static inline int hwinfo_get_reset_cause(uint32_t *cause) { *cause = 0; return 0; }
+#endif
+"""
+
+INIT_H = r"""
+#ifndef STUB_INIT_H
+#define STUB_INIT_H
+#define PRE_KERNEL_1 0
+#define SYS_INIT(fn, level, prio) typedef int h_sys_init_unused_##fn
+#endif
+"""
+
 HARNESS = r"""
 #include <setjmp.h>
 #include <stdarg.h>
@@ -198,7 +216,8 @@ K_ERR_CPU_EXCEPTION, K_ERR_STACK_CHK_FAIL = 0, 2
 def write_stubs(d):
     for rel, text in (("zephyr/kernel.h", KERNEL_H), ("zephyr/fatal.h", FATAL_H),
                       ("zephyr/sys/reboot.h", REBOOT_H), ("zephyr/logging/log.h", LOG_H),
-                      ("zephyr/logging/log_ctrl.h", LOG_CTRL_H)):
+                      ("zephyr/logging/log_ctrl.h", LOG_CTRL_H),
+                      ("zephyr/drivers/hwinfo.h", HWINFO_H), ("zephyr/init.h", INIT_H)):
         path = os.path.join(d, rel)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:

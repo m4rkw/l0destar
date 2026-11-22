@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.135
+
+### A thread stack overflow now leaves a `fatal:` note
+The hardware stack guard's fault escalates to a HardFault that TF-M takes and halts on, so `fatal.c` never ran and the next boot said plain `rst=wdt`. After a watchdog reset with no other note, the first init (before any thread refills its stack) now reads the INIT_STACKS pattern left in each thread's stack; one with under 96 bytes left gives `rst=wdt+fatal:2@sysworkq` (or `@main`, `@log`, `@t<stack size>`) and the usual ERR line, marked as read from the stack fill.
+- `CONFIG_APP_STACK_NOTE` (default y, needs `INIT_STACKS`; selects `THREAD_MONITOR`): about 480 bytes of RAM on the car build (146384 of 154264 used). Nothing is logged while it works.
+- A frame bigger than what is left is stopped before it writes, so that overflow leaves margin and is not caught.
+- Note: `CONFIG_INIT_STACKS=y` switched `APP_ISR_STACK_MARK` off (it depends on `!INIT_STACKS`).
+- Status: arm-compiled (car fragment) and host-tested; not run on hardware.
+
+### Kernel heap halved
+- `CONFIG_HEAP_MEM_POOL_SIZE=8192` in `prj.conf` (was 16384), for every board: 8 KB of RAM freed on the car build. The only users are lte_lc and getaddrinfo, about 2.5 KB worst case (estimated, not measured).
+- Status: arm-compiled only; not run on hardware.
+
 ## 0.4.134
 
 ### Log thread stack margin is reported

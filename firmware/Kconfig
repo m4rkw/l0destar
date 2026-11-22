@@ -2031,6 +2031,25 @@ config APP_WDT_FREEZE_CAPTURE
 	  the culprit, and no note after a watchdog reset rules out the first group
 	  and leaves the second.  Bench-tested one case at a time; see watchdog.c.
 
+config APP_STACK_NOTE
+	bool "Name the thread whose stack ran out, after the watchdog reset it causes"
+	default y
+	depends on INIT_STACKS && THREAD_STACK_INFO
+	select THREAD_MONITOR
+	help
+	  A thread stack that overflows (the hardware stack guard) ends in a
+	  HardFault that TF-M takes and halts on, so fatal.c's handler never runs
+	  and the next boot says plain rst=wdt.  The firmware keeps a table of its
+	  threads' stacks in noinit RAM, and the first init of the next boot, before
+	  any thread refills its stack, counts the INIT_STACKS pattern left at the
+	  bottom of each.  After a watchdog reset with no other note, a stack with
+	  under 96 bytes left is reported like any fatal error:
+	  rst=wdt+fatal:2@sysworkq (or @main, @log, @t<stack size>) and one ERR line.
+	  Costs the table (~210 bytes of RAM), THREAD_MONITOR's pointer per thread
+	  and a walk of the thread list on sleep entry; nothing is logged while it
+	  works.  A frame bigger than what is left is stopped before it writes, so
+	  such an overflow leaves margin and is not caught.
+
 config APP_ISR_STACK_MARK
 	bool "Report how deep the interrupt stack went before the last reset"
 	default y

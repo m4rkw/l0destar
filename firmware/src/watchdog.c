@@ -318,20 +318,22 @@ void watchdog_init(void)
  * stack fill, CONFIG_INIT_STACKS (prj.conf).  A thin margin is one WRN, once;
  * a healthy one logs nothing.  Called a few minutes after boot (from
  * watchdog_kick, below) and on sleep entry (do_sleep). */
+#define LOG_STACK_FIRST_MS 180000
+
+#if IS_ENABLED(CONFIG_LOG_PROCESS_THREAD)
 #define LOG_STACK_SIZE   CONFIG_LOG_PROCESS_THREAD_STACK_SIZE
 #define LOG_STACK_LOW    (LOG_STACK_SIZE / 4)
-#define LOG_STACK_FIRST_MS 180000
 
 extern struct k_thread logging_thread;
 
 static size_t s_log_unused_min = SIZE_MAX;
 static bool   s_log_stack_warned;
+#endif
 
 void log_stack_check(void)
 {
-    if (!IS_ENABLED(CONFIG_LOG_PROCESS_THREAD)) {
-        return;
-    }
+    fatal_stack_register();
+#if IS_ENABLED(CONFIG_LOG_PROCESS_THREAD)
     size_t unused;
     if (k_thread_stack_space_get(&logging_thread, &unused) != 0) {
         return;
@@ -344,6 +346,7 @@ void log_stack_check(void)
         LOG_WRN("log thread stack low: %u of %u bytes unused",
                 (unsigned)s_log_unused_min, (unsigned)LOG_STACK_SIZE);
     }
+#endif
 }
 
 void watchdog_kick(void)
