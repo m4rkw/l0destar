@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.134
+
+### Log thread stack margin is reported
+A log thread stack that runs thin used to show only as a silent freeze. Its unused stack is now read once a few minutes after boot and once on sleep entry; under 25 % unused (512 of 2048 bytes) gives one `log thread stack low: N of M bytes unused` warning.
+- `CONFIG_INIT_STACKS=y` in `prj.conf` (the unused count needs the stack fill); no extra RAM. Nothing is logged while the margin is healthy.
+- Status: arm-compiled only (v4.0p2 car fragment); not run on hardware.
+
 ## 0.4.133
 
 ### Log thread stack 768 -> 2048 bytes

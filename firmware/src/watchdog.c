@@ -46,6 +46,7 @@
 #include <cmsis_core.h>
 #include <hal/nrf_wdt.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "app.h"
 #include "freeze_note.h"
@@ -311,9 +312,50 @@ void watchdog_init(void)
 #endif
 }
 
+/* Stack margin of the log thread.  Its thread object, logging_thread, is a
+ * global in Zephyr's log_core.c, so it is read directly (no THREAD_MONITOR /
+ * THREAD_NAME, which cost ~360 bytes of RAM); the unused count needs the 0xAA
+ * stack fill, CONFIG_INIT_STACKS (prj.conf).  A thin margin is one WRN, once;
+ * a healthy one logs nothing.  Called a few minutes after boot (from
+ * watchdog_kick, below) and on sleep entry (do_sleep). */
+#define LOG_STACK_SIZE   CONFIG_LOG_PROCESS_THREAD_STACK_SIZE
+#define LOG_STACK_LOW    (LOG_STACK_SIZE / 4)
+#define LOG_STACK_FIRST_MS 180000
+
+extern struct k_thread logging_thread;
+
+static size_t s_log_unused_min = SIZE_MAX;
+static bool   s_log_stack_warned;
+
+void log_stack_check(void)
+{
+    if (!IS_ENABLED(CONFIG_LOG_PROCESS_THREAD)) {
+        return;
+    }
+    size_t unused;
+    if (k_thread_stack_space_get(&logging_thread, &unused) != 0) {
+        return;
+    }
+    if (unused < s_log_unused_min) {
+        s_log_unused_min = unused;
+    }
+    if (s_log_unused_min < LOG_STACK_LOW && !s_log_stack_warned) {
+        s_log_stack_warned = true;
+        LOG_WRN("log thread stack low: %u of %u bytes unused",
+                (unsigned)s_log_unused_min, (unsigned)LOG_STACK_SIZE);
+    }
+}
+
 void watchdog_kick(void)
 {
+    static bool s_first_done;
+
     if (s_channel >= 0) {
         task_wdt_feed(s_channel);
+    }
+    if (!s_first_done && k_current_get() == s_fed_by &&
+        k_uptime_get() >= LOG_STACK_FIRST_MS) {
+        s_first_done = true;
+        log_stack_check();
     }
 }

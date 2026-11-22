@@ -1177,6 +1177,7 @@ static bool low_battery_lockout(void)
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
+    log_stack_check();
     data_gap_reset();
     /* No fault-code read here: sleep is only ever entered with the ignition
      * off, and the engine ECU is unpowered then, so the read would time out

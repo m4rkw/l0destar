@@ -575,6 +575,8 @@ void led_accel_impact(void);
 
 void watchdog_init(void);
 void watchdog_kick(void);
+/* Min unused bytes of the log thread stack; one WRN if under 25 % (watchdog.c) */
+void log_stack_check(void);
 /* "stall:<addr>/..." once after a watchdog reset, else NULL (watchdog.c) */
 const char *watchdog_last_stall(void);
 /* "fz:<pc>/<lr>[/i<irq>]" once after a watchdog reset that caught a frozen
