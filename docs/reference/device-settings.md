@@ -77,7 +77,7 @@ A queued command waits until the tracker next reads a reply.
 | Tracker state | Reads a reply | A command waits up to |
 |---|---|---|
 | Driving | At ignition changes, while the vehicle is reported stationary, and at least every `APP_RESP_POLL_S` (30 seconds) | about 30 seconds |
-| Ignition on, engine off | Every `APP_IGNITION_ON_SLEEP_INTERVAL` (30 seconds) | about 30 seconds |
+| Ignition on, engine off | Every `APP_IGNITION_ON_SLEEP_INTERVAL` (60 seconds) | about 60 seconds |
 | Parked, interval above 0 | On every timed report | the interval |
 | Parked, interval 0 | Not until the ignition comes on, or a timed report scheduled after movement | the next drive |
 

@@ -183,6 +183,8 @@ extern struct wake_report wake_pending;
  * so call it once per fresh battery_v rather than treating it as a free
  * query. */
 bool engine_is_running(void);
+/* Sleep entry: the next key-on starts from "engine not running". */
+void engine_verdict_reset(void);
 
 /* -- module init / lifecycle ----------------------------------------------- */
 int  crypto_init(void);
@@ -812,6 +814,7 @@ float battery_poll_voltage(void);       /* one conversion from a shut-down INA, 
 bool  battery_on_backup(float v);       /* supply is the inline backup module, not the car */
 extern bool backup_woke;                /* this wake found the module taking over: alert without the settle wait */
 
+int  accel_crash_low_power(void);
 int  accel_crash_int_enable(int threshold_mg);
 int  accel_crash_int_disable(void);
 int  accel_read_wake_src(uint8_t *src);

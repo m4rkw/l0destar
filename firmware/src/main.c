@@ -131,7 +131,7 @@ static void ign_isr(const struct device *dev, struct gpio_callback *cb,
     k_sem_give(&s_wake_sem);
 }
 
-static void ign_irq_enable(void)
+static void ign_irq_arm(gpio_flags_t level)
 {
     if (!s_ign_cb_installed) {
         gpio_init_callback(&s_ign_cb, ign_isr, BIT(PIN_IGN_SENSE));
@@ -141,11 +141,16 @@ static void ign_irq_enable(void)
     /* Level, not edge.  An edge trigger takes a GPIOTE IN channel, which
      * keeps the pin-detect logic clocked for the whole sleep (~20-45 uA on
      * the SiP per Nordic); a level trigger goes through the PORT/sense
-     * path, which costs nothing.  One direction is enough: sleep is only
-     * ever entered with the ignition off, so the only transition that can
-     * matter is the sense pin going low (ignition present).  The awake
+     * path, which costs nothing.  One direction is enough: a parked
+     * sleep waits for the sense pin going low (ignition present), a key-on
+     * sleep for it going high.  The awake
      * side polls ignition and is untouched by this. */
-    gpio_pin_interrupt_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INT_LEVEL_LOW);
+    gpio_pin_interrupt_configure(hw_gpio0, PIN_IGN_SENSE, level);
+}
+
+static void ign_irq_enable(void)
+{
+    ign_irq_arm(GPIO_INT_LEVEL_LOW);
 }
 
 static void ign_irq_disable(void)
@@ -1177,6 +1182,7 @@ static bool low_battery_lockout(void)
 static void do_sleep(void)
 {
     LOG_INF("entering sleep");
+    engine_verdict_reset();
     log_stack_check();
     data_gap_reset();
     /* No fault-code read here: sleep is only ever entered with the ignition
@@ -2191,6 +2197,112 @@ static void do_sleep(void)
 /* ========================================================================= */
 /*  STATE_IGNITION_SLEEP — ignition ON, engine OFF, watching for engine      */
 /* ========================================================================= */
+/* Between reports everything is down but the modem (left registered, in PSM
+ * where the network grants it), the GNSS backup supply and the interrupts:
+ * the key going off, and an impact.  The rail is looked at every
+ * VOLTAGE_POLL_INTERVAL for the engine starting.
+ *
+ * Each report takes a fresh fix, a hot start while the backup supply is up.  One
+ * that finds none halves the searching, down to every 16th report, and those
+ * in between go from the last position. */
+#define IGN_SLEEP_FIX_STEP_MS  5000
+#define IGN_SLEEP_FIX_STEPS    3
+/* Shorter intervals than this leave no room to sleep in. */
+#define IGN_SLEEP_MIN_S        30
+/* Awake this long after the key-on record, for the engine to be started. */
+#define IGN_SLEEP_GRACE_MS     15000
+
+/* The key off wakes it, where a parked unit's wait is for the key on.  Armed
+ * for that level only: the key-on level holds here, and would fire at once. */
+static void ign_off_irq_enable(void)
+{
+    ign_irq_arm(GPIO_INT_LEVEL_HIGH);
+}
+
+/* databuf_deliver()'s stop test. */
+static bool drain_ign_sleep(void)
+{
+    return ignition_read() != 0 ||
+           battery_read_voltage() >= ENGINE_RUNNING_VOLTAGE;
+}
+
+/* The receiver and the other rails go down.  Any reply still owed is waited
+ * for first, with the receiver's rail up: one that turns the backup supply off
+ * would otherwise drop it for a moment and lose what it keeps. */
+static void ign_sleep_down(bool *accel_low)
+{
+    gnss_stop();
+    databuf_deliver(RESPONSE_TIMEOUT_MS, DRAIN_PARKED_MS, drain_ign_sleep);
+    transport_close();
+    if (pending_server_cmd[0] != '\0') {
+        cmd_run(pending_server_cmd);
+        pending_server_cmd[0] = '\0';
+        if (alert_count > 0) alert_send();
+    }
+    hw_can_power_off();
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+    obd_close();
+#endif
+    proge_mode_off();
+    hw_gnss_backup_key_on();
+    hw_aux_power_off();
+    hw_power_shutdown();
+    led_all_off();
+
+    if (!*accel_low && accel_available()) {
+        crash_irq_disable();
+        accel_crash_low_power();
+        accel_crash_int_enable(CRASH_THRESHOLD_MG);
+        atomic_clear(&s_accel_int_flag);
+        *accel_low = true;
+    }
+}
+
+/* Until the next report, rail look, key-off or impact.  The level interrupts
+ * disarm themselves, so they are armed here every time. */
+static void ign_sleep_wait(int64_t ms, bool accel_low)
+{
+    k_sem_reset(&s_wake_sem);
+    atomic_clear(&s_ign_int_flag);
+    ign_off_irq_enable();
+    if (accel_low) {
+        atomic_set(&s_accel_level_armed, 1);
+        gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
+                                     GPIO_INT_LEVEL_HIGH);
+        if (atomic_get(&s_accel_int_flag)) {
+            k_sem_give(&s_wake_sem);
+        }
+    }
+    console_suspend();
+    (void)k_sem_take(&s_wake_sem, K_MSEC(CLAMP(ms, 1, WATCHDOG_SLEEP_SLICE_S * 1000)));
+    watchdog_kick();
+}
+
+static void ign_sleep_up(void)
+{
+    console_resume();
+    hw_power_wake();
+    hw_aux_power_on();
+    gnss_start();
+}
+
+/* Back to what the main loop, or do_sleep(), expects. */
+static void ign_sleep_leave(bool down, bool accel_low)
+{
+    ign_irq_disable();
+    atomic_clear(&s_ign_int_flag);
+    if (down) {
+        ign_sleep_up();
+    }
+    if (accel_low) {
+        atomic_clear(&s_accel_level_armed);
+        gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INT_DISABLE);
+        accel_disable_wake_int();
+        crash_irq_enable();
+    }
+    led_on();
+}
+
 static void do_ignition_sleep(void)
 {
     LOG_INF("ignition sleep (ign=ON, engine=OFF)");
@@ -2198,19 +2310,36 @@ static void do_ignition_sleep(void)
     led_all_off();
     int64_t last_voltage_ms = k_uptime_get();
     int64_t last_send_ms    = k_uptime_get();
+    bool    down = false;           /* rails and receiver down */
+    bool    accel_low = false;
+    unsigned fix_every = 1;         /* reports per search */
+    unsigned fix_in = 0;            /* reports until the next */
 
     for (;;) {
         watchdog_kick();
-        crash_check();
+        if (atomic_get(&s_accel_int_flag)) {
+            console_resume();
+            crash_check();
+        }
 #if IS_ENABLED(CONFIG_APP_KLINE_OBD)
-        /* Ignition on with the engine off: the ECU is still powered, so the
-         * session and the fault-code watch stay live here too. */
-        obd_service();
+        /* While awake only: the session is closed for the wait, and each
+         * report opens one of its own. */
+        if (!down) {
+            obd_service();
+        }
 #endif
 
         ignition = (char)ignition_read();
         if (ignition != 0) {
+            console_resume();
+            /* The sense drops out while the starter turns. */
+            if (ign_back_from_crank()) {
+                continue;
+            }
             LOG_INF("ignition OFF — sending final position");
+            if (down) {
+                hw_power_wake();
+            }
             use_cached_gps = true;
             read_udp_response = false;
             /* Report even with no cached fix — the point of this record is
@@ -2226,34 +2355,91 @@ static void do_ignition_sleep(void)
                 data_reset();
             }
             previous_ignition = ignition;
+            ign_irq_disable();
+            atomic_clear(&s_ign_int_flag);
+            if (accel_low) {
+                atomic_clear(&s_accel_level_armed);
+                gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
+                                             GPIO_INT_DISABLE);
+            }
             s_state = STATE_SLEEP;
             return;
         }
 
         int64_t now = k_uptime_get();
         if (now - last_voltage_ms >= VOLTAGE_POLL_INTERVAL * 1000) {
-            battery_v = battery_read_voltage();
-            if (engine_is_running()) {
-                engine_running = true;
-                LOG_INF("engine started (%d rpm, %.2fV)",
-                        engine_rpm_or_na(), (double)battery_v);
-                s_state = STATE_IDLE;
-                return;
-            }
+            bool look = true;
+
             last_voltage_ms = now;
+            if (down) {
+                /* One conversion; the averaged reading only to confirm. */
+                look = battery_poll_voltage() >= ENGINE_RUNNING_VOLTAGE;
+                if (look) {
+                    hw_power_wake();
+                }
+            }
+            if (look) {
+                battery_v = battery_read_voltage();
+                if (engine_is_running()) {
+                    console_resume();
+                    engine_running = true;
+                    LOG_INF("engine started (%d rpm, %.2fV)",
+                            engine_rpm_or_na(), (double)battery_v);
+                    ign_sleep_leave(down, accel_low);
+                    s_state = STATE_IDLE;
+                    return;
+                }
+                if (down) {
+                    hw_power_shutdown();
+                }
+            }
         }
 
         now = k_uptime_get();
         if (now - last_send_ms >= IGNITION_ON_SLEEP_INTERVAL * 1000) {
-            /* GNSS is already running continuously — grab a fix if one is
-             * available (returns immediately when locked), don't block 60s. */
-            struct gnss_fix fix = {0};
-            if (gnss_collect(2000, &fix) == 0 && fix.valid) {
-                g_gnss = fix;
+            bool search = !have_position() || fix_in == 0;
+            bool got = false;
+            bool was_down = down;
+
+            last_send_ms = now;     /* the search is part of the interval */
+            if (down) {
+                console_resume();
+                hw_power_wake();
+                if (search) {
+                    ign_sleep_up();
+                    down = false;
+                }
+            }
+            for (int i = 0; search && !got && i < IGN_SLEEP_FIX_STEPS; i++) {
+                struct gnss_fix fix = {0};
+
+                got = gnss_collect(was_down ? IGN_SLEEP_FIX_STEP_MS : 2000,
+                                   &fix) == 0 && fix.valid;
+                if (got) {
+                    g_gnss = fix;
+                }
+                if (!was_down || drain_ign_sleep()) {
+                    break;      /* it was running anyway, or something wants us */
+                }
+            }
+            if (ignition_read() != 0) {
+                down = false;
+                continue;
+            }
+            if (!search) {
+                fix_in--;
+            } else {
+                fix_every = got ? 1 : MIN(fix_every * 2, 16u);
+                fix_in = fix_every - 1;
             }
             use_cached_gps = true;
             read_udp_response = true;
-            if (collect_data(ignition) > 0) {
+            /* A failed fix leaves the last position to report from. */
+            force_record = have_position();
+            int have_record = collect_data(ignition);
+
+            force_record = false;
+            if (have_record > 0) {
                 gnss_stop();
                 /* The socket stays open for the replies — see send_data(). */
                 send_data();
@@ -2264,23 +2450,55 @@ static void do_ignition_sleep(void)
                     if (alert_count > 0) alert_send();
                 }
                 if (!last_send_ok) modem_recover();
-                gnss_resume();
+                if (!down) {
+                    gnss_resume();
+                }
+#if IS_ENABLED(CONFIG_APP_KLINE_OBD)
+                obd_service();
+#endif
 
                 /* The response just processed may have advertised a newer
-                 * firmware (fota=<ver>); no-op otherwise.  GNSS was resumed
-                 * above, so the awake variant puts it back on failure. */
+                 * firmware (fota=<ver>); no-op otherwise.  It hands the
+                 * receiver back running, so its rail has to be up. */
+                if (down && fota_check_requested()) {
+                    ign_sleep_up();
+                    down = false;
+                }
                 fota_check(FOTA_CTX_AWAKE);
 
-                /* Or switched installation mode on: the main loop picks it up. */
-                if (install_active()) {
+                /* Or switched installation mode on: the main loop picks it up.
+                 * The same way out for an engine the record found running. */
+                if (install_active() || engine_running) {
+                    ign_sleep_leave(down, accel_low);
                     s_state = STATE_IDLE;
                     return;
                 }
             }
-            last_send_ms = k_uptime_get();
+            if (down) {
+                /* Reported from the last position, its rail never up. */
+                ign_sleep_down(&accel_low);
+            }
         }
 
-        status_delay(1000);
+        /* Without a position yet the receiver stays up to find one. */
+        if (have_position() && IGNITION_ON_SLEEP_INTERVAL >= IGN_SLEEP_MIN_S) {
+            if (!down) {
+                ign_sleep_down(&accel_low);
+                down = true;
+                continue;       /* the key or the rail may have moved meanwhile */
+            }
+            int64_t t = k_uptime_get();
+
+            ign_sleep_wait(MIN(last_send_ms + IGNITION_ON_SLEEP_INTERVAL * 1000 - t,
+                               last_voltage_ms + VOLTAGE_POLL_INTERVAL * 1000 - t),
+                           accel_low);
+        } else {
+            if (down) {
+                ign_sleep_up();
+                down = false;
+            }
+            status_delay(1000);
+        }
     }
 }
 
@@ -2965,6 +3183,16 @@ int main(void)
                 break;
             }
 
+            /* Key on, engine off, and the server told: there is nothing to
+             * stay awake for once the driver has had time to start it. */
+            if (ignition == 0 && previous_ignition == 0 && !engine_running &&
+                last_send_ok && network_ready && have_position() &&
+                s_buffered_records == 0 && !install_active() &&
+                k_uptime_get() - s_last_send_ms >= IGN_SLEEP_GRACE_MS) {
+                s_state = STATE_IGNITION_SLEEP;
+                break;
+            }
+
             /* Ignition off and the server already told: nothing keeps the
              * unit awake, yet sleep is otherwise only entered from
              * STATE_SEND, so this idled with GNSS running until the next
@@ -3098,6 +3326,9 @@ int main(void)
                          || previous_ignition == -1
                          || send_int_to_server
                          || !last_send_ok
+                         /* key on, engine off: nothing to wait for, and
+                          * sleep is entered from the send */
+                         || (!engine_running && !s_coasting)
                          || data_index - data_motion_bytes() >= BATCH_FLUSH_BYTES;
 #if IS_ENABLED(CONFIG_APP_DRIVE_STREAM)
             if (s_ds_on && !flush) {

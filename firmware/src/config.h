@@ -223,12 +223,13 @@
 
 /* -- engine-running detection, voltage fallback ---------------------------- */
 /* Only consulted when the ECU is not answering — see engine_is_running().
- * Demoting to "engine stopped" needs the rail low AND the vehicle standing
- * still for this long; any GNSS speed above ENGINE_MOVING_KMH restarts the
- * hold.  Generous on purpose: holding the driving cadence a few minutes too
- * long after a genuine key-on-engine-off stop costs some power, dropping it
- * mid-journey costs the journey. */
-#define ENGINE_STOPPED_HOLD_S       300
+ * Demoting to "engine stopped" needs the rail low for a hold; any GNSS speed
+ * from ENGINE_MOVING_KMH up restarts it.  Sized from the car's drives, Aug-Nov
+ * 2026 (450k records with rpm): the alternator was cut with the engine running
+ * for up to 230 s, but only up to 108 s of it standing still. */
+#define ENGINE_STILL_HOLD_S         120   /* fresh fixes say standing still */
+#define ENGINE_STOPPED_HOLD_S       300   /* speed unknown */
+#define ENGINE_STILL_FIX_MAX_AGE_S  15    /* a fix older than this shows nothing */
 #define ENGINE_MOVING_KMH           3.0f  /* above this, something is driving */
 /* How old a fix may be and still count as evidence of movement.  STATE_IDLE
  * only refreshes GNSS once per record, so this has to span a record interval

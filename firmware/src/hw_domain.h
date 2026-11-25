@@ -108,6 +108,8 @@ bool hw_gnss_backup_wanted(void);
 
 /* The ignition is on: the supply is no longer held down. */
 void hw_gnss_backup_hold_clear(void);
+/* Key on: supplied whatever the server or an off window says. */
+void hw_gnss_backup_key_on(void);
 
 int hw_gnss_backup_report(char *buf, size_t size, int *count);
 void hw_gnss_backup_reported(int count);

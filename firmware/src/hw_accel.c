@@ -427,6 +427,26 @@ int accel_power_down(void)
 	return 0;
 }
 
+/* Gyro off and the accelerometer in low power at 52 Hz, still at the crash
+ * interrupt's +-8 g, with the FIFO batching it alone: the key-on, engine-off
+ * wait.  accel_disable_wake_int() puts both sensors back. */
+int accel_crash_low_power(void)
+{
+	if (!s_ok) return -1;
+
+	s_fifo_awake = false;
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL2_G, 0x00);
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL6_C, 0x10);
+	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL1_XL, 0x3C))
+		return -EIO;
+	s_mg_per_lsb = 0.244f;
+	k_msleep(100);		/* the ODR change settles, as in the sleep set-up */
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x00);
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, 0x02);
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x06);
+	return 0;
+}
+
 /* -- crash (high-g) interrupt, used while awake ----------------------------- */
 
 int accel_crash_int_enable(int threshold_mg)

@@ -96,7 +96,7 @@ state machine:
 - **IDLE** – wait for network registration, poll ignition + battery, decide when to send.
 - **GPS_COLLECT** – acquire a GNSS fix, build and buffer a telemetry record.
 - **SEND** – transmit batched telemetry over encrypted UDP, process any server command.
-- **IGNITION_SLEEP** – ignition on but engine off: periodic sends, watch for engine start / ignition off.
+- **IGNITION_SLEEP** – ignition on but engine off: periodic sends, with the receiver and the other rails down between them (GNSS backup supply on), watching for engine start / ignition off.
 - **SLEEP** – ignition off: peripherals powered down; wakes on the IMU's movement interrupt, ignition change, or telemetry timer.
 
 Extras handled in the loop: **movement alarm** with escalating cooldowns,
@@ -404,7 +404,7 @@ returns assistance data (`agnss: received … bytes` → `A-GNSS data injected`)
 | `APP_TRACCAR_SEC_TAG` | -1 | Modem sec_tag holding the CA for HTTPS to Traccar; -1 = plain HTTP |
 | `APP_PSK_HEX` | "" | Device key, 64 hex characters: required, and must match the server's |
 | `APP_ENGINE_OFF_LOOP_INTERVAL` | 0 | Engine-off wake interval until the server sets one (s; 0 = 3600) |
-| `APP_IGNITION_ON_SLEEP_INTERVAL` | 30 | Send cadence: ignition on, engine off (s) |
+| `APP_IGNITION_ON_SLEEP_INTERVAL` | 60 | Send cadence: ignition on, engine off (s) |
 | `APP_VOLTAGE_POLL_INTERVAL` | 5 | Battery sample cadence in IDLE (s) |
 | `APP_BATTERY_CHECK_INTERVAL` | 86400 | Battery check during deep sleep (s) |
 | `APP_NETWORK_REGISTRATION_TIMEOUT` | 60 | Registration timeout (s) |

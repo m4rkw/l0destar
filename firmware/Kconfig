@@ -783,7 +783,7 @@ config APP_ENGINE_OFF_LOOP_INTERVAL
 
 config APP_IGNITION_ON_SLEEP_INTERVAL
 	int "Send cadence while ignition on, engine off"
-	default 30
+	default 60
 
 config APP_VOLTAGE_POLL_INTERVAL
 	int "Battery sample cadence in IDLE"

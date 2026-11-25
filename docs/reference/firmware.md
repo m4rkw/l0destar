@@ -380,7 +380,7 @@ Set `APP_TRACCAR` to report to a [Traccar](https://www.traccar.org) server with 
 | Symbol | Type | Default | Meaning |
 |---|---|---|---|
 | `APP_ENGINE_OFF_LOOP_INTERVAL` | int | `0` | Engine-off timed wake interval, in seconds, that the device starts with. At `0` it wakes every 900 seconds (`ENGINE_OFF_BOOT_INTERVAL`) until the first server reply, which then sets the interval: in practice the server's `int` setting is what applies |
-| `APP_IGNITION_ON_SLEEP_INTERVAL` | int | `30` | Send interval, in seconds, with the ignition on and the engine off |
+| `APP_IGNITION_ON_SLEEP_INTERVAL` | int | `60` | Send interval, in seconds, with the ignition on and the engine off |
 | `APP_VOLTAGE_POLL_INTERVAL` | int | `5` | How often, in seconds, the battery is sampled with the ignition on and the engine off, to notice the engine starting |
 | `APP_BATTERY_CHECK_INTERVAL` | int | `86400` | While asleep with the battery below `APP_BATTERY_POWEROFF_MV`, seconds until the next check |
 | `APP_NETWORK_REGISTRATION_TIMEOUT` | int | `60` | Seconds a connect waits for registration before leaving the radio searching |
@@ -396,7 +396,7 @@ Set `APP_TRACCAR` to report to a [Traccar](https://www.traccar.org) server with 
 | `APP_BATTERY_WARNING_MV` | int | `11900` | A `low battery` alert once the ignition has been off for at least 60 seconds with the battery below this |
 | `APP_BATTERY_POWEROFF_MV` | int | `11800` | While asleep, a timed wake below this sends nothing and the next check is `APP_BATTERY_CHECK_INTERVAL` later |
 | `APP_SLEEP_SAFETY_MV` | int | `12000` | While asleep, a timed wake below this skips its send |
-| `APP_ENGINE_RUNNING_MV` | int | `13000` | Without an engine speed from the ECU, a battery voltage above this means the engine is running. The reverse needs the voltage low and the vehicle stationary for 300 seconds (`ENGINE_STOPPED_HOLD_S`), because cars with charging control let the rail fall below 13V while driving |
+| `APP_ENGINE_RUNNING_MV` | int | `13000` | Without an engine speed from the ECU, a battery voltage above this means the engine is running (GNSS movement only keeps that verdict, it never starts it, and sleep clears it). The reverse needs the voltage low and the vehicle seen standing still for 120 seconds (`ENGINE_STILL_HOLD_S`), or 300 seconds without movement when GNSS has no fresh fix (`ENGINE_STOPPED_HOLD_S`), because cars with charging control let the rail fall below 13V while driving |
 | `APP_BACKUP_SUPPLY` | bool | `n` | The inline battery backup module is fitted. A supply between `APP_BACKUP_MIN_MV` and `APP_BACKUP_MAX_MV` with the ignition off is then backup power rather than a flat car battery: timed reports keep going, the power-off and sleep-safety gates are bypassed, a `backup power` alert (priority 1) goes out once the ignition has been off for 60 seconds, and `car power restored` when the rail comes back. The module's ~0.4 s ignition pulse at takeover wakes a sleeping unit, which watches the rail fall into the band and reports the cut instead of treating it as a key-on. A key-on from sleep then needs the line on for 1.5 s (`BACKUP_PULSE_MAX_MS`) rather than 200 ms. The sleeping unit also reads the rail every 30 s (`BACKUP_RAIL_POLL_S`) and reports the cut, and later the return of car power, from that alone, so the pulse is not required |
 | `APP_BACKUP_MIN_MV` | int | `8500` | Lower edge of the backup band; below it the reading is a flat supply again (the pack's own undervoltage lockout has tripped) |
 | `APP_BACKUP_MAX_MV` | int | `9700` | Upper edge of the backup band. The module delivers 9.6V less a diode drop, 8.8-9.3V with load; keep this below anything a resting car battery can show |
@@ -616,7 +616,8 @@ These are compiled in and have no Kconfig symbol; change them in the source and 
 | `TLS_SEC_TAG` | `1` | The other modem tag the CA certificate is written to |
 | `ENGINE_OFF_BOOT_INTERVAL` | `900` | Timed wake interval, in seconds, from boot until the first server reply when `APP_ENGINE_OFF_LOOP_INTERVAL` is 0 |
 | `RESEND_POLL_S` | `30` | How often a parked unit that owes a timed report - one that failed because the modem had not registered - checks for registration, so the report goes out as soon as it has rather than at the next timed wake |
-| `ENGINE_STOPPED_HOLD_S` | `300` | Seconds of low voltage and standstill before the voltage fallback calls the engine stopped |
+| `ENGINE_STILL_HOLD_S` | `120` | Seconds of low voltage, with fresh fixes showing standstill, before the voltage fallback calls the engine stopped |
+| `ENGINE_STOPPED_HOLD_S` | `300` | The same without a fresh fix, where no movement is seen |
 | `ENGINE_MOVING_KMH` | `3.0` | GNSS speed above which the vehicle counts as moving, restarting that hold |
 | `ENGINE_FIX_MAX_AGE_S` | `180` | Oldest fix still counted as evidence of movement |
 | `AGNSS_RETRIES`, `AGNSS_RETRY_INTERVAL_MS` | `2`, `15000` | Built-in receiver only. Further A-GNSS fetches during a cold search when the first fails, and the gap between them; GNSS keeps searching between attempts |

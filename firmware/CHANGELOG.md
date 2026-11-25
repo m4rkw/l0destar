@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.4.137
+
+### Key on with the engine off no longer streams
+A noisy GNSS speed (3 km/h or more) counted as the engine running, even with the key off, and the verdict survived sleep, so a key-on at 12 V could stream at full rate.
+- Movement now only keeps a running verdict; it takes rpm or the rail at `APP_ENGINE_RUNNING_MV` to start one. The verdict cannot start with the key off and is cleared on sleep entry.
+- A drive that begins with the alternator cut and no rpm reports at the key-on interval until the rail reaches the threshold.
+- `CONFIG_APP_IGNITION_ON_SLEEP_INTERVAL` default 30 -> 60 (a server `ignition_on_sleep_s` still overrides it).
+- Without rpm, a rail under `APP_ENGINE_RUNNING_MV` ends the verdict after 120 s of fresh fixes showing standstill (was 300 s); 300 s stays where the speed is unknown. A fresh rpm still decides on its own.
+- Status: engine verdict host-tested; the 60 s interval seen on the bench.
+
+### Key on with the engine off sleeps between reports
+It drew about 33 mA all the time; now the receiver and the other rails go down between reports.
+- The GNSS backup supply stays on while the key is on, whatever the server setting or off window.
+- It sleeps 15 s after the key-on record instead of after a full batch (`APP_BATCH_SIZE`) of intervals; engine-off records no longer wait for a batch.
+- Each report takes a fresh fix, up to 15 s; after a failed search it tries less often, down to every 16th report, and reports the last position between.
+- The rail is read every 5 s for engine start. Key off and an impact wake it at once; a key-off has to hold 5 s, so the starter's dropout is not one.
+- OBD: the session closes between reports, so RPM and fault codes are only checked with each report.
+- The modem stays registered and uses PSM where granted. Intervals under 30 s stay awake as before.
+- Status: run on the bench, two 60 s cycles: 0.15 mA at the 4.2 V rail asleep, about 1.1 mA over a cycle with a short wake and 12 mA over one with about 16 s of GNSS.
+
 ## 0.4.135
 
 ### A thread stack overflow now leaves a `fatal:` note

@@ -54,6 +54,7 @@ static bool s_fw_pending = true;
 /* Uptime at which the rail first read below ENGINE_RUNNING_VOLTAGE with the
  * vehicle stationary, or -1 when the hold is not running. */
 static int64_t s_low_voltage_since = -1;
+static int64_t s_still_since = -1;
 
 /* Device-side record id, stamped on every record as rid= and restarted at
  * each boot.  The server stores it alongside the record, which is
@@ -134,7 +135,7 @@ void data_reset(void)
 /* Is anything driving the vehicle's electrics?  GNSS only: the fallback below
  * exists precisely because the ECU is not answering, so obd_speed_kmh() is no
  * use here.  A fix that is missing, thin on satellites or stale reads as "not
- * moving", which only ever makes the fallback more conservative. */
+ * moving", which leaves the longer hold to end the verdict. */
 static bool gnss_says_moving(void)
 {
     if (!g_gnss.valid || g_gnss.sats < SPEED_MIN_SATS) {
@@ -145,6 +146,15 @@ static bool gnss_says_moving(void)
         return false;
     }
     return g_gnss.speed_kmh >= ENGINE_MOVING_KMH;
+}
+
+/* A fresh fix that shows the vehicle standing, as opposed to no news. */
+static bool gnss_says_still(void)
+{
+    return g_gnss.valid && g_gnss.sats >= SPEED_MIN_SATS &&
+           k_uptime_get() - g_gnss.fix_uptime_ms <=
+               (int64_t)ENGINE_STILL_FIX_MAX_AGE_S * 1000 &&
+           g_gnss.speed_kmh < ENGINE_MOVING_KMH;
 }
 
 /* Is the engine running?
@@ -163,9 +173,11 @@ static bool gnss_says_moving(void)
  * engine-off cadence mid-journey.
  *
  * The asymmetry that does hold: nothing but an alternator puts the rail
- * above ENGINE_RUNNING_VOLTAGE, so voltage may promote on its own.  Demotion
- * additionally needs the vehicle standing still for ENGINE_STOPPED_HOLD_S,
- * and any movement restarts that hold, so a charge-cut episode can never
+ * above ENGINE_RUNNING_VOLTAGE, so voltage may promote on its own (movement
+ * may not: GNSS noise would do it).  Demotion
+ * additionally needs the vehicle seen standing still for ENGINE_STILL_HOLD_S,
+ * or no movement seen for ENGINE_STOPPED_HOLD_S where the speed is unknown.
+ * Movement restarts both, so a charge-cut episode while driving can never
  * accumulate towards a stop however long it lasts.  Within the hold the
  * previous verdict stands.
  *
@@ -186,16 +198,18 @@ bool engine_is_running(void)
     if (rpm >= 0) {
         /* Reset the hold so that losing the ECU later falls back from a
          * clean slate rather than part-way through someone else's timer. */
-        s_low_voltage_since = -1;
+        s_low_voltage_since = s_still_since = -1;
         return rpm > 0;
     }
 #endif
     if (battery_v >= ENGINE_RUNNING_VOLTAGE) {
-        s_low_voltage_since = -1;
+        s_low_voltage_since = s_still_since = -1;
         return true;
     }
-    if (gnss_says_moving()) {
-        s_low_voltage_since = -1;
+    /* Movement keeps a running verdict, never makes one: the noise of a weak
+     * fix passes ENGINE_MOVING_KMH on a vehicle that has not moved. */
+    if (engine_running && gnss_says_moving()) {
+        s_low_voltage_since = s_still_since = -1;
         return true;
     }
 
@@ -203,6 +217,15 @@ bool engine_is_running(void)
 
     if (s_low_voltage_since < 0) {
         s_low_voltage_since = now;
+    }
+    if (!gnss_says_still()) {
+        s_still_since = -1;
+    } else if (s_still_since < 0) {
+        s_still_since = now;
+    }
+    if (s_still_since >= 0 &&
+        now - s_still_since >= (int64_t)ENGINE_STILL_HOLD_S * 1000) {
+        return false;
     }
     if (now - s_low_voltage_since < (int64_t)ENGINE_STOPPED_HOLD_S * 1000) {
         return engine_running;
@@ -213,8 +236,15 @@ bool engine_is_running(void)
 static float battery_sample_with_engine_check(void)
 {
     battery_v = battery_read_voltage();
-    engine_running = engine_is_running();
+    /* With the key off the verdict can end but not begin. */
+    engine_running = engine_is_running() && (engine_running || ignition == 0);
     return battery_v;
+}
+
+void engine_verdict_reset(void)
+{
+    engine_running = false;
+    s_low_voltage_since = s_still_since = -1;
 }
 
 /* Off for BATTERY_WARN_SETTLE_S as far as anything has seen: since the first

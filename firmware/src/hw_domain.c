@@ -620,6 +620,12 @@ void hw_domain_notify_set(enum hw_domain dom, hw_domain_notify_t cb)
 	}
 }
 
+void hw_gnss_backup_key_on(void)
+{
+	s_bckp_hold = false;
+	bckp_set(true);
+}
+
 void hw_gnss_backup_cutoff(int sleep_s, bool on_backup)
 {
 	int64_t ms;
