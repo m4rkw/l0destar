@@ -57,6 +57,10 @@ the unit in every reply as tu=.
     led_accel_wake=0|1
     weak_hold_rsrp_dbm=-140..-100 (0 = off)   weak_hold_snr_db=-20..5
     weak_hold_max_s=5-600
+    smart_power=0|1                smart_power_rsrp_dbm=-140..-90
+    smart_power_battery_mv=11000-13000   smart_power_battery_drop_mv=0-1000 (0 = off)
+    smart_power_max_defer_s=0-86400
+    log_hold_rsrp_dbm=-140..-90 (0 = off)
     obd_alerts=<rule>[|<rule>...]  e.g. obd_alerts='coolant>=95|rpm>6500'
                                    (| for the comma, which separates commands)
 

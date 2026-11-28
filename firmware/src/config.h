@@ -215,11 +215,6 @@
  * ~190 uF); not yet measured. */
 #define BACKUP_FALL_MIN_V           0.02f
 #define BACKUP_POLL_MS              250
-/* The pulse is only the fast path.  The sleep loop also reads the rail on
- * every pass, at most this far apart: the tilt poll's cadence, so with tow
- * detection on it adds no wakes.  A cut is then found within a poll or two
- * of the rail settling, whatever the ignition wire is doing. */
-#define BACKUP_RAIL_POLL_S          30
 
 /* -- engine-running detection, voltage fallback ---------------------------- */
 /* Only consulted when the ECU is not answering — see engine_is_running().

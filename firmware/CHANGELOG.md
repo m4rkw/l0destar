@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.4.140
+
+### Shorter PSM active time
+The modem now asks for 2 s of PSM active time instead of 10 s, so it sleeps sooner after each send.
+- `CONFIG_APP_PSM_ACTIVE_S` default 10 → 2 (with `APP_PSM_SLEEP`).
+- Bench, parked report: ~60 → ~55 mC, 14 → 5.6 s awake; O2 granted 2 s.
+
+### Captured warnings wait out a weak signal
+At weak signal a record now goes without the captured warnings, which are sent later; every byte costs much more radio energy there.
+- `CONFIG_APP_LOG_HOLD` (default y), `_RSRP_DBM` (-116, tunable `xlh`, 0 = off), `_MAX_S` (86400).
+- Errors are never held. Everything goes once the log rings are 75 % full or the oldest line is `_MAX_S` old.
+- No signal reading, no hold; an unmoved parked unit whose wake has none goes by its last report's reading.
+- Held lines no longer count as waiting for `APP_SMART_POWER`. The pre-restart flush and `logdump` are not held.
+- The server does not yet send or store `xlh`.
+- Status: host-tested; not bench-verified.
+
+### Accelerometer slower in the key-on, engine-off sleep
+It samples at 12.5 Hz there (was 52), expected to save about 20 uA.
+- `CONFIG_APP_IGN_SLEEP_IMU_HZ` (default 12 = 12.5 Hz; 26 or 52); still +-8 g with the impact interrupt and FIFO.
+- A short hit is sampled every 80 ms (was 19), so a brief one is likelier to be missed or to read low.
+- Status: host-tested; not bench-verified.
+
+### Intelligent power saving
+A parked unit can put a timed report off when it would be costly (weak signal) and the car battery is low.
+- `CONFIG_APP_SMART_POWER` (default n), `_RSRP_DBM` (-116), `_BATTERY_MV` (12400), `_MAX_DEFER_S` (86400, the most allowed); tunables `xsp`, `xsr`, `xsb`, `xsm`.
+- Only while unmoved since the last report sent, with nothing else waiting (alerts, backlog, captured warnings, boot fields, acks, commands, updates); the first report of each parked stay always goes.
+- Judged on the stored signal, from the last report sent or measured since; a modem in PSM gives no ordinary reading.
+- `CONFIG_APP_SMART_POWER_NCELL` (default y, needs `APP_SMART_POWER`): before putting a report off, one neighbour-cell measurement (about 1 s and 2.6 mC on the bench) sends it if the signal has improved; with no result in 5 s the stored reading stands. Units turned on only by `xsp` do not measure.
+- A report still goes once the battery is `CONFIG_APP_SMART_POWER_BATTERY_DROP_MV` (40, tunable `xsd`, 0 = off) below its reading at the last report sent.
+- The next record carries `pd=<wakes deferred>`; the server does not yet store it or send the tunables.
+- Status: host-tested and builds; not yet bench-verified.
+
+### External GNSS: longer bring-up search
+The receiver is now given 15 s to answer after its rail comes up (was 6 s), so an engine start shortly after an ignition-sleep wake no longer raises "receiver not answering".
+- `FIND_MS` in gnss_ext.c; a rail off for about 30 s left the MAX-M10S silent for ~12 s.
+- Status: bench-tested on v4.0p2 at engine start after a 30 s rail-off.
+
+### Pulsed ignition pull-up (boards without S4R3)
+With S4R3 removed, the nRF pull-up is held only while parked and pulsed for each read otherwise, so a key left on costs nanoamps, not 59 uA (or 250 uA held).
+- `CONFIG_APP_BOARD_IGN_EXT_PULLUP` now settable: n for a board with S4R3 removed; `CONFIG_APP_IGN_PULSED_PULLUP` (default y) then applies.
+- In an ignition sleep the key-off is found by the 5 s rail poll instead of an interrupt.
+- Status: builds; not run on hardware. Boards with S4R3 fitted are unchanged.
+
+### Accelerometer sleep rate setting
+- The accelerometer now samples at 12.5 Hz while asleep (was 52), about 20 uA less parked; `CONFIG_APP_ACC_SLEEP_ODR_HZ` takes 52, 26 or 12 (12.5 Hz).
+- Status: knock wakes bench-tested at 26 and 12.5 Hz.
+
+### A parked unit no longer wakes every 30 s
+It sleeps until an interrupt, a report or the hourly pass.
+- `CONFIG_APP_TOW_IMU_WAKE` (default y): the accelerometer watches for the slow tilt around the sleep-entry reference. `CONFIG_APP_TOW_POLL_S` polling runs only off centre, with a tow alert latched, or for `CONFIG_APP_TOW_TILT_DEG` under about 6.
+- The 30 s backup rail poll is gone; the module's ignition pulse reports a cut. The rail is still read on every pass, so the return of car power can take up to an hour to be reported.
+- The low-battery lockout check likewise runs on whatever pass comes next.
+- Status: builds and host-tested; not run on hardware.
+
 ## 0.4.137
 
 ### Key on with the engine off no longer streams

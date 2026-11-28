@@ -339,13 +339,25 @@ config APP_BOARD_CAN_XSTBY
 	  boards where the CAN rail shares the (GPS) AUX domain.
 
 config APP_BOARD_IGN_EXT_PULLUP
-	bool
+	bool "IGN_SENSE has an external pull-up (S4R3)"
 	default y if APP_BOARD_IS_L0DESTAR
 	help
 	  IGN_SENSE has an external 56K pull-up to the always-on 3.3V rail
 	  (2N7002 open-drain sense).  Skip the nRF internal pull-up — in
 	  parallel it would roughly triple the sense current whenever the
-	  ignition is on.
+	  ignition is on.  Set n on a board with S4R3 removed.
+
+config APP_IGN_PULSED_PULLUP
+	bool "Pulse the internal ignition pull-up"
+	depends on !APP_BOARD_IGN_EXT_PULLUP
+	default y if APP_BOARD_IS_L0DESTAR
+	help
+	  With no external pull-up, the internal one (~13K) is held on only
+	  while parked, waiting for the key, when the sense FET is off and it
+	  draws nothing.  Otherwise the pin is disconnected and each
+	  ignition_read() turns the pull-up on for a few microseconds, so a key
+	  left on costs nanoamps instead of ~250 uA.  Key-off in an ignition
+	  sleep is then found by the 5 s rail poll rather than an interrupt.
 
 # --- pin assignments (P0.x GPIO numbers, -1 = not fitted) --------------------
 # One column per board, extracted from the KiCad PCBs.  P0.11/P0.12 are never

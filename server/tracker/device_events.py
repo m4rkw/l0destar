@@ -328,6 +328,12 @@ TUNABLE_TEXT = {
     'weak_hold_rsrp_dbm': ('Weak-signal send hold', None),
     'weak_hold_snr_db': ('Weak-signal hold SNR threshold', 'set to %s dB'),
     'weak_hold_max_s': ('Weak-signal hold limit', 'set to %s s'),
+    'smart_power': ('Intelligent power saving', None),
+    'smart_power_rsrp_dbm': ('Power saving signal threshold', 'set to %s dBm'),
+    'smart_power_battery_mv': ('Power saving battery threshold', 'set to %s mV'),
+    'smart_power_battery_drop_mv': ('Power saving battery drop report', None),
+    'smart_power_max_defer_s': ('Power saving longest report gap', 'set to %s s'),
+    'log_hold_rsrp_dbm': ('Weak-signal log hold', None),
 }
 
 
@@ -351,6 +357,12 @@ def tunable_text(column, value):
     if column == 'weak_hold_rsrp_dbm':
         return ('Weak-signal send hold at RSRP %s dBm or below' % value
                 if value <= -100 else 'Weak-signal send hold off')
+    if column == 'smart_power_battery_drop_mv':
+        return ('Power saving battery drop report set to %s mV' % value if value
+                else 'Power saving battery drop report off')
+    if column == 'log_hold_rsrp_dbm':
+        return ('Weak-signal log hold at RSRP %s dBm or below' % value
+                if value <= -90 else 'Weak-signal log hold off')
     if how is None:
         return '%s %s' % (label, 'on' if value else 'off')
     return '%s %s' % (label, how % value)

@@ -530,6 +530,11 @@ void fota_report_flush(void)
     }
 }
 
+bool fota_report_pending(void)
+{
+    return s_pending_report[0] != '\0';
+}
+
 void fota_confirm_image(void)
 {
     /* A swapped-in image boots as BOOT_UPGRADE_TEST: unless it confirms
@@ -936,6 +941,7 @@ void fota_confirm_image(void)   { }
 bool fota_image_on_probation(void) { return false; }
 void fota_verdict_on_boot(void) { }
 void fota_report_flush(void)    { }
+bool fota_report_pending(void)  { return false; }
 int  fota_check(enum fota_ctx ctx) { ARG_UNUSED(ctx); return 0; }
 
 #endif /* CONFIG_APP_FOTA */

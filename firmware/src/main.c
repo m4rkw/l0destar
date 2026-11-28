@@ -26,6 +26,8 @@
 #include "pins.h"
 #include "install.h"
 #include "stream_batch.h"
+#include "smart_power.h"
+#include "tow_wake.h"
 #if IS_ENABLED(CONFIG_APP_BOARD_HAS_EXT_FLASH)
 #include "extflash.h"
 #endif
@@ -148,14 +150,18 @@ static void ign_irq_arm(gpio_flags_t level)
     gpio_pin_interrupt_configure(hw_gpio0, PIN_IGN_SENSE, level);
 }
 
+/* With the pulsed pull-up the wait for the key holds it on: the sense FET is
+ * off until the key comes, so it draws nothing. */
 static void ign_irq_enable(void)
 {
+    ignition_sense_hold(true);
     ign_irq_arm(GPIO_INT_LEVEL_LOW);
 }
 
 static void ign_irq_disable(void)
 {
     gpio_pin_interrupt_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INT_DISABLE);
+    ignition_sense_hold(false);
 }
 
 /* -- console suspend across the sleep wait ---------------------------------- */
@@ -244,11 +250,56 @@ static void accel_cb_install(void)
     }
 }
 
+/* -- slow tilt in the IMU (APP_TOW_IMU_WAKE, see tow_wake.h) --------------- */
+static bool s_tow_alerted;          /* a tow alert is latched */
+static struct tow_wake s_tow;
+static bool s_tow_abs;              /* the absolute comparator is armed */
+static bool s_tow_new_ref;          /* take the reference at the next arm */
+
+/* The parked stay as intelligent power saving sees it (smart_power.h). */
+static struct smart_power s_smart;
+
+/* Straight after accel_enable_wake_int(), which leaves the high-pass wake:
+ * switches to the absolute one if the unit is where its comparator is quiet.
+ * The attitude read here is also the check, on every pass that re-arms, that
+ * an IMU which lost its set-up has not let the unit be lifted unseen.  The
+ * threshold follows the tow angle, which the server can change. */
+static void tow_wake_arm(void)
+{
+    int ref[3], now[3];
+
+    if (accel_tilt_ref(ref) != 0) return;
+
+    int ths = tow_wake_ths(ref, TOW_TILT_DEG);
+
+    if (ths == 0 || accel_read(&now[0], &now[1], &now[2]) != 0) return;
+
+    int8_t ofs[3] = { tow_wake_ofs(ref[0]), tow_wake_ofs(ref[1]),
+                      tow_wake_ofs(ref[2]) };
+
+    if (!tow_wake_centred(&s_tow, s_tow_alerted, now, ofs, ths)) return;
+    s_tow_abs = accel_wake_absolute(ofs, ths) == 0;
+}
+
 static void accel_irq_enable(void)
 {
+    s_tow_abs = false;
     if (!accel_available()) return;
     accel_cb_install();
+    /* A wake that came in while the pass was busy is dropped below, but the
+     * unit still moved.  Read before the set-up, whose own spurious wake is
+     * not movement. */
+    if (atomic_get(&s_accel_int_flag)) {
+        smart_power_moved(&s_smart);
+    }
     accel_enable_wake_int();
+    if (IS_ENABLED(CONFIG_APP_TOW_IMU_WAKE)) {
+        if (s_tow_new_ref) {
+            s_tow_new_ref = false;
+            accel_snapshot_tilt_ref();
+        }
+        tow_wake_arm();
+    }
     /* Drop anything latched before this arming — a stale flag from the awake
      * path, or the FS/ODR step that fires a spurious wake ~26 ms into
      * accel_enable_wake_int() — so the first sleep iteration doesn't confirm
@@ -264,10 +315,26 @@ static void accel_irq_enable(void)
 
 static void accel_irq_disable(void)
 {
+    s_tow_abs = false;
     if (!accel_available()) return;
     atomic_clear(&s_accel_level_armed);
     gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1, GPIO_INT_DISABLE);
     accel_disable_wake_int();
+}
+
+/* The parked unit's wake at the attitude it is at now: the movement baseline,
+ * the tow reference and the interrupt.  With APP_TOW_IMU_WAKE the reference
+ * waits for the sleep configuration, so accel_irq_enable() takes it. */
+static void sleep_accel_start(void)
+{
+    accel_read_baseline();
+    if (IS_ENABLED(CONFIG_APP_TOW_IMU_WAKE)) {
+        s_tow = (struct tow_wake){ 0 };
+        s_tow_new_ref = true;
+    } else {
+        accel_snapshot_tilt_ref();
+    }
+    accel_irq_enable();
 }
 
 /* -- crash (impact) interrupt while awake ----------------------------------- */
@@ -749,6 +816,27 @@ static bool sleep_modem_release(bool raised, bool owed)
     return true;
 }
 
+/* How long the sleep may last, in seconds, with a modem up and not in PSM; 0
+ * for no limit.  Only a pass releases such a modem, or finds that the PSM it
+ * was granted never came, and nothing else brings one round before the next
+ * report: until the deadline of the PSM check at the foot of the loop, or soon
+ * where there is no grant to wait for. */
+#define MODEM_AWAKE_RECHECK_S 30
+static int modem_awake_check_s(void)
+{
+    if (!network_ready || modem_psm_asleep()) {
+        return 0;
+    }
+    if (IS_ENABLED(CONFIG_APP_PSM_SLEEP) && modem_psm_granted()) {
+        int64_t left_ms = (int64_t)(CONFIG_APP_PSM_ACTIVE_S +
+                                    CONFIG_APP_PSM_SLEEP_GRACE_S) * 1000 -
+                          modem_radio_quiet_ms();
+
+        return left_ms > 0 ? (int)((left_ms + 999) / 1000) : 1;
+    }
+    return MODEM_AWAKE_RECHECK_S;
+}
+
 /* A fix someone asked for (gpsfix, or the backup supply turned on) is
  * answered with its position once the search is done. */
 static bool s_fix_answer_due;
@@ -798,6 +886,127 @@ static bool should_send_data(void)
         elapsed >= (int64_t)g_settings.loop_interval * 1000)
                                                  return true;
     return false;
+}
+
+/* -- intelligent power saving (smart_power.h) ------------------------------ */
+
+/* Whether the stored signal (the last report's, or one measured since) still
+ * speaks for where the unit stands. */
+static bool parked_signal_known(void)
+{
+    return s_smart.have_ref && !s_smart.moved && accel_available();
+}
+
+/* Everything that must not wait for a later report.  v is the rail.  Log
+ * lines held for a better signal can wait. */
+static uint32_t smart_pending(float v)
+{
+    uint32_t p = 0;
+
+    if (alert_count > 0 || alert_unanswered() > 0 || data_alert_due(v)) {
+        p |= SMART_PENDING_ALERT;
+    }
+    if (data_index > 0 || databuf_count() > 0 || databuf_unacked() > 0) {
+        p |= SMART_PENDING_RECORDS;
+    }
+    if (data_log_due(parked_signal_known(), s_smart.rsrp_dbm) > 0) {
+        p |= SMART_PENDING_LOG;
+    }
+    if (data_fields_waiting()) {
+        p |= SMART_PENDING_FIELDS;
+    }
+    if (!last_send_ok || modem_unregistered_s() >= 0 ||
+        pending_server_cmd[0] != '\0' || jobs_pending() || power_reboot ||
+        fota_check_requested() || fota_report_pending() ||
+        s_move_needs_gps || s_fix_answer_due) {
+        p |= SMART_PENDING_WORK;
+    }
+    return p;
+}
+
+/* The longest a parked wake waits for a neighbour-cell measurement (about 1 s
+ * on the bench), and the weakest RSRP there is, to ask whether any reading
+ * would hold the waiting log lines. */
+#define SMART_NCELL_TIMEOUT_MS 5000
+#define SMART_RSRP_WEAKEST_DBM (-157)
+
+/* Further down: the key or the accelerometer wants the sleep loop. */
+static bool drain_woken(void);
+
+enum smart_wake {
+    SMART_WAKE_REPORT,      /* send it */
+    SMART_WAKE_DEFER,       /* put it off */
+    SMART_WAKE_INTERRUPTED, /* another wake came: see to that first */
+};
+
+/* What to do with this wake's report.  The modem is asked for the signal only
+ * when the answer could matter: an AT%XMONITOR, and where a modem asleep has
+ * nothing for that and the stored reading alone would put the report off, one
+ * neighbour-cell measurement. */
+static enum smart_wake smart_defer(float v, bool timed_only)
+{
+    if (!tun_smart_power()) {
+        return SMART_WAKE_REPORT;
+    }
+
+    struct smart_power_in in = {
+        .enabled = true,
+        .timed_only = timed_only,
+        .pending = smart_pending(v),
+        .imu_ok = accel_available(),
+        .on_backup = battery_on_backup(v),
+        .batt_mv = (int)(v * 1000.0f + 0.5f),
+        .now_ms = k_uptime_get(),
+        .next_interval_s = telemetry_interval(),
+        .rsrp_thr_dbm = tun_smart_power_rsrp_dbm(),
+        .batt_thr_mv = tun_smart_power_battery_mv(),
+        .batt_drop_mv = tun_smart_power_battery_drop_mv(),
+        .max_defer_s = tun_smart_power_max_defer_s(),
+    };
+    enum smart_power_why why = smart_power_decide(&s_smart, &in);
+
+    /* A modem that does answer AT%XMONITOR is believed, either way, also on
+     * whether the log lines are held. */
+    if ((why == SMART_DEFER || why == SMART_SEND_SIGNAL ||
+         (why == SMART_SEND_PENDING && in.pending == SMART_PENDING_LOG)) &&
+        modem_is_registered()) {
+        int rsrp = 0;
+
+        if (modem_read_signal() == 0) {
+            in.fresh_valid = true;
+            rsrp = g_cell.rsrp_dbm;
+        } else if (IS_ENABLED(CONFIG_APP_SMART_POWER_NCELL) &&
+                   smart_power_hangs_on_signal(&s_smart, &in) &&
+                   (!(in.pending & SMART_PENDING_LOG) ||
+                    data_log_due(true, SMART_RSRP_WEAKEST_DBM) == 0)) {
+            int err = modem_measure_rsrp(&rsrp, SMART_NCELL_TIMEOUT_MS,
+                                         drain_woken);
+
+            if (err == -ECANCELED) {
+                return SMART_WAKE_INTERRUPTED;
+            }
+            if (err) {
+                LOG_DBG("smart power: no measurement (%d)", err);
+            }
+            in.fresh_valid = (err == 0);
+        }
+        if (in.fresh_valid) {
+            in.fresh_rsrp_dbm = rsrp;
+            smart_power_measured(&s_smart, rsrp);
+            in.pending = smart_pending(v);
+            why = smart_power_decide(&s_smart, &in);
+        }
+    }
+    if (why != SMART_DEFER) {
+        return SMART_WAKE_REPORT;
+    }
+    data_report_deferred();
+    LOG_INF("smart power: report deferred (rsrp %d dBm %s, %.2fV, last sent "
+            "%lld min ago)",
+            in.fresh_valid ? in.fresh_rsrp_dbm : s_smart.rsrp_dbm,
+            in.fresh_valid ? "now" : "stored", (double)v,
+            (in.now_ms - s_smart.sent_ms) / 60000);
+    return SMART_WAKE_DEFER;
 }
 
 /* ========================================================================= */
@@ -970,7 +1179,8 @@ static bool drain_key_on(void)
 }
 
 /* In a parked wake the sleep-side interrupts are armed, and this pass took
- * the flags they had latched before it got here, so one set now is new. */
+ * the flags they had latched before it got here, so one set now is new.  Also
+ * what abandons smart_defer()'s signal measurement. */
 static bool drain_woken(void)
 {
     return ign_on_since_check() || atomic_get(&s_accel_int_flag) != 0;
@@ -1252,11 +1462,10 @@ static void do_sleep(void)
     led_all_off();
     LOG_INF("sleep: all peripherals off");
 
-    accel_read_baseline();
-    accel_snapshot_tilt_ref();
-    accel_irq_enable();
+    s_tow_alerted = false;
+    sleep_accel_start();
+    smart_power_reset(&s_smart);    /* nothing sent from this stay yet */
 
-    bool tow_alerted = false;
 #if SLEEP_D6D_TAMPER
     bool tamper_alerted = false;
 #endif
@@ -1326,13 +1535,13 @@ static void do_sleep(void)
             sleep_secs = telemetry_remaining;
         if (s_move_cooldown_secs > 0 && s_move_cooldown_secs < sleep_secs)
             sleep_secs = s_move_cooldown_secs;
-        if (TOW_TILT_DEG > 0 && sleep_secs > TOW_POLL_S)
+        if (TOW_TILT_DEG > 0 && !s_tow_abs && sleep_secs > TOW_POLL_S)
             sleep_secs = TOW_POLL_S;   /* slow-tilt poll cadence */
-        if (IS_ENABLED(CONFIG_APP_BACKUP_SUPPLY) &&
-            sleep_secs > BACKUP_RAIL_POLL_S)
-            sleep_secs = BACKUP_RAIL_POLL_S;   /* backup rail poll */
         if (resend_owed && sleep_secs > RESEND_POLL_S)
             sleep_secs = RESEND_POLL_S;   /* notice the registration */
+        int modem_check_s = modem_awake_check_s();
+        if (modem_check_s > 0 && sleep_secs > modem_check_s)
+            sleep_secs = modem_check_s;
         if (sleep_secs < 1) sleep_secs = 1;
         hw_gnss_backup_cutoff(sleep_secs, s_backup_seen);
 
@@ -1345,6 +1554,10 @@ static void do_sleep(void)
          * debounce) is latched but its semaphore was just reset: give it
          * back so the wait returns at once instead of at the next timer. */
         if (atomic_get(&s_ign_int_flag)) {
+            k_sem_give(&s_wake_sem);
+        }
+        /* And a movement wake that came in between the re-arm and here. */
+        if (atomic_get(&s_accel_int_flag)) {
             k_sem_give(&s_wake_sem);
         }
         /* Likewise a report owed on a registration that has already
@@ -1376,9 +1589,9 @@ static void do_sleep(void)
         if (elapsed < 1) elapsed = 1;
 
         /* A quiet pass — the timer ran out, no wake interrupt is latched and
-         * no report is due — is the tow poll every TOW_POLL_S: two accel
-         * reads, an ignition read and, with the backup module, one rail
-         * conversion, none of which log.  Leave the console
+         * no report is due, which is every tow poll while one runs — is a few
+         * accel reads, an ignition read, a rail conversion or two and the
+         * re-arm, none of which log.  Leave the console
          * suspended for it rather than hold the HF clock for nothing.  Every
          * branch a quiet pass can still fall into (tilt over threshold, a
          * polled ignition change, INT1 still high, the tow re-arm, the modem
@@ -1487,9 +1700,8 @@ static void do_sleep(void)
                 sleep_key_on();
                 return;
             }
-            accel_read_baseline();
-            accel_snapshot_tilt_ref();
-            accel_irq_enable();
+            sleep_accel_start();
+            smart_power_reset(&s_smart);    /* the accel was off */
             ign_before = ignition_read();
             telemetry_remaining = telemetry_interval_once();
             continue;
@@ -1497,6 +1709,38 @@ static void do_sleep(void)
         if (key_wake) {
             sleep_key_on();
             return;
+        }
+
+        /* --- a wake from the absolute comparator: what was it? --- */
+        /* Drained ahead of the tilt check, whose alert can take longer than
+         * the ring holds.  Short of a knock it is a tilt, or something the
+         * high-pass wake would have slept through: no movement confirm, and
+         * off centre until a later pass, with the tilt check below and the
+         * poll taking it from here.  The high-pass wake is armed at once, so
+         * a knock during the rest of this pass is still caught. */
+        struct accel_impact imp;
+        bool drained = false, have_imp = false;
+        if (IS_ENABLED(CONFIG_APP_TOW_IMU_WAKE) && s_tow_abs &&
+            (atomic_get(&s_accel_int_flag) ||
+             gpio_pin_get(hw_gpio0, PIN_ACC_INT1) == 1)) {
+            console_resume();
+            gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
+                                         GPIO_INT_DISABLE);
+            smart_power_moved(&s_smart);
+            drained = true;
+            /* The comparator trips low on a knock's rise: let the rest of it
+             * reach the ring before judging it. */
+            k_msleep(TOW_WAKE_RING_MS);
+            have_imp = (accel_fifo_drain_impact(&imp) == 0 && imp.samples > 0);
+            if (have_imp &&
+                !tow_wake_knock(imp.peak_delta_mg, imp.swing_mg)) {
+                LOG_DBG("accel wake: no knock (swing %d mg), polling the tilt",
+                        imp.swing_mg);
+                drained = false;
+                tow_wake_trip(&s_tow);
+                accel_irq_enable();
+                tow_wake_trip(&s_tow);  /* and at this pass's own re-arm */
+            }
         }
 
         /* --- slow-tilt check (tow / jack) --- */
@@ -1519,6 +1763,7 @@ static void do_sleep(void)
             }
 
             if (tilt >= TOW_TILT_DEG * 10) {
+                smart_power_moved(&s_smart);
                 console_resume();
                 k_msleep(2000);                       /* debounce */
                 tilt = accel_tilt_from_ref_tenths();
@@ -1527,8 +1772,8 @@ static void do_sleep(void)
                             tilt / 10, tilt % 10);
                     continue;           /* the next pass takes the key */
                 }
-                if (tilt >= TOW_TILT_DEG * 10 && !tow_alerted) {
-                    tow_alerted = true;
+                if (tilt >= TOW_TILT_DEG * 10 && !s_tow_alerted) {
+                    s_tow_alerted = true;
                     tow_stable_secs = 0;
                     LOG_WRN("sustained tilt %d.%ddeg - possible tow/jack",
                             tilt / 10, tilt % 10);
@@ -1547,7 +1792,7 @@ static void do_sleep(void)
                     alert_send_standalone();
                 }
             } else if (tilt >= 0 && tilt < TOW_TILT_DEG * 5) {
-                tow_alerted = false;   /* re-arm once back near level */
+                s_tow_alerted = false;   /* re-arm once back near level */
             }
 
             /* Latched at an attitude it is not coming back from: once that
@@ -1555,11 +1800,11 @@ static void do_sleep(void)
              * normal so a *further* tilt can alert again.  Without the
              * re-snap, clearing the latch would just re-alert on the lift
              * that is already reported. */
-            if (tow_alerted && TOW_REARM_S > 0 &&
+            if (s_tow_alerted && TOW_REARM_S > 0 &&
                 tow_stable_secs >= TOW_REARM_S) {
                 console_resume();
                 accel_snapshot_tilt_ref();
-                tow_alerted = false;
+                s_tow_alerted = false;
                 tow_stable_secs = 0;
                 tow_last_tilt = -1;
                 LOG_INF("tow tilt re-armed at the new resting attitude");
@@ -1592,15 +1837,15 @@ static void do_sleep(void)
         }
 #endif
 
-        /* --- backup rail poll --- */
-        /* The module's wake pulse only reaches the sense if nothing else on
-         * the ignition wire holds it down, which a car's own ignition loads
-         * can, and on the first bench tests it never arrived.  So the rail
-         * is read on every pass as well: one INA conversion, silent unless
-         * it finds something.  Settled in the band (confirmed a moment
-         * later) is the module carrying the tracker, reported once; back
-         * above it is the car supply returning, reported once, which also
-         * re-arms the poll for the next cut. */
+        /* --- backup rail check --- */
+        /* The module's wake pulse is how a cut is found.  The read here is
+         * the fallback, for a pulse that something on the ignition wire held
+         * down: one INA conversion on whatever pass runs (a report, a wake,
+         * at the least once an hour), silent unless it finds something.  It
+         * is also what notices the car supply coming back.  Settled in the
+         * band (confirmed a moment later) is the module carrying the
+         * tracker, reported once; back above it is the car supply returning,
+         * reported once, which also re-arms the check for the next cut. */
         if (IS_ENABLED(CONFIG_APP_BACKUP_SUPPLY) && !backup_wake &&
             !restore_wake) {
             float v = battery_poll_voltage();
@@ -1640,9 +1885,11 @@ static void do_sleep(void)
          * while it was still being moved. */
         bool accel_int = atomic_clear(&s_accel_int_flag) != 0;
         if (accel_available() &&
-            (accel_int || gpio_pin_get(hw_gpio0, PIN_ACC_INT1) == 1)) {
+            (accel_int || drained ||
+             gpio_pin_get(hw_gpio0, PIN_ACC_INT1) == 1)) {
             console_resume();
             LOG_INF("accel wake");
+            smart_power_moved(&s_smart);
             gpio_pin_interrupt_configure(hw_gpio0, PIN_ACC_INT1,
                                          GPIO_INT_DISABLE);
 
@@ -1654,9 +1901,10 @@ static void do_sleep(void)
              * the two rather than the hit.  (The ring itself is safe either
              * way in sleep: accel-only at 26 Hz batching is ~438 samples,
              * about 16 s, so a 10 s confirm does not wrap it.) */
-            struct accel_impact imp;
-            bool have_imp = (accel_fifo_drain_impact(&imp) == 0 &&
-                             imp.samples > 0);
+            if (!drained) {
+                have_imp = (accel_fifo_drain_impact(&imp) == 0 &&
+                            imp.samples > 0);
+            }
             int peak = have_imp ? imp.peak_delta_mg : 0;
             bool impact_sent = false;
 
@@ -1808,8 +2056,11 @@ static void do_sleep(void)
         }
 
         /* --- owed timed report --- */
+        bool owed_now = false;      /* this pass's report is one that was owed */
+
         if (resend_owed && modem_is_registered()) {
             report_owed_set(&resend_owed, false);
+            owed_now = true;
             if (report_interval() > 0) {
                 LOG_WRN("registered — sending the timed report owed for "
                         "%lld s",
@@ -1853,6 +2104,9 @@ static void do_sleep(void)
              * record, and the only way the server hears the car supply is
              * back before the next timed wake. */
             bool forced = restore_wake;
+            /* Only the interval's own report may be put off. */
+            bool timed_only = !backup_wake && !restore_wake && !owed_now &&
+                              !resend_owed && wake_at == 0;
 
             backup_wake = false;
             restore_wake = false;
@@ -1878,9 +2132,8 @@ static void do_sleep(void)
                     return;
                 }
                 /* Recovered without a key: sleep as before. */
-                accel_read_baseline();
-                accel_snapshot_tilt_ref();
-                accel_irq_enable();
+                sleep_accel_start();
+                smart_power_reset(&s_smart);
                 ign_before = ignition_read();
                 telemetry_remaining = telemetry_interval_once();
                 continue;
@@ -1888,8 +2141,31 @@ static void do_sleep(void)
             if (!on_backup && !forced && v > 0 && v < SLEEP_SAFETY_VOLTAGE) {
                 LOG_WRN("battery %.2fV, skipping send", (double)v);
                 hw_power_shutdown();
+                /* A movement in this pass leaves the wake disarmed, and the
+                 * next pass may be a long way off. */
+                accel_read_baseline();
+                accel_irq_enable();
                 telemetry_remaining = telemetry_interval_once();
                 continue;
+            }
+
+            enum smart_wake smart = smart_defer(v, timed_only);
+
+            if (smart == SMART_WAKE_INTERRUPTED) {
+                /* Straight to the next pass, which takes the wake and comes
+                 * back to the report a second on.  Not by way of pass_end,
+                 * whose re-arm would drop a latched movement wake.  The
+                 * parked line reads off, so a key now on is seen there as a
+                 * change even without its interrupt. */
+                hw_power_shutdown();
+                telemetry_remaining = 1;
+                ign_before = 1;
+                continue;
+            }
+            if (smart == SMART_WAKE_DEFER) {
+                hw_power_shutdown();
+                telemetry_remaining = telemetry_interval_once();
+                goto pass_end;
             }
 
             /* Past the battery gates, so a wake that skipped the send
@@ -1953,6 +2229,9 @@ static void do_sleep(void)
 
             ignition = (char)ignition_read();
             read_udp_response = true;
+            /* Before report_start() forgets it. */
+            data_log_signal_ref(parked_signal_known(), s_smart.rsrp_dbm);
+            smart_power_report_start(&s_smart);
             if (collect_data(ignition) > 0) {
                 wake_rec_id = data_last_rec_id();
                 send_data();
@@ -1968,6 +2247,14 @@ static void do_sleep(void)
                     wake_rsrp_dbm = g_cell.rsrp_dbm;
                     wake_snr_db = g_cell.snr_db;
                     wake_band = g_cell.band;
+                }
+                if (last_send_ok && g_cell.signal_valid &&
+                    g_cell.signal_ms >= woke_ms) {
+                    /* The wake's reading, taken before the radio's load
+                     * like the ones it will be compared with. */
+                    smart_power_report_sent(&s_smart, k_uptime_get(),
+                                            g_cell.rsrp_dbm,
+                                            (int)(v * 1000.0f + 0.5f));
                 }
                 if (pending_server_cmd[0] != '\0') {
                     cmd_run(pending_server_cmd);
@@ -2004,6 +2291,7 @@ static void do_sleep(void)
                 network_backoff_reset();
             }
             data_reset();
+            data_log_signal_ref(false, 0);
 
             if (search_gps) {
                 gnss_stop();
@@ -2090,6 +2378,7 @@ static void do_sleep(void)
             }
         }
 
+pass_end:
         /* power modem back off if any alert or telemetry path woke it —
          * except with a timed report owed on a search still inside its
          * window, or on a registration that has just arrived: the next
@@ -2216,6 +2505,13 @@ static void do_sleep(void)
  * for that level only: the key-on level holds here, and would fire at once. */
 static void ign_off_irq_enable(void)
 {
+    if (IS_ENABLED(CONFIG_APP_IGN_PULSED_PULLUP)) {
+        /* A pull-up held against the on FET costs ~250 uA: leave the pin
+         * released and let the wait's 5 s rail poll find the key off. */
+        gpio_pin_interrupt_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INT_DISABLE);
+        ignition_sense_hold(false);
+        return;
+    }
     ign_irq_arm(GPIO_INT_LEVEL_HIGH);
 }
 
@@ -2535,6 +2831,7 @@ static struct kline_discovery kline_boot_disc;
      IS_ENABLED(CONFIG_APP_ACCEL_TEST)       ||   \
      IS_ENABLED(CONFIG_APP_VOLTAGE_TEST)     ||   \
      IS_ENABLED(CONFIG_APP_L_SENSE_TEST)     ||   \
+     IS_ENABLED(CONFIG_APP_IGN_TEST)         ||   \
      IS_ENABLED(CONFIG_APP_LTE_POWER_TEST))
 
 /* Every datagram and the update check carry the IMEI.  Reading it needs no
@@ -2773,6 +3070,21 @@ int main(void)
         } else {
             printk("VBUS=%.3f V\n", (double)v);
         }
+        k_msleep(500);
+    }
+#endif
+
+#if IS_ENABLED(CONFIG_APP_IGN_TEST)
+    printk("\n*** IGNITION TEST — ignition state at 2 Hz (%s pull-up) ***\n",
+           IS_ENABLED(CONFIG_APP_BOARD_IGN_EXT_PULLUP) ? "external" :
+           IS_ENABLED(CONFIG_APP_IGN_PULSED_PULLUP) ? "pulsed internal" :
+           "internal");
+    for (int prev = -1;;) {
+        int v = ignition_read();    /* 0 = ON (active low) */
+
+        printk("%8lld ms  ign=%s%s\n", k_uptime_get(), v == 0 ? "ON" : "OFF",
+               prev >= 0 && v != prev ? "  <-- changed" : "");
+        prev = v;
         k_msleep(500);
     }
 #endif

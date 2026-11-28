@@ -25,9 +25,14 @@ static bool s_ok;
 #define ACC_FIFO_CTRL3 0x09
 #define ACC_FIFO_CTRL4 0x0A
 #define ACC_CTRL1_XL   0x10
+
+/* FIFO batch period: 26 Hz, or 12.5 Hz in a 12.5 Hz sleep */
+#define FIFO_SAMPLE_MS   38
+static int s_fifo_sample_ms = FIFO_SAMPLE_MS;
 #define ACC_CTRL2_G    0x11
 #define ACC_CTRL3_C    0x12
 #define ACC_CTRL6_C    0x15
+#define ACC_CTRL7_G    0x16
 #define ACC_OUT_TEMP_L 0x20
 #define ACC_OUTX_L_G   0x22
 #define ACC_OUTX_L_A   0x28
@@ -42,6 +47,7 @@ static bool s_ok;
 #define ACC_WAKE_UP_DUR 0x5C
 #define ACC_WAKE_UP_SRC 0x1B
 #define ACC_MD1_CFG    0x5E
+#define ACC_X_OFS_USR  0x73		/* Y and Z follow */
 
 static int16_t s_base_x, s_base_y, s_base_z;
 
@@ -319,16 +325,19 @@ int accel_enable_wake_int(void)
 	 * (~170 µA) at every ODR; true low-power at 52 Hz is ~25 µA */
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL6_C, 0x10);
 
-	/* Switch to low-power 52 Hz ±2 g for sleep (fine wake sensitivity) */
-	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL1_XL, 0x30))
+	/* Switch to low-power ±2 g for sleep (fine wake sensitivity), at
+	 * 52 Hz (ODR code 0x3) or 26 Hz (0x2) */
+	uint8_t odr = CONFIG_APP_ACC_SLEEP_ODR_HZ >= 52 ? 0x3
+		    : CONFIG_APP_ACC_SLEEP_ODR_HZ >= 26 ? 0x2 : 0x1;
+	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL1_XL, odr << 4))
 		return -EIO;
 	s_mg_per_lsb = 0.061f;
 
 	/* The FS/ODR change makes the raw output step ~4x and resets the slope
 	 * filter — without settling, that internal step fires a spurious wake
 	 * interrupt ~26 ms after arming and the first reads are garbage.
-	 * 100 ms ≈ 5 samples at 52 Hz. */
-	k_msleep(100);
+	 * About 5 samples: 100 ms at 52 Hz, 200 ms at 26 Hz. */
+	k_msleep(odr == 0x3 ? 100 : odr == 0x2 ? 200 : 400);
 
 	/* Keep the FIFO ring running in sleep, accel-only (gyro is off), so a
 	 * parked impact's true waveform is captured for drain on wake.  Not
@@ -341,8 +350,10 @@ int accel_enable_wake_int(void)
 	 * unit's ~250 mg made a 744 mg "impact" on the bench, until the ring
 	 * cycled them out.  The settling samples go too. */
 	s_fifo_awake = false;
+	/* Batched at 26 Hz, or at the output rate below it */
+	s_fifo_sample_ms = odr == 0x1 ? 80 : FIFO_SAMPLE_MS;
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x00);
-	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, 0x02);
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, odr == 0x1 ? 0x01 : 0x02);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x06);
 
 	/* Enable slope filter for wake-up */
@@ -387,6 +398,45 @@ int accel_enable_wake_int(void)
 	return 0;
 }
 
+/* Turns the wake-up that accel_enable_wake_int() has just armed into the
+ * absolute one of tow_wake.h: INT1 while any axis of the low-pass output is
+ * more than ths WK_THS steps (7.8 mg) from the stored offsets, 6D as before.
+ * The offsets reach the wake-up engine only: USR_OFF_ON_OUT stays off, so the
+ * output registers and the FIFO still read raw.  On a failed write the
+ * high-pass wake is put back. */
+int accel_wake_absolute(const int8_t ofs[3], int ths)
+{
+	if (!s_ok) return -1;
+
+	bool ok = bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL7_G, 0x00);
+
+	/* XL_HM_MODE as before, USR_OFF_W: offsets of 2^-6 g a step */
+	ok = ok && bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL6_C, 0x18);
+	for (int i = 0; i < 3; i++) {
+		ok = ok && bb_write_reg(&acc_bus, ACC_ADDR, ACC_X_OFS_USR + i,
+					(uint8_t)ofs[i]);
+	}
+	/* WAKE_THS_W: 1 LSB = FS/256.  Duration 0. */
+	ok = ok && bb_write_reg(&acc_bus, ACC_ADDR, ACC_WAKE_UP_DUR, 0x10);
+	/* USR_OFF_ON_WU last, with everything it reads in place */
+	ok = ok && bb_write_reg(&acc_bus, ACC_ADDR, ACC_WAKE_UP_THS,
+				(uint8_t)(0x40 | (ths & 0x3F)));
+	if (!ok) {
+		bb_write_reg(&acc_bus, ACC_ADDR, ACC_WAKE_UP_THS, 0x05);
+		bb_write_reg(&acc_bus, ACC_ADDR, ACC_WAKE_UP_DUR, 0x00);
+		bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL6_C, 0x10);
+		return -EIO;
+	}
+
+	/* A couple of samples on the new path, then drop what the change
+	 * raised. */
+	k_msleep(80);
+	uint8_t dummy;
+	bb_read_regs(&acc_bus, ACC_ADDR, ACC_WAKE_UP_SRC, &dummy, 1);
+	bb_read_regs(&acc_bus, ACC_ADDR, ACC_D6D_SRC, &dummy, 1);
+	return 0;
+}
+
 int accel_disable_wake_int(void)
 {
 	if (!s_ok) return -1;
@@ -400,6 +450,14 @@ int accel_disable_wake_int(void)
 
 	/* Back to 416 Hz ±8 g in high-performance mode, gyro back on */
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL6_C, 0x00);
+	if (IS_ENABLED(CONFIG_APP_TOW_IMU_WAKE)) {
+		/* nothing of the absolute wake is left behind */
+		bb_write_reg(&acc_bus, ACC_ADDR, ACC_WAKE_UP_THS, 0x00);
+		bb_write_reg(&acc_bus, ACC_ADDR, ACC_WAKE_UP_DUR, 0x00);
+		for (int i = 0; i < 3; i++) {
+			bb_write_reg(&acc_bus, ACC_ADDR, ACC_X_OFS_USR + i, 0);
+		}
+	}
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL1_XL, 0x6C);
 	s_mg_per_lsb = 0.244f;
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL2_G, 0x40);
@@ -427,22 +485,30 @@ int accel_power_down(void)
 	return 0;
 }
 
-/* Gyro off and the accelerometer in low power at 52 Hz, still at the crash
- * interrupt's +-8 g, with the FIFO batching it alone: the key-on, engine-off
- * wait.  accel_disable_wake_int() puts both sensors back. */
+/* Gyro off and the accelerometer in low power at APP_IGN_SLEEP_IMU_HZ, still
+ * at the crash interrupt's +-8 g, with the FIFO batching it alone: the key-on,
+ * engine-off wait.  accel_disable_wake_int() puts both sensors back. */
 int accel_crash_low_power(void)
 {
 	if (!s_ok) return -1;
 
+	/* ODR code 0x3 (52 Hz), 0x2 (26 Hz) or 0x1 (12.5 Hz) */
+	uint8_t odr = CONFIG_APP_IGN_SLEEP_IMU_HZ >= 52 ? 0x3
+		    : CONFIG_APP_IGN_SLEEP_IMU_HZ >= 26 ? 0x2 : 0x1;
+
 	s_fifo_awake = false;
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL2_G, 0x00);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL6_C, 0x10);
-	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL1_XL, 0x3C))
+	/* FS_XL = 11: +-8 g */
+	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_CTRL1_XL, (odr << 4) | 0x0C))
 		return -EIO;
 	s_mg_per_lsb = 0.244f;
-	k_msleep(100);		/* the ODR change settles, as in the sleep set-up */
+	/* The ODR change settles, about 5 samples, as in the sleep set-up */
+	k_msleep(odr == 0x3 ? 100 : odr == 0x2 ? 200 : 400);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x00);
-	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, 0x02);
+	/* Batched at 26 Hz, or at the output rate below it */
+	s_fifo_sample_ms = odr == 0x1 ? 80 : FIFO_SAMPLE_MS;
+	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, odr == 0x1 ? 0x01 : 0x02);
 	bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x06);
 	return 0;
 }
@@ -521,17 +587,42 @@ int accel_d6d_tamper(uint8_t *src)
 static int16_t s_tilt_ref[3];
 static bool    s_tilt_ref_ok;
 
+/* With the IMU watching for tilt (APP_TOW_IMU_WAKE) the reference is also the
+ * comparator's centre: it is taken in the sleep configuration, and averaged,
+ * so that one noisy or shaken sample does not set it off centre. */
+#define TILT_REF_SAMPLES   8
+#define TILT_REF_GAP_MS    40		/* a sample apart at 26 Hz */
+
 int accel_snapshot_tilt_ref(void)
 {
-	int x, y, z;
-	if (accel_read(&x, &y, &z) != 0) {
-		s_tilt_ref_ok = false;
-		return -1;
+	int n = IS_ENABLED(CONFIG_APP_TOW_IMU_WAKE) ? TILT_REF_SAMPLES : 1;
+	int sum[3] = { 0 };
+
+	for (int i = 0; i < n; i++) {
+		int x, y, z;
+
+		if (i > 0) k_msleep(TILT_REF_GAP_MS);
+		if (accel_read(&x, &y, &z) != 0) {
+			s_tilt_ref_ok = false;
+			return -1;
+		}
+		sum[0] += x;
+		sum[1] += y;
+		sum[2] += z;
 	}
-	s_tilt_ref[0] = (int16_t)x;
-	s_tilt_ref[1] = (int16_t)y;
-	s_tilt_ref[2] = (int16_t)z;
+	for (int k = 0; k < 3; k++) {
+		s_tilt_ref[k] = (int16_t)(sum[k] / n);
+	}
 	s_tilt_ref_ok = true;
+	return 0;
+}
+
+int accel_tilt_ref(int mg[3])
+{
+	if (!s_tilt_ref_ok) return -1;
+	for (int k = 0; k < 3; k++) {
+		mg[k] = s_tilt_ref[k];
+	}
 	return 0;
 }
 
@@ -566,7 +657,6 @@ int accel_tilt_from_ref_tenths(void)
  * for that drain, so an impact's profile reaches back to the last drain. */
 
 #define FIFO_MAX_SAMPLES 512
-#define FIFO_SAMPLE_MS   38              /* 26 Hz */
 
 static int16_t s_fifo_xl[FIFO_MAX_SAMPLES][3];   /* raw LSB */
 static int16_t s_fifo_gy[FIFO_MAX_SAMPLES][3];
@@ -645,6 +735,7 @@ int accel_fifo_enable(void)
 	/* BDR 26 Hz for both sensors (gyro[7:4]=0010, xl[3:0]=0010) */
 	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL3, 0x22))
 		return -EIO;
+	s_fifo_sample_ms = FIFO_SAMPLE_MS;
 	/* Continuous (ring) mode */
 	if (!bb_write_reg(&acc_bus, ACC_ADDR, ACC_FIFO_CTRL4, 0x06))
 		return -EIO;
@@ -723,7 +814,13 @@ int accel_fifo_drain_impact(struct accel_impact *out)
 	 * spikes go above, free-fall dips below) */
 	int over = 0;
 	float peak_dev = 0.0f;
+	int lo_raw[3] = { INT16_MAX, INT16_MAX, INT16_MAX };
+	int hi_raw[3] = { INT16_MIN, INT16_MIN, INT16_MIN };
 	for (int i = 0; i < nxl; i++) {
+		for (int k = 0; k < 3; k++) {
+			lo_raw[k] = MIN(lo_raw[k], s_fifo_xl[i][k]);
+			hi_raw[k] = MAX(hi_raw[k], s_fifo_xl[i][k]);
+		}
 		float x = s_fifo_xl[i][0] * mg;
 		float y = s_fifo_xl[i][1] * mg;
 		float z = s_fifo_xl[i][2] * mg;
@@ -732,8 +829,12 @@ int accel_fifo_drain_impact(struct accel_impact *out)
 		if (dev > peak_dev) peak_dev = dev;
 		if (dev > 250.0f) over++;
 	}
-	out->over_ms = over * FIFO_SAMPLE_MS;
+	out->over_ms = over * s_fifo_sample_ms;
 	out->peak_delta_mg = (int)peak_dev;
+	for (int k = 0; k < 3 && nxl > 0; k++) {
+		out->swing_mg = MAX(out->swing_mg,
+				    (int)((hi_raw[k] - lo_raw[k]) * mg));
+	}
 
 	/* Dump ±0.5 s around the peak to the log for bench analysis */
 	int lo = peak_idx - 13;

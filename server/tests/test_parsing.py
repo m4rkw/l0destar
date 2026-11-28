@@ -468,3 +468,19 @@ def test_response_carries_the_leds_token_after_gw():
                                     _Quiet()).endswith(',gw=off,le=1,tu=-,im=0,gx=off,os=0')
     assert telemetry.build_response(dict(base, leds=0), _NoCommands(),
                                     _Quiet()).endswith(',gw=off,le=0,tu=-,im=0,gx=off,os=0')
+
+
+# -- pd=: parked reports put off ----------------------------------------------
+
+def test_deferred_wakes_are_read_without_disturbing_the_rest():
+    data = telemetry.parse_csv_line(FULL + ',pd=3,rid=7')
+    assert data['deferred_wakes'] == 3 and data['rec_id'] == '7'
+    assert 'deferred_wakes' not in telemetry.parse_csv_line(FULL)
+    # Not a log column until there is one in the database.
+    assert 'deferred_wakes' not in telemetry.LOG_COLUMNS
+
+
+@pytest.mark.parametrize('value', ['', '-1', 'x', '1.5', '\u00b2', '9' * 10])
+def test_unusable_deferred_wakes_are_dropped(value):
+    data = telemetry.parse_csv_line(FULL + ',pd=' + value + ',rid=7')
+    assert 'deferred_wakes' not in data and data['rec_id'] == '7'

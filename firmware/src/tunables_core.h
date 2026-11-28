@@ -41,6 +41,12 @@ enum tun_key {
 	TUN_XWR,	/* weak-signal send hold: RSRP at or below this, dBm (0 = off) */
 	TUN_XWS,	/* weak-signal send hold: SNR at or below this, dB */
 	TUN_XWM,	/* weak-signal send hold: longest hold, s */
+	TUN_XSP,	/* intelligent power saving on/off */
+	TUN_XSR,	/* ... weak at or below this RSRP, dBm */
+	TUN_XSB,	/* ... battery low at or below this, mV */
+	TUN_XSD,	/* ... send on a battery drop of this, mV (0 = off) */
+	TUN_XSM,	/* ... longest between parked reports, s */
+	TUN_XLH,	/* log lines held at or below this RSRP, dBm (0 = off) */
 	TUN_N_INT
 };
 
@@ -73,6 +79,14 @@ static const struct {
 	[TUN_XWR] = {"xwr", -140, 0},
 	[TUN_XWS] = {"xws", -20, 5},
 	[TUN_XWM] = {"xwm", 5, 600},
+	[TUN_XSP] = {"xsp", 0, 1},
+	[TUN_XSR] = {"xsr", -140, -90},
+	[TUN_XSB] = {"xsb", 11000, 13000},
+	[TUN_XSD] = {"xsd", 0, 1000},
+	[TUN_XSM] = {"xsm", 0, 86400},	/* never more than a day */
+	/* xlh: -140..-90 dBm, or 0 for off; -89..-1 is read as off
+	 * (log_hold.h). */
+	[TUN_XLH] = {"xlh", -140, 0},
 };
 
 /* The poweroff level may be at most this far under the warning level. */
@@ -207,16 +221,17 @@ static inline int32_t tun_table_get(const struct tun_table *t, enum tun_key k,
 	return v;
 }
 
-/* The built values as the "tb=" record field, in the tu= grammar: all twenty
- * integer keys plus xoa (commas sent as '|', "xoa:" when empty) and xop (the
+/* The built values as the "tb=" record field, in the tu= grammar: all
+ * twenty-six integer keys plus xoa (commas sent as '|', "xoa:" when empty) and xop (the
  * PID selection, "xop:" when empty), ';'-separated in the order xtt xpi xii
- * xap xab xoa xop xis xbw xbp xds xdi xim xia xic xdd xns xrp xlw xwr xws xwm.
+ * xap xab xoa xop xis xbw xbp xds xdi xim xia xic xdd xns xrp xlw xwr xws xwm xsp
+ * xsr xsb xsd xsm xlh.
  * Worst case with every integer in its limits, a 120-char xoa and a 24-char
- * xop is 317 bytes
+ * xop is 368 bytes
  * plus the NUL; TUN_BUILT_BUF leaves room for a few out-of-range Kconfig
  * values.  Returns the length, or -1 (out[0] = '\0') if it does not fit or the
  * xoa / xop is longer than TUN_OA_MAX / TUN_OP_MAX. */
-#define TUN_BUILT_BUF 352
+#define TUN_BUILT_BUF 400
 
 static inline int tun_format_built(char *out, size_t cap, const int32_t built[TUN_N_INT],
 				   const char *oa, const char *op)

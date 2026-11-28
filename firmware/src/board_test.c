@@ -133,6 +133,7 @@ static void acc_isr(const struct device *dev, struct gpio_callback *cb,
 
 static void ign_irq(bool on)
 {
+	ignition_sense_hold(on);    /* the edge needs the pull-up held */
 	if (on) {
 		if (!s_ign_cb_in) {
 			gpio_init_callback(&s_ign_cb, ign_isr,

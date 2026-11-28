@@ -178,6 +178,21 @@ CREATE TABLE `device` (
   `weak_hold_snr_db`      TINYINT DEFAULT NULL,
   -- xwm: APP_WEAK_HOLD_MAX_S, seconds, 5-600: longest a send is held
   `weak_hold_max_s`       SMALLINT DEFAULT NULL,
+  -- xsp: APP_SMART_POWER, 0 or 1: put off costly parked reports
+  `smart_power`           TINYINT DEFAULT NULL,
+  -- xsr: APP_SMART_POWER_RSRP_DBM, dBm, -140..-90: weak at or below this
+  `smart_power_rsrp_dbm`  SMALLINT DEFAULT NULL,
+  -- xsb: APP_SMART_POWER_BATTERY_MV, mV, 11000-13000: low at or below this
+  `smart_power_battery_mv` SMALLINT DEFAULT NULL,
+  -- xsd: APP_SMART_POWER_BATTERY_DROP_MV, mV, 0-1000 (0 = off): report once
+  -- the battery has dropped this far since the last report
+  `smart_power_battery_drop_mv` SMALLINT DEFAULT NULL,
+  -- xsm: APP_SMART_POWER_MAX_DEFER_S, seconds, 0-86400: longest between
+  -- parked reports
+  `smart_power_max_defer_s` INT DEFAULT NULL,
+  -- xlh: APP_LOG_HOLD_RSRP_DBM, dBm, -140..-90, or 0 for off: hold captured
+  -- warnings while the RSRP is at or below this
+  `log_hold_rsrp_dbm`     SMALLINT DEFAULT NULL,
   -- The values the unit says it is built with (tb=), raw: <code>:<value>[;...]
   -- in the tu= grammar, xoa's commas as '|'.  NULL until it has reported.
   -- GET /config and /devices show them as tunables_built, and the value in

@@ -22,6 +22,9 @@ EVERY = {
     'databuf_drain_s': 60, 'network_search_s': 3600,
     'resp_poll_s': 20, 'led_accel_wake': 0,
     'weak_hold_rsrp_dbm': -115, 'weak_hold_snr_db': -6, 'weak_hold_max_s': 60,
+    'smart_power': 1, 'smart_power_rsrp_dbm': -116, 'smart_power_battery_mv': 12400,
+    'smart_power_battery_drop_mv': 40, 'smart_power_max_defer_s': 86400,
+    'log_hold_rsrp_dbm': -116,
 }
 CODES = {'tow_tilt_deg': 'xtt', 'parked_impact_mg': 'xpi', 'impact_immediate_mg': 'xii',
          'accel_alert_priority': 'xap', 'accel_alert_backoff_s': 'xab',
@@ -30,7 +33,10 @@ CODES = {'tow_tilt_deg': 'xtt', 'parked_impact_mg': 'xpi', 'impact_immediate_mg'
          'drive_stream_accel_ms': 'xim', 'drive_stream_accel': 'xia', 'drive_stream_impact': 'xic',
          'databuf_drain_s': 'xdd', 'network_search_s': 'xns',
          'resp_poll_s': 'xrp', 'led_accel_wake': 'xlw',
-         'weak_hold_rsrp_dbm': 'xwr', 'weak_hold_snr_db': 'xws', 'weak_hold_max_s': 'xwm'}
+         'weak_hold_rsrp_dbm': 'xwr', 'weak_hold_snr_db': 'xws', 'weak_hold_max_s': 'xwm',
+         'smart_power': 'xsp', 'smart_power_rsrp_dbm': 'xsr', 'smart_power_battery_mv': 'xsb',
+         'smart_power_battery_drop_mv': 'xsd', 'smart_power_max_defer_s': 'xsm',
+         'log_hold_rsrp_dbm': 'xlh'}
 
 
 class Bare:
@@ -73,7 +79,8 @@ def test_all_set_and_the_obd_commas_become_pipes():
     token = telemetry.tunables_token(EVERY)
     assert token == ('xtt:8;xpi:900;xii:700;xap:-1;xab:86400;'
                      'xoa:coolant>=95|rpm>6500|stft<-12.5/2;xop:0C050B;xis:30;xbw:11900;xbp:11000;'
-                     'xds:1;xdi:900;xim:0;xia:1;xic:1;xdd:60;xns:3600;xrp:20;xlw:0;xwr:-115;xws:-6;xwm:60')
+                     'xds:1;xdi:900;xim:0;xia:1;xic:1;xdd:60;xns:3600;xrp:20;xlw:0;xwr:-115;xws:-6;xwm:60;'
+                     'xsp:1;xsr:-116;xsb:12400;xsd:40;xsm:86400;xlh:-116')
     assert ',' not in token
     assert reply(**EVERY).endswith(',le=1,tu=' + token + ',im=0,gx=off,os=0')
 
@@ -82,7 +89,16 @@ def test_the_reply_stays_small_with_every_tunable_at_its_largest():
     rules = ','.join(['rpm>6500'] * 13) + ',a>1'
     assert len(rules) == 120 and telemetry.valid_obd_alerts(rules)
     text = reply(**dict(EVERY, obd_alerts=rules))
-    assert len(text.encode()) < 400 < 1400
+    # The firmware decrypts a reply into 512 bytes and loses a longer one.
+    assert len(text.encode()) < 512
+
+
+def test_command_sets_the_power_saving_tunables(client, web, bearer):
+    response = post(client, '/command', bearer,
+                    command='smart_power=1,smart_power_battery_drop_mv=0,log_hold_rsrp_dbm=-110')
+    assert response.get_json()['status'] == 'ok'
+    assert updates(web)[-1][1] == [1, 0, -110, 1]
+    assert not [w for w in web.writes if w[0].startswith('INSERT INTO `command`')]
 
 
 # -- the rule grammar --------------------------------------------------------------
@@ -149,6 +165,8 @@ def test_config_post_sets_and_clears_with_null(client, web, bearer):
     ('xbp', 10499), ('xbp', 12201), ('xds', 2), ('xdi', 901), ('xim', -1), ('xim', 5001), ('xia', 2), ('xic', 2),
     ('xdd', 0), ('xns', 59), ('xrp', 4), ('xlw', 2),
     ('xwr', -141), ('xwr', 1), ('xws', -21), ('xws', 6), ('xwm', 4), ('xwm', 601),
+    ('xsp', -1), ('xsp', 2), ('xsr', -141), ('xsr', -89), ('xsb', 10999), ('xsb', 13001),
+    ('xsd', -1), ('xsd', 1001), ('xsm', -1), ('xsm', 86401), ('xlh', -141), ('xlh', 1),
     ('xtt', 'abc'), ('xtt', 1.5), ('xtt', True), ('xtt', ''), ('xtt', 'default'),
     ('xoa', 7), ('xoa', 'coolant'), ('xoa', 'a>1;b>2'), ('xoa', 'a>1|b>2'),
     ('xoa', 'a>1,'), ('xoa', 'a>1,b>' + '9' * 120), ('xoa', 'rpm>1é'),
@@ -257,6 +275,18 @@ def test_command_checks_the_battery_pair(client, web, bearer):
     ('weak_hold_snr_db', None, 'Weak-signal hold SNR threshold back to the built value'),
     ('weak_hold_max_s', 60, 'Weak-signal hold limit set to 60 s'),
     ('weak_hold_max_s', None, 'Weak-signal hold limit back to the built value'),
+    ('smart_power', 1, 'Intelligent power saving on'),
+    ('smart_power', 0, 'Intelligent power saving off'),
+    ('smart_power', None, 'Intelligent power saving back to the built value'),
+    ('smart_power_rsrp_dbm', -116, 'Power saving signal threshold set to -116 dBm'),
+    ('smart_power_battery_mv', 12400, 'Power saving battery threshold set to 12400 mV'),
+    ('smart_power_max_defer_s', 0, 'Power saving longest report gap set to 0 s'),
+    ('smart_power_battery_drop_mv', 40, 'Power saving battery drop report set to 40 mV'),
+    ('smart_power_battery_drop_mv', 0, 'Power saving battery drop report off'),
+    ('smart_power_battery_drop_mv', None, 'Power saving battery drop report back to the built value'),
+    ('log_hold_rsrp_dbm', -116, 'Weak-signal log hold at RSRP -116 dBm or below'),
+    ('log_hold_rsrp_dbm', 0, 'Weak-signal log hold off'),
+    ('log_hold_rsrp_dbm', None, 'Weak-signal log hold back to the built value'),
 ])
 def test_setting_text(column, value, text):
     assert ev.setting_text(column, value) == text
@@ -269,7 +299,8 @@ def test_every_tunable_has_wording():
 # -- tb=: the values the unit was built with ----------------------------------------
 
 TB = ('xtt:8;xpi:900;xii:700;xap:-1;xab:86400;xoa:coolant>=95|rpm>6500;xop:0C05;xis:30;'
-      'xbw:11900;xbp:11000;xds:1;xdi:900;xim:0;xia:1;xic:1;xdd:60;xns:3600;xrp:20;xlw:0;xwr:-115;xws:-6;xwm:60')
+      'xbw:11900;xbp:11000;xds:1;xdi:900;xim:0;xia:1;xic:1;xdd:60;xns:3600;xrp:20;xlw:0;xwr:-115;xws:-6;xwm:60;'
+      'xsp:0;xsr:-116;xsb:12400;xsd:40;xsm:86400;xlh:0')
 
 
 def test_tb_parses_every_code_and_turns_pipes_into_commas():

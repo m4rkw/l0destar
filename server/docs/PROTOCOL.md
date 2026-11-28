@@ -78,6 +78,7 @@ Anything after the twelve fixed fields is a comma-separated group of
 | `rsrp` | serving cell RSRP, dBm (−140…−44) | per-packet |
 | `snr` | serving cell SNR, dB (−24…+24) | per-packet |
 | `band` | LTE band in use | per-packet |
+| `pd` | parked wakes that put their timed report off since the record before (intelligent power saving, `APP_SMART_POWER`), on the first record built after them; absent otherwise. The server accepts it but does not store it (`log` has no column; see `migrations/2026-11-28_log_deferred_wakes.sql`) | per-record |
 | `wt` | `<rid>:<ms>[:<attach_ms>]` — how long the device was awake for the send of record `<rid>`, and how much of that was the LTE attach | retrospective |
 | `bk` | `<state>:<age_s>[\|<state>:<age_s>...]` — each change of the GNSS receiver's backup supply (V_BCKP) on a board that switches it, oldest first: 1 supplied, 0 dropped, and how long before this record was built it changed. Boot is not a change and is not reported (the server holds the state and answers `gb=`); a cut-off during the night is told by the next record. The newest is kept on the device row (`gnss_backup`, dated record time minus age) unless the API set it later | retrospective |
 | `ap` | `<int>:<ma>:<backup>` (an old unit adds `:<track>`, read and dropped) — the settings the unit is running, sent on the first record after a boot and whenever one changes (a setting the server sent shows as applied). Kept on the device row (`ap_*`) | live |
@@ -444,7 +445,16 @@ drive_stream_interval_s, `xim` drive_stream_accel_ms (0-5000, 0 = every record),
 `xia` drive_stream_accel (0/1), `xic` drive_stream_impact (0/1, impact capture
 while `xia` is 0), `xdd` databuf_drain_s, `xns`
 network_search_s, `xrp` resp_poll_s, `xlw` led_accel_wake, `xwr` weak_hold_rsrp_dbm (-140..-100 dBm, 0 = off),
-`xws` weak_hold_snr_db (-20..5), `xwm` weak_hold_max_s (5-600); or `tu=-` when
+`xws` weak_hold_snr_db (-20..5), `xwm` weak_hold_max_s (5-600), `xsp`
+smart_power (0/1, intelligent power saving), `xsr` smart_power_rsrp_dbm
+(-140..-90, weak at or below, dBm; firmware default -116), `xsb`
+smart_power_battery_mv (11000..13000, battery low at or below, mV; default
+12400), `xsd` smart_power_battery_drop_mv (0..1000 mV, report once the battery
+has dropped this far since the last report; 0 = off; default 40), `xsm`
+smart_power_max_defer_s (0..86400, longest between parked reports, s; default
+86400), `xlh` log_hold_rsrp_dbm (-140..-90: at or below this
+RSRP captured warnings wait for a better signal and `L,` records carry only
+errors; 0 = off, as is -89..-1); or `tu=-` when
 every column is NULL. A NULL column is no override: the unit keeps its built
 value, so the unit makes its overrides exactly the listed pairs and anything
 not listed goes back to the built value. Values are integers except `xoa`, a
@@ -461,8 +471,8 @@ POST /api/1.0/command (not queued, `<name>=default` clears) and by code in
 `tb=` is a record field (not a reply token), sent by the unit in the record
 that carries `fw=` and `bd=`, once per boot until a reply lands: the values
 the unit was BUILT with (the compiled-in defaults, not the current overrides),
-in the `tu=` grammar - `<code>:<value>` pairs joined by `;` for all twenty-two
-codes, `xoa` commas sent as `|`, an empty `xoa` as `xoa:`. Because the pairs
+in the `tu=` grammar - `<code>:<value>` pairs joined by `;` for each code it
+knows, `xoa` commas sent as `|`, an empty `xoa` as `xoa:`. Because the pairs
 contain `;` the server takes the field whole. It stores the text, normalised to
 the pairs that parsed (unknown codes and non-integer values dropped), in
 `device`.`tunables_built` (VARCHAR(400)); a field with nothing readable leaves

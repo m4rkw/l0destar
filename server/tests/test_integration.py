@@ -412,6 +412,23 @@ def test_unparseable_built_tunables_leave_the_row_alone(device, database):
     assert last_log(database) is not None
 
 
+def test_a_record_with_deferred_wakes_is_stored(device, database):
+    send(device, record(0, 51.5, -0.1, 0, extras=',pd=5'))
+
+    assert last_log(database) is not None
+
+
+def test_power_saving_tunables_reach_the_reply(client, device, database, bearer):
+    posted = client.post('/api/1.0/config', headers=bearer, json={
+        'imei': device['imei'], 'xsp': 1, 'xsr': -140, 'xsb': 13000,
+        'xsd': 1000, 'xsm': 86400, 'xlh': -140})
+    assert posted.get_json()['status'] == 'ok'
+
+    row = database.one('SELECT * FROM `device` WHERE `id` = %s', (device['id'],))
+    assert (',tu=xsp:1;xsr:-140;xsb:13000;xsd:1000;xsm:86400;xlh:-140,'
+            in telemetry.build_response(row, db.web, logs.udp))
+
+
 # -- the version on the device row -------------------------------------------
 
 def fresh(device):

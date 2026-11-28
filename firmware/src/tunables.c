@@ -47,6 +47,12 @@ LOG_MODULE_REGISTER(tun, CONFIG_APP_LOG_LEVEL);
 #define BUILT_WH_RSRP 0
 #endif
 
+#if IS_ENABLED(CONFIG_APP_LOG_HOLD)
+#define BUILT_LH_RSRP CONFIG_APP_LOG_HOLD_RSRP_DBM
+#else
+#define BUILT_LH_RSRP 0
+#endif
+
 static const int32_t s_built[TUN_N_INT] = {
 	[TUN_XTT] = CONFIG_APP_TOW_TILT_DEG,
 	[TUN_XPI] = CONFIG_APP_PARKED_IMPACT_MG,
@@ -68,6 +74,12 @@ static const int32_t s_built[TUN_N_INT] = {
 	[TUN_XWR] = BUILT_WH_RSRP,
 	[TUN_XWS] = CONFIG_APP_WEAK_HOLD_SNR_DB,
 	[TUN_XWM] = CONFIG_APP_WEAK_HOLD_MAX_S,
+	[TUN_XSP] = IS_ENABLED(CONFIG_APP_SMART_POWER),
+	[TUN_XSR] = CONFIG_APP_SMART_POWER_RSRP_DBM,
+	[TUN_XSB] = CONFIG_APP_SMART_POWER_BATTERY_MV,
+	[TUN_XSD] = CONFIG_APP_SMART_POWER_BATTERY_DROP_MV,
+	[TUN_XSM] = CONFIG_APP_SMART_POWER_MAX_DEFER_S,
+	[TUN_XLH] = BUILT_LH_RSRP,
 };
 
 static struct tun_table s_t;		/* empty: everything at its built value */
@@ -159,3 +171,9 @@ bool tun_led_accel_wake(void)        { return get(TUN_XLW) != 0; }
 int  tun_weak_hold_rsrp_dbm(void)    { return get(TUN_XWR); }
 int  tun_weak_hold_snr_db(void)      { return get(TUN_XWS); }
 int  tun_weak_hold_max_s(void)       { return get(TUN_XWM); }
+bool tun_smart_power(void)           { return get(TUN_XSP) != 0; }
+int  tun_smart_power_rsrp_dbm(void)  { return get(TUN_XSR); }
+int  tun_smart_power_battery_mv(void) { return get(TUN_XSB); }
+int  tun_smart_power_battery_drop_mv(void) { return get(TUN_XSD); }
+int  tun_smart_power_max_defer_s(void) { return get(TUN_XSM); }
+int  tun_log_hold_rsrp_dbm(void)     { return get(TUN_XLH); }

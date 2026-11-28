@@ -70,6 +70,15 @@ config APP_VOLTAGE_TEST
 	  bring-up aid — leave off in production.  Has no effect while
 	  APP_DEBUG_BATTERY_MV is set, which fakes the reading.
 
+config APP_IGN_TEST
+	bool "Stream the ignition state at boot"
+	default n
+	help
+	  At startup, print the ignition state through ignition_read() at
+	  2 Hz, so the pulsed pull-up (APP_IGN_PULSED_PULLUP) is the path
+	  tested.  Loops forever; does not enter the main loop.  Bench aid —
+	  leave off in production.
+
 config APP_L_SENSE_TEST
 	bool "Stream the K-wire L-line sense at boot"
 	default n
@@ -1062,7 +1071,7 @@ config APP_PSM_TAU_S
 
 config APP_PSM_ACTIVE_S
 	int "Active time to request (seconds)"
-	default 10 if APP_PSM_SLEEP
+	default 2 if APP_PSM_SLEEP
 	default 60
 	depends on APP_PSM_PROBE
 	help
@@ -1075,12 +1084,14 @@ config APP_PSM_ACTIVE_S
 	  every APP_IGNITION_ON_SLEEP_INTERVAL (30 s), so 60 s clears both.
 	  A probe on a deployed vehicle should observe and change nothing.
 
-	  Adopting it, the default drops to 10 s: every second of active time
+	  Adopting it, the default drops to 2 s: every second of active time
 	  is idle-mode paging before the modem may sleep, and the exchange is
 	  over as soon as the server's reply lands -- RAI already tells the
 	  network so.  It stays under the 30 s awake cadence, so a key-on
 	  engine-off wait sleeps between its sends rather than idling through
-	  them.
+	  them.  Bench, O2, parked report: 10 s ~60 mC and 14 s awake, 2 s
+	  ~55 mC and 5.6 s, 0 s ~53 mC and 3.4 s (both granted); 0 s is left
+	  as an option because some networks may treat a zero timer oddly.
 
 config APP_NO_SIGNAL_MAX_INTERVAL
 	int "Ceiling on the engine-off wake interval with no network (0 = no backoff)"
@@ -1361,6 +1372,27 @@ config APP_ACC_MOVEMENT_THRESHOLD
 	int "Movement delta threshold (milli-g)"
 	default 150
 
+config APP_ACC_SLEEP_ODR_HZ
+	int "Accelerometer sample rate while asleep (Hz)"
+	default 12
+	range 12 52
+	help
+	  52, 26 or 12 (12.5 Hz).  Each step down halves the accelerometer's
+	  sleep current (about 27, 14 and 7.5 uA) but samples a short knock
+	  half as often, so a light one is likelier to be missed.
+
+config APP_IGN_SLEEP_IMU_HZ
+	int "Accelerometer sample rate in the key-on, engine-off sleep (Hz)"
+	default 12
+	range 12 52
+	help
+	  52, 26 or 12 (12.5 Hz), about 27, 14 and 7.5 uA.  The accelerometer
+	  stays at +-8 g there for the impact interrupt
+	  (APP_CRASH_THRESHOLD_MG), and its FIFO keeps the profile an impact
+	  alert reports.  A lower rate samples a short hit less often (every
+	  80 ms at 12.5 Hz, 19 ms at 52), so a brief one is likelier to be
+	  missed or to read low.
+
 config APP_MOVEMENT_CONFIRM_MS
 	int "Movement confirmation window (ms)"
 	default 10000
@@ -1439,11 +1471,23 @@ config APP_TOW_TILT_DEG
 	  reach 10-15°, jacking a corner 3-8°) that never trip the movement
 	  wake.  Suspension settling is ~1-2°, so keep above ~4.
 
+config APP_TOW_IMU_WAKE
+	bool "Let the accelerometer watch for the slow tilt while asleep"
+	default y
+	help
+	  The IMU's wake-up is armed as a comparator around the tilt
+	  reference, so one interrupt covers knocks and slow tilts, and the
+	  unit does not wake every APP_TOW_POLL_S to read the angle.  The
+	  poll, with the high-pass wake, is still used while the unit sits
+	  beyond the comparator or a tow alert is latched, and for tow angles
+	  too small for it (under about 6 degrees).  n polls throughout.
+
 config APP_TOW_POLL_S
 	int "Tow tilt poll interval during sleep (seconds)"
 	default 30
 	help
-	  Sleep-loop wake cadence for the tilt check.  Each poll is a single
+	  Sleep-loop wake cadence for the tilt check (with APP_TOW_IMU_WAKE,
+	  only while the unit is off centre).  Each poll is a single
 	  accelerometer read (~ms); the power cost is negligible on vehicle
 	  power.
 
@@ -1607,7 +1651,7 @@ config APP_DRIVE_STREAM
 	  between records) rather than one released after each.  That also keeps
 	  the modem out of power saving mode: PSM is negotiated at attach and
 	  cannot be switched off under a registration, but the modem only enters
-	  it after the network's active time (10 s) with nothing to send, and a
+	  it after the network's active time (APP_PSM_ACTIVE_S) with nothing to send, and a
 	  unit sending every second never gets there.
 
 	  Every record carries what a normal one does -- position, speed,
@@ -2152,6 +2196,39 @@ config APP_DEBUG_LOG_PER_RECORD
 	  drains over a few cycles rather than delaying the position.  Also
 	  bounded by what fits in the datagram beside the record itself.
 
+config APP_LOG_HOLD
+	bool "Hold captured warnings while the signal is weak"
+	default y
+	help
+	  Every byte costs far more radio energy from a weak cell.  With this
+	  on, a record sent at or below APP_LOG_HOLD_RSRP_DBM carries the
+	  captured errors but not the warnings, which stay for a record sent
+	  at better signal.  Everything goes whatever the signal once the two
+	  log rings together are 75 % full, or their oldest line is
+	  APP_LOG_HOLD_MAX_S old.  With no signal reading nothing is held; an
+	  unmoved parked unit goes by the reading of its last report where
+	  the wake has none.  Held lines do not count as something waiting for
+	  APP_SMART_POWER.  The flush before a planned restart and the logdump
+	  command are not held.
+
+	  The code is always built in: with this off the unit starts with the
+	  hold off and the server turns it on with the tunable xlh.
+
+config APP_LOG_HOLD_RSRP_DBM
+	int "Hold log lines at or below this RSRP (dBm)"
+	default -116
+	range -140 -90
+	help
+	  Run-time override: tunable xlh (0 = off).
+
+config APP_LOG_HOLD_MAX_S
+	int "Longest a log line is held (seconds)"
+	default 86400
+	range 0 604800
+	help
+	  Counted from when the line was logged; for one kept across a reset,
+	  from the boot.  0 holds nothing.
+
 config APP_MODEM_STUCK_CFUN_S
 	int "Registered but unable to send for this long before a CFUN cycle"
 	default 600
@@ -2227,5 +2304,82 @@ config APP_WEAK_HOLD_MAX_S
 	  After this long without a send one goes out whatever the signal, so
 	  the server is not starved and another failure is not masked; the hold
 	  can start again a few seconds later.  Run-time override: tunable xwm.
+
+config APP_SMART_POWER
+	bool "Intelligent power saving: put off costly parked reports"
+	default n
+	help
+	  A parked report from a weak cell costs several times a normal one
+	  (bench: 53-126 mC at -102..-113 dBm RSRP, 146-595 mC at -116..-120,
+	  up to 1051 mC below).  With this on, a timed report is put off to the
+	  next wake when the signal is at or below APP_SMART_POWER_RSRP_DBM,
+	  the car battery at or below APP_SMART_POWER_BATTERY_MV, the unit has
+	  not moved since the last report sent, and nothing else is waiting (an
+	  alert, backlog, captured log lines not held by APP_LOG_HOLD, a boot
+	  field, an acknowledgement, a command or update).  The next report sent carries pd=<wakes put
+	  off>.  The server hears nothing, and can send nothing, in between.
+
+	  A modem in PSM has no AT%XMONITOR reading to give, so the signal is
+	  the one read with the last report sent, or measured since
+	  (APP_SMART_POWER_NCELL).  Without that, a signal that improves while
+	  the car stands is only found when a report goes:
+	  APP_SMART_POWER_MAX_DEFER_S at the latest.
+
+	  The code is always built in: with this off the unit starts with it
+	  off and the server turns it on with the tunable xsp.
+
+config APP_SMART_POWER_RSRP_DBM
+	int "Power saving: signal is weak at or below this RSRP (dBm)"
+	default -116
+	range -140 -90
+	help
+	  Run-time override: tunable xsr.
+
+config APP_SMART_POWER_BATTERY_MV
+	int "Power saving: car battery is low at or below this (mV)"
+	default 12400
+	range 11000 13000
+	help
+	  A resting 12 V lead-acid battery reads about 12.6-12.7 V full and
+	  12.4 V at roughly three quarters.  Under APP_SLEEP_SAFETY_MV a parked
+	  unit sends nothing in any case, so this acts between the two.
+	  Run-time override: tunable xsb.
+
+config APP_SMART_POWER_BATTERY_DROP_MV
+	int "Power saving: send once the battery has dropped this far (mV)"
+	default 40
+	range 0 1000
+	help
+	  A report goes when the car battery reads at least this much below
+	  what it did at the last report sent, so a draining battery stays
+	  visible to the server.  0 turns this off.  Run-time override:
+	  tunable xsd.
+
+config APP_SMART_POWER_MAX_DEFER_S
+	int "Power saving: longest between parked reports (seconds)"
+	default 86400
+	range 0 86400
+	help
+	  A report goes on the last wake that still falls inside this since the
+	  one before: with an hourly interval and a day here, after 23 hours.
+	  Under the report interval nothing is ever put off.  Run-time
+	  override: tunable xsm.
+
+config APP_SMART_POWER_NCELL
+	bool "Power saving: measure the signal before putting a report off"
+	default y
+	select LTE_LC_NEIGHBOR_CELL_MEAS_MODULE
+	help
+	  A parked report that the stored signal alone would put off first gets
+	  one neighbour-cell measurement of the serving carrier, which a modem
+	  in PSM can make without an RRC connection (bench: about 1 s and
+	  2.6 mC, against some 55 mC for a report at good signal).  A reading
+	  above APP_SMART_POWER_RSRP_DBM sends the report; either way it
+	  replaces the stored one.  With no result in 5 s the stored one
+	  stands.  A key-on or accelerometer wake abandons the measurement.
+	  No measurement is made on a wake that sends anyway.
+
+	  Built in whether or not APP_SMART_POWER is set, so a unit turned on
+	  with the tunable xsp measures too.
 
 source "Kconfig.zephyr"

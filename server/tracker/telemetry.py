@@ -287,6 +287,13 @@ def parse_csv_line(line):
             if '=' not in pair:
                 continue
             key, value = pair.split('=', 1)
+            if key == 'pd':
+                # Parked wakes that put their report off since the record
+                # before.  Read but not stored: `log` has no column for it
+                # (migrations/2026-11-28_log_deferred_wakes.sql).
+                if value.isascii() and value.isdigit() and len(value) <= 9:
+                    data['deferred_wakes'] = int(value)
+                continue
             if key == 'rsrq':
                 # Tenths of a dB: the 3GPP index has half-dB steps, so a
                 # whole number would throw half the resolution away.
@@ -572,6 +579,13 @@ TUNABLES = [
     ('xwr', 'weak_hold_rsrp_dbm', -140, 0),
     ('xws', 'weak_hold_snr_db', -20, 5),
     ('xwm', 'weak_hold_max_s', 5, 600),
+    ('xsp', 'smart_power', 0, 1),
+    ('xsr', 'smart_power_rsrp_dbm', -140, -90),
+    ('xsb', 'smart_power_battery_mv', 11000, 13000),
+    ('xsd', 'smart_power_battery_drop_mv', 0, 1000),    # 0 = off
+    ('xsm', 'smart_power_max_defer_s', 0, 86400),
+    # -140..-90 dBm, or 0 for off; -89..-1 is accepted and also reads as off.
+    ('xlh', 'log_hold_rsrp_dbm', -140, 0),
 ]
 TUNABLE_COLUMNS = [column for _, column, _, _ in TUNABLES]
 # Text tunables, which have no numeric range.

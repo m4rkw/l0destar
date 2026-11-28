@@ -15,12 +15,15 @@ import pytest
 
 SRC = os.environ.get("GNSS_SRC", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
-KEYS = ["xtt", "xpi", "xii", "xap", "xab", "xis", "xbw", "xbp", "xds", "xdi", "xim", "xia", "xic", "xdd", "xns", "xrp", "xlw", "xwr", "xws", "xwm"]
+KEYS = ["xtt", "xpi", "xii", "xap", "xab", "xis", "xbw", "xbp", "xds", "xdi", "xim", "xia", "xic", "xdd", "xns", "xrp", "xlw", "xwr", "xws", "xwm", "xsp", "xsr", "xsb", "xsd", "xsm", "xlh"]
 BUILT = dict(xtt=6, xpi=800, xii=700, xap=2, xab=300, xis=30, xbw=11900, xbp=11800, xds=0, xdi=0,
-             xim=0, xia=1, xic=1, xdd=60, xns=300, xrp=30, xlw=0, xwr=0, xws=-6, xwm=60)
+             xim=0, xia=1, xic=1, xdd=60, xns=300, xrp=30, xlw=0, xwr=0, xws=-6, xwm=60,
+             xsp=0, xsr=-116, xsb=12400, xsd=40, xsm=86400, xlh=-116)
 LIMITS = dict(xtt=(0, 30), xpi=(300, 2500), xii=(0, 1200), xap=(-2, 2), xab=(0, 86400), xis=(10, 600),
               xbw=(11000, 12500), xbp=(10500, 12200), xds=(0, 1), xdi=(0, 900), xim=(0, 5000), xia=(0, 1), xic=(0, 1),
-              xdd=(1, 600), xns=(60, 86400), xrp=(5, 600), xlw=(0, 1), xwr=(-140, 0), xws=(-20, 5), xwm=(5, 600))
+              xdd=(1, 600), xns=(60, 86400), xrp=(5, 600), xlw=(0, 1), xwr=(-140, 0), xws=(-20, 5), xwm=(5, 600),
+              xsp=(0, 1), xsr=(-140, -90), xsb=(11000, 13000), xsd=(0, 1000), xsm=(0, 86400),
+              xlh=(-140, 0))
 
 WRAPPER = r"""
 #include <stdlib.h>
@@ -230,10 +233,10 @@ def test_long_garbage_is_safe(lib):
 
 # -- tb=: the built values as a record field ---------------------------------
 
-TB_ORDER = ["xtt", "xpi", "xii", "xap", "xab", "xoa", "xop", "xis", "xbw", "xbp", "xds", "xdi", "xim", "xia", "xic", "xdd", "xns", "xrp", "xlw", "xwr", "xws", "xwm"]
+TB_ORDER = ["xtt", "xpi", "xii", "xap", "xab", "xoa", "xop", "xis", "xbw", "xbp", "xds", "xdi", "xim", "xia", "xic", "xdd", "xns", "xrp", "xlw", "xwr", "xws", "xwm", "xsp", "xsr", "xsb", "xsd", "xsm", "xlh"]
 
 
-def fmt(lib, oa, cap=320, op="0C05"):
+def fmt(lib, oa, cap=400, op="0C05"):
     lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p, C.c_char_p]
     for i, k in enumerate(KEYS):
         lib.set_built(i, BUILT[k])
@@ -269,24 +272,24 @@ def test_tb_worst_case_fits(lib):
     oa = ",".join(["x"] * 61)[:120]
     assert len(oa) == 120
     for i, k in enumerate(KEYS):
-        lib.set_built(i, LIMITS[k][1] if k != "xap" else -2)
-    buf = C.create_string_buffer(320)
+        lib.set_built(i, max(LIMITS[k], key=lambda v: len(str(v))) if k != "xap" else -2)
+    buf = C.create_string_buffer(400)
     lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p, C.c_char_p]
-    n = lib.fmt_built(buf, 320, oa.encode(), b"0C" * 12)
-    assert 0 < n <= 317 and n == len(buf.value)
+    n = lib.fmt_built(buf, 400, oa.encode(), b"0C" * 12)
+    assert 0 < n <= 368 and n == len(buf.value)
     assert buf.value.decode().count("|") == oa.count(",")
 
 
 def test_tb_worst_case_with_negative_weak_hold_values(lib):
     oa = ",".join(["x"] * 61)[:120]
     for i, k in enumerate(KEYS):
-        lib.set_built(i, LIMITS[k][1] if k != "xap" else -2)
+        lib.set_built(i, max(LIMITS[k], key=lambda v: len(str(v))) if k != "xap" else -2)
     for k, v in (("xwr", -140), ("xws", -20), ("xwm", 600)):
         lib.set_built(KEYS.index(k), v)
-    buf = C.create_string_buffer(320)
+    buf = C.create_string_buffer(400)
     lib.fmt_built.argtypes = [C.c_char_p, C.c_size_t, C.c_char_p, C.c_char_p]
-    n = lib.fmt_built(buf, 320, oa.encode(), b"0C" * 12)
-    assert 0 < n <= 317 and b"xwr:-140;xws:-20;xwm:600" in buf.value
+    n = lib.fmt_built(buf, 400, oa.encode(), b"0C" * 12)
+    assert 0 < n <= 368 and b"xwr:-140;xws:-20;xwm:600" in buf.value
 
 
 def test_tb_too_small_or_long(lib):

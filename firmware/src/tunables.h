@@ -44,6 +44,17 @@ bool tun_led_accel_wake(void);
 int  tun_weak_hold_rsrp_dbm(void);
 int  tun_weak_hold_snr_db(void);
 int  tun_weak_hold_max_s(void);
+/* Intelligent power saving (smart_power.h): on at all, the RSRP and battery
+ * thresholds, the battery drop that sends, and the longest between parked
+ * reports. */
+bool tun_smart_power(void);
+int  tun_smart_power_rsrp_dbm(void);
+int  tun_smart_power_battery_mv(void);
+int  tun_smart_power_battery_drop_mv(void);
+int  tun_smart_power_max_defer_s(void);
+/* Log lines held at or below this RSRP in dBm (log_hold.h; -140..-90, 0 or
+ * above -90 = nothing is held). */
+int  tun_log_hold_rsrp_dbm(void);
 
 /* The built values as "tb=" text (tunables_core.h); returns the length or -1. */
 int tun_built_string(char *out, size_t cap);

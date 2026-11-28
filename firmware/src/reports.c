@@ -34,6 +34,11 @@ void job_request(enum job j)
     s_pending |= 1U << j;
 }
 
+bool jobs_pending(void)
+{
+    return s_pending != 0;
+}
+
 static void report(const char *name, const char *text)
 {
     char line[300];

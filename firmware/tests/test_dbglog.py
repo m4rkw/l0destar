@@ -37,6 +37,8 @@ KERNEL_H = r"""
 #define Z_IS_ENABLED3(ignore, val, ...) val
 #define IS_ENABLED(m) Z_IS_ENABLED1(m)
 #define ARG_UNUSED(x) (void)(x)
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define compiler_barrier() __asm__ __volatile__("" ::: "memory")
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 #define BUILD_ASSERT(c, msg) _Static_assert(c, msg)
 
@@ -194,6 +196,8 @@ int h_mc_unplanned(void) { return g_mc_unplanned; }
 
 void h_capture(const char *line, int len, int64_t ms) { capture(line, (uint8_t)len, ms); }
 int  h_take(char *out, int max) { return dbglog_take(out, (size_t)max); }
+int  h_take_weak(char *out, int max, int64_t age) { return dbglog_take_weak(out, (size_t)max, age); }
+long h_due_weak(int64_t age) { return (long)dbglog_due_weak(age); }
 void h_sent(uint32_t id) { dbglog_sent(id); }
 void h_answered(uint32_t id) { dbglog_answered(id); }
 int  h_unanswered(void) { return dbglog_unanswered(); }
@@ -215,6 +219,7 @@ void h_reset(void)
     s_repeat_ms = 0;
     s_take_head = s_take_tail = 0;
     s_take_dropped = s_take_core = 0;
+    s_take_errors = false;
     s_held = false;
     s_held_id = 0;
     s_held_ms = 0;
@@ -402,6 +407,9 @@ def load(so):
     L.h_answered.argtypes = [C.c_uint32]
     L.h_ack.argtypes = [C.c_int]
     L.h_pending.restype = C.c_long
+    L.h_take_weak.argtypes = [C.c_char_p, C.c_int, C.c_int64]
+    L.h_due_weak.argtypes = [C.c_int64]
+    L.h_due_weak.restype = C.c_long
     L.h_core_dropped.argtypes = [C.c_uint32]
     L.h_dropped.restype = C.c_uint32
     L.h_core.restype = C.c_uint32
@@ -471,6 +479,16 @@ class Log:
         raw = self.take(max)
         assert raw == b"" or raw.startswith(b"\nL,")
         return [x[2:] for x in raw.split(b"\n")[1:]] if raw else []
+
+    def take_weak(self, max=4096, age=86_400_000):
+        buf = C.create_string_buffer(max + 1)
+        n = self.L.h_take_weak(buf, max, age)
+        raw = buf.raw[:n]
+        assert raw == b"" or raw.startswith(b"\nL,")
+        return [x[2:] for x in raw.split(b"\n")[1:]] if raw else []
+
+    def due_weak(self, age=86_400_000):
+        return self.L.h_due_weak(age)
 
     def check(self):
         assert self.L.h_lock_bad() == 0                   # never nested, always released
@@ -1274,3 +1292,168 @@ def test_the_modem_call_is_cut_to_fit_not_overrun():
     got = cause(hw=WDT | SW, crash="fatal:2@3e99c735", stall="stall:4aa02/3e254/49722/48a78",
                 freeze="fz:48a78/3e254/i479", mc="mc:lte-offline", isr="isr:2010")
     assert len(got) <= 63 and got.startswith("sw+wdt+fatal:2@3e99c735+stall:")
+
+
+# -- weak signal: warnings held, errors sent (CONFIG_APP_LOG_HOLD) ------------
+
+DAY_MS = 86_400_000
+FULL = (HEAD + TAIL) * 75 // 100
+
+
+def level(x):
+    return x.split(b",", 2)[1]
+
+
+def test_weak_with_only_warnings_hands_out_nothing_and_nothing_is_due(log):
+    kept = log.add(3)
+    assert log.due_weak() == 0
+    assert log.take_weak() == []
+    log.L.h_sent(1)
+    assert log.L.h_unanswered() == 0
+    assert log.take_lines() == kept
+
+
+def test_weak_sends_the_errors_alone_and_the_reply_frees_only_them(log):
+    w1 = log.add(1)
+    e1 = log.add(1, level="E")
+    w2 = log.add(1)
+    e2 = log.add(1, level="E")
+    w3 = log.add(1)
+    assert log.due_weak() == sum(1 + len(x) for x in e1 + e2)
+    assert log.take_weak() == e1 + e2
+    log.L.h_sent(7)
+    assert log.take_weak() == [] and log.take_lines() == []   # one batch outstanding
+    log.L.h_answered(7)
+    assert log.due_weak() == 0
+    assert log.take_lines() == w1 + w2 + w3
+
+
+def test_an_unanswered_error_goes_again(log):
+    log.add(1)
+    e = log.add(1, level="E")
+    assert log.take_weak() == e
+    log.L.h_sent(1)
+    log.L.h_settle()
+    assert log.due_weak() > 0
+    assert log.take_weak() == e
+
+
+def test_a_failed_send_keeps_the_error_and_a_normal_take_after_it_is_whole(log):
+    w = log.add(1)
+    e = log.add(1, level="E")
+    assert log.take_weak() == e
+    log.L.h_ack(0)
+    assert log.take_lines() == w + e
+    log.L.h_ack(1)
+    assert log.L.h_pending() == 0
+
+
+def test_an_error_in_the_tail_is_found_behind_a_head_of_warnings(log):
+    w = []
+    while sum(1 + len(x) for x in w) <= HEAD:
+        w += log.add(1)
+    e = log.add(1, level="E")
+    w += log.add(1)
+    assert log.L.h_pending() < FULL
+    assert log.take_weak() == e
+    log.L.h_sent(0)
+    assert log.take_lines() == w
+
+
+def test_an_error_that_does_not_fit_holds_back_the_ones_after_it(log):
+    e = log.add(1, level="E", body="a long error " + "x" * 20)
+    w = []
+    while sum(1 + len(x) for x in e + w) <= HEAD:
+        w += log.add(1)
+    short = log.add(1, level="E", body="y")
+    assert log.take_weak(max=3 + len(short[0])) == []
+    assert log.take_weak(max=3 + len(e[0])) == e
+    log.L.h_sent(0)
+    assert log.take_weak() == short
+
+
+def test_a_store_three_quarters_full_is_sent_as_in_good_signal(log):
+    kept = []
+    while sum(1 + len(x) for x in kept) + 40 < FULL:
+        kept += log.add(1, body="n %04d" % len(kept))
+        assert log.take_weak() == []
+    while log.L.h_pending() < FULL:
+        kept += log.add(1)
+    assert log.L.h_dropped() == 0                       # released before any loss
+    assert log.due_weak() == log.L.h_pending()
+    got = log.take_weak(max=100)
+    assert got and got == kept[:len(got)]
+    log.L.h_sent(0)
+    assert log.L.h_pending() < FULL                     # drained under it: held again
+    assert log.take_weak() == [] and log.due_weak() == 0
+
+
+def test_a_line_held_for_the_cap_releases_the_store(log):
+    old = log.add(1, ms=5000)
+    new = log.add(1, ms=60_000)
+    log.at(5000 + DAY_MS - 1)
+    assert log.take_weak() == [] and log.due_weak() == 0
+    log.at(5000 + DAY_MS)
+    assert log.due_weak() == log.L.h_pending()
+    assert log.take_weak(max=3 + len(old[0])) == old
+    log.L.h_sent(0)
+    assert log.take_weak() == []                        # what is left is young
+    log.at(60_000 + DAY_MS)
+    assert log.take_weak() == new
+
+
+def test_a_cap_of_zero_holds_nothing(log):
+    kept = log.add(2)
+    assert log.take_weak(age=0) == kept
+
+
+def test_a_line_kept_across_a_reset_waits_from_the_boot(log):
+    old = log.add(1, ms=5000)
+    log.reset()
+    log.at(DAY_MS - 1)
+    assert log.take_weak() == []
+    log.at(DAY_MS)
+    assert log.take_weak() == [zeroed(old[0])]
+
+
+def test_the_dropped_markers_wait_too(log):
+    log.L.h_core_dropped(3)
+    e = log.add(1, level="E")
+    assert log.take_weak() == e
+    log.L.h_sent(0)
+    assert log.L.h_core() == 3
+    assert any(b"console lines dropped" in x for x in log.take_lines())
+
+
+def test_random_weak_and_normal_takes_lose_and_double_nothing(log):
+    rng = random.Random(42)
+    waiting, delivered, captured = [], [], []
+    for step in range(4000):
+        if log.L.h_pending() < FULL - 80 and rng.random() < 0.6:
+            new = log.add(1, level=rng.choice("WWE"),
+                          body="%05d %s" % (step, "z" * rng.randrange(30)))
+            waiting += new
+            captured += new
+            continue
+        weak = rng.random() < 0.7 and log.L.h_pending() < FULL
+        size = rng.randrange(40, 300)
+        got = log.take_weak(max=size) if weak else log.take_lines(size)
+        if weak:
+            assert all(level(x) == b"E" for x in got)
+        log.L.h_sent(step + 1)
+        if got and rng.random() < 0.2:
+            log.L.h_settle()
+        else:
+            log.L.h_answered(step + 1)
+            for x in got:
+                waiting.remove(x)
+            delivered += got
+        assert log.L.h_pending() == sum(1 + len(x) for x in waiting)
+        if step % 97 == 0:
+            # The rings are still whole to the check made after a reset.
+            before = log.L.h_pending()
+            log.reset()
+            assert log.L.h_pending() == before
+            waiting = [zeroed(x) for x in waiting]
+    assert len(delivered) > 300
+    assert len(delivered) + len(waiting) == len(captured)

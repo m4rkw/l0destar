@@ -30,9 +30,12 @@ int hw_power_init(void)
 	}
 	/* The PCBs sense ignition through a 2N7002 open-drain with an external
 	 * 56K pull-up to the always-on 3.3V rail; adding the internal pull-up
-	 * would roughly triple the sense current whenever ignition is on. */
+	 * would roughly triple the sense current whenever ignition is on.
+	 * Without it, the pulsed pull-up starts released: see ignition_read(). */
 	if (IS_ENABLED(CONFIG_APP_BOARD_IGN_EXT_PULLUP)) {
 		gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INPUT);
+	} else if (IS_ENABLED(CONFIG_APP_IGN_PULSED_PULLUP)) {
+		ignition_sense_hold(false);
 	} else {
 		gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE,
 				   GPIO_INPUT | GPIO_PULL_UP);
@@ -199,6 +202,43 @@ static int64_t s_ign_on_ms = -1;
 int64_t g_debug_key_on_ms;
 #endif
 
+/* Pulsed pull-up (APP_IGN_PULSED_PULLUP): held while a parked sleep waits
+ * for the key, released otherwise.  13K against the pin's few pF settles in
+ * well under a microsecond, so the read waits a generous margin. */
+#define IGN_PULSE_SETTLE_US 20
+
+static bool s_ign_held;
+
+void ignition_sense_hold(bool on)
+{
+	if (!IS_ENABLED(CONFIG_APP_IGN_PULSED_PULLUP)) {
+		return;
+	}
+	static bool configured;
+
+	if (configured && s_ign_held == on) {
+		return;     /* the parked loop re-arms every pass */
+	}
+	configured = true;
+	s_ign_held = on;
+	gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE,
+			   on ? (GPIO_INPUT | GPIO_PULL_UP) : GPIO_DISCONNECTED);
+}
+
+static int ign_pin_get(void)
+{
+	int v;
+
+	if (!IS_ENABLED(CONFIG_APP_IGN_PULSED_PULLUP) || s_ign_held) {
+		return gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
+	}
+	gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_INPUT | GPIO_PULL_UP);
+	k_busy_wait(IGN_PULSE_SETTLE_US);
+	v = gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
+	gpio_pin_configure(hw_gpio0, PIN_IGN_SENSE, GPIO_DISCONNECTED);
+	return v;
+}
+
 int ignition_read(void)
 {
 	int v;
@@ -208,7 +248,7 @@ int ignition_read(void)
 	v = CONFIG_APP_DEBUG_IGNITION;
 #else
 	/* Active-low sense (pulled up): pin low = ignition present = 0 (ON) */
-	v = gpio_pin_get(hw_gpio0, PIN_IGN_SENSE);
+	v = ign_pin_get();
 #endif
 #if IS_ENABLED(CONFIG_APP_DEBUG_NBIOT_TEST)
 	if (g_debug_key_on_ms && k_uptime_get() >= g_debug_key_on_ms) {

@@ -8,6 +8,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <modem/lte_lc.h>
+#include <modem/modem_info.h>
 #include <modem/nrf_modem_lib.h>
 #include <modem/modem_key_mgmt.h>
 #include <nrf_modem_at.h>
@@ -262,6 +263,11 @@ static void sleep_report(const struct lte_lc_evt *evt, bool entering)
 static void ncell_report(const struct lte_lc_cells_info *info);
 #endif
 
+#if IS_ENABLED(CONFIG_APP_SMART_POWER_NCELL)
+/* Defined with modem_measure_rsrp(), further down. */
+static bool rsrp_probe_collect(const struct lte_lc_cells_info *info);
+#endif
+
 #if IS_ENABLED(CONFIG_APP_NETSCAN)
 /* Defined with the scan (netscan_run, further down). */
 static bool netscan_collect(const struct lte_lc_cells_info *info);
@@ -317,8 +323,14 @@ static void lte_handler_body(const struct lte_lc_evt *evt)
                 evt->rrc_mode == LTE_LC_RRC_MODE_CONNECTED
                     ? "Connected" : "Idle");
         break;
-#if IS_ENABLED(CONFIG_APP_NCELLMEAS) || IS_ENABLED(CONFIG_APP_NETSCAN)
+#if IS_ENABLED(CONFIG_APP_NCELLMEAS) || IS_ENABLED(CONFIG_APP_NETSCAN) || \
+    IS_ENABLED(CONFIG_APP_SMART_POWER_NCELL)
     case LTE_LC_EVT_NEIGHBOR_CELL_MEAS:
+#if IS_ENABLED(CONFIG_APP_SMART_POWER_NCELL)
+        if (rsrp_probe_collect(&evt->cells_info)) {
+            break;
+        }
+#endif
 #if IS_ENABLED(CONFIG_APP_NETSCAN)
         if (netscan_collect(&evt->cells_info)) {
             break;
@@ -1337,6 +1349,111 @@ int modem_net_scan(char *out, size_t cap)
         }
     }
     return 0;
+}
+#endif
+
+#if IS_ENABLED(CONFIG_APP_SMART_POWER_NCELL)
+/* The serving cell's RSRP from a modem asleep in PSM, which AT%XMONITOR cannot
+ * give: a neighbour-cell measurement of the current carrier.  It makes no RRC
+ * connection; on the bench (2026-11-27, -101 dBm) it took about 1 s and
+ * 2.6 mC, and the modem went back to sleep. */
+static K_SEM_DEFINE(s_probe_sem, 0, 1);
+/* Set while a result is awaited.  Left set by an abandoned measurement, so that
+ * the event its cancel brings is taken here too. */
+static atomic_t s_probe_armed;
+static int16_t s_probe_rsrp;        /* index; INVALID for no serving cell */
+
+/* Long enough for a cancel to report (the library gives it 2 s) and the modem
+ * to be asleep again. */
+#define PROBE_SETTLE_MS 4000
+
+static bool rsrp_probe_collect(const struct lte_lc_cells_info *info)
+{
+    if (!atomic_get(&s_probe_armed)) {
+        return false;
+    }
+    s_probe_rsrp =
+        info->current_cell.id == LTE_LC_CELL_EUTRAN_ID_INVALID
+            ? LTE_LC_CELL_RSRP_INVALID : info->current_cell.rsrp;
+    atomic_clear(&s_probe_armed);
+    k_sem_give(&s_probe_sem);
+    return true;
+}
+
+int modem_measure_rsrp(int *rsrp_dbm, int timeout_ms, bool (*stop)(void))
+{
+    struct lte_lc_ncellmeas_params params = {
+        .search_type = LTE_LC_NEIGHBOR_SEARCH_TYPE_DEFAULT,
+    };
+
+    if (!s_connected) {
+        return -ENOTCONN;
+    }
+    if (modem_rrc_connected()) {
+        return -EBUSY;
+    }
+    if (stop()) {
+        return -ECANCELED;
+    }
+
+    bool was_asleep = modem_psm_asleep();
+
+    k_sem_reset(&s_probe_sem);
+    atomic_set(&s_probe_armed, 1);
+
+    int err = MCM_LTE(MCM_LTE_NCELL, lte_lc_neighbor_cell_measurement(&params));
+
+    if (err) {
+        atomic_clear(&s_probe_armed);
+        return err;             /* -EINPROGRESS: one is running already */
+    }
+
+    int64_t end = k_uptime_get() + timeout_ms;
+
+    err = -ETIMEDOUT;
+    while (k_uptime_get() < end) {
+        if (k_sem_take(&s_probe_sem, K_MSEC(100)) == 0) {
+            err = 0;
+            break;
+        }
+        watchdog_kick();
+        if (stop()) {
+            break;
+        }
+    }
+    if (err) {
+        (void)MCM_LTE(MCM_LTE_NCANCEL,
+                      lte_lc_neighbor_cell_measurement_cancel());
+    }
+
+    /* The measurement takes the modem out of PSM for as long as it runs.
+     * Wait for it to be back: the sleep loop releases a modem it finds awake,
+     * and closes the connection to do it. */
+    end = k_uptime_get() + PROBE_SETTLE_MS;
+    while (!stop() && was_asleep && !modem_psm_asleep() &&
+           k_uptime_get() < end) {
+        k_msleep(100);
+        watchdog_kick();
+    }
+    if (stop()) {
+        return -ECANCELED;
+    }
+    if (err) {
+        return err;
+    }
+    if (s_probe_rsrp == LTE_LC_CELL_RSRP_INVALID) {
+        return -ENODATA;
+    }
+    *rsrp_dbm = RSRP_IDX_TO_DBM(s_probe_rsrp);
+    return 0;
+}
+#else
+int modem_measure_rsrp(int *rsrp_dbm, int timeout_ms, bool (*stop)(void))
+{
+    ARG_UNUSED(rsrp_dbm);
+    ARG_UNUSED(timeout_ms);
+    ARG_UNUSED(stop);
+    return -ENOTSUP;
 }
 #endif
 

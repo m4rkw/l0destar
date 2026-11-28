@@ -103,7 +103,9 @@ LOG_MODULE_REGISTER(gnss, CONFIG_APP_LOG_LEVEL);
 #define RX_RING_SIZE        2048
 #define TICK_MS             10       /* receive housekeeping; also the idle-flush quantum */
 #define PROBE_MS            250      /* how long one baud rate gets to answer */
-#define FIND_MS             6000     /* how long a bring-up searches before giving up */
+#define FIND_MS             15000    /* how long a bring-up searches before giving up: a rail
+                                        * off ~30 s comes back half-drained and the M10S
+                                        * took ~12 s to answer (v4.0p2 bench) */
 #define SILENT_MS           5000     /* no NAV-PVT for this long: find the receiver again */
 #define ACK_MS              500
 #define SWITCH_MS           1500     /* how long a receiver gets to take up a new baud rate */

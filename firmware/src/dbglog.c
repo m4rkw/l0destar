@@ -66,6 +66,15 @@
  * recurse.  A reply that never comes is reported by the records' own
  * "datagram #N unanswered".
  *
+ * WEAK SIGNAL
+ * -----------
+ * While the signal is weak (log_hold.h, decided by data.c) the caller takes
+ * with dbglog_take_weak(): the errors only, from wherever they sit in the
+ * rings, and no markers; the warnings stay for a later record.  Once the
+ * rings are LOG_HOLD_FULL_PCT full or the oldest line has waited max_age_ms,
+ * it takes as dbglog_take() does.  dbglog_due_weak() is what such a take has
+ * to send, so that held lines keep no report from being put off.
+ *
  * MEMORY AND RETENTION
  * --------------------
  * Both rings, their positions and the two dropped counters live in one
@@ -108,6 +117,7 @@
 #include <zephyr/drivers/hwinfo.h>
 
 #include "app.h"
+#include "log_hold.h"
 
 #define HEAD_SIZE  CONFIG_APP_DEBUG_LOG_HEAD
 #define TAIL_SIZE  CONFIG_APP_DEBUG_LOG_TAIL
@@ -189,6 +199,8 @@ static uint16_t s_take_head;
 static uint16_t s_take_tail;
 static uint32_t s_take_dropped;
 static uint32_t s_take_core;
+/* The counts are of error lines, not of the lines at the front. */
+static bool     s_take_errors;
 
 /* The batch is held: sent as datagram s_held_id at s_held_ms, no reply yet. */
 static bool     s_held;
@@ -242,6 +254,56 @@ static uint8_t ring_read(const struct ring *r, uint16_t *off, char *out)
     }
     *off = o;
     return len;
+}
+
+/* Whether the entry at `off` is an error ("<digits>,E,..."), and the offset of
+ * the one after it. */
+static bool ring_is_error(const struct ring *r, uint16_t off, uint16_t *next)
+{
+    uint8_t len = (uint8_t)r->buf[off];
+
+    *next = (off + 1U + len) % r->size;
+    for (uint8_t i = 0; i + 1 < len; i++) {
+        if (r->buf[(off + 1U + i) % r->size] == ',') {
+            return r->buf[(off + 2U + i) % r->size] == 'E';
+        }
+    }
+    return false;
+}
+
+/* Remove the first `n` error entries, closing the gaps in place: an entry only
+ * ever moves towards the front, so a forward byte copy is safe. */
+static void ring_remove_errors(struct ring *r, uint16_t n)
+{
+    uint16_t src = r->pos->rd;
+    uint16_t dst = r->pos->rd;
+    uint16_t lines = r->pos->lines;
+    uint16_t used = 0;
+    uint16_t kept = 0;
+
+    if (n == 0) {
+        return;
+    }
+    for (uint16_t i = 0; i < lines; i++) {
+        uint16_t bytes = 1U + (uint8_t)r->buf[src];
+        uint16_t next;
+        bool error = ring_is_error(r, src, &next);
+
+        if (error && n > 0) {
+            n--;
+        } else {
+            for (uint16_t j = 0; j < bytes; j++) {
+                r->buf[(dst + j) % r->size] = r->buf[(src + j) % r->size];
+            }
+            dst = (dst + bytes) % r->size;
+            used += bytes;
+            kept++;
+        }
+        src = next;
+    }
+    r->pos->wr = dst;
+    r->pos->used = used;
+    r->pos->lines = kept;
 }
 
 /* -- retained block -------------------------------------------------------- */
@@ -683,6 +745,7 @@ static void taken_clear(void)
     s_take_tail = 0;
     s_take_dropped = 0;
     s_take_core = 0;
+    s_take_errors = false;
 }
 
 static bool taken_any(void)
@@ -696,6 +759,17 @@ static bool taken_any(void)
  * since sit behind them.  Called with the lock held. */
 static void taken_free(void)
 {
+    if (s_take_errors) {
+        /* The buffers move before the positions are sealed again: a reset in
+         * between must find no valid block. */
+        s_store.sum = ~s_store.sum;
+        compiler_barrier();
+        ring_remove_errors(&s_head, s_take_head);
+        ring_remove_errors(&s_tail, s_take_tail);
+        taken_clear();
+        s_held = false;
+        return;
+    }
     while (s_take_head > 0 && s_head.pos->lines > 0) {
         ring_pop(&s_head);
         s_take_head--;
@@ -726,7 +800,101 @@ static void hold_expire(void)
     }
 }
 
-int dbglog_take(char *out, size_t max)
+/* The error lines of `r` as "\nL,<line>", oldest first, until one does not fit
+ * (*full).  Returns bytes written; `*taken` counts the lines.  Called with the
+ * lock held. */
+static size_t drain_errors(const struct ring *r, char *out, size_t max,
+                           uint16_t *taken, bool *full)
+{
+    uint16_t off = r->pos->rd;
+    size_t used = 0;
+
+    for (uint16_t i = 0; i < r->pos->lines; i++) {
+        uint16_t next;
+
+        if (ring_is_error(r, off, &next)) {
+            size_t need = 3U + (uint8_t)r->buf[off];
+
+            if (used + need > max) {
+                *full = true;
+                break;
+            }
+            out[used++] = '\n';
+            out[used++] = 'L';
+            out[used++] = ',';
+            used += ring_read(r, &off, out + used);
+            (*taken)++;
+        }
+        off = next;
+    }
+    return used;
+}
+
+/* The uptime the oldest entry of a ring that has one starts with. */
+static int64_t ring_first_ms(const struct ring *r)
+{
+    uint8_t len = (uint8_t)r->buf[r->pos->rd];
+    int64_t ms = 0;
+
+    for (uint8_t i = 0; i < len; i++) {
+        char c = r->buf[(r->pos->rd + 1U + i) % r->size];
+
+        if (c < '0' || c > '9') {
+            break;
+        }
+        ms = ms * 10 + (c - '0');
+    }
+    return ms;
+}
+
+/* Whether the warnings can stay for a better signal.  A line restored after a
+ * reset is stamped 0, so its wait counts from this boot.  Called with the lock
+ * held. */
+static bool can_wait(int64_t max_age_ms)
+{
+    int64_t now = k_uptime_get();
+    int64_t oldest = now;
+
+    if (s_head.pos->lines > 0) {
+        oldest = MIN(oldest, ring_first_ms(&s_head));
+    }
+    if (s_tail.pos->lines > 0) {
+        oldest = MIN(oldest, ring_first_ms(&s_tail));
+    }
+    return log_hold_can_wait((size_t)s_head.pos->used + s_tail.pos->used,
+                             HEAD_SIZE + TAIL_SIZE, now - oldest, max_age_ms);
+}
+
+static size_t error_bytes(const struct ring *r)
+{
+    uint16_t off = r->pos->rd;
+    size_t n = 0;
+
+    for (uint16_t i = 0; i < r->pos->lines; i++) {
+        uint16_t next;
+        uint8_t len = (uint8_t)r->buf[off];
+
+        if (ring_is_error(r, off, &next)) {
+            n += 1U + len;
+        }
+        off = next;
+    }
+    return n;
+}
+
+size_t dbglog_due_weak(int64_t max_age_ms)
+{
+    k_spinlock_key_t key = k_spin_lock(&s_lock);
+
+    store_open();
+    size_t n = can_wait(max_age_ms)
+                   ? error_bytes(&s_head) + error_bytes(&s_tail)
+                   : (size_t)s_head.pos->used + s_tail.pos->used;
+    k_spin_unlock(&s_lock, key);
+    return n;
+}
+
+static int take(char *out, size_t max, bool weak, int64_t max_age_ms)
 {
     size_t used = 0;
 
@@ -745,6 +913,19 @@ int dbglog_take(char *out, size_t max)
     taken_clear();
 
     flush_repeat();
+
+    if (weak && can_wait(max_age_ms)) {
+        bool full = false;
+
+        s_take_errors = true;
+        used += drain_errors(&s_head, out, max, &s_take_head, &full);
+        if (!full) {
+            used += drain_errors(&s_tail, out + used, max - used,
+                                 &s_take_tail, &full);
+        }
+        unlock_sealed(key);
+        return (int)used;
+    }
 
     used += drain_ring(&s_head, out + used, max - used, &s_take_head);
 
@@ -786,6 +967,16 @@ int dbglog_take(char *out, size_t max)
 
     unlock_sealed(key);
     return (int)used;
+}
+
+int dbglog_take(char *out, size_t max)
+{
+    return take(out, max, false, 0);
+}
+
+int dbglog_take_weak(char *out, size_t max, int64_t max_age_ms)
+{
+    return take(out, max, true, max_age_ms);
 }
 
 void dbglog_sent(uint32_t id)

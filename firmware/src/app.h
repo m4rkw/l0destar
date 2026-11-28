@@ -239,6 +239,11 @@ int  modem_update_cell_info(void);
 /* Serving-cell RSRP/SNR/band into g_cell; folded into modem_update_cell_info,
  * so callers refreshing cell context get it without asking. */
 int  modem_read_signal(void);
+/* The serving cell's RSRP from one neighbour-cell measurement, for a registered
+ * modem with no RRC connection, PSM included.  Blocks for up to timeout_ms and
+ * a little more while the modem goes back to sleep; stop() true abandons it
+ * (-ECANCELED).  -ENOTSUP without APP_SMART_POWER_NCELL. */
+int  modem_measure_rsrp(int *rsrp_dbm, int timeout_ms, bool (*stop)(void));
 /* mcc/mnc from one %XMONITOR, when the serving cell has changed since they
  * were read.  No signal reading and no connection evaluation, so it is cheap
  * enough to run on every cell change, GNSS running or not. */
@@ -263,6 +268,7 @@ enum job { JOB_NETSCAN, JOB_SELFTEST, JOB_STATUS, JOB_GNSSSTAT, JOB_BACKLOG,
            JOB_BACKLOG_FLUSH, JOB_LOGDUMP };
 void job_request(enum job j);
 void jobs_service(void);
+bool jobs_pending(void);
 void sleep_once_request(int secs);   /* sleep=<s>: the next wait, once */
 /* Allow NB-IoT (LTE-M preferred) or go back to LTE-M only.  With the radio
  * up this is CFUN=4, the mode, then a full bring-up; with it down it only
@@ -458,6 +464,18 @@ void     databuf_deliver(int timeout_ms, int budget_ms, bool (*stop)(void));
  * the bytes written, or -1 if they do not fit. */
 int      databuf_stamp(const char *in, size_t len, char *out, size_t cap);
 void data_reset(void);
+/* Intelligent power saving (smart_power.h): a parked wake put its report off
+ * (counted into the next record's pd=); whether a record has anything new to
+ * tell; and whether one built at this rail voltage would raise an alert. */
+void data_report_deferred(void);
+bool data_fields_waiting(void);
+bool data_alert_due(float v);
+/* Log lines held for a better signal (log_hold.h).  data_log_signal_ref()
+ * gives the signal to go by when this wake has no reading, or takes it away
+ * (false); data_log_due() is the captured log bytes a report sent now, judged
+ * with that reference, would have to carry. */
+void   data_log_signal_ref(bool valid, int rsrp_dbm);
+size_t data_log_due(bool ref_valid, int ref_rsrp_dbm);
 int  send_data(void);
 /* send_data() for the sends of an awake vehicle, which a very weak serving
  * cell may hold back in the backlog (weak_hold.h, tunable xwr).  `urgent`
@@ -473,6 +491,11 @@ int  send_data_live(bool urgent);
 #if IS_ENABLED(CONFIG_APP_DEBUG_LOG)
 size_t      dbglog_pending(void);              /* bytes waiting */
 int         dbglog_take(char *out, size_t max);/* append lines; bytes added */
+/* The same in weak signal (log_hold.h): the errors only, unless the store is
+ * near full or its oldest line older than max_age_ms.  dbglog_due_weak() is
+ * the bytes such a take has to send. */
+int         dbglog_take_weak(char *out, size_t max, int64_t max_age_ms);
+size_t      dbglog_due_weak(int64_t max_age_ms);
 void        dbglog_ack(bool sent);             /* free (or keep) what was taken */
 /* What the last take handed out went in datagram `id` (transport_sent_id()):
  * held until dbglog_answered(id).  Freed at once for id 0, or when nothing is
@@ -489,6 +512,8 @@ const char *dbglog_reset_cause(void);          /* "wdt", "sw+pin", ... or NULL *
 #else
 static inline size_t      dbglog_pending(void) { return 0; }
 static inline int         dbglog_take(char *out, size_t max) { return 0; }
+static inline int         dbglog_take_weak(char *out, size_t max, int64_t max_age_ms) { return 0; }
+static inline size_t      dbglog_due_weak(int64_t max_age_ms) { return 0; }
 static inline void        dbglog_ack(bool sent) { }
 static inline void        dbglog_sent(uint32_t id) { }
 static inline void        dbglog_answered(uint32_t id) { }
@@ -527,6 +552,7 @@ void        fota_confirm_image(void);  /* stop MCUboot reverting this image */
 bool        fota_image_on_probation(void); /* swapped in, not yet confirmed */
 void        fota_verdict_on_boot(void); /* did the staged update take? */
 void        fota_report_flush(void);   /* send that verdict once linked */
+bool        fota_report_pending(void); /* that verdict has not gone yet */
 /* 0 = no update, 1 = updating (reboots, does not return), <0 = check failed */
 int         fota_check(enum fota_ctx ctx);
 
@@ -804,6 +830,9 @@ int   accel_read_temp(float *temp_c);
 int   modem_read_temp(float *temp_c);
 int   modem_read_vbat(int *mv);        /* nRF9151 VDD (= VSYS), millivolts */
 int   ignition_read(void);
+/* Pulsed ignition pull-up: hold it on for an interrupt wait (no-op unless
+ * APP_IGN_PULSED_PULLUP). */
+void  ignition_sense_hold(bool on);
 #if IS_ENABLED(CONFIG_APP_DEBUG_NBIOT_TEST)
 /* Bench: the ignition reads on from this uptime (0 = never). */
 extern int64_t g_debug_key_on_ms;
@@ -822,6 +851,7 @@ int  accel_read_d6d_src(uint8_t *src);
 int  accel_d6d_tamper(uint8_t *src);
 int  accel_snapshot_tilt_ref(void);
 int  accel_tilt_from_ref_tenths(void);
+int  accel_tilt_ref(int mg[3]);         /* the reference; <0 with none */
 
 /* impact forensics from the IMU FIFO ring buffer */
 struct accel_impact {
@@ -831,6 +861,7 @@ struct accel_impact {
     int peak_gyro_dps10;  /* peak |ω| (degrees/sec × 10) */
     int samples;          /* accel samples drained from the ring */
     int over_ms;          /* time with | |a| - 1g | > 250 mg */
+    int swing_mg;         /* largest per-axis max - min across the ring */
 };
 int  accel_fifo_enable(void);
 int  accel_fifo_disable(void);
@@ -901,6 +932,7 @@ int  accel_confirm_peak_mg(void);
 void accel_get_movement_info(int *tilt_tenths, int *delta_mg);
 int  accel_enable_wake_int(void);
 int  accel_disable_wake_int(void);
+int  accel_wake_absolute(const int8_t ofs[3], int ths);
 int  accel_power_down(void);
 void movement_reset(void);
 

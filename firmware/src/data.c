@@ -21,6 +21,7 @@
 #include "tunables.h"
 #include "tunables_core.h"
 #include "weak_hold.h"
+#include "log_hold.h"
 
 LOG_MODULE_REGISTER(data, CONFIG_APP_LOG_LEVEL);
 
@@ -345,6 +346,45 @@ static void ap_string(char *ap, size_t size)
              (int)g_settings.movement_alarm, g_settings.backup_interval, 0);
 }
 
+/* -- intelligent power saving (smart_power.h) ------------------------------ */
+
+/* Parked wakes whose report was put off since the last record: pd=. */
+static uint32_t s_deferred;
+
+void data_report_deferred(void)
+{
+    s_deferred++;
+}
+
+/* Something a record would tell the server that it has not heard yet.  Not
+ * wt=/ws= (every report leaves one for the next) or pd=. */
+bool data_fields_waiting(void)
+{
+    char ap[40], ack[48], bk[BKLOG_BUF];
+    int count;
+
+    ap_string(ap, sizeof(ap));
+    return s_fw_pending || send_int_to_server || strcmp(ap, s_ap_sent) != 0 ||
+           cmd_ack_text(ack, sizeof(ack)) > 0 ||
+           hw_gnss_backup_report(bk, sizeof(bk), &count) > 0;
+}
+
+/* True if a record built at this rail voltage would raise a power alert, which
+ * only collect_data() does.  A recovered battery re-arms its warning here too,
+ * as a record would have. */
+bool data_alert_due(float v)
+{
+    if (s_on_backup && v > BACKUP_SUPPLY_MAX) {
+        return true;
+    }
+    if (v >= BATTERY_WARNING_LEVEL) {
+        s_battery_warning_status = 0;
+        return false;
+    }
+    return v >= IMPLAUSIBLE_VOLTAGE && !battery_on_backup(v) &&
+           s_battery_warning_status == 0;
+}
+
 /* The fields every record type ends with. */
 static void append_sync_fields(void)
 {
@@ -422,6 +462,18 @@ static void append_sync_fields(void)
                 data_index += n;
                 s_fe_sent = fe;
             }
+        }
+    }
+
+    /* pd=: how many parked wakes put their report off before this one. */
+    if (s_deferred > 0) {
+        n = snprintf(&data_current[data_index],
+                     DATA_LIMIT - data_index - 1, ",pd=%u", (unsigned)s_deferred);
+        if (n > 0 && n < DATA_LIMIT - data_index - 1) {
+            data_index += n;
+            LOG_INF("smart power: reporting after %u deferred wake%s",
+                    (unsigned)s_deferred, s_deferred == 1 ? "" : "s");
+            s_deferred = 0;
         }
     }
 
@@ -1299,6 +1351,38 @@ void data_reply(uint32_t id, const char *resp)
     reply_apply(resp);
 }
 
+/* -- held log lines (log_hold.h) ------------------------------------------- */
+
+#define LOG_HOLD_MAX_MS ((int64_t)CONFIG_APP_LOG_HOLD_MAX_S * 1000)
+
+/* The latest reading from where an unmoved parked unit stands (its last
+ * report's, or one measured since): a modem woken from PSM has none of its own
+ * when the record is built. */
+static bool s_log_ref_valid;
+static int  s_log_ref_dbm;
+
+void data_log_signal_ref(bool valid, int rsrp_dbm)
+{
+    s_log_ref_valid = valid;
+    s_log_ref_dbm = rsrp_dbm;
+}
+
+static bool log_signal_weak(bool ref_valid, int ref_dbm)
+{
+    bool now_valid = g_cell.signal_valid &&
+                     k_uptime_get() - g_cell.signal_ms <= SIGNAL_FRESH_MS;
+
+    return log_hold_weak(tun_log_hold_rsrp_dbm(), now_valid, g_cell.rsrp_dbm,
+                         ref_valid, ref_dbm);
+}
+
+size_t data_log_due(bool ref_valid, int ref_rsrp_dbm)
+{
+    return log_signal_weak(ref_valid, ref_rsrp_dbm)
+               ? dbglog_due_weak(LOG_HOLD_MAX_MS)
+               : dbglog_pending();
+}
+
 /* -- send ----------------------------------------------------------------- */
 
 /* The datagram being sent: the records, stamped with their ages, then the
@@ -1472,7 +1556,10 @@ int send_data(void)
     }
     if (room > 0) {
         size_t pending = dbglog_pending();
-        int added = dbglog_take(&s_tx[tx_len], (size_t)room);
+        int added = log_signal_weak(s_log_ref_valid, s_log_ref_dbm)
+                        ? dbglog_take_weak(&s_tx[tx_len], (size_t)room,
+                                           LOG_HOLD_MAX_MS)
+                        : dbglog_take(&s_tx[tx_len], (size_t)room);
 
         if (added > 0) {
             tx_len += added;
